@@ -53,6 +53,12 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // Spec Tags (context-aware pricing REFINEMENT): repeatable property-driven
   // tags per catalog item — quantity source + variant match conditions.
   { table: 'rom_scope_items', column: 'spec_tags', type: "json DEFAULT '[]'::json" },
+  // Ownership scoping (slice 0b, DESIGN-rom-mode-on-rfp.md): the REAL owner id.
+  // rfp_requests never had created_by at all; rom_pilots.created_by is a display
+  // name. Backfilled below in runPermissionAndOwnershipBackfill(); NULL after
+  // backfill means admin-only (fail closed).
+  { table: 'rfp_requests', column: 'created_by_user_id', type: 'varchar' },
+  { table: 'rom_pilots', column: 'created_by_user_id', type: 'varchar' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
@@ -101,11 +107,13 @@ const ADDITIVE_TABLES: string[] = [
   )`,
 ];
 
-export async function runStartupMigrations(): Promise<void> {
+// dbi is injectable for tests (a drizzle handle over any pg driver); production
+// callers pass nothing and get the app's own connection.
+export async function runStartupMigrations(dbi: any = db): Promise<void> {
   // Additive tables first (columns may target them).
   for (const ddl of ADDITIVE_TABLES) {
     try {
-      await db.execute(sql.raw(ddl));
+      await dbi.execute(sql.raw(ddl));
     } catch (error) {
       console.warn(`⚠️  Startup table migration skipped:`, (error as Error).message);
     }
@@ -114,12 +122,116 @@ export async function runStartupMigrations(): Promise<void> {
     try {
       // Table/column/type are hardcoded constants above (never user input),
       // so building the DDL string here is safe.
-      await db.execute(
+      await dbi.execute(
         sql.raw(`ALTER TABLE ${m.table} ADD COLUMN IF NOT EXISTS ${m.column} ${m.type}`)
       );
     } catch (error) {
       // Log and continue — a failed additive migration should not crash boot.
       console.warn(`⚠️  Startup migration skipped for ${m.table}.${m.column}:`, (error as Error).message);
     }
+  }
+}
+
+/**
+ * Slice 0 + 0b backfills (2026-07-21). Idempotent — safe on every boot.
+ *
+ * PERMISSIONS: checkPermission reads the per-user users.permissions JSON column,
+ * NOT ROLE_PERMISSIONS — the role map is only a seed for NEW accounts. Updating
+ * the map does nothing for JJ's existing row. So on boot, every active user row
+ * is topped up to at least its role's current map (union — never removes a
+ * permission an admin granted by hand).
+ *
+ * OWNERSHIP: adds no rows, only resolves created_by_user_id where NULL by
+ * matching display-name text against users:
+ *   - rom_pilots.created_by holds "First Last" (or a username) from the fork.
+ *   - rfp_requests has NO created_by; sent_by (the "RFP Request" field) is the
+ *     closest signal — auto-filled with the logged-in user's display name, but
+ *     historically also "Name - Company" contact strings. We strip a
+ *     " - Company" suffix and match the remainder. Unmatched rows STAY NULL =
+ *     admin-only, per the fail-closed rule.
+ * Counts are logged every boot; GET /api/admin/ownership-report shows the same
+ * numbers plus the unresolved rows, with a reassign action.
+ */
+export async function runPermissionAndOwnershipBackfill(dbi: any = db): Promise<void> {
+  // ── Permission top-up ──────────────────────────────────────────────────────
+  try {
+    const { ROLE_PERMISSIONS } = await import('@shared/schema');
+    const rows: any = await dbi.execute(sql`SELECT id, role, permissions FROM users`);
+    const userRows: any[] = rows.rows ?? rows;
+    let updated = 0;
+    for (const u of userRows) {
+      const rolePerms: string[] = (ROLE_PERMISSIONS as any)[u.role] || [];
+      const current: string[] = Array.isArray(u.permissions)
+        ? u.permissions
+        : (typeof u.permissions === 'string' ? JSON.parse(u.permissions || '[]') : []);
+      const merged = Array.from(new Set([...current, ...rolePerms]));
+      if (merged.length !== current.length) {
+        await dbi.execute(
+          sql`UPDATE users SET permissions = ${JSON.stringify(merged)}::json, updated_at = NOW() WHERE id = ${u.id}`
+        );
+        updated++;
+      }
+    }
+    console.log(`[permissions backfill] ${userRows.length} users checked, ${updated} topped up to role baseline`);
+  } catch (error) {
+    console.warn('⚠️  Permission backfill skipped:', (error as Error).message);
+  }
+
+  // ── Ownership backfill ─────────────────────────────────────────────────────
+  try {
+    const usersRes: any = await dbi.execute(
+      sql`SELECT id, username, first_name, last_name FROM users`
+    );
+    const userRows: any[] = usersRes.rows ?? usersRes;
+    // Map of normalized display name / username → user id. Names that collide
+    // across two users are dropped from the map (ambiguous = unresolved).
+    const nameToId = new Map<string, string | null>();
+    const claim = (key: string | null | undefined, id: string) => {
+      const k = (key || '').trim().toLowerCase();
+      if (!k) return;
+      if (nameToId.has(k) && nameToId.get(k) !== id) nameToId.set(k, null); // collision
+      else nameToId.set(k, id);
+    };
+    for (const u of userRows) {
+      claim(`${u.first_name || ''} ${u.last_name || ''}`, u.id);
+      claim(u.username, u.id);
+    }
+    const resolve = (text: string | null | undefined): string | null => {
+      if (!text) return null;
+      // "Name - Company" contact strings: match on the part before " - ".
+      const base = text.split(' - ')[0].trim().toLowerCase();
+      return nameToId.get(base) ?? nameToId.get(text.trim().toLowerCase()) ?? null;
+    };
+
+    for (const t of [
+      { table: 'rfp_requests', sourceCol: 'sent_by' },
+      { table: 'rom_pilots', sourceCol: 'created_by' },
+    ]) {
+      const res: any = await dbi.execute(
+        sql.raw(`SELECT id, ${t.sourceCol} AS source_text FROM ${t.table} WHERE created_by_user_id IS NULL`)
+      );
+      const pending: any[] = res.rows ?? res;
+      let resolved = 0;
+      for (const row of pending) {
+        const ownerId = resolve(row.source_text);
+        if (ownerId) {
+          await dbi.execute(
+            sql.raw(`UPDATE ${t.table} SET created_by_user_id = '${ownerId.replace(/'/g, "''")}' WHERE id = ${Number(row.id)}`)
+          );
+          resolved++;
+        }
+      }
+      const totalRes: any = await dbi.execute(sql.raw(`SELECT COUNT(*)::int AS c FROM ${t.table}`));
+      const total = (totalRes.rows ?? totalRes)[0]?.c ?? 0;
+      const unresolvedRes: any = await dbi.execute(
+        sql.raw(`SELECT COUNT(*)::int AS c FROM ${t.table} WHERE created_by_user_id IS NULL`)
+      );
+      const unresolved = (unresolvedRes.rows ?? unresolvedRes)[0]?.c ?? 0;
+      console.log(
+        `[ownership backfill] ${t.table}: ${total} total, ${resolved} newly resolved this boot, ${unresolved} UNRESOLVED (admin-only)`
+      );
+    }
+  } catch (error) {
+    console.warn('⚠️  Ownership backfill skipped:', (error as Error).message);
   }
 }

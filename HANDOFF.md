@@ -422,3 +422,87 @@ all test data, JJ isn't live. Full slice plan, acceptance tests and risks in the
 
 **Check before slice 2:** does JJ's role carry `rfp.edit`? The evaluation save is guarded by
 it; if not, ROM mode would lock him out of his own budget.
+
+## 2026-07-21 (PM) — Slices 0 + 0b SHIPPED: permissions + ownership scoping
+Built together, as designed, blocking slices 1–5. tsc: exactly 251 before and after
+(zero new signatures per file + TS code; baseline measured with `git stash -u`).
+esbuild syntax gate passed on all touched files.
+
+**Slice 0 — permissions.** New `pricing.edit` (admin + manager) and `records.editAny`
+(admin only; per-user grantable escape hatch). Role `user` gains `rfp.create`,
+`rfp.edit`, `rom.create`, `rom.edit`. Because `checkPermission` reads the per-user
+`users.permissions` column, a startup backfill (`runPermissionAndOwnershipBackfill`)
+tops every existing user row up to its role's current map — UNION only, never removes
+hand-granted perms. This is what fixes JJ's actual row, not just new accounts.
+**Rate lock, permission half, on the evaluation-budget save:** users without
+`pricing.edit` get REJECT-ON-TAMPER, not silent forcing — every submitted unitPrice
+must equal the stored row's price (or catalog/snapshot for a new masterItemId row);
+mismatches and new free-text rows 403 with catalog-only guidance. Chose rejection over
+the design's force-from-catalog for THIS half because dev-mode budgets have no single
+source of truth to force from (stored price ≠ catalog after drift) and silently
+recomputing the budget's stored aggregate totals (which the client computes with
+tenantShare/rollup logic) risked corrupting them. Slice 2 still owes the ROM-mode
+FORCE semantics where the catalog IS the source of truth.
+
+**Slice 0b — ownership.** DESIGN DOC WAS WRONG: `rfp_requests` has NO `createdBy`
+column at all. Closest signal is `sentBy` (Step-1 "RFP Request" field, auto-filled
+with the logged-in user's display name; historically also "Name - Company" broker
+strings). Added `createdByUserId` (varchar, users.id) to `rfp_requests` and
+`rom_pilots` via startup migration; stamped at ALL creation sites (RFP POST ×2,
+create-option, counter-offer, ROM POST, fork-to-rom). **`storage.createRfpRequest`
+uses an EXPLICIT `.values()` mapping** — the scope_of_work silent-drop class —
+createdByUserId had to be added there or it would have shipped as a no-op.
+Backfill matches sentBy/createdBy against user display names + usernames, strips
+" - Company" suffixes, drops AMBIGUOUS name collisions (two users, same display
+name → unresolved). Unmatched stays NULL = **admin-only, fail closed**.
+
+**Scoping decisions (Adolfo, this session):** reads UNSCOPED (everyone sees the
+portfolio); **managers ARE scoped** — below admin, everyone modifies only what they
+created. `records.editAny` is the per-user escape hatch since no role carries it
+except admin. CAVEAT this creates: Brenda/Andrew/John lose edit on historical RFPs
+they didn't create until reassigned. Mitigation shipped: **Admin → Users tab →
+"Record Ownership" card** shows resolved/unresolved counts per table (the number
+Adolfo asked to see before trusting scoping — check it right after publish; also
+logged on every boot) with per-row REASSIGN. Design test 5 is softened accordingly:
+manager dev-workflow is byte-identical *on records they own*.
+
+**Enforcement surface** (`server/ownership.ts`, `requireRfpOwnership`/
+`requireRomOwnership`, admin/records.editAny bypass → owner match → 403):
+26 RFP routes in routes.ts (PATCH rfp, advance-phase, archive/reopen/cancel/
+reinstate, create-option, counter-offer, DELETE rfp, files POST/DELETE,
+update-with-files, workflow-phase, advance-workflow, additional-areas, ITB
+PATCH/DELETE, bid-collections ×4, evaluation-budget ×3, select-primary-bidder,
+project-alternates), fork-to-rom, ROM pilot PUT/DELETE, ROM line-items ×3, plus an
+INLINE check on `POST /api/invitation-to-bid` (rfpId is in the body, not the URL).
+Found and closed: `POST /api/rfp-requests/:id/files` had **NO AUTH AT ALL** — now
+requireAuth + ownership (no client caller POSTs to it; verified).
+
+**Catalog hardening (open item #3 from 7/20):** POST + PUT `/api/rom-scope-items`
+now `admin.access` (was requireAuth-only — any signed-in user could edit unitPrice
+AND specTags). `contractor-pricing` POST/DELETE + `pricing-mode` PATCH now
+`pricing.edit` (managers keep them, role user loses them).
+
+**Verified by execution, not narration:** `scripts/test-slice0-backfill.ts` ran the
+REAL migration + backfill functions against a live local Postgres 16 seeded with
+pre-migration schema and dirty data — 25/25 checks passed: columns created,
+JJ/manager/admin permission top-ups exact (JJ has NO pricing.edit), display-name
+match, " - Company" strip, broker string → NULL, ambiguous "Sam Smith" collision →
+NULL, offboarded "Francis Roura" → NULL, and full idempotency on second boot
+(0 changes). Migration functions now take an injectable db handle (default = app
+connection; prod path unchanged) to make this test possible.
+
+**Decisions logged:** bid-collections routes deliberately NOT gated by pricing.edit
+(bids are contractor numbers, not catalog rates; ownership + rfp.edit gate them).
+DELETE rfp keeps its internal permission logic + gains ownership. admin.tsx contains
+TWO duplicate `permissionCategories` objects (contact + user editors) — same class
+as the ROM modal's duplicate forms; both updated, consolidation still owed.
+
+### OPEN after this session
+1. Adolfo: publish, then Admin → Users → Record Ownership — read the unresolved
+   counts (production Neon numbers) and reassign anything live. Managers may need
+   reassignment or per-user `records.editAny` for historical deals they work.
+2. Client courtesy UI for ownership (hide/grey edit buttons on non-owned records)
+   deliberately deferred — server 403s carry clear messages; fold into slice 3.
+3. Slice 2 owes ROM-mode force-from-catalog on the evaluation save; slice 0's
+   reject-on-tamper covers dev-mode rate lock (test 5b) until then.
+4. `pg` + `@types/pg` added as devDependencies for the backfill test only.

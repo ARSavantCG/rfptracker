@@ -54,6 +54,10 @@ import {
 } from "./file-organization";
 import { validateRfpForProgression, canAdvanceToPhase } from "./validation";
 import { checkPermission, upload, pdfUpload, uploadsDir, setupSession, requireAuth, requireAuthFlexible, requireAdmin } from './middleware';
+// Slice 0b: ownership scoping — every mutating route on a specific RFP/ROM
+// record passes through requireRfpOwnership/requireRomOwnership (admin or
+// records.editAny bypass; owner match; NULL owner fails closed to admin-only).
+import { requireRfpOwnership, registerOwnershipAdminRoutes } from './ownership';
 import { generateBidCollectionHtml, generateAllBidCollectionsHtml, generateRfpPreviewHtml } from './html-generators';
 import { registerAuthRoutes } from './auth-routes';
 import { AuthService } from './auth';
@@ -82,6 +86,7 @@ function cleanInvalidValue(value: any): string {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register extracted route modules
+  registerOwnershipAdminRoutes(app); // slice 0b: ownership report + reassign (admin-only)
   registerAuthRoutes(app);
   registerRomRoutes(app);
   registerActualsRoutes(app);
@@ -814,7 +819,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: parsed.internalDueDate, // Map internalDueDate to dueDate for validation
       };
 
-      const newRequest = await storage.createRfpRequest(requestData);
+      // Slice 0b: stamp the REAL owner id (not a display name) at creation.
+      const newRequest = await storage.createRfpRequest({
+        ...requestData,
+        createdByUserId: (req as any).userId ?? null,
+      });
       
       // Create project folder structure for file organization
       const projectFolder = sanitizeProjectName(newRequest.projectName, newRequest.rfpNumber);
@@ -1030,7 +1039,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('  - selectedBayIds:', requestWithFiles.selectedBayIds?.length || 0, 'IDs');
       console.log('About to create RFP with selectedBayConfigurations:', requestWithFiles.selectedBayConfigurations?.length || 0);
 
-      const newRequest = await storage.createRfpRequest(requestWithFiles);
+      // Slice 0b: stamp the REAL owner id (not a display name) at creation.
+      const newRequest = await storage.createRfpRequest({
+        ...requestWithFiles,
+        createdByUserId: (req as any).userId ?? null,
+      });
       
       // Create project folder structure for file organization
       const projectFolder = sanitizeProjectName(newRequest.projectName, newRequest.rfpNumber);
@@ -1110,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFP request
-  app.patch("/api/rfp-requests/:id", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.patch("/api/rfp-requests/:id", requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1145,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advance workflow phase
-  app.post("/api/rfp-requests/:id/advance-phase", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.post("/api/rfp-requests/:id/advance-phase", requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1181,7 +1194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Archive RFP
-  app.patch("/api/rfp-requests/:id/archive", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/archive", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1207,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reopen RFP (move from completed back to in-progress)
-  app.patch("/api/rfp-requests/:id/reopen", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/reopen", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1238,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Cancel RFP — requires a free-text reason; stamps cancelled_at server-side
-  app.patch("/api/rfp-requests/:id/cancel", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/cancel", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
@@ -1268,7 +1281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reinstate RFP — restores status to in-progress and workflow_phase to prior snapshot
-  app.patch("/api/rfp-requests/:id/reinstate", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/reinstate", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
@@ -1292,7 +1305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create RFP Option (alternative design/scope for same project)
-  app.post("/api/rfp-requests/:id/create-option", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/create-option", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     console.log("Auth check for POST /api/rfp-requests/:id/create-option");
     
     // Token-based authentication (sessions are disabled)
@@ -1407,6 +1420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the option RFP using storage method
       const option = await storage.createRfpRequest({
         ...optionData,
+        createdByUserId: (req as any).userId ?? null, // slice 0b: option belongs to its creator
         overrides: originalRfp.overrides || {},
         metadata: {}
       });
@@ -1421,7 +1435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create Counter Offer (duplicate RFP with versioned ID)
-  app.post("/api/rfp-requests/:id/counter-offer", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/counter-offer", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1492,6 +1506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the counter offer RFP using storage method
       const counterOffer = await storage.createRfpRequest({
         ...counterOfferData,
+        createdByUserId: (req as any).userId ?? null, // slice 0b: counter belongs to its creator
         areaBreakdown: originalRfp.areaBreakdown || [],
         overrides: originalRfp.overrides || {},
         metadata: {}
@@ -1507,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete RFP request - with permission checking
-  app.delete("/api/rfp-requests/:id", requireAuth, async (req, res) => {
+  app.delete("/api/rfp-requests/:id", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     console.log(`=== DELETE START ===`);
     console.log(`Delete request for RFP ID: ${req.params.id}`);
     
@@ -1622,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload additional files to existing RFP (with project folder organization)
-  app.post("/api/rfp-requests/:id/files", upload.array("files"), async (req, res) => {
+  app.post("/api/rfp-requests/:id/files", upload.array("files"), requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1741,7 +1756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete file
-  app.delete("/api/rfp-requests/:id/files/:fileId", requireAuth, async (req, res) => {
+  app.delete("/api/rfp-requests/:id/files/:fileId", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const fileId = req.params.fileId;
@@ -1843,7 +1858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFP request with files
-  app.patch("/api/rfp-requests/:id/update-with-files", requireAuth, upload.array("files"), async (req, res) => {
+  app.patch("/api/rfp-requests/:id/update-with-files", requireAuth, upload.array("files"), requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2249,7 +2264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // merged here to include the canAdvanceToPhase business-rule gate from the dead
   // handler plus the publish-email side effect from the live one.
   // Verify before adding any new handlers for this path.
-  app.patch("/api/rfp-requests/:id/workflow-phase", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/workflow-phase", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2338,7 +2353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Advance workflow phase route
-  app.post("/api/rfp-requests/:id/advance-workflow", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/advance-workflow", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2394,6 +2409,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Invitation to bid request body:', JSON.stringify(req.body, null, 2));
       const parsed = insertInvitationToBidSchema.parse(req.body);
+      // Slice 0b: this route mutates the RFP (date sync below) but carries the
+      // rfpId in the BODY, so the URL-param ownership middleware can't guard it.
+      // Same rule inline: admin / records.editAny bypass, owner match, NULL
+      // owner fails closed.
+      {
+        const reqUser: any = (req as any).user;
+        const p: string[] = reqUser?.permissions || [];
+        const bypass = reqUser?.role === 'admin' || p.includes('admin.access') || p.includes('records.editAny');
+        if (!bypass) {
+          if (parsed.rfpId == null) return res.status(400).json({ message: "rfpId is required" });
+          const owningRfp: any = await storage.getRfpRequest(Number(parsed.rfpId));
+          if (!owningRfp) return res.status(404).json({ message: "RFP not found" });
+          if (!owningRfp.createdByUserId || owningRfp.createdByUserId !== (req as any).userId) {
+            return res.status(403).json({ message: "You can only modify records you created. Ask an admin if you need access to this one." });
+          }
+        }
+      }
       await syncInvitationDatesToRfp(parsed.rfpId, {
         contractorDueDate: parsed.contractorDueDate,
         architectDueDate: parsed.architectDueDate,
@@ -2410,7 +2442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save additional areas for invitation to bid (Step 3)
-  app.post("/api/rfp-requests/:id/additional-areas", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/additional-areas", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2483,7 +2515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rfp-requests/:id/invitation-to-bid", requireAuth, async (req, res) => {
+  app.patch("/api/rfp-requests/:id/invitation-to-bid", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2511,7 +2543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rfp-requests/:id/invitation-to-bid", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
+  app.delete("/api/rfp-requests/:id/invitation-to-bid", requireAuth, checkPermission('rfp.delete'), requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3121,7 +3153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.post("/api/rfp-requests/:id/bid-collections", upload.any(), requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3205,7 +3237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.patch("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3233,7 +3265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.put("/api/rfp-requests/:rfpId/bid-collections/:id", upload.any(), requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3324,7 +3356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.delete'), async (req, res) => {
+  app.delete("/api/rfp-requests/:rfpId/bid-collections/:id", requireAuth, checkPermission('rfp.delete'), requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3388,7 +3420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Evaluation Budget routes
-  app.post("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, checkPermission('rfp.edit'), async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget", requireAuth, checkPermission('rfp.edit'), requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -3396,7 +3428,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const budgetData = req.body;
-      
+
+      // ── Slice 0: pricing.edit lock (permission half; server-side) ─────────
+      // A user WITHOUT pricing.edit may edit quantities but never unit rates.
+      // Enforcement is REJECT-ON-TAMPER, not silent forcing: every submitted
+      // unitPrice must equal the stored price for that row (or, for a new
+      // catalog row, the catalog/snapshot price). An honest client that only
+      // changed quantities always passes; a hand-crafted POST with altered
+      // rates gets 403. New custom rows (no masterItemId) are also 403 —
+      // pricing a free-text row IS setting a rate. The ROM-mode FORCE-from-
+      // catalog semantics land in slice 2; this guard is what protects
+      // development RFPs from rate edits by role 'user' (design test 5b).
+      const perms: string[] = ((req as any).user)?.permissions || [];
+      const mayEditPricing = perms.includes('pricing.edit') || perms.includes('admin.access');
+      if (!mayEditPricing) {
+        const parseMoney = (v: any) => parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, '')) || 0;
+        const stored = await storage.getEvaluationBudget(rfpId);
+        const storedById = new Map<string, any>();
+        for (const arr of [stored?.tenantImprovements, stored?.designSoftCosts, stored?.existingImprovements]) {
+          for (const it of (arr as any[]) || []) if (it?.id != null) storedById.set(String(it.id), it);
+        }
+        // Catalog prices for any masterItemIds in the payload (new rows).
+        const incoming: any[] = [
+          ...((budgetData.tenantImprovements as any[]) || []),
+          ...((budgetData.designSoftCosts as any[]) || []),
+          ...((budgetData.existingImprovements as any[]) || []),
+        ];
+        const masterIds = Array.from(new Set(
+          incoming.map((i: any) => i?.masterItemId).filter((n: any) => Number.isInteger(n))
+        )) as number[];
+        const catalogById = new Map<number, any>();
+        if (masterIds.length > 0) {
+          const rows = await db.select().from(romScopeItems).where(inArray(romScopeItems.id, masterIds));
+          for (const r of rows) catalogById.set(r.id, r);
+        }
+        for (const item of incoming) {
+          const submitted = parseMoney(item?.unitPrice);
+          const prior = item?.id != null ? storedById.get(String(item.id)) : undefined;
+          if (prior) {
+            if (Math.abs(submitted - parseMoney(prior.unitPrice)) > 0.005) {
+              return res.status(403).json({
+                message: `Unit rates are locked for your account. "${item.description || item.customDescription || 'A line item'}" was submitted with a changed rate — quantities are yours, rates are not.`,
+              });
+            }
+            continue;
+          }
+          if (Number.isInteger(item?.masterItemId)) {
+            const catalogPrice = parseMoney(catalogById.get(item.masterItemId)?.unitPrice);
+            const snapshotPrice = parseMoney(item?.masterItemSnapshot?.unitPrice);
+            if (Math.abs(submitted - catalogPrice) > 0.005 && Math.abs(submitted - snapshotPrice) > 0.005) {
+              return res.status(403).json({
+                message: `Unit rates are locked for your account. New items must carry the catalog rate.`,
+              });
+            }
+            continue;
+          }
+          // New free-text row from a rate-locked user.
+          return res.status(403).json({
+            message: `Your account can only add items from the catalog — custom items and their pricing require an admin. Ask an admin to add "${item?.customDescription || item?.description || 'this item'}" to the catalog if it's missing.`,
+          });
+        }
+      }
+      // ── end pricing.edit lock ─────────────────────────────────────────────
+
       // Clean up orphaned assembly items before saving
       if (budgetData.tenantImprovements) {
         budgetData.tenantImprovements = budgetData.tenantImprovements.map((item: any) => {
@@ -3716,7 +3810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clean up orphaned assembly items in evaluation budget
-  app.post("/api/rfp-requests/:rfpId/evaluation-budget/cleanup-assemblies", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget/cleanup-assemblies", requireAuth, requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -3784,7 +3878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Evaluation Budget Attachments routes
-  app.post("/api/rfp-requests/:rfpId/evaluation-budget/attachments", requireAuth, upload.any(), async (req, res) => {
+  app.post("/api/rfp-requests/:rfpId/evaluation-budget/attachments", requireAuth, upload.any(), requireRfpOwnership('rfpId'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {
@@ -6328,7 +6422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Select primary bidder and port to Step 5
-  app.post("/api/rfp-requests/:id/select-primary-bidder", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/select-primary-bidder", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.id);
       const { bidCollectionId } = req.body;
@@ -6822,7 +6916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rfp-requests/:id/project-alternates", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/project-alternates", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.id);
       const data = insertProjectAlternateSchema.parse({ ...req.body, projectId: rfpId });

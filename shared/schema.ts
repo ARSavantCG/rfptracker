@@ -55,6 +55,13 @@ export const rfpRequests = pgTable("rfp_requests", {
   // self-serve pricing via the ROM Pilot, skipping steps 2-3. Column created by
   // startup migration, NOT drizzle-kit push.
   pricingPath: text("pricing_path").default("development"),
+  // Ownership scoping (slice 0b, 2026-07-21). rfp_requests never had a
+  // createdBy column (the design doc was wrong about that) — sentBy is the
+  // closest historical signal and is only a display string. This is the REAL
+  // owner: users.id, stamped at creation, backfilled by matching sentBy
+  // against user display names. NULL = owner unresolvable = admin-only
+  // (fail closed). Column created by startup migration, NOT drizzle-kit push.
+  createdByUserId: varchar("created_by_user_id"),
   notes: text("notes"), // Development Team Notes
   dealMetricNotes: text("deal_metric_notes"), // Deal Metric Notes for finance/metrics team
   files: json("files").$type<RfpFile[]>().notNull().default([]),
@@ -1101,6 +1108,10 @@ export const romPilots = pgTable("rom_pilots", {
   cmFeeRemovedBy: text("cm_fee_removed_by"),
   cmFeeRemovedAt: timestamp("cm_fee_removed_at"),
   createdBy: text("created_by"),
+  // Ownership scoping (slice 0b): the real owner (users.id). createdBy above
+  // is only a display name — backfill matches it against users; NULL after
+  // backfill = admin-only (fail closed). Created by startup migration.
+  createdByUserId: varchar("created_by_user_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1419,6 +1430,15 @@ export type Permission =
   | 'reports.view' | 'reports.generate'
   | 'users.create' | 'users.edit' | 'users.delete' | 'users.view'
   | 'rom.create' | 'rom.edit' | 'rom.delete' | 'rom.view'
+  // pricing.edit (2026-07-21, slice 0): may change UNIT RATES. Held by admin +
+  // manager, withheld from 'user' — a leasing user edits quantities, never rates.
+  // Server-enforced on the evaluation-budget save; greyed inputs are courtesy.
+  | 'pricing.edit'
+  // records.editAny (2026-07-21, slice 0b): bypasses ownership scoping without
+  // full admin.access. Seeded to NO role by default (Adolfo chose to scope
+  // managers too) — grantable per-user from the admin panel as the escape hatch
+  // when someone must work a record they didn't create.
+  | 'records.editAny'
   | 'admin.access';
 
 export type UserRole = 'admin' | 'manager' | 'user';
@@ -1431,6 +1451,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'reports.view', 'reports.generate',
     'users.create', 'users.edit', 'users.delete', 'users.view',
     'rom.create', 'rom.edit', 'rom.delete', 'rom.view',
+    'pricing.edit', 'records.editAny',
     'admin.access'
   ],
   manager: [
@@ -1438,14 +1459,20 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'properties.create', 'properties.edit', 'properties.view',
     'contacts.create', 'contacts.edit', 'contacts.view',
     'reports.view', 'reports.generate',
-    'rom.create', 'rom.edit', 'rom.delete', 'rom.view'
+    'rom.create', 'rom.edit', 'rom.delete', 'rom.view',
+    // Managers change unit rates (contractor bid pricing) but are ownership-
+    // scoped like everyone below admin (Adolfo, 2026-07-21). records.editAny
+    // is deliberately NOT here — grant it per-user when someone needs it.
+    'pricing.edit'
   ],
   user: [
-    'rfp.view',
+    // Slice 0 (2026-07-21): leasing team creates Step 1 and runs ROMs.
+    // No pricing.edit — unit rates are locked server-side. No *.delete.
+    'rfp.view', 'rfp.create', 'rfp.edit',
     'properties.view',
     'contacts.view',
     'reports.view',
-    'rom.view'
+    'rom.view', 'rom.create', 'rom.edit'
   ]
 };
 

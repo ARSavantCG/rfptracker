@@ -11,7 +11,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import Templates from "./lib/rfp-templates";
 import { startEmailScheduler } from "./email-scheduler";
-import { runStartupMigrations } from "./startup-migrations";
+import { runStartupMigrations, runPermissionAndOwnershipBackfill } from "./startup-migrations";
 
 const app = express();
 app.use(express.json());
@@ -65,6 +65,16 @@ app.use((req, res, next) => {
     log("✅ Startup schema check complete");
   } catch (error) {
     log(`⚠️  Warning: startup schema check failed: ${error}`);
+  }
+
+  // Slice 0/0b: top up per-user permissions to the role baseline (checkPermission
+  // reads users.permissions, not ROLE_PERMISSIONS) and resolve record ownership.
+  // Idempotent; logs resolved/unresolved counts each boot.
+  try {
+    await runPermissionAndOwnershipBackfill();
+    log("✅ Permission + ownership backfill complete");
+  } catch (error) {
+    log(`⚠️  Warning: permission/ownership backfill failed: ${error}`);
   }
 
   // Initialize RFP Templates module

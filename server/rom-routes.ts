@@ -12,6 +12,9 @@ import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import { requireAuth, checkPermission } from './middleware';
+// Slice 0b: ownership scoping on ROM mutations (admin / records.editAny bypass,
+// owner match on createdByUserId, NULL owner fails closed to admin-only).
+import { requireRfpOwnership, requireRomOwnership } from './ownership';
 import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
@@ -490,8 +493,15 @@ export function registerRomRoutes(app: Express): void {
       const romCount = currentYearRoms.length + 1;
       const romNumber = `ROM-${currentYear}-${romCount.toString().padStart(3, '0')}`;
       
+      // Slice 0b: stamp the real owner id; keep createdBy as the display name.
+      const reqUser: any = (req as any).user;
+      const creatorName = reqUser?.firstName && reqUser?.lastName
+        ? `${reqUser.firstName} ${reqUser.lastName}`
+        : reqUser?.username || "";
       const pilot = await storage.createRomPilot({
         ...req.body,
+        createdBy: (req.body as any)?.createdBy || creatorName,
+        createdByUserId: (req as any).userId ?? null,
         romNumber
       });
       res.status(201).json(pilot);
@@ -519,7 +529,7 @@ export function registerRomRoutes(app: Express): void {
   // onto the ROM path. SNAPSHOTS the RFP's property/bays/project into a new linked
   // ROM Pilot, marks the RFP pricingPath='rom_pilot', and jumps its workflow
   // phase straight to 'evaluation' (steps 2-3 never exist for allowance deals).
-  app.post("/api/rfp-requests/:id/fork-to-rom", requireAuth, async (req, res) => {
+  app.post("/api/rfp-requests/:id/fork-to-rom", requireAuth, requireRfpOwnership('id'), async (req, res) => {
     try {
       const rfpId = parseInt(req.params.id);
       if (isNaN(rfpId)) return res.status(400).json({ message: "Invalid RFP ID" });
@@ -560,6 +570,7 @@ export function registerRomRoutes(app: Express): void {
         selectedBayConfigurations: bays,
         status: "active",
         createdBy: creator,
+        createdByUserId: (req as any).userId ?? null, // slice 0b: real owner id
         linkedRfpId: rfpId,
         notes: `ROM Pilot — forked from ${(rfp as any).rfpNumber} at Step 1`,
       } as any);
@@ -669,7 +680,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/rom-pilots/:id", requireAuth, async (req, res) => {
+  app.put("/api/rom-pilots/:id", requireAuth, requireRomOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -687,7 +698,7 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/rom-pilots/:id", requireAuth, checkPermission('rom.delete'), async (req, res) => {
+  app.delete("/api/rom-pilots/:id", requireAuth, checkPermission('rom.delete'), requireRomOwnership('id'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -715,7 +726,10 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/rom-scope-items", requireAuth, async (req, res) => {
+  // Catalog hardening (HANDOFF 2026-07-20 open #3): the catalog is admin-only
+  // DOCTRINE — a writable catalog undermines rate lock from behind, since every
+  // future fork seeds from these prices and spec tags.
+  app.post("/api/rom-scope-items", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       // Handle date conversion for lastUpdated field
       const createData = { ...req.body };
@@ -733,7 +747,9 @@ export function registerRomRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/rom-scope-items/:id", requireAuth, async (req, res) => {
+  // Catalog hardening: was requireAuth-only — any signed-in user could edit
+  // unitPrice AND specTags directly. Admin-only, same doctrine as POST above.
+  app.put("/api/rom-scope-items/:id", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1145,7 +1161,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
     }
   });
 
-  app.post("/api/rom-pilots/:id/line-items", requireAuth, async (req, res) => {
+  app.post("/api/rom-pilots/:id/line-items", requireAuth, requireRomOwnership('id'), async (req, res) => {
     try {
       console.log("ROM line items save request received");
       console.log("User from auth:", req.user?.username);
@@ -1203,7 +1219,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
   });
 
   // Individual line item save endpoint
-  app.post("/api/rom-pilots/:id/line-items/individual", requireAuth, async (req, res) => {
+  app.post("/api/rom-pilots/:id/line-items/individual", requireAuth, requireRomOwnership('id'), async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {
@@ -1252,7 +1268,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
     }
   });
 
-  app.delete("/api/rom-pilots/:id/line-items", requireAuth, checkPermission('rom.delete'), async (req, res) => {
+  app.delete("/api/rom-pilots/:id/line-items", requireAuth, checkPermission('rom.delete'), requireRomOwnership('id'), async (req, res) => {
     try {
       const romPilotId = parseInt(req.params.id);
       if (isNaN(romPilotId)) {
@@ -1394,7 +1410,9 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
   });
 
   // POST /api/scope-items/:id/contractor-pricing
-  app.post("/api/scope-items/:id/contractor-pricing", requireAuth, async (req, res) => {
+  // pricing.edit (slice 0): contractor pricing entries and pricing mode are
+  // rate edits — admin + manager only, never role 'user'.
+  app.post("/api/scope-items/:id/contractor-pricing", requireAuth, checkPermission('pricing.edit'), async (req, res) => {
     try {
       const scopeItemId = parseInt(req.params.id);
       if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });
@@ -1426,7 +1444,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
   });
 
   // DELETE /api/scope-items/:scopeItemId/contractor-pricing/:id
-  app.delete("/api/scope-items/:scopeItemId/contractor-pricing/:id", requireAuth, async (req, res) => {
+  app.delete("/api/scope-items/:scopeItemId/contractor-pricing/:id", requireAuth, checkPermission('pricing.edit'), async (req, res) => {
     try {
       const pricingId = parseInt(req.params.id);
       if (isNaN(pricingId)) return res.status(400).json({ message: "Invalid pricing record ID" });
@@ -1444,7 +1462,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
   });
 
   // PATCH /api/scope-items/:id/pricing-mode — update mode and recalculate activePrice
-  app.patch("/api/scope-items/:id/pricing-mode", requireAuth, async (req, res) => {
+  app.patch("/api/scope-items/:id/pricing-mode", requireAuth, checkPermission('pricing.edit'), async (req, res) => {
     try {
       const scopeItemId = parseInt(req.params.id);
       if (isNaN(scopeItemId)) return res.status(400).json({ message: "Invalid scope item ID" });

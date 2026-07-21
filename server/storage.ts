@@ -586,6 +586,9 @@ export class DatabaseStorage implements IStorage {
         bayIdsPerBuilding: request.bayIdsPerBuilding || null,
         status: request.status || "in-progress",
         workflowPhase: request.workflowPhase || "rfp-validation",
+        // Slice 0b: real owner id. This .values() block is an EXPLICIT mapping —
+        // omitting a field here silently drops it (the scope_of_work bug class).
+        createdByUserId: (request as any).createdByUserId || null,
       })
       .returning();
     

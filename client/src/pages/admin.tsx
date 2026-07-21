@@ -28,6 +28,7 @@ import { TemplatesManagement } from "@/components/templates-management";
 import { CreateUserModal } from "@/components/create-user-modal";
 import type { User, UserRole, Permission } from "@shared/schema";
 import { ROLE_PERMISSIONS } from "@shared/schema";
+import OwnershipReportCard from "@/components/ownership-report-card";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 function SystemUsersAndContacts() {
@@ -968,6 +969,17 @@ function ContactPermissionsDialog({ contact, open, onOpenChange, onSave, isSavin
       permissions: ['users.create', 'users.edit', 'users.delete', 'users.view'] as Permission[],
       description: 'Manage user accounts and permission assignments'
     },
+    // NOTE: this permissionCategories object exists TWICE in this file (contact
+    // editor + user editor) — the duplicate-edit-form class. Any change here
+    // must be made in BOTH copies until they're consolidated.
+    'ROM Management': {
+      permissions: ['rom.create', 'rom.edit', 'rom.delete', 'rom.view'] as Permission[],
+      description: 'Create and run ROM pilots and ROM-mode pricing'
+    },
+    'Pricing & Ownership': {
+      permissions: ['pricing.edit', 'records.editAny'] as Permission[],
+      description: 'pricing.edit: may change unit rates (admin/manager). records.editAny: may modify records created by others — the escape hatch when ownership scoping blocks someone'
+    },
     'System Administration': {
       permissions: ['admin.access'] as Permission[],
       description: 'Full system access and administrative controls'
@@ -1576,6 +1588,7 @@ export default function Admin() {
                 <SystemUsersAndContacts />
               </CardContent>
             </Card>
+            <OwnershipReportCard />
           </TabsContent>
 
           <TabsContent value="templates" className="mt-6">
@@ -1949,6 +1962,17 @@ function UserEditDialog({ user, open, onOpenChange, onSave, isSaving }: UserEdit
     'User Administration': {
       permissions: ['users.create', 'users.edit', 'users.delete', 'users.view'] as Permission[],
       description: 'Manage user accounts and permission assignments'
+    },
+    // NOTE: this permissionCategories object exists TWICE in this file (contact
+    // editor + user editor) — the duplicate-edit-form class. Any change here
+    // must be made in BOTH copies until they're consolidated.
+    'ROM Management': {
+      permissions: ['rom.create', 'rom.edit', 'rom.delete', 'rom.view'] as Permission[],
+      description: 'Create and run ROM pilots and ROM-mode pricing'
+    },
+    'Pricing & Ownership': {
+      permissions: ['pricing.edit', 'records.editAny'] as Permission[],
+      description: 'pricing.edit: may change unit rates (admin/manager). records.editAny: may modify records created by others — the escape hatch when ownership scoping blocks someone'
     },
     'System Administration': {
       permissions: ['admin.access'] as Permission[],

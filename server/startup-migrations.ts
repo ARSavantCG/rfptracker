@@ -153,7 +153,13 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
  * numbers plus the unresolved rows, with a reassign action.
  */
 export async function runPermissionAndOwnershipBackfill(dbi: any = db): Promise<void> {
-  // ── Permission top-up ──────────────────────────────────────────────────────
+  // ── Permission top-up (LEGACY users only) ──────────────────────────────────
+  // Contacts (the real accounts) do NOT use role→permission seeding — their
+  // permissions are set explicitly in the admin panel (which now includes the
+  // ROM / Pricing & Ownership categories). So JJ gets rfp.create/rom.create by
+  // an admin granting them on his CONTACT record, not from this loop. This only
+  // tops up any legacy `users` rows to their role baseline (a no-op in prod,
+  // where users is empty) and must never invent permissions for contacts.
   try {
     const { ROLE_PERMISSIONS } = await import('@shared/schema');
     const rows: any = await dbi.execute(sql`SELECT id, role, permissions FROM users`);
@@ -172,19 +178,18 @@ export async function runPermissionAndOwnershipBackfill(dbi: any = db): Promise<
         updated++;
       }
     }
-    console.log(`[permissions backfill] ${userRows.length} users checked, ${updated} topped up to role baseline`);
+    console.log(`[permissions backfill] legacy users: ${userRows.length} checked, ${updated} topped up (contacts manage perms via admin UI)`);
   } catch (error) {
     console.warn('⚠️  Permission backfill skipped:', (error as Error).message);
   }
 
   // ── Ownership backfill ─────────────────────────────────────────────────────
+  // REBUILT for the contacts identity model: accounts are `contacts`, and the
+  // owner id we store must equal req.userId, i.e. "contact_<id>". Any legacy
+  // `users` rows are included with their bare id for completeness.
   try {
-    const usersRes: any = await dbi.execute(
-      sql`SELECT id, username, first_name, last_name FROM users`
-    );
-    const userRows: any[] = usersRes.rows ?? usersRes;
-    // Map of normalized display name / username → user id. Names that collide
-    // across two users are dropped from the map (ambiguous = unresolved).
+    // Map of normalized name/email → owner-id STRING. Collisions across two
+    // accounts drop to null (ambiguous = leave unresolved = admin-only).
     const nameToId = new Map<string, string | null>();
     const claim = (key: string | null | undefined, id: string) => {
       const k = (key || '').trim().toLowerCase();
@@ -192,13 +197,29 @@ export async function runPermissionAndOwnershipBackfill(dbi: any = db): Promise<
       if (nameToId.has(k) && nameToId.get(k) !== id) nameToId.set(k, null); // collision
       else nameToId.set(k, id);
     };
-    for (const u of userRows) {
-      claim(`${u.first_name || ''} ${u.last_name || ''}`, u.id);
-      claim(u.username, u.id);
+
+    const contactsRes: any = await dbi.execute(
+      sql`SELECT id, name, email FROM contacts`
+    );
+    for (const c of (contactsRes.rows ?? contactsRes)) {
+      const ownerId = `contact_${c.id}`;
+      claim(c.name, ownerId);   // display name as seen in sent_by / created_by
+      claim(c.email, ownerId);  // some records store the login email
     }
+    // Legacy users (usually none in prod) — bare id, no prefix.
+    try {
+      const usersRes: any = await dbi.execute(
+        sql`SELECT id, username, first_name, last_name FROM users`
+      );
+      for (const u of (usersRes.rows ?? usersRes)) {
+        claim(`${u.first_name || ''} ${u.last_name || ''}`, u.id);
+        claim(u.username, u.id);
+      }
+    } catch { /* users may not exist */ }
+
     const resolve = (text: string | null | undefined): string | null => {
       if (!text) return null;
-      // "Name - Company" contact strings: match on the part before " - ".
+      // "Name - Company" strings: match on the part before " - ".
       const base = text.split(' - ')[0].trim().toLowerCase();
       return nameToId.get(base) ?? nameToId.get(text.trim().toLowerCase()) ?? null;
     };

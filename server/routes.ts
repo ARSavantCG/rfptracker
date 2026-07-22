@@ -566,14 +566,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Derived, not stored — pricingPath + createdByUserId are the source of
       // truth, so this can never drift out of sync with the actual route.
       // ONE users query for the whole list (not per row).
-      const ownerRows = await db.select({
-        id: users.id, username: users.username,
-        firstName: users.firstName, lastName: users.lastName,
-      }).from(users);
+      // ONE contacts query for the whole list. Owner ids are stored as
+      // "contact_<n>" (the same string auth produces), so key the map that way.
+      const contactRows = await db.select({
+        id: contacts.id, name: contacts.name, email: contacts.email,
+      }).from(contacts);
       const ownerNameById = new Map<string, string>();
-      for (const u of ownerRows) {
-        const full = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
-        ownerNameById.set(u.id, full || u.username);
+      for (const c of contactRows) {
+        ownerNameById.set(`contact_${c.id}`, (c.name || c.email || '').trim());
       }
       const withResponsible = requestsWithLiveData.map((rfp: any) => {
         const isRom = rfp.pricingPath === 'rom_pilot';

@@ -548,3 +548,66 @@ Postgres across all six real-world data shapes — 7/7 pass, including NULL
    If so, the fix is data entry (or defaulting developmentContact at validation),
    not the column.
 3. Consider surfacing the same badge on the workflow sidebar header later.
+
+## 2026-07-21 (PM, CRITICAL CORRECTION) — slice 0/0b was built against the wrong table
+First publish exposed the fault: boot logs read `[permissions backfill] 0 users
+checked` and `rfp_requests: 72 total, 0 resolved, 72 UNRESOLVED`. Root cause —
+**all real accounts live in `contacts`, not `users`.** Auth (server/auth-routes.ts
++ middleware.resolveUserFromToken) authenticates contacts by email/password and
+sets req.userId = "contact_<id>", req.user.role = 'contact', permissions from
+contacts.permissions. The `users` table is legacy/empty in production. Adolfo logs
+in as a contact (with admin.access); JJ and the managers were ALL added through
+contacts. So every piece of slice 0/0b keyed on `users` or role==='admin' was wrong.
+
+**Production impact that was live:** ownership enforcement was ON across 26+ routes
+while 0 owners had resolved → every non-admin.access contact (JJ, managers) was
+being 403'd on ALL RFP/ROM mutations by the fail-closed branch. Only admin.access
+holders (Adolfo) could edit. This was a real, shipped regression.
+
+### Corrections shipped this push
+1. **Enforcement flag, default OFF.** `requireRecordOwnership` no-ops (auth only)
+   unless `ENFORCE_OWNERSHIP=true`. Restores everyone's access immediately.
+   Flip the env var to 'true' ONLY after the ownership report shows real owners
+   resolving. This is the no-lockout sequence.
+2. **bypassesOwnership** now keys off `admin.access` / `records.editAny`
+   permissions, NOT role==='admin' (contacts are role 'contact'). Matches the
+   convention requireAdmin already used.
+3. **Ownership backfill rebuilt on contacts:** builds name+email → "contact_<id>"
+   map from `contacts` (plus any legacy users, bare id), resolves sent_by /
+   created_by, stores the "contact_<id>" string so it matches req.userId with no
+   translation. Collisions and unknowns stay NULL = admin-only.
+4. **Permission top-up** scoped to legacy users only, with a comment that contacts
+   get permissions via the admin UI (the ROM / Pricing & Ownership categories
+   added earlier apply to the contact editor too). It does NOT invent contact
+   perms — too risky without knowing the owner-tag model.
+5. **Reassign route** validates contact_<n> against contacts, bare id against users.
+6. **Ownership report** assignable list = active contacts (id surfaced as
+   contact_<n>) + any users, so reassignment writes a matchable id.
+7. **Responsible-party column** owner-name map rebuilt from contacts (was reading
+   empty users → names were blank, only sent_by fallback showed).
+
+Creation stamping already wrote req.userId (="contact_<id>") — correct as-is, no
+change needed. tsc 251→251, esbuild clean. Live-PG test rewritten for the contacts
+world (empty users table, accounts in contacts, records referencing them by name/
+email): resolves RFP-1 by name, RFP-2 by email, RFP-3 by "Name - Company" strip,
+RFP-4 unknown→NULL, ROM-1 by name, ROM-2 null→NULL, and asserts the stored string
+equals contact_<id> (req.userId), idempotent on re-run. ALL PASS.
+
+### DO THIS after publishing (evidence-first, no blind flip)
+1. Publish. Boot logs should now show contacts resolving, e.g.
+   `rfp_requests: 72 total, N resolved, (72-N) UNRESOLVED`. N should be > 0.
+2. Admin → Users → Record Ownership: read the resolved/unresolved split on REAL
+   data. Reassign or grant records.editAny as needed. This is the number that was
+   the whole point of the checkpoint.
+3. **Grant JJ his leasing permissions on his CONTACT record** via Admin (rfp.create,
+   rfp.edit, rom.create, rom.edit) — the backfill no longer does this. Verify he
+   has them; he may already, since he was "tagged as owner."
+4. Only once the report looks right: set ENFORCE_OWNERSHIP=true in the Replit
+   deployment env and republish. Re-run gates 1–7 with enforcement live.
+
+### STILL OPEN / verify
+- The pricing.edit rate-lock on the evaluation save reads req.user.permissions —
+  works for contacts already (permissions populated for both branches). But its
+  regression test must run as a CONTACT without pricing.edit, not a users account.
+- ROLE_PERMISSIONS map edits remain (harmless; only affect legacy users + new-user
+  seed). Contact permission management is entirely via the admin UI.

@@ -1,32 +1,40 @@
 /**
- * Ownership scoping (slice 0b, DESIGN-rom-mode-on-rfp.md, 2026-07-21).
+ * Ownership scoping (slice 0b — REBUILT 2026-07-21 for the contacts identity model).
+ *
+ * PRODUCTION REALITY: all real accounts are `contacts` rows (JJ, managers, and
+ * Adolfo all log in as contacts). The `users` table is legacy/empty in prod.
+ * The canonical owner id is therefore `req.userId` — the string auth already
+ * produces: "contact_<n>" for a contact, a bare id for a rare users account.
+ * created_by_user_id stores exactly that string, so it matches req.userId with
+ * no translation and works uniformly across both account types.
  *
  * THE RULE (Adolfo): below admin, a person may MODIFY only records they created —
- * this includes managers (his call, 2026-07-21, which supersedes the design's
- * admin-or-owner-only sketch in one direction: managers are scoped too).
- * Reads stay unscoped — everyone sees the whole portfolio.
+ * managers included. Reads stay unscoped. Admin is identified by the
+ * `admin.access` PERMISSION (contacts have role 'contact', never 'admin' — same
+ * convention requireAdmin already uses), NOT by a role string.
  *
- * Gate order per request:
- *   1. admin.access            → pass (admin modifies anything)
- *   2. records.editAny         → pass (per-user escape hatch, seeded to no
- *                                 role except admin; grant from the admin panel
- *                                 when e.g. a manager must cover a colleague's deal)
- *   3. record.createdByUserId === req.userId → pass
- *   4. otherwise 403. A NULL createdByUserId FAILS CLOSED (admin-only) — the
- *      backfill couldn't resolve an owner and "no owner" never means "anyone".
+ * Gate order: admin.access | records.editAny → pass; owner id match → pass;
+ * else 403, with a NULL owner failing closed to admin-only.
  *
- * Applied AFTER requireAuth (needs req.user/req.userId) on every mutating route
- * that targets a specific rfp_requests or rom_pilots record. Creation routes are
- * not scoped (nothing to own yet) — they STAMP createdByUserId instead.
+ * ENFORCEMENT IS FLAGGED. Because the first backfill ran against the wrong
+ * (empty) table and resolved 0 owners, turning enforcement on blind would 403
+ * every non-admin contact on every RFP/ROM mutation. So enforcement is OFF
+ * unless ENFORCE_OWNERSHIP=true. Sequence: ship OFF → Adolfo runs the ownership
+ * report against real contacts data → confirm owners resolve → flip the flag on.
  */
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { storage } from './storage';
 import { requireAuth, requireAdmin } from './middleware';
 
+// Default OFF. Flip to 'true' in the deployment env only AFTER the ownership
+// report shows owners resolving on real data (see registerOwnershipAdminRoutes).
+const OWNERSHIP_ENFORCED = process.env.ENFORCE_OWNERSHIP === 'true';
+
 function bypassesOwnership(user: any): boolean {
   const perms: string[] = user?.permissions || [];
-  return user?.role === 'admin' || perms.includes('admin.access') || perms.includes('records.editAny');
+  // admin.access is the real admin signal (contacts are role 'contact').
+  return perms.includes('admin.access') || perms.includes('records.editAny');
 }
 
 /**
@@ -39,6 +47,9 @@ export function requireRecordOwnership(kind: 'rfp' | 'rom', param: string) {
     try {
       const user = req.user;
       if (!user) return res.status(401).json({ message: 'Authentication required' });
+      // Flagged off → behave exactly as before this slice (auth + whatever
+      // permission checks already ran earlier in the chain). No lockouts.
+      if (!OWNERSHIP_ENFORCED) return next();
       if (bypassesOwnership(user)) return next();
 
       const id = parseInt(req.params[param]);
@@ -102,10 +113,28 @@ export function registerOwnershipAdminRoutes(app: any) {
           unresolvedRecords: (unresolvedRows.rows ?? unresolvedRows),
         };
       }
-      const usersRes: any = await db.execute(
-        sql`SELECT id, username, first_name, last_name, role FROM users WHERE is_active = true ORDER BY username`
+      // Assignable owners = CONTACTS (the real accounts), surfaced with the
+      // same id string auth uses (contact_<n>) so a reassignment writes a value
+      // that will actually match req.userId. Any real users rows are appended.
+      const contactsRes: any = await db.execute(
+        sql`SELECT id, name, email, company FROM contacts WHERE is_active = true ORDER BY name`
       );
-      report.assignableUsers = (usersRes.rows ?? usersRes);
+      const contactRows = (contactsRes.rows ?? contactsRes).map((c: any) => ({
+        id: `contact_${c.id}`,
+        username: c.email,
+        first_name: c.name,
+        last_name: '',
+        role: 'contact',
+        company: c.company,
+      }));
+      let userRows: any[] = [];
+      try {
+        const usersRes: any = await db.execute(
+          sql`SELECT id, username, first_name, last_name, role FROM users WHERE is_active = true ORDER BY username`
+        );
+        userRows = usersRes.rows ?? usersRes;
+      } catch { /* users table may be empty/absent in prod */ }
+      report.assignableUsers = [...contactRows, ...userRows];
       res.json(report);
     } catch (error) {
       console.error('[ownership] report failed:', error);
@@ -120,9 +149,18 @@ export function registerOwnershipAdminRoutes(app: any) {
       if (!['rfp', 'rom'].includes(table) || !Number.isInteger(id) || typeof userId !== 'string' || !userId) {
         return res.status(400).json({ message: "Expected { table: 'rfp'|'rom', id, userId }" });
       }
-      const userRes: any = await db.execute(sql`SELECT id FROM users WHERE id = ${userId} LIMIT 1`);
-      if ((userRes.rows ?? userRes).length === 0) {
-        return res.status(400).json({ message: 'Unknown user id' });
+      // Validate the target owner id. contact_<n> → contacts; anything else → users.
+      let ownerExists = false;
+      if (typeof userId === 'string' && userId.startsWith('contact_')) {
+        const cid = parseInt(userId.replace('contact_', ''));
+        const r: any = await db.execute(sql`SELECT id FROM contacts WHERE id = ${cid} LIMIT 1`);
+        ownerExists = (r.rows ?? r).length > 0;
+      } else {
+        const r: any = await db.execute(sql`SELECT id FROM users WHERE id = ${userId} LIMIT 1`);
+        ownerExists = (r.rows ?? r).length > 0;
+      }
+      if (!ownerExists) {
+        return res.status(400).json({ message: 'Unknown owner id' });
       }
       const tableName = table === 'rfp' ? 'rfp_requests' : 'rom_pilots';
       const result: any = await db.execute(sql.raw(

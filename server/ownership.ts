@@ -24,6 +24,7 @@
  */
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import { contacts } from '@shared/schema';
 import { storage } from './storage';
 import { requireAuth, requireAdmin } from './middleware';
 
@@ -94,8 +95,8 @@ export function registerOwnershipAdminRoutes(app: any) {
   // not assumptions. Admin-only; read-only; returns no secrets (names/emails only).
   app.get('/api/admin/ownership-diagnostic', requireAuth, requireAdmin, async (_req: any, res: any) => {
     try {
-      const contactsRes: any = await db.execute(sql`SELECT id, name, email, company, type FROM contacts WHERE is_active = true ORDER BY name`);
-      const contactList = (contactsRes.rows ?? contactsRes).map((c: any) => ({
+      const activeContacts: any[] = await db.select({ id: contacts.id, name: contacts.name, email: contacts.email, company: contacts.company, type: contacts.type, isActive: contacts.isActive }).from(contacts);
+      const contactList = activeContacts.filter((c: any) => c.isActive !== false).map((c: any) => ({
         ownerId: `contact_${c.id}`, name: c.name, email: c.email, company: c.company, type: c.type,
       }));
       const knownKeys = new Set<string>();
@@ -160,17 +161,17 @@ export function registerOwnershipAdminRoutes(app: any) {
       // Assignable owners = CONTACTS (the real accounts), surfaced with the
       // same id string auth uses (contact_<n>) so a reassignment writes a value
       // that will actually match req.userId. Any real users rows are appended.
-      const contactsRes: any = await db.execute(
-        sql`SELECT id, name, email, company FROM contacts WHERE is_active = true ORDER BY name`
-      );
-      const contactRows = (contactsRes.rows ?? contactsRes).map((c: any) => ({
-        id: `contact_${c.id}`,
-        username: c.email,
-        first_name: c.name,
-        last_name: '',
-        role: 'contact',
-        company: c.company,
-      }));
+      const activeContacts: any[] = (await db.select({ id: contacts.id, name: contacts.name, email: contacts.email, company: contacts.company, isActive: contacts.isActive }).from(contacts)).filter((c: any) => c.isActive !== false);
+      const contactRows = activeContacts
+        .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')))
+        .map((c: any) => ({
+          id: `contact_${c.id}`,
+          username: c.email,
+          first_name: c.name,
+          last_name: '',
+          role: 'contact',
+          company: c.company,
+        }));
       let userRows: any[] = [];
       try {
         const usersRes: any = await db.execute(

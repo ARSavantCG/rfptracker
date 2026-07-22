@@ -611,3 +611,42 @@ equals contact_<id> (req.userId), idempotent on re-run. ALL PASS.
   regression test must run as a CONTACT without pricing.edit, not a users account.
 - ROLE_PERMISSIONS map edits remain (harmless; only affect legacy users + new-user
   seed). Contact permission management is entirely via the admin UI.
+
+## 2026-07-22 — ROOT CAUSE of 0/72 resolve: schema-drift throw on select().from(contacts)
+Diagnostic card + reassign dropdown were EMPTY in prod → the backfill's contact
+read returned nothing → empty map → all 72 RFPs / 2 ROMs unresolved. The sent_by
+values were clean all along ("John Mejia - Bridge Industrial", "Brenda Gonzalez",
+etc.); the matcher was never the problem — it had nothing to match against.
+
+Root cause: contacts were read with `db.execute(sql`SELECT ... FROM contacts`)`
+(raw), then `rows.rows ?? rows` — wrong shape on the Neon serverless driver. When
+switched to the drizzle builder `db.select().from(contacts)`, a SECOND fault
+surfaced and was caught in a local test that finally reproduced prod: the builder
+selects EVERY column in the drizzle schema, so any column the production contacts
+table is missing (schema drift) throws, the try/catch swallows it, 0 resolved.
+
+FIX: narrow projection everywhere — `db.select({ id, name, email }).from(contacts)`
+— so unrelated column drift can't break the read. Applied in the backfill
+(startup-migrations.ts) and both ownership.ts routes (report assignable list +
+diagnostic). Lesson banked: NEVER `select().from(table)` in startup/backfill code;
+always project the columns you use, because startup code runs before/around the
+very migrations that fix drift.
+
+TEST NOW REPRODUCES PROD: scripts/test-slice0-backfill.ts seeds a minimal contacts
+table (missing columns like phone), which made the full-select throw exactly as
+prod did — RED — then GREEN after the narrow-projection fix. 11/11 pass: resolves
+by name, by email, "Name - Company" strip, unknown→NULL, ROM by name, null→NULL,
+owner string == req.userId, idempotent.
+
+Also this session: backfill made NON-BLOCKING (runs after listen(), not awaited)
+so a slow Neon round-trip can't delay port bind / feed the healthcheck window;
+diagnostic added as an admin-panel CARD (raw-URL nav can't send the Bearer token
+this app's requireAuth needs).
+
+### After publishing this (expected)
+- Boot log: `[ownership backfill] rfp_requests: 72 total / ~65 resolved / ~7 UNRESOLVED`.
+  The ~7 unresolved should be the "Francis Roura" RFPs (offboarded contact — if his
+  contact row is gone/inactive he can't resolve) plus any genuinely odd sent_by.
+- Reassign dropdown will now be POPULATED with contacts.
+- Decide who inherits Francis Roura's RFPs (#174,171,129,116,74) — reassign to them.
+- THEN, once counts look right, set ENFORCE_OWNERSHIP=true and republish.

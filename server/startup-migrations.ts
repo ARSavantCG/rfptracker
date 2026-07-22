@@ -198,10 +198,21 @@ export async function runPermissionAndOwnershipBackfill(dbi: any = db): Promise<
       else nameToId.set(k, id);
     };
 
-    const contactsRes: any = await dbi.execute(
-      sql`SELECT id, name, email FROM contacts`
-    );
-    for (const c of (contactsRes.rows ?? contactsRes)) {
+    // Read contacts via the drizzle QUERY BUILDER (dbi.select().from(contacts)),
+    // the same path the working contacts UI and reassign dropdown use. The prior
+    // raw db.execute(sql`SELECT ... FROM contacts`) returned an unexpected shape
+    // on the Neon serverless driver, so `rows.rows ?? rows` iterated nothing →
+    // empty map → 0/72 resolved. Query-builder path returns a plain array.
+    // Project ONLY the columns we use. `select().from(contacts)` would request
+    // every column in the drizzle schema, so any column the production table is
+    // missing (schema drift — the very thing startup-migrations patches) throws
+    // and the whole backfill gets caught/skipped → 0 resolved. Narrow select is
+    // drift-proof.
+    const { contacts } = await import('@shared/schema');
+    const allContacts: any[] = await dbi
+      .select({ id: contacts.id, name: contacts.name, email: contacts.email })
+      .from(contacts);
+    for (const c of allContacts) {
       const ownerId = `contact_${c.id}`;
       claim(c.name, ownerId);   // display name as seen in sent_by / created_by
       claim(c.email, ownerId);  // some records store the login email

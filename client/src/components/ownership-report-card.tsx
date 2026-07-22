@@ -105,6 +105,12 @@ export default function OwnershipReportCard() {
   const { data, isLoading, error } = useQuery<OwnershipReport>({
     queryKey: ["/api/admin/ownership-report"],
   });
+  // Diagnostic: fetched on demand (button) so it doesn't run for every admin view.
+  const [showDiag, setShowDiag] = useState(false);
+  const diag = useQuery<any>({
+    queryKey: ["/api/admin/ownership-diagnostic"],
+    enabled: showDiag,
+  });
 
   return (
     <Card className="mt-6">
@@ -147,6 +153,65 @@ export default function OwnershipReportCard() {
             ))}
           </div>
         )}
+
+        {/* Diagnostic: why records aren't resolving. Shows the ACTUAL stored
+            values vs contacts, so the matcher can be fixed from real data. */}
+        <div className="mt-6 border-t pt-4">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowDiag((v) => !v)}
+            data-testid="ownership-diagnostic-toggle"
+          >
+            {showDiag ? "Hide" : "Show"} why records aren't matching
+          </Button>
+          {showDiag && (
+            <div className="mt-3 text-sm space-y-4">
+              {diag.isLoading && <p className="text-gray-500">Loading diagnostic…</p>}
+              {diag.error != null && <p className="text-red-600">Failed to load diagnostic.</p>}
+              {diag.data && (
+                <>
+                  <div>
+                    <h5 className="font-medium mb-1">Known contacts ({diag.data.contacts?.length ?? 0})</h5>
+                    <div className="max-h-40 overflow-auto border rounded p-2 space-y-0.5">
+                      {(diag.data.contacts || []).map((c: any) => (
+                        <div key={c.ownerId} className="text-xs text-gray-700">
+                          <span className="font-mono">{c.ownerId}</span> — {c.name}
+                          {c.company ? ` (${c.company})` : ""} · {c.email}
+                          {c.type ? ` · ${c.type}` : ""}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {(["rfp_requests", "rom_pilots"] as const).map((tbl) => (
+                    <div key={tbl}>
+                      <h5 className="font-medium mb-1">
+                        Unmatched values in {tbl} ({(diag.data.tables?.[tbl] || []).length})
+                      </h5>
+                      <div className="max-h-56 overflow-auto border rounded p-2 space-y-0.5">
+                        {(diag.data.tables?.[tbl] || []).map((r: any, i: number) => (
+                          <div key={`${tbl}-${i}`} className="text-xs flex items-center gap-2">
+                            <span className={r.matchesContact ? "text-green-700" : "text-amber-700"}>
+                              {r.matchesContact ? "✓ would match" : "✗ no match"}
+                            </span>
+                            <span className="text-gray-500">×{r.count}</span>
+                            <span className="font-mono text-gray-800 truncate">
+                              {r.value === null ? "(null)" : `"${r.value}"`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-xs text-gray-500">
+                    "✗ no match" rows are why ownership isn't resolving — the stored text doesn't
+                    equal any contact name or email. Share this with whoever's fixing the matcher.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

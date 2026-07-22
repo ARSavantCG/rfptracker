@@ -158,20 +158,32 @@ export function registerOwnershipAdminRoutes(app: any) {
           unresolvedRecords: (unresolvedRows.rows ?? unresolvedRows),
         };
       }
-      // Assignable owners = CONTACTS (the real accounts), surfaced with the
-      // same id string auth uses (contact_<n>) so a reassignment writes a value
-      // that will actually match req.userId. Any real users rows are appended.
-      const activeContacts: any[] = (await db.select({ id: contacts.id, name: contacts.name, email: contacts.email, company: contacts.company, isActive: contacts.isActive }).from(contacts)).filter((c: any) => c.isActive !== false);
-      const contactRows = activeContacts
-        .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')))
-        .map((c: any) => ({
-          id: `contact_${c.id}`,
-          username: c.email,
-          first_name: c.name,
-          last_name: '',
-          role: 'contact',
-          company: c.company,
-        }));
+      // Assignable owners = CONTACTS. Isolated in its own try/catch so a
+      // failure here can NEVER blank the whole report (which would empty the
+      // dropdown with no explanation). On error we still return the report and
+      // attach diagnostics the card can display.
+      let contactRows: any[] = [];
+      const contactDiag: any = { attempted: true };
+      try {
+        const activeContacts: any[] = (await db
+          .select({ id: contacts.id, name: contacts.name, email: contacts.email, company: contacts.company, isActive: contacts.isActive })
+          .from(contacts))
+          .filter((c: any) => c.isActive !== false);
+        contactDiag.rawCount = activeContacts.length;
+        contactRows = activeContacts
+          .sort((a: any, b: any) => String(a.name || '').localeCompare(String(b.name || '')))
+          .map((c: any) => ({
+            id: `contact_${c.id}`,
+            username: c.email,
+            first_name: c.name,
+            last_name: '',
+            role: 'contact',
+            company: c.company,
+          }));
+      } catch (e: any) {
+        contactDiag.error = String(e?.message || e);
+        console.error('[ownership] contacts read failed:', e);
+      }
       let userRows: any[] = [];
       try {
         const usersRes: any = await db.execute(
@@ -180,6 +192,7 @@ export function registerOwnershipAdminRoutes(app: any) {
         userRows = usersRes.rows ?? usersRes;
       } catch { /* users table may be empty/absent in prod */ }
       report.assignableUsers = [...contactRows, ...userRows];
+      report.contactDiag = contactDiag; // count + any error, shown on the card
       res.json(report);
     } catch (error) {
       console.error('[ownership] report failed:', error);

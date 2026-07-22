@@ -131,6 +131,24 @@ export default function OwnershipReportCard() {
         )}
         {data && (
           <div className="space-y-6">
+            {/* Contact-load diagnostic: makes an empty dropdown self-explaining. */}
+            {(() => {
+              const d: any = (data as any).contactDiag;
+              const n = (data.assignableUsers || []).length;
+              if (n > 0) return (
+                <p className="text-xs text-green-700" data-testid="ownership-contact-count">
+                  {n} assignable {n === 1 ? "contact" : "contacts"} loaded.
+                </p>
+              );
+              return (
+                <div className="text-xs text-red-700 border border-red-200 bg-red-50 rounded p-2" data-testid="ownership-contact-error">
+                  <div className="font-medium">No assignable contacts loaded — dropdowns will be empty.</div>
+                  {d?.error
+                    ? <div className="mt-1 font-mono">Query error: {d.error}</div>
+                    : <div className="mt-1">Contacts query returned {d?.rawCount ?? 0} rows. If this app instance points at the wrong database, that would explain it.</div>}
+                </div>
+              );
+            })()}
             {([
               { key: "rfpRequests", apiTable: "rfp" as const, title: "RFP Requests", report: data.rfpRequests },
               { key: "romPilots", apiTable: "rom" as const, title: "ROM Pilots", report: data.romPilots },

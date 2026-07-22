@@ -88,8 +88,52 @@ export const requireRomOwnership = (param = 'id') => requireRecordOwnership('rom
  * trusting scoping) and the reassign escape hatch for locked-out teammates.
  */
 export function registerOwnershipAdminRoutes(app: any) {
-  app.get('/api/admin/ownership-report', requireAuth, requireAdmin, async (_req: any, res: any) => {
+  // DIAGNOSTIC (2026-07-22): why is the backfill resolving 0/72? Shows the ACTUAL
+  // distinct sent_by / created_by values that failed to match, next to the contact
+  // names/emails the matcher knows about — so the transform is built from real data,
+  // not assumptions. Admin-only; read-only; returns no secrets (names/emails only).
+  app.get('/api/admin/ownership-diagnostic', requireAuth, requireAdmin, async (_req: any, res: any) => {
     try {
+      const contactsRes: any = await db.execute(sql`SELECT id, name, email, company, type FROM contacts WHERE is_active = true ORDER BY name`);
+      const contactList = (contactsRes.rows ?? contactsRes).map((c: any) => ({
+        ownerId: `contact_${c.id}`, name: c.name, email: c.email, company: c.company, type: c.type,
+      }));
+      const knownKeys = new Set<string>();
+      for (const c of contactList) {
+        if (c.name) knownKeys.add(String(c.name).trim().toLowerCase());
+        if (c.email) knownKeys.add(String(c.email).trim().toLowerCase());
+      }
+      const out: any = { contacts: contactList, tables: {} };
+      for (const t of [
+        { key: 'rfp_requests', col: 'sent_by' },
+        { key: 'rom_pilots', col: 'created_by' },
+      ]) {
+        const distinctRes: any = await db.execute(sql.raw(
+          `SELECT ${t.col} AS source_text, COUNT(*)::int AS n
+             FROM ${t.key}
+            WHERE created_by_user_id IS NULL
+            GROUP BY ${t.col} ORDER BY n DESC`
+        ));
+        const rows = (distinctRes.rows ?? distinctRes).map((r: any) => {
+          const raw = r.source_text;
+          const base = raw ? String(raw).split(' - ')[0].trim().toLowerCase() : '';
+          const full = raw ? String(raw).trim().toLowerCase() : '';
+          return {
+            value: raw,
+            count: r.n,
+            matchesContact: knownKeys.has(base) || knownKeys.has(full),
+          };
+        });
+        out.tables[t.key] = rows;
+      }
+      res.json(out);
+    } catch (error) {
+      console.error('[ownership] diagnostic failed:', error);
+      res.status(500).json({ message: 'Diagnostic failed' });
+    }
+  });
+
+  app.get('/api/admin/ownership-report', requireAuth, requireAdmin, async (_req: any, res: any) => {    try {
       const report: any = {};
       for (const t of [
         { key: 'rfpRequests', table: 'rfp_requests', label: 'rfp_number', name: 'project_name', source: 'sent_by' },

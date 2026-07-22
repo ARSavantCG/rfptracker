@@ -67,15 +67,13 @@ app.use((req, res, next) => {
     log(`⚠️  Warning: startup schema check failed: ${error}`);
   }
 
-  // Slice 0/0b: top up per-user permissions to the role baseline (checkPermission
-  // reads users.permissions, not ROLE_PERMISSIONS) and resolve record ownership.
-  // Idempotent; logs resolved/unresolved counts each boot.
-  try {
-    await runPermissionAndOwnershipBackfill();
-    log("✅ Permission + ownership backfill complete");
-  } catch (error) {
-    log(`⚠️  Warning: permission/ownership backfill failed: ${error}`);
-  }
+  // Slice 0/0b: resolve record ownership against contacts. Runs in the
+  // BACKGROUND (not awaited) so a slow Neon round-trip over 72+ rows can never
+  // delay the server binding its port — that delay was feeding the healthcheck
+  // window on boot. It's idempotent and logs its own counts when it finishes.
+  runPermissionAndOwnershipBackfill()
+    .then(() => log("✅ Permission + ownership backfill complete"))
+    .catch((error) => log(`⚠️  Warning: permission/ownership backfill failed: ${error}`));
 
   // Initialize RFP Templates module
   try {

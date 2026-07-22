@@ -650,3 +650,79 @@ this app's requireAuth needs).
 - Reassign dropdown will now be POPULATED with contacts.
 - Decide who inherits Francis Roura's RFPs (#174,171,129,116,74) — reassign to them.
 - THEN, once counts look right, set ENFORCE_OWNERSHIP=true and republish.
+
+## 2026-07-22 — SESSION END: slices 0/0b live & verified; enforcement flipped ON
+Where we actually landed after the full saga:
+
+**RESOLVED & VERIFIED ON THE REAL PAGE:**
+- Ownership card shows 72/72 RFPs owned, 2/2 ROMs owned, 0 unresolved, 0 unmatched.
+  16 assignable contacts load; reassign dropdowns populated. Francis Roura RFPs
+  resolved too (his contact is still active enough to match) — no manual reassign
+  needed.
+- ENFORCE_OWNERSHIP set to 'true' in Replit deployment Secrets + republished.
+  Enforcement is now LIVE (was intentionally OFF all session to avoid lockouts).
+
+**THE ROOT CAUSE OF THE ENTIRE MULTI-ROUND SAGA (bank this):**
+Production never ran my code. The Replit WORKSPACE had diverged from GitHub main —
+the Replit Agent was building its OWN parallel implementation of slices 0/0b in the
+workspace, and every "Publish" shipped the Agent's version, not the commits I pushed
+to GitHub. All my fixes (contacts identity model, non-blocking backfill, diagnostic
+card, narrow-projection contacts read) were invisible in prod because prod published
+from a different lineage. Fixed by, in the workspace shell:
+  git rebase --abort            (a rebase of Agent commits onto mine was mid-conflict)
+  git reset --hard origin/main  (snap workspace to GitHub 9b27cf01; only workspace-
+                                 unique commit was an empty "Published your App" marker)
+Then Republish → production finally ran GitHub main → everything worked immediately.
+
+**PERMANENT RULES ADDED (do not skip again):**
+1. Before EVERY publish, in the workspace shell: `git log --oneline origin/main..HEAD`.
+   Empty output = safe. Anything listed = workspace has drifted; reconcile BEFORE
+   publishing. This one check would have caught the whole thing on day one.
+2. ONE builder per feature. Either Claude builds via GitHub (and Adolfo
+   reset-hard-to-origin + republishes), OR the Replit Agent builds in the workspace.
+   NEVER both on the same files — that's what created the divergence.
+3. Real secondary bug found & fixed along the way: startup/backfill code must NEVER
+   `select().from(table)` — the drizzle builder selects every schema column, so any
+   prod column drift throws and gets swallowed. Always project: `select({id,name,
+   email}).from(contacts)`. Applied in backfill + both ownership routes.
+
+**ALSO fixed this session:** backfill made non-blocking (runs after listen(), not
+awaited) so slow Neon can't delay port bind / feed the healthcheck window.
+
+### TOMORROW — TEST ENFORCEMENT (do these on the REAL rendered pages, tap actual
+### buttons; API calls / source reads do NOT count — that assumption cost us a session)
+
+Setup: have logins ready for JJ (contact, role user), a manager (Brenda/Andrew/John),
+and admin (Adolfo).
+
+TEST 1 — Enforcement is actually ON (the key signal):
+  As JJ, open an RFP that resolved to SOMEONE ELSE (any John Mejia / Brenda record).
+  Try to edit/save it.
+  PASS = clean 403 "you can only modify records you created."
+  FAIL = it saves → ENFORCE_OWNERSHIP didn't take; check the deployment env var
+         is exactly ENFORCE_OWNERSHIP=true (lowercase 'true'), republish.
+
+TEST 2 — JJ can work his OWN records:
+  As JJ: create a new RFP via Step 1 → should save.
+    (If 403 HERE, that's NOT enforcement — it's missing permission. Admin → JJ's
+     contact → grant rfp.create, rfp.edit, rom.create, rom.edit.)
+  As JJ: edit an RFP he owns → saves. Fork one to ROM → works.
+
+TEST 3 — Managers not broken (Adolfo's original must-not-break):
+  As a manager, on a deal THEY own: price a bid / save the evaluation budget → saves
+  (managers have pricing.edit). If they don't own any, admin reassigns one to them
+  first via the ownership card.
+
+TEST 4 — Admin bypasses everything:
+  As Adolfo, edit ANY record regardless of owner → always works.
+
+Behavior matrix to confirm: owner→yes, non-owner→403, manager-on-own→yes, admin-any→yes.
+
+### STILL OPEN (deferred, not blocking)
+- Confirm JJ's contact carries the four leasing permissions (may already, via "owner"
+  tag). Verify in TEST 2.
+- Slice 0's rate-lock regression (test 5b) should be run as a CONTACT without
+  pricing.edit, not a users account.
+- Fee-base definitions still owed by Adolfo before fee-engine work (permit "construction
+  costs" scope; does contingency exclude other fees; CM before/after contingency).
+- Slices 1–5 (move ROM onto the RFP) remain unstarted — blocked on 0/0b, now unblocked.

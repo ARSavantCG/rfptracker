@@ -182,7 +182,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
           Manage Leases
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[1100px] max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between pr-12">
           <DialogTitle className="flex items-center gap-2">
             <Building className="h-5 w-5" />
@@ -241,7 +241,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                         <FormItem>
                           <FormLabel>Assigned Bays</FormLabel>
                           <FormControl>
-                            <div className="border rounded-md">
+                            <div className="border rounded-md min-w-0 overflow-x-auto max-h-[480px] overflow-y-auto">
                               <BaySelectionGrid
                                 property={property}
                                 excludeLeaseId={editingLease?.id}

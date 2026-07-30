@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
+import { defaultElectricalAllocation } from "@shared/electrical-utils";
 
 
 // Voltage options for electrical allocation
@@ -426,7 +427,9 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
               {(() => {
                 const totalTransformerCapacity = transformers.reduce((sum: number, t: any) => sum + (t.totalCapacityKva || 0), 0);
                 const propertyAllocation = currentProperty?.electricalAllocation || 0;
-                const propertyIncrement = currentProperty?.electricalAllocationIncrement || 50;
+                // Schema default is 200, not 50. The 50 here disagreed with
+                // property-form-modal and evaluation-budget, both of which use 200.
+                const propertyIncrement = currentProperty?.electricalAllocationIncrement || 200;
                 
                 // Calculate tenant's share of building
                 const tenantSF = rfp?.selectedBayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
@@ -437,8 +440,24 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 const selectedVoltage = form.watch("tenantElectricalVoltage") || "480";
                 const tenantKvaShare = totalTransformerCapacity * (tenantSharePercent / 100);
                 const suggestedAmps = kvaToAmps(tenantKvaShare, selectedVoltage);
-                // Round DOWN to nearest 50 AMPS
-                const suggestedAmpsRounded = Math.floor(suggestedAmps / 50) * 50;
+
+                // Default allocation = proportionate share of the BUILDING's total
+                // amps, floored to the property's increment. Previously this derived
+                // from transformer kVA and hard-coded a 50 A round-down, ignoring
+                // propertyIncrement entirely even though it was displayed above.
+                //
+                // Falls back to the kVA-derived figure only when the property has no
+                // electricalAllocation recorded, so properties that were relying on
+                // the old behaviour still get a suggestion instead of a blank 0.
+                const suggestedAmpsRounded = propertyAllocation > 0
+                  ? defaultElectricalAllocation({
+                      buildingTotalAmps: propertyAllocation,
+                      tenantSharePercent: tenantSharePercent,
+                      increment: propertyIncrement,
+                    })
+                  : (propertyIncrement > 0
+                      ? Math.floor(suggestedAmps / propertyIncrement) * propertyIncrement
+                      : Math.round(suggestedAmps));
                 
                 return (
                   <div className="space-y-4">
@@ -462,7 +481,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                     </div>
                     
                     {/* Calculated Suggestion */}
-                    {totalTransformerCapacity > 0 && propertySF > 0 && (
+                    {(propertyAllocation > 0 || totalTransformerCapacity > 0) && propertySF > 0 && (
                       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                         <h4 className="text-sm font-medium text-gray-900 mb-2">Calculated Allocation (Based on Tenant's Share)</h4>
                         <div className="grid grid-cols-2 gap-4 text-sm mb-3">

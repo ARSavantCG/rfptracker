@@ -292,6 +292,18 @@ export function BaySelectionGrid({
 
   // For single building mode, get bays from the property
   const bays = property ? getSortedBays(property) : [];
+
+  // Denominator for the "% of building" labels on bay tiles and selected-bay
+  // badges. Uses rentable SF (falling back to raw SF) so it matches the same
+  // basis the Area Summary and occupancy report use. Returns '' when the
+  // building total is unknown rather than rendering a misleading 0.0%.
+  const buildingTotalRentableSf = bays.reduce(
+    (sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
+  );
+  const fmtPctOfBuilding = (sf: number): string => {
+    if (!(buildingTotalRentableSf > 0) || !(sf > 0)) return '';
+    return `${((sf / buildingTotalRentableSf) * 100).toFixed(1)}%`;
+  };
   
 
   // Toggle bay selection for single building mode
@@ -645,6 +657,13 @@ export function BaySelectionGrid({
               const propSelectedIds = selectedBuildingIds[buildingKey] || new Set();
               const propSelectedBays = propBays.filter(bay => propSelectedIds.has(bay.id));
               const propTotalSF = propSelectedBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage), 0);
+              // Multi-building mode has no component-scope `property`, so the
+              // shared fmtPctOfBuilding would return ''. Use this building's own total.
+              const propBuildingTotalSf = propBays.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+              const fmtPctOfThisBuilding = (sf: number): string => {
+                if (!(propBuildingTotalSf > 0) || !(sf > 0)) return '';
+                return `${((sf / propBuildingTotalSf) * 100).toFixed(1)}%`;
+              };
               
               return (
                 <div key={prop.id} className="border rounded-lg p-4 bg-gray-50">
@@ -753,7 +772,12 @@ export function BaySelectionGrid({
                                               getBayDisplayName(bay.bayName)
                                             )}
                                           </div>
-                                          <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                                          <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>
+                                      {Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k
+                                      {fmtPctOfThisBuilding(bay.rentableSquareFootage || bay.squareFootage) && (
+                                        <span className="text-gray-400" style={{fontSize: '7px'}}> ({fmtPctOfThisBuilding(bay.rentableSquareFootage || bay.squareFootage)})</span>
+                                      )}
+                                    </div>
                                           
                                           {/* Vertical Stack: Doors → Amenities */}
                                           <div className="flex flex-col items-center gap-px">
@@ -947,7 +971,12 @@ export function BaySelectionGrid({
                                         getBayDisplayName(bay.bayName)
                                       )}
                                     </div>
-                                    <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>{Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k</div>
+                                    <div className="text-gray-600" style={{fontSize: '8px', lineHeight: '9px', marginBottom: '2px'}}>
+                                      {Math.round((bay.rentableSquareFootage || bay.squareFootage) / 1000)}k
+                                      {fmtPctOfBuilding(bay.rentableSquareFootage || bay.squareFootage) && (
+                                        <span className="text-gray-400" style={{fontSize: '7px'}}> ({fmtPctOfBuilding(bay.rentableSquareFootage || bay.squareFootage)})</span>
+                                      )}
+                                    </div>
                                     
                                     {/* Vertical Stack: Doors → Amenities */}
                                     <div className="flex flex-col items-center gap-px">
@@ -1071,7 +1100,7 @@ export function BaySelectionGrid({
                       variant="outline"
                       className={getBayColor(true)}
                     >
-                      {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft)
+                      {getBayDisplayName(bay.bayName)} ({(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} sq ft{fmtPctOfBuilding(bay.rentableSquareFootage || bay.squareFootage) ? ` · ${fmtPctOfBuilding(bay.rentableSquareFootage || bay.squareFootage)}` : ''})
                       {bay.hasStorefrontEntry && <span className="text-orange-600 ml-1" title="Storefront Entry">🚪</span>}
                       {bay.hasSpeculativeOffice && <span className="text-blue-600 ml-1" title="Speculative Office">🏢</span>}
                     </Badge>

@@ -700,15 +700,8 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                           <div className="text-lg font-semibold text-green-600">
                             {(() => {
-                              // ABSOLUTE FIX: Force exact 408,763 SF when all bays selected
-                              if (selectedBayConfigurations.length === selectedProperty?.bayConfigurations?.length) {
-                                return "408,763"; // Exact server value
-                              }
-                              let directSum = 0;
-                              selectedBayConfigurations.forEach(bay => {
-                                directSum += (bay.squareFootage || 0);
-                              });
-                              return directSum.toLocaleString();
+                              const selectedBaySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
+                              return selectedBaySquareFootage.toLocaleString();
                             })()} SF
                           </div>
                           <p className="text-xs text-gray-500">Available for tenant use</p>
@@ -717,23 +710,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
                           <div className="text-lg font-semibold text-orange-600">
                             {(() => {
-                              // ABSOLUTE FIX: Force exact 426 SF when all bays selected
-                              if (selectedBayConfigurations.length === selectedProperty?.bayConfigurations?.length) {
-                                return "426"; // Exact server value
-                              }
-                              let directSum = 0;
-                              selectedBayConfigurations.forEach(bay => {
-                                directSum += (bay.squareFootage || 0);
-                              });
+                              const selectedBaySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
                               const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
-                              
+
                               if (selectedProperty?.bayConfigurations) {
-                                // Partial selection = proportional
-                                let totalPropertyBaysSF = 0;
-                                selectedProperty.bayConfigurations.forEach((bay: any) => {
-                                  totalPropertyBaysSF += (bay.squareFootage || 0);
-                                });
-                                const proportionalMechanical = totalPropertyBaysSF > 0 ? (directSum / totalPropertyBaysSF) * mechanicalRoomSF : 0;
+                                const totalPropertyBaysSF = selectedProperty.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
+                                const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
                                 return Math.round(proportionalMechanical).toLocaleString();
                               }
                               return '0';

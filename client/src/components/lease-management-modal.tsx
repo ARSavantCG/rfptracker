@@ -18,13 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Trash2, Edit, Plus, Building, Users, Printer } from "lucide-react";
 import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { BaySelectionGrid } from "@/components/bay-selection-grid";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
@@ -241,42 +241,17 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                         <FormItem>
                           <FormLabel>Assigned Bays</FormLabel>
                           <FormControl>
-                            <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto border rounded-md p-3">
-                              {availableBays.map((bay) => (
-                                <div
-                                  key={bay.id}
-                                  className={`flex items-center space-x-2 ${
-                                    leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
-                                      ? "opacity-50"
-                                      : ""
-                                  }`}
-                                >
-                                  <Checkbox
-                                    id={bay.id}
-                                    checked={field.value.includes(bay.id)}
-                                    disabled={
-                                      leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
-                                    }
-                                    onCheckedChange={(checked) => {
-                                      if (checked) {
-                                        field.onChange([...field.value, bay.id]);
-                                      } else {
-                                        field.onChange(field.value.filter((id: string) => id !== bay.id));
-                                      }
-                                    }}
-                                  />
-                                  <label
-                                    htmlFor={bay.id}
-                                    className={`text-sm font-medium cursor-pointer ${
-                                      leasedBays.includes(bay.id) && !editingLease?.assignedBays?.includes(bay.id)
-                                        ? "text-gray-400"
-                                        : ""
-                                    }`}
-                                  >
-                                    {bay.bayName}
-                                  </label>
-                                </div>
-                              ))}
+                            <div className="border rounded-md">
+                              <BaySelectionGrid
+                                property={property}
+                                excludeLeaseId={editingLease?.id}
+                                initialSelectedBays={(property?.bayConfigurations || []).filter(
+                                  (bay: BayConfiguration) => field.value?.includes(bay.id)
+                                )}
+                                onSelectionChange={(selectedBays) => {
+                                  field.onChange(selectedBays.map((bay) => bay.id));
+                                }}
+                              />
                             </div>
                           </FormControl>
                           

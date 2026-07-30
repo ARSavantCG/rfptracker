@@ -22,6 +22,12 @@ interface BaySelectionGridProps {
   initialSelectedBays?: BayConfiguration[]; // For single-building mode
   initialSelectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]};
   initialCostsPerBuilding?: {[propertyName: string]: BuildingCosts};
+  /**
+   * Lease being edited, if any. Its bays are excluded from leasedBayIds so the
+   * grid does not treat a lease's own bays as taken by someone else and lock
+   * the user out of the selection they are trying to change.
+   */
+  excludeLeaseId?: number;
 }
 
 export function BaySelectionGrid({ 
@@ -32,7 +38,8 @@ export function BaySelectionGrid({
   onMultiBuildingToggle,
   initialSelectedBays = [],
   initialSelectedBaysPerBuilding = {},
-  initialCostsPerBuilding = {}
+  initialCostsPerBuilding = {},
+  excludeLeaseId
 }: BaySelectionGridProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<Set<string>>(new Set());
   const [multiBuildingMode, setMultiBuildingMode] = useState(isMultiBuilding);
@@ -65,7 +72,9 @@ export function BaySelectionGrid({
     : (executedLeasesForProperty || []);
   
   // Get all leased bay IDs
-  const leasedBayIds = (allExecutedLeases || []).flatMap(lease => lease.assignedBays || []);
+  const leasedBayIds = (allExecutedLeases || [])
+    .filter(lease => excludeLeaseId == null || lease.id !== excludeLeaseId)
+    .flatMap(lease => lease.assignedBays || []);
 
   // Fetch demising wall improvements for visual boundary markers (single-building only)
   const { data: propertyImprovements = [] } = useQuery<any[]>({

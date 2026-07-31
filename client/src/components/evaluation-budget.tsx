@@ -1322,12 +1322,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Helper function to calculate rentable area from selected bays
   const calculateRentableArea = (): number => {
+    // Per-bay fallback to squareFootage. rentableSquareFootage is null on plenty
+    // of bay records (older and property-sourced ones), and summing only that
+    // field returned 0 for the whole RFP - which hid the Rentable Area readout
+    // entirely, since it is rendered only when the value is truthy. Every other
+    // call site in the app already uses `rentableSquareFootage || squareFootage`.
     if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
-      return Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-        return total + (bay.rentableSquareFootage || 0);
+      const fromBays = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
+        return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
       }, 0));
-    } else if (rfp?.warehouseArea) {
-      return parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
+      // Fall THROUGH to warehouseArea when the bays sum to nothing, rather than
+      // returning 0 - previously an empty bay list short-circuited the fallback.
+      if (fromBays > 0) return fromBays;
+    }
+    if (rfp?.warehouseArea) {
+      // parseFloat, not parseInt: "397,164 SF" truncates to 397 under parseInt.
+      const parsed = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
+      return isNaN(parsed) ? 0 : Math.round(parsed);
     }
     return 0;
   };
@@ -5337,11 +5348,21 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           <CardTitle>Budget Evaluation - {rfp?.projectName || 'Project'}</CardTitle>
           {(() => {
             const area = calculateRentableArea();
-            if (!area) return null;
+            if (!area) {
+              return (
+                <p className="text-sm text-amber-700 mt-1">
+                  Rentable Area unavailable &mdash; no bay areas or warehouse area recorded on this RFP.
+                </p>
+              );
+            }
             return (
-              <p className="text-sm text-muted-foreground mt-1">
-                Rentable Area: {area.toLocaleString()} SF
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm text-muted-foreground">Rentable Area</span>
+                <span className="text-base font-semibold tabular-nums text-blue-900 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
+                  {area.toLocaleString()} SF
+                </span>
+                <span className="text-xs text-muted-foreground">use as quantity for area-based scope</span>
+              </div>
             );
           })()}
         </CardHeader>

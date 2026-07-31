@@ -1347,10 +1347,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   useEffect(() => {
     if (budgetData.designSoftCosts.length === 0) return;
 
-    // Calculate total rentable area from selected bay configurations
-    const totalRentableArea = rfp?.selectedBayConfigurations 
-      ? rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0)
-      : 0;
+    // Use the shared helper so this effect, the header readout, and
+    // RecordProjectActuals all agree. The old inline version summed only
+    // rentableSquareFootage and returned 0 whenever that field was null.
+    const totalRentableArea = calculateRentableArea();
 
     // Calculate TI total
     const tiTotal = budgetData.tenantImprovements.reduce((sum, item) => {
@@ -1364,7 +1364,25 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       return desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"));
     });
     const designUnitPrice = designItem ? parseFloat(designItem.unitPrice || "0") : 0;
-    const calculatedDesignTotal = totalRentableArea * designUnitPrice;
+
+    // The Design figure that feeds cmBase must be what the Design line ACTUALLY
+    // totals, not what it would total if auto-calculated.
+    //
+    // Previously this was always totalRentableArea * designUnitPrice. When Design
+    // is manually overridden to a lump sum - "1 ls @ $55,000" - that formula
+    // re-reads the $55,000 as a per-SF rate and produces 32,025 x 55,000 =
+    // $1,761,375,000, which then became the Construction Management base and
+    // cascaded into Contingency. Observed 2026-07-31: CM billed $48,480,320.86
+    // against a correct value of $44,020.86.
+    //
+    // When the line is overridden, trust its stored total. Only compute when this
+    // effect is actually the thing that will set it.
+    const designIsOverridden = designItem ? manualOverrides.has(designItem.id) : false;
+    const calculatedDesignTotal = !designItem
+      ? 0
+      : designIsOverridden
+        ? parseFloat(designItem.totalPrice?.toString() || "0")
+        : totalRentableArea * designUnitPrice;
 
     // Calculate DSC total (excluding Design, CM, and Contingency for CM base calculation)
     const dscBeforeCM = budgetData.designSoftCosts
@@ -1556,7 +1574,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     budgetData.designSoftCosts.length,
     budgetData.designSoftCosts.reduce((sum, i) => sum + parseFloat(i.totalPrice?.toString() || "0"), 0),
     rfp?.selectedBayConfigurations?.length || 0,
-    rfp?.selectedBayConfigurations?.reduce((total, bay) => total + (bay.rentableSquareFootage || 0), 0) || 0,
+    rfp?.selectedBayConfigurations?.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0) || 0,
     manualOverrides
   ]);
 

@@ -78,6 +78,13 @@ const EXPIRING_WINDOW_DAYS = 365;
 // exists and its SF counts toward occupancy, but we cannot say whether it is
 // current. Do not silently treat that as Active.
 function leaseStatus(lease: ExecutedLease): { label: string; color: string } {
+  // Temporary access / licence agreements are labelled distinctly. NOTE: their SF
+  // still counts toward the property's occupied total, because deriveOccupiedSf
+  // treats every lease alike. Whether a temporary agreement should count as
+  // "leased" on a vacancy report is a business decision, not a technical one -
+  // flagged rather than silently changed.
+  if (lease.leaseType === 'temporary') return { label: 'Temporary', color: '#92400e' };
+
   const end = lease.leaseEndDate ? new Date(lease.leaseEndDate) : null;
   if (!end || isNaN(end.getTime())) return { label: 'Recorded', color: '#6b7280' };
   const now = new Date();

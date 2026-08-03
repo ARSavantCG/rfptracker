@@ -58,6 +58,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     hasSpeculativeOffice: false, 
     officeSquareFootage: "",
     hasRestroom: false,
+    suiteNumber: "",
+    spaceGeneration: "",
     canBeSplit: false,
     splitNorthSquareFootage: "",
     splitSouthSquareFootage: "",
@@ -291,6 +293,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
       officeSquareFootage: newBay.hasSpeculativeOffice ? (parseFloat((newBay.officeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
       hasRestroom: newBay.hasRestroom,
+      suiteNumber: newBay.suiteNumber?.trim() || undefined,
+      spaceGeneration: (newBay.spaceGeneration || undefined) as BayConfiguration['spaceGeneration'],
       canBeSplit: newBay.canBeSplit,
       splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
       splitSouthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthDockDoors) || 0) : undefined,
@@ -312,6 +316,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: false,
       officeSquareFootage: "",
       hasRestroom: false,
+      suiteNumber: "",
+      spaceGeneration: "",
       canBeSplit: false,
       splitNorthSquareFootage: "",
       splitSouthSquareFootage: "",
@@ -370,6 +376,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: false,
       officeSquareFootage: "",
       hasRestroom: false,
+      suiteNumber: "",
+      spaceGeneration: "",
       canBeSplit: false,
       splitNorthSquareFootage: "",
       splitSouthSquareFootage: "",
@@ -409,6 +417,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
       officeSquareFootage: bay.officeSquareFootage != null ? String(bay.officeSquareFootage) : "",
       hasRestroom: bay.hasRestroom || false,
+      suiteNumber: bay.suiteNumber || "",
+      spaceGeneration: bay.spaceGeneration || "",
       canBeSplit: bay.canBeSplit || false,
       splitNorthSquareFootage: bay.canBeSplit ? Math.floor(bay.squareFootage / 2).toString() : "",
       splitSouthSquareFootage: bay.canBeSplit ? Math.ceil(bay.squareFootage / 2).toString() : "",
@@ -459,6 +469,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: newBay.hasSpeculativeOffice,
       officeSquareFootage: newBay.hasSpeculativeOffice ? (parseFloat((newBay.officeSquareFootage || "").replace(/[^0-9.]/g, "")) || undefined) : undefined,
       hasRestroom: newBay.hasRestroom,
+      suiteNumber: newBay.suiteNumber?.trim() || undefined,
+      spaceGeneration: (newBay.spaceGeneration || undefined) as BayConfiguration['spaceGeneration'],
       canBeSplit: newBay.canBeSplit,
       splitNorthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitNorthDockDoors) || 0) : undefined,
       splitSouthDockDoors: newBay.canBeSplit ? (parseInt(newBay.splitSouthDockDoors) || 0) : undefined,
@@ -504,6 +516,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: false,
       officeSquareFootage: "",
       hasRestroom: false,
+      suiteNumber: "",
+      spaceGeneration: "",
       canBeSplit: false,
       splitNorthSquareFootage: "",
       splitSouthSquareFootage: "",
@@ -535,6 +549,8 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
       hasSpeculativeOffice: false,
       officeSquareFootage: "",
       hasRestroom: false,
+      suiteNumber: "",
+      spaceGeneration: "",
       canBeSplit: false,
       splitNorthSquareFootage: "",
       splitSouthSquareFootage: "",
@@ -923,6 +939,33 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                       />
                     </div>
                   )}
+                  {/* Suite number and space generation */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="suiteNumber" className="text-sm font-medium">Suite Number</Label>
+                      <Input
+                        id="suiteNumber"
+                        placeholder="Optional, e.g. 200"
+                        value={newBay.suiteNumber}
+                        onChange={(e) => setNewBay({ ...newBay, suiteNumber: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Leave blank to show nothing.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="spaceGeneration" className="text-sm font-medium">Space Generation</Label>
+                      <select
+                        id="spaceGeneration"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={newBay.spaceGeneration}
+                        onChange={(e) => setNewBay({ ...newBay, spaceGeneration: e.target.value })}
+                      >
+                        <option value="">Not specified</option>
+                        <option value="first">1st Gen &mdash; raw shell</option>
+                        <option value="second">2nd Gen &mdash; prior improvements</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">2nd gen may need demo or allow reuse.</p>
+                    </div>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox 
                       id="hasRestroom"
@@ -1290,6 +1333,32 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                     />
                                   </div>
                                 )}
+                                {/* Suite number and space generation */}
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label htmlFor="editSuiteNumber" className="text-xs text-muted-foreground">Suite Number</Label>
+                                    <Input
+                                      id="editSuiteNumber"
+                                      className="h-8 text-xs"
+                                      placeholder="Optional, e.g. 200"
+                                      value={newBay.suiteNumber}
+                                      onChange={(e) => setNewBay({ ...newBay, suiteNumber: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="editSpaceGeneration" className="text-xs text-muted-foreground">Space Generation</Label>
+                                    <select
+                                      id="editSpaceGeneration"
+                                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                      value={newBay.spaceGeneration}
+                                      onChange={(e) => setNewBay({ ...newBay, spaceGeneration: e.target.value })}
+                                    >
+                                      <option value="">Not specified</option>
+                                      <option value="first">1st Gen &mdash; raw shell</option>
+                                      <option value="second">2nd Gen &mdash; prior improvements</option>
+                                    </select>
+                                  </div>
+                                </div>
                                 <div className="flex items-center space-x-2">
                                   <Checkbox 
                                     id="editHasRestroom"

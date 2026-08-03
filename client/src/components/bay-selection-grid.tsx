@@ -72,8 +72,21 @@ export function BaySelectionGrid({
     : (executedLeasesForProperty || []);
   
   // Get all leased bay IDs
-  const leasedBayIds = (allExecutedLeases || [])
-    .filter(lease => excludeLeaseId == null || lease.id !== excludeLeaseId)
+  const relevantLeases = (allExecutedLeases || [])
+    .filter(lease => excludeLeaseId == null || lease.id !== excludeLeaseId);
+
+  // Only EXECUTED leases block a bay from being selected. Temporary access /
+  // licence agreements are surfaced so the space is known to be occupied, but
+  // they are short-term and a real deal can legitimately be worked on the same
+  // space - so they must not gate.
+  // Rows written before lease_type existed read as null; treat those as executed,
+  // which is the historically correct interpretation.
+  const leasedBayIds = relevantLeases
+    .filter(lease => (lease.leaseType || 'executed') !== 'temporary')
+    .flatMap(lease => lease.assignedBays || []);
+
+  const temporaryBayIds = relevantLeases
+    .filter(lease => lease.leaseType === 'temporary')
     .flatMap(lease => lease.assignedBays || []);
 
   // Fetch demising wall improvements for visual boundary markers (single-building only)
@@ -742,6 +755,8 @@ export function BaySelectionGrid({
                               <div key={bayNumber} className="flex flex-col gap-0.5">
                                 {sortedBays.map((bay: any) => {
                                   const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
+                                  // Occupied under a temporary agreement: shown, but still selectable.
+                                  const isTemporary = temporaryBayIds.includes(bay.id) || temporaryBayIds.includes(bay.parentBayId);
                                   const isSelected = propSelectedIds.has(bay.id);
                                   const isSplitBay = bay.isSplitBay;
                                   const splitSideClass = isSplitBay 
@@ -933,6 +948,8 @@ export function BaySelectionGrid({
                         <div key={bayNumber} className="flex flex-col gap-0.5">
                           {sortedBays.map((bay: any) => {
                             const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
+                            // Occupied under a temporary agreement: shown, but still selectable.
+                            const isTemporary = temporaryBayIds.includes(bay.id) || temporaryBayIds.includes(bay.parentBayId);
                             const isSelected = selectedBayIds.has(bay.id);
                             const isSplitBay = bay.isSplitBay;
                             const splitSideClass = isSplitBay 
@@ -962,12 +979,18 @@ export function BaySelectionGrid({
                                       ? 'bg-red-800 border-red-900 text-white cursor-not-allowed opacity-95'
                                       : `hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500
                                          ${isSelected ? 'ring-2 ring-orange-500 shadow-lg' : ''}
+                                         ${isTemporary ? 'border-dashed border-amber-500 bg-amber-50' : ''}
                                          ${getBayColor(isSelected)}`
                                     }
                                   `}
                                   data-testid={`bay-button-${getBayDisplayName(bay.bayName || `Bay ${bay.bayNumber}`).replace(/\s/g, '-')}`}
                                 >
                                   <div className="text-center w-full">
+                                    {bay.suiteNumber && String(bay.suiteNumber).trim() && (
+                                      <div className="text-blue-800 font-semibold" style={{fontSize: '7px', lineHeight: '8px'}}>
+                                        STE {String(bay.suiteNumber).trim()}
+                                      </div>
+                                    )}
                                     <div className="font-bold" style={{fontSize: '9px', lineHeight: '10px', marginBottom: '2px'}}>
                                       {isSplitBay ? (
                                         <>
@@ -986,6 +1009,19 @@ export function BaySelectionGrid({
                                         <span className="text-gray-400" style={{fontSize: '7px'}}> ({fmtPctOfBuilding(bay.rentableSquareFootage || bay.squareFootage)})</span>
                                       )}
                                     </div>
+                                    {bay.spaceGeneration && (
+                                      <div
+                                        className={bay.spaceGeneration === 'second' ? 'text-purple-700 font-semibold' : 'text-gray-500'}
+                                        style={{fontSize: '7px', lineHeight: '8px'}}
+                                      >
+                                        {bay.spaceGeneration === 'second' ? '2nd Gen' : '1st Gen'}
+                                      </div>
+                                    )}
+                                    {isTemporary && (
+                                      <div className="text-amber-700 font-semibold" style={{fontSize: '7px', lineHeight: '8px'}}>
+                                        TEMP
+                                      </div>
+                                    )}
                                     
                                     {/* Vertical Stack: Doors → Amenities */}
                                     <div className="flex flex-col items-center gap-px">

@@ -35,6 +35,7 @@ const leaseFormSchema = z.object({
   accessibleParking: z.number().min(0).default(0),
   evParking: z.number().min(0).default(0),
   trailerParking: z.number().min(0).default(0),
+  leaseType: z.enum(['executed', 'temporary']).default('executed'),
   electricalAllocation: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
@@ -63,6 +64,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       accessibleParking: 0,
       evParking: 0,
       trailerParking: 0,
+      leaseType: 'executed' as const,
       electricalAllocation: undefined,
       notes: "",
     },
@@ -135,6 +137,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       accessibleParking: lease.accessibleParking || 0,
       evParking: lease.evParking || 0,
       trailerParking: lease.trailerParking || 0,
+      leaseType: (lease.leaseType === 'temporary' ? 'temporary' : 'executed') as 'executed' | 'temporary',
       electricalAllocation: lease.electricalAllocation ?? undefined,
       notes: lease.notes || "",
     });
@@ -285,6 +288,33 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           <div className="text-xs text-orange-600 mt-1 font-medium">
                             <strong>Optional:</strong> Enter the actual lease area if it differs from the calculated bay area above. 
                             This will override the bay calculation for all lease displays and reports.
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Lease Type */}
+                    <FormField
+                      control={form.control}
+                      name="leaseType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Agreement Type</FormLabel>
+                          <FormControl>
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            >
+                              <option value="executed">Executed Lease</option>
+                              <option value="temporary">Temporary / Access Agreement</option>
+                            </select>
+                          </FormControl>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {field.value === 'temporary'
+                              ? 'Shown in the bay grid with a dashed amber border and a TEMP marker, but the bays stay selectable for RFPs and other leases.'
+                              : 'Blocks its bays from selection in the bay grid.'}
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -518,7 +548,11 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <div className="text-sm">
                               <span className="text-gray-500">Parking:</span>
                               <span className="ml-2 font-medium">
-                                {`${lease.standardParking || 0} Std, ${lease.accessibleParking || 0} ADA, ${lease.evParking || 0} EV, ${lease.trailerParking || 0} Trailer`}{lease.electricalAllocation ? ` · ${lease.electricalAllocation.toLocaleString()} A` : ''}
+                                {lease.leaseType === 'temporary' && (
+                                  <span className="inline-block mr-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-semibold align-middle">
+                                    TEMPORARY
+                                  </span>
+                                )}{`${lease.standardParking || 0} Std, ${lease.accessibleParking || 0} ADA, ${lease.evParking || 0} EV, ${lease.trailerParking || 0} Trailer`}{lease.electricalAllocation ? ` · ${lease.electricalAllocation.toLocaleString()} A` : ''}
                               </span>
                             </div>
                           </div>

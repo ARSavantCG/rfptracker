@@ -607,6 +607,19 @@ export type BayConfiguration = {
   id: string;
   bayName: string; // e.g., "Bay 1-2", "Bay 2-3", etc.
   squareFootage: number;
+
+  // Optional leasing identifier shown above the bay name in the selection grid.
+  // Blank/undefined renders nothing - bays are identified by bayName by default
+  // and only some properties assign suite numbers.
+  suiteNumber?: string;
+
+  // First generation = raw shell, never built out. Second generation = carries
+  // improvements left by a prior tenant, which may be reusable or need demo.
+  // Deliberately NOT derived from hasSpeculativeOffice: a bay can be occupied and
+  // demolished back to shell, and spec office is landlord work, not a prior
+  // tenant's leftovers. Undefined means "not yet assessed" and renders nothing -
+  // it is not the same as first generation.
+  spaceGeneration?: 'first' | 'second';
   standardDockDoors: number; // Count of standard overhead dock doors
   oversizedDockDoors: number; // Count of oversized dock doors
   mechanicalRoomAllocation?: number; // Calculated mechanical room square footage allocation for this bay
@@ -1033,6 +1046,14 @@ export const executedLeases = pgTable("executed_leases", {
   leaseEndDate: timestamp("lease_end_date"),
   rentableSquareFootage: integer("rentable_square_footage"), // Actual leased square footage for space management
   bayNumbers: text("bay_numbers"), // Human readable bay numbers (e.g., "Bay 1-2, Bay 3-4")
+
+  // 'executed'  - a signed lease. Blocks its bays from further selection.
+  // 'temporary' - an access/licence agreement. Shown in the grid so the space is
+  //               known to be occupied, but does NOT block selection: these are
+  //               short-term and a real deal can be worked on the same space.
+  // Nullable rather than defaulted so existing rows read as executed without a
+  // backfill, which is the historically correct interpretation.
+  leaseType: text("lease_type").default('executed'),
   
   // Override and parking allocation
   rentableAreaOverride: integer("rentable_area_override"), // Override calculated area with actual lease terms

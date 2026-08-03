@@ -791,3 +791,55 @@ zero vs null price, comma-formatted money.
   (a) evaluation budget, (b) both ROM pilot modals, and confirm the floor holds.
 - Catalog-library integration (`pricing_library.xlsx`, 81 items, UNIT/ASSY,
   includedBasisQty/overage, pricing_rounds, median mode) is specified but NOT built.
+
+## 2026-08-03 (later) — Percent-fee rows bypassed the minimum entirely — FIXED
+
+**Reported by Adolfo:** entered builder's risk at 0.01 (1%) on a new RFP; the
+catalog minimum did not kick in. Correct report — the earlier fix did not cover
+this path.
+
+**Root cause.** Percent fees never go through `qty * unitPrice`. Six auto-populate
+branches in `evaluation-budget.tsx` (design/architect, builder's risk, permit fees,
+CM, contingency, demising wall) and `computeRomFeeTotals()` in `server/rom-routes.ts`
+compute `base * rate` and then ASSIGN the result over `totalPrice`. So
+`computeLineTotal` ran, applied the floor correctly, and the fee engine stomped it
+immediately after.
+
+Note the count: I initially identified FOUR fee branches by reading. A scripted
+assert found SIX. The two extra were design/architect and demising wall — and
+demising wall is the flagship 200 LF minimum case.
+
+**Fix.** `applyFeeMinimum(computed, item)` in `shared/line-total.ts`, applied at all
+seven sites (6 client branches + server fee engine).
+
+**Semantics (confirmed by Adolfo 2026-08-03).** The minimum is a floor on the FEE
+ITSELF: `MAX(base * rate, minimum)`. This matches a carrier writing a minimum policy
+premium — 1% of TI, but not less than $2,500. It is NOT a floor on the base that the
+rate applies to. Do not reinterpret this without asking.
+
+**Snapshot shape problem.** Evaluation line items carry the catalog minimum on
+`romSnapshot` (import / spec-tag paths) OR `masterItemSnapshot` (manual picker) OR
+directly (raw catalog row). `resolveMinimumSource()` checks all three in that order,
+and an EMPTY earlier snapshot does not veto a later one — that near-miss is covered
+by a test. `masterItemSnapshot` construction in `server/intake-parser-routes.ts` and
+the `EvaluationLineItem` type were extended to carry `minimumCost`/`hasMinimumCost`.
+
+**Tests.** `test-line-total.ts` now 52 assertions. Run: `npx tsx test-line-total.ts`.
+
+### Lessons banked
+- **A fix that computes the right number is worthless if a later pass overwrites it.**
+  Grep for ASSIGNMENTS to `totalPrice`, not just for the arithmetic that produces it.
+  `it.totalPrice = computed.toString()` was the whole bug.
+- **Count the branches with a script, not by reading.** Reading found 4 of 6.
+  `assert s.count(pattern) == N` catches the miss before it ships.
+- Percent fees are a genuinely separate calculation family from unit-priced lines.
+  They share the minimum concept but not the math — hence two exported helpers.
+
+### OPEN
+- Still no backfill of historical rows (unchanged from the earlier entry).
+- Fee-base definitions STILL owed by Adolfo (permit "construction costs" scope;
+  does contingency exclude other fees; CM before/after contingency). The minimum now
+  floors whatever base those definitions settle on — changing a base changes which
+  lines hit their floor, so re-verify minimums after those are answered.
+- Not verified against helium or Neon. Needs click-through on the RFP that showed
+  the bug: builder's risk at 1% with a minimum-bearing catalog item.

@@ -27,7 +27,7 @@ import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
-import { computeLineTotal } from "@shared/line-total";
+import { computeLineTotal, applyFeeMinimum } from "@shared/line-total";
 
 interface MasterCategory {
   id: number;
@@ -51,7 +51,7 @@ interface EvaluationLineItem {
   masterCategoryId?: number | null;
   isFixedAllowance?: boolean; // When true, line displays its exact entered value — exempt from hidden-cost distribution
   masterItemId?: number | null; // Links this line item back to a rom_scope_items catalog entry, when picked from a Scope of Work / ROM catalog selection
-  masterItemSnapshot?: { description: string; unit: string; unitPrice: string; calculationBasis?: string | null } | null; // Snapshot of the catalog item at time of selection
+  masterItemSnapshot?: { description: string; unit: string; unitPrice: string; calculationBasis?: string | null; minimumCost?: string | null; hasMinimumCost?: boolean | null } | null; // Snapshot of the catalog item at time of selection
   customDescription?: string | null;
 }
 
@@ -1422,7 +1422,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) {
         const newQty = totalRentableArea;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
         
         // Only update if different
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
@@ -1450,7 +1454,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           basis === "pct-rentable-sf" ? totalRentableArea :
           tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
 
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
@@ -1472,7 +1480,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           basis === "pct-rentable-sf" ? totalRentableArea :
           tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
 
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
@@ -1494,7 +1506,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           basis === "pct-rentable-sf" ? totalRentableArea :
           cmBase;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
 
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
@@ -1551,7 +1567,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           basis === "pct-rentable-sf" ? totalRentableArea :
           contingencyBase;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
 
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {
           return {
@@ -1790,7 +1810,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       if (desc.includes("demising wall")) {
         const newQty = buildingDepth;
         const unitPx = parseFloat(item.unitPrice || "0");
-        const newTotal = (newQty * unitPx).toString();
+        // These auto-populate branches compute base x rate and ASSIGN over
+        // totalPrice, bypassing computeLineTotal — so the catalog minimum has to
+        // be applied here too, or it is lost (builder's risk minimum premium,
+        // demising wall 200 LF minimum). See shared/line-total.ts.
+        const newTotal = applyFeeMinimum(newQty * unitPx, item).total.toString();
         
         // Only update if different
         if (item.quantity !== newQty || item.totalPrice !== newTotal) {

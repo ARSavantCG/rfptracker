@@ -1,6 +1,6 @@
 // Tests for shared/line-total.ts — the minimum-cost-aware line math.
 // Run: npx tsx test-line-total.ts
-import { computeLineTotal, effectiveMinimumCost, parseMoney } from './shared/line-total';
+import { computeLineTotal, effectiveMinimumCost, parseMoney, applyFeeMinimum, resolveMinimumSource } from './shared/line-total';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: any, expected: any) {
@@ -87,6 +87,48 @@ check('works off a romSnapshot-shaped object',
     quantity: 10, unitPrice: '48.75',
     item: { hasMinimumCost: true, minimumCost: '9,750.00' },
   }).total, 9750);
+
+
+// ── applyFeeMinimum: percent-fee rows (builder's risk, permit, CM, contingency) ──
+// These compute base x rate and ASSIGN over totalPrice, so they need their own floor.
+const brWithMin = { masterItemSnapshot: { hasMinimumCost: true, minimumCost: '2500' } };
+
+// 1% of a $150,000 TI total = $1,500, under a $2,500 minimum premium.
+const brLow = applyFeeMinimum(150000 * 0.01, brWithMin);
+check('BUG CASE: builders risk 1% below minimum premium bills the floor', brLow.total, 2500);
+check('BUG CASE: computed fee preserved for display', brLow.computed, 1500);
+check('BUG CASE: fee minimum flagged', brLow.minimumApplied, true);
+
+// 1% of $400,000 = $4,000, above the minimum.
+const brHigh = applyFeeMinimum(400000 * 0.01, brWithMin);
+check('builders risk above minimum bills actual', brHigh.total, 4000);
+check('builders risk above minimum not flagged', brHigh.minimumApplied, false);
+
+check('fee with no minimum passes through',
+  applyFeeMinimum(1500, { masterItemSnapshot: { description: 'x' } }).total, 1500);
+check('fee with null item passes through', applyFeeMinimum(1500, null).total, 1500);
+check('fee NaN coerced to 0', applyFeeMinimum(NaN, null).total, 0);
+check('fee exactly at minimum not flagged',
+  applyFeeMinimum(2500, brWithMin).minimumApplied, false);
+
+// ── resolveMinimumSource: snapshot shape independence ────────────────────────
+check('resolves from romSnapshot',
+  effectiveMinimumCost(resolveMinimumSource({
+    romSnapshot: { hasMinimumCost: true, minimumCost: '9750' } })), 9750);
+check('resolves from masterItemSnapshot',
+  effectiveMinimumCost(resolveMinimumSource({
+    masterItemSnapshot: { hasMinimumCost: true, minimumCost: '2500' } })), 2500);
+check('resolves from the item itself (raw catalog row)',
+  effectiveMinimumCost(resolveMinimumSource({ hasMinimumCost: true, minimumCost: '500' })), 500);
+check('an EMPTY romSnapshot does not veto masterItemSnapshot',
+  effectiveMinimumCost(resolveMinimumSource({
+    romSnapshot: { unit: 'lf.' },
+    masterItemSnapshot: { hasMinimumCost: true, minimumCost: '2500' } })), 2500);
+check('romSnapshot wins when both carry a minimum',
+  effectiveMinimumCost(resolveMinimumSource({
+    romSnapshot: { hasMinimumCost: true, minimumCost: '9750' },
+    masterItemSnapshot: { hasMinimumCost: true, minimumCost: '2500' } })), 9750);
+check('no minimum anywhere -> null', resolveMinimumSource({ romSnapshot: {}, description: 'x' }), null);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

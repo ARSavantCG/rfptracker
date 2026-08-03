@@ -16,7 +16,7 @@ import { requireAuth, checkPermission } from './middleware';
 // owner match on createdByUserId, NULL owner fails closed to admin-only).
 import { requireRfpOwnership, requireRomOwnership } from './ownership';
 import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
-import { computeLineTotal } from '@shared/line-total';
+import { computeLineTotal, applyFeeMinimum } from '@shared/line-total';
 import { eq, desc, and } from 'drizzle-orm';
 import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
 
@@ -1089,11 +1089,17 @@ function computeRomFeeTotals(items: any[], catalogById: Map<any, any>) {
     if (!isPercentFeeItem(cat)) continue;
     const pct = extractPctFromName(cat?.name || "");
     if (pct == null) continue;
-    const computed = subtotal * (pct / 100);
+    // MAX(base x rate, catalog minimum) — the minimum is a floor on the FEE,
+    // matching a carrier's minimum policy premium. Without this the assignment
+    // below stomps any floor computeLineTotal applied. See shared/line-total.ts.
+    const floored = applyFeeMinimum(subtotal * (pct / 100), cat);
+    const computed = floored.total;
     it.unitPrice = computed.toString();
     it.quantity = "1";
     it.tenantShare = 100;
     it.totalPrice = computed.toString();
+    it.minimumApplied = floored.minimumApplied;
+    it.minimumCost = floored.minimumCost;
     feeTotal += computed;
     if (/construction management|cm fee/i.test(cat?.name || "")) cmFeeTotal += computed;
   }

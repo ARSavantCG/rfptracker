@@ -466,7 +466,15 @@ If you cannot find any scope, return {"proposals": []}.`
           unit: normalizeUnit(catItem?.unit),
           masterItemId: catItem ? catItem.id : null,
           masterItemSnapshot: catItem
-            ? { description: catItem.name, unit: normalizeUnit(catItem.unit), unitPrice: catItem.unitPrice || "0" }
+            ? {
+                description: catItem.name,
+                unit: normalizeUnit(catItem.unit),
+                unitPrice: catItem.unitPrice || "0",
+                // Minimum must ride on the snapshot or the fee/auto-populate
+                // branches cannot floor this line. See shared/line-total.ts.
+                minimumCost: catItem.minimumCost ?? null,
+                hasMinimumCost: catItem.hasMinimumCost ?? false,
+              }
             : null,
         });
         existingDescriptions.add(desc.toLowerCase());

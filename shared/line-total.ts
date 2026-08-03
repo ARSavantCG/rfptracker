@@ -98,3 +98,62 @@ export function computeLineTotal(input: LineTotalInput): LineTotalResult {
 export function lineTotal(input: LineTotalInput): number {
   return computeLineTotal(input).total;
 }
+
+/**
+ * Finds the minimum-cost fields on a line item regardless of which snapshot
+ * shape it carries.
+ *
+ * Evaluation line items carry `romSnapshot` (catalog import / spec-tag paths)
+ * or `masterItemSnapshot` (manual picker path) or, for a raw catalog row, the
+ * fields directly. Checking only one of these is why a fix can appear to work
+ * on one screen and silently miss on another. Order: romSnapshot, then
+ * masterItemSnapshot, then the item itself. First one with the flag ON wins;
+ * a snapshot that merely EXISTS does not veto a later source.
+ */
+export function resolveMinimumSource(item: any): MinimumCostSource | null {
+  if (!item) return null;
+  const candidates = [item.romSnapshot, item.masterItemSnapshot, item];
+  for (const c of candidates) {
+    if (c && effectiveMinimumCost(c) !== null) return c;
+  }
+  return null;
+}
+
+export interface FeeFloorResult {
+  /** The fee after the minimum is applied. */
+  total: number;
+  /** The fee before the minimum, kept for display / explanation. */
+  computed: number;
+  /** True when the minimum raised the fee. */
+  minimumApplied: boolean;
+  minimumCost: number | null;
+}
+
+/**
+ * Applies a catalog minimum to a PERCENT-FEE row.
+ *
+ * WHY THIS IS SEPARATE FROM computeLineTotal (Adolfo 2026-08-03):
+ * Percent fees — builder's risk, permit fees, CM, contingency — do not go
+ * through quantity x unitPrice. They are computed as base x rate and then
+ * ASSIGNED over totalPrice, which stomped any minimum computeLineTotal had
+ * already applied. Builder's risk entered at 1% produced 1% of TI total with
+ * no floor, even though the catalog item carried a minimum premium.
+ *
+ * Semantics confirmed by Adolfo: the minimum is a floor on the FEE ITSELF —
+ * MAX(base x rate, minimum) — matching how a carrier writes a minimum policy
+ * premium. It is NOT a floor on the base the rate applies to.
+ */
+export function applyFeeMinimum(computed: number, item: any): FeeFloorResult {
+  const source = resolveMinimumSource(item);
+  const minimumCost = effectiveMinimumCost(source);
+  const safeComputed = isNaN(computed) ? 0 : computed;
+  if (minimumCost === null) {
+    return { total: safeComputed, computed: safeComputed, minimumApplied: false, minimumCost: null };
+  }
+  return {
+    total: Math.max(safeComputed, minimumCost),
+    computed: safeComputed,
+    minimumApplied: minimumCost > safeComputed,
+    minimumCost,
+  };
+}

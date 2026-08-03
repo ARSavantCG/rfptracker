@@ -28,6 +28,18 @@ interface BaySelectionGridProps {
    * the user out of the selection they are trying to change.
    */
   excludeLeaseId?: number;
+  /**
+   * Strips the Card border/shadow and header; renders just the bay scroll grid
+   * with inline Select All/Clear controls. Use when embedding inside a form or
+   * modal that already provides its own framing. Always implies single-building
+   * mode — multi-building toggle is hidden.
+   */
+  compact?: boolean;
+  /**
+   * When true all bays are selectable regardless of executed-lease status.
+   * Use in contexts where lease availability is irrelevant (e.g. cost rows).
+   */
+  disableLeaseLocking?: boolean;
 }
 
 export function BaySelectionGrid({ 
@@ -39,7 +51,9 @@ export function BaySelectionGrid({
   initialSelectedBays = [],
   initialSelectedBaysPerBuilding = {},
   initialCostsPerBuilding = {},
-  excludeLeaseId
+  excludeLeaseId,
+  compact = false,
+  disableLeaseLocking = false,
 }: BaySelectionGridProps) {
   const [selectedBayIds, setSelectedBayIds] = useState<Set<string>>(new Set());
   const [multiBuildingMode, setMultiBuildingMode] = useState(isMultiBuilding);
@@ -88,6 +102,10 @@ export function BaySelectionGrid({
   const temporaryBayIds = relevantLeases
     .filter(lease => lease.leaseType === 'temporary')
     .flatMap(lease => lease.assignedBays || []);
+
+  // In disableLeaseLocking mode (e.g. cost rows) all bays are selectable.
+  const effectiveLeasedBayIds = disableLeaseLocking ? [] as string[] : leasedBayIds;
+  const effectiveTemporaryBayIds = disableLeaseLocking ? [] as string[] : temporaryBayIds;
 
   // Fetch demising wall improvements for visual boundary markers (single-building only)
   const { data: propertyImprovements = [] } = useQuery<any[]>({
@@ -497,7 +515,7 @@ export function BaySelectionGrid({
       // Filter out leased bays - check parent bay IDs for split bays
       const availableIndividualBays = individualBays.filter((bay: any) => {
         const parentId = bay.parentBayId || bay.id;
-        return !leasedBayIds.includes(parentId);
+        return !effectiveLeasedBayIds.includes(parentId);
       });
       
       const availableBayIds = new Set(availableIndividualBays.map((bay: any) => bay.id));
@@ -608,65 +626,67 @@ export function BaySelectionGrid({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            {multiBuildingMode ? <Building2 className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
-            <span>
-              {multiBuildingMode 
-                ? (() => {
-                    const propertiesWithInitialSelections = Object.keys(initialSelectedBaysPerBuilding);
-                    const filteredCount = propertiesWithInitialSelections.length > 0 
-                      ? properties.filter(prop => {
-                          const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
-                          return propertiesWithInitialSelections.includes(buildingKey);
-                        }).length
-                      : properties.length;
-                    return `Multi-Building Bay Selection (${filteredCount} properties)`;
-                  })()
-                : `Bay Selection Grid - ${property?.propertyName || 'Property'}`
-              }
-            </span>
-          </CardTitle>
-          <div className="flex items-center space-x-4">
-            {/* Multi-Building Toggle */}
-            {onMultiBuildingToggle && (
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="multi-building-toggle" className="text-sm font-medium">
-                  Multi-Building
-                </Label>
-                <Switch
-                  id="multi-building-toggle"
-                  checked={multiBuildingMode}
-                  onCheckedChange={handleMultiBuildingToggle}
-                />
-              </div>
-            )}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={selectAllAvailable}
-              data-testid="button-select-all-available"
-            >
-              <Grid className="h-4 w-4 mr-1" />
-              Select All Available
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearSelection}
-              disabled={multiBuildingMode ? Object.keys(selectedBaysPerBuilding).length === 0 : selectedBayIds.size === 0}
-              data-testid="button-clear-all"
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Clear All
-            </Button>
+    <Card className={compact ? "border-0 shadow-none" : undefined}>
+      {!compact && (
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              {multiBuildingMode ? <Building2 className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+              <span>
+                {multiBuildingMode 
+                  ? (() => {
+                      const propertiesWithInitialSelections = Object.keys(initialSelectedBaysPerBuilding);
+                      const filteredCount = propertiesWithInitialSelections.length > 0 
+                        ? properties.filter(prop => {
+                            const buildingKey = `${prop.propertyName} - Building ${prop.building}`;
+                            return propertiesWithInitialSelections.includes(buildingKey);
+                          }).length
+                        : properties.length;
+                      return `Multi-Building Bay Selection (${filteredCount} properties)`;
+                    })()
+                  : `Bay Selection Grid - ${property?.propertyName || 'Property'}`
+                }
+              </span>
+            </CardTitle>
+            <div className="flex items-center space-x-4">
+              {/* Multi-Building Toggle */}
+              {onMultiBuildingToggle && (
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="multi-building-toggle" className="text-sm font-medium">
+                    Multi-Building
+                  </Label>
+                  <Switch
+                    id="multi-building-toggle"
+                    checked={multiBuildingMode}
+                    onCheckedChange={handleMultiBuildingToggle}
+                  />
+                </div>
+              )}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={selectAllAvailable}
+                data-testid="button-select-all-available"
+              >
+                <Grid className="h-4 w-4 mr-1" />
+                Select All Available
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+                disabled={multiBuildingMode ? Object.keys(selectedBaysPerBuilding).length === 0 : selectedBayIds.size === 0}
+                data-testid="button-clear-all"
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Clear All
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {multiBuildingMode ? (
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "p-0 space-y-2" : "space-y-6"}>
+        {(!compact && multiBuildingMode) ? (
           /* Multi-Building Mode */
           <div className="space-y-6">
             {(() => {
@@ -857,6 +877,37 @@ export function BaySelectionGrid({
         ) : (
           /* Single Building Mode */
           <div className="space-y-2">
+            {/* Compact mode: inline Select All / Clear / count bar */}
+            {compact && (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllAvailable}
+                  data-testid="button-select-all-available"
+                >
+                  <Grid className="h-3 w-3 mr-1" />
+                  Select All
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  disabled={selectedBayIds.size === 0}
+                  data-testid="button-clear-all"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+                {selectedBayIds.size > 0 && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {selectedBays.length} bay{selectedBays.length !== 1 ? 's' : ''} selected
+                  </Badge>
+                )}
+              </div>
+            )}
             {/* Building Orientation Compass for Single Building */}
             {property && property.firstBayDirection && (
               <div className="flex justify-center mb-3">
@@ -947,9 +998,9 @@ export function BaySelectionGrid({
                       const bayGroup = (
                         <div key={bayNumber} className="flex flex-col gap-0.5">
                           {sortedBays.map((bay: any) => {
-                            const isLeased = leasedBayIds.includes(bay.id) || leasedBayIds.includes(bay.parentBayId);
+                            const isLeased = effectiveLeasedBayIds.includes(bay.id) || effectiveLeasedBayIds.includes(bay.parentBayId);
                             // Occupied under a temporary agreement: shown, but still selectable.
-                            const isTemporary = temporaryBayIds.includes(bay.id) || temporaryBayIds.includes(bay.parentBayId);
+                            const isTemporary = effectiveTemporaryBayIds.includes(bay.id) || effectiveTemporaryBayIds.includes(bay.parentBayId);
                             const isSelected = selectedBayIds.has(bay.id);
                             const isSplitBay = bay.isSplitBay;
                             const splitSideClass = isSplitBay 
@@ -1077,8 +1128,8 @@ export function BaySelectionGrid({
           </div>
         )}
 
-        {/* Selection Summary */}
-        <div className="bg-gray-50 p-4 rounded-lg">
+        {/* Selection Summary — hidden in compact mode; the modal provides its own framing */}
+        {!compact && <div className="bg-gray-50 p-4 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Calculator className="h-5 w-5 text-blue-600" />
@@ -1154,7 +1205,7 @@ export function BaySelectionGrid({
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
       </CardContent>
     </Card>

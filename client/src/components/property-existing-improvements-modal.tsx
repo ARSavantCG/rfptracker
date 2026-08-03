@@ -23,6 +23,7 @@ import {
 } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { BaySelectionGrid } from "@/components/bay-selection-grid";
 
 // Cost stage labels for UI display
 const COST_STAGE_LABELS = {
@@ -1212,41 +1213,66 @@ export function PropertyExistingImprovementsModal({
                     <FormField
                       control={form.control}
                       name="applicableBays"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Applicable Bays</FormLabel>
-                          <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border rounded p-2">
-                            {availableBays.map((bay) => (
-                              <div key={bay.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={bay.id}
-                                  checked={field.value?.includes(bay.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([...(field.value || []), bay.id]);
-                                    } else {
-                                      field.onChange(field.value?.filter((id: string) => id !== bay.id) || []);
-                                    }
-                                  }}
-                                />
-                                <label htmlFor={bay.id} className="text-sm text-left">
-                                  {bay.bayName}
-                                  {bay.suiteNumber && String(bay.suiteNumber).trim() && (
-                                    <span className="text-blue-700 ml-1">· STE {String(bay.suiteNumber).trim()}</span>
-                                  )}
-                                  {bay.hasSpeculativeOffice && (
-                                    <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
-                                  )}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            💡 <strong>Split bays:</strong> For bays with North/South configurations, select individual halves to track costs separately.
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        // Convert stored bay IDs → minimal BayConfiguration objects so the
+                        // grid can pre-highlight already-selected bays on open. Split-bay
+                        // IDs (${parentId}_north / _south) are resolved to their parent config.
+                        const storedIds: string[] = field.value || [];
+                        const initialSelectedBays = storedIds.map((id) => {
+                          const baseId = id.replace(/_(north|south)$/, '');
+                          const config = currentProperty.bayConfigurations?.find((b) => b.id === baseId);
+                          const isNorth = id.endsWith('_north');
+                          const isSouth = id.endsWith('_south');
+                          const rawSf = config ? Number(config.squareFootage) || 0 : 0;
+                          const sf = config
+                            ? isNorth
+                              ? (config.splitNorthSquareFootage || Math.floor(rawSf / 2))
+                              : isSouth
+                                ? (config.splitSouthSquareFootage || Math.ceil(rawSf / 2))
+                                : rawSf
+                            : 0;
+                          return {
+                            id,
+                            bayName: config?.bayName
+                              ? isNorth
+                                ? `${config.bayName} North`
+                                : isSouth
+                                  ? `${config.bayName} South`
+                                  : config.bayName
+                              : id,
+                            squareFootage: sf,
+                            standardDockDoors: config?.standardDockDoors ?? 0,
+                            oversizedDockDoors: config?.oversizedDockDoors ?? 0,
+                          } as import("@shared/schema").BayConfiguration;
+                        });
+
+                        return (
+                          <FormItem>
+                            <FormLabel>Applicable Bays</FormLabel>
+                            <BaySelectionGrid
+                              property={currentProperty}
+                              compact={true}
+                              disableLeaseLocking={true}
+                              initialSelectedBays={initialSelectedBays}
+                              onSelectionChange={(selectedBays) => {
+                                const newIds = selectedBays.map((b) => b.id);
+                                const currentIds: string[] = field.value || [];
+                                // Guard: skip onChange if IDs haven't actually changed (prevents
+                                // dirtying the form on the grid's emit-on-mount).
+                                const newSorted = [...newIds].sort().join(',');
+                                const curSorted = [...currentIds].sort().join(',');
+                                if (newSorted !== curSorted) {
+                                  field.onChange(newIds);
+                                }
+                              }}
+                            />
+                            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                              💡 <strong>Split bays:</strong> For bays with North/South configurations, select individual halves to track costs separately.
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   )}
 

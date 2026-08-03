@@ -141,11 +141,20 @@ export function buildImprovementRow(
         denomSf = warehouseNetSf;
         basisLabel = `${fmtSf(warehouseNetSf)} sf (warehouse)`;
       } else if (propertyRentableSf > 0) {
-        // Office SF unknown (0) or ≥ rentable — can't net cleanly; fall back to
-        // full rentable and flag the basis (*) so the number is never silently
-        // presented as a true warehouse rate.
         denomSf = propertyRentableSf;
-        basisLabel = `${fmtSf(propertyRentableSf)} sf (rentable*)`;
+        // Distinguish two zero-officeSf cases:
+        //   (a) Bays are flagged hasSpeculativeOffice but officeSquareFootage is
+        //       missing — office area is known to exist but unrecorded. Use
+        //       rentable SF as an approximation and flag (*) so the analyst knows
+        //       to enter the missing SF in the bay configurator.
+        //   (b) No spec-office bays at all — pure warehouse property. Rentable
+        //       SF IS warehouse SF; label it (warehouse) without the asterisk.
+        const hasUnentered = bays.some(
+          (b) => b.hasSpeculativeOffice && !(b.officeSquareFootage),
+        );
+        basisLabel = hasUnentered
+          ? `${fmtSf(propertyRentableSf)} sf (rentable*)`
+          : `${fmtSf(propertyRentableSf)} sf (warehouse)`;
       }
       break;
     case 'whole-property':

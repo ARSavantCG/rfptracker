@@ -466,7 +466,24 @@ export function PropertyExistingImprovementsModal({
   };
 
   const allocationType = form.watch("allocationType");
-  
+  const category = form.watch("category");
+
+  // Derived office SF from bay configuration — mirrors derivePropertyOfficeSf in
+  // costs-in-place-report.ts. Used as the live placeholder and divergence anchor
+  // for spec-office areaSf entries so the bay configurator stays the single source
+  // of truth.
+  const derivedOfficeSf = useMemo(() => {
+    const bayConfigs = (currentProperty.bayConfigurations || []) as BayConfiguration[];
+    return bayConfigs.reduce((sum: number, bay: BayConfiguration) => {
+      if (bay.canBeSplit) {
+        const north = bay.splitNorthOffice ? (bay.splitNorthOfficeSquareFootage || 0) : 0;
+        const south = bay.splitSouthOffice ? (bay.splitSouthOfficeSquareFootage || 0) : 0;
+        return sum + north + south;
+      }
+      return sum + (bay.officeSquareFootage || 0);
+    }, 0);
+  }, [currentProperty.bayConfigurations]);
+
   // Track previous bucket to handle bucket switching
   const previousBucketRef = useRef<"ACTUALS" | "COMMITTED" | "FORECAST" | "PIPELINE">(form.getValues("bucket"));
   
@@ -529,6 +546,7 @@ export function PropertyExistingImprovementsModal({
           squareFootage: squareFootage,
           hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
           officeSquareFootage: bayConfig.officeSquareFootage || 0,
+          suiteNumber: bayConfig.suiteNumber || undefined,
           isSplitBay: false
         };
       });
@@ -553,6 +571,7 @@ export function PropertyExistingImprovementsModal({
             squareFootage: squareFootage,
             hasSpeculativeOffice: bayConfig.hasSpeculativeOffice || false,
             officeSquareFootage: bayConfig.officeSquareFootage || 0,
+            suiteNumber: bayConfig.suiteNumber || undefined,
             isSplitBay: false
           },
           // Include the north split option
@@ -562,6 +581,7 @@ export function PropertyExistingImprovementsModal({
             squareFootage: bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2),
             hasSpeculativeOffice: bayConfig.splitNorthOffice === true,
             officeSquareFootage: 0,
+            suiteNumber: bayConfig.suiteNumber || undefined,
             isSplitBay: true,
             splitSide: 'north' as const,
             parentBayId: bayConfig.id
@@ -573,6 +593,7 @@ export function PropertyExistingImprovementsModal({
             squareFootage: bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2),
             hasSpeculativeOffice: bayConfig.splitSouthOffice === true,
             officeSquareFootage: 0,
+            suiteNumber: bayConfig.suiteNumber || undefined,
             isSplitBay: true,
             splitSide: 'south' as const,
             parentBayId: bayConfig.id
@@ -1112,22 +1133,50 @@ export function PropertyExistingImprovementsModal({
                       <FormField
                         control={form.control}
                         name="areaSf"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Area (SF) — optional</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                inputMode="numeric"
-                                placeholder="e.g., 2,400 (for $/SF on Costs-in-Place report)"
-                              />
-                            </FormControl>
-                            <div className="text-xs text-slate-500">
-                              Enter for area-specific items like office buildouts. Leave blank to use the property's rentable SF for $/SF.
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const isSpecOffice = category === "spec-office";
+                          const isWarehouseCategory = category === "lighting" || category === "hvac";
+                          const enteredSf = field.value
+                            ? parseFloat(String(field.value).replace(/[^0-9.]/g, ""))
+                            : null;
+                          const sfDiverges =
+                            isSpecOffice &&
+                            derivedOfficeSf > 0 &&
+                            enteredSf !== null &&
+                            !isNaN(enteredSf) &&
+                            Math.abs(enteredSf - derivedOfficeSf) > 1;
+                          return (
+                            <FormItem>
+                              <FormLabel>Area (SF) — optional</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  inputMode="numeric"
+                                  placeholder={
+                                    isSpecOffice && derivedOfficeSf > 0
+                                      ? derivedOfficeSf.toLocaleString("en-US")
+                                      : "e.g., 2,400"
+                                  }
+                                />
+                              </FormControl>
+                              {sfDiverges && (
+                                <div className="text-xs text-amber-600 dark:text-amber-400">
+                                  ⚠ Entered SF ({Math.round(enteredSf!).toLocaleString()}) differs from bay-config total ({derivedOfficeSf.toLocaleString()}). The report uses the entered value.
+                                </div>
+                              )}
+                              <div className="text-xs text-slate-500">
+                                {isSpecOffice
+                                  ? derivedOfficeSf > 0
+                                    ? `Leave blank to use total office SF from bay configuration (${derivedOfficeSf.toLocaleString()} sf).`
+                                    : "Leave blank to use total office SF from bay configuration. (No office SF entered on bays yet — add it in the bay configurator.)"
+                                  : isWarehouseCategory
+                                  ? "Area SF has no effect for warehouse items — the $/SF denominator is warehouse net SF from bay configuration. Only relevant if you override the $/SF Basis to 'Own Area'."
+                                  : "Leave blank to use the property's rentable SF for $/SF."}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                     )}
 
@@ -1182,6 +1231,9 @@ export function PropertyExistingImprovementsModal({
                                 />
                                 <label htmlFor={bay.id} className="text-sm text-left">
                                   {bay.bayName}
+                                  {bay.suiteNumber && String(bay.suiteNumber).trim() && (
+                                    <span className="text-blue-700 ml-1">· STE {String(bay.suiteNumber).trim()}</span>
+                                  )}
                                   {bay.hasSpeculativeOffice && (
                                     <span className="text-blue-600 ml-1" title="Has Speculative Office">🏢</span>
                                   )}

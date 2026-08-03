@@ -19,6 +19,48 @@ interface BayConfigurationManagerProps {
   property: Property;
 }
 
+/**
+ * Single definition of the bay form's shape.
+ *
+ * There were five copies of this object literal - the useState initialiser plus
+ * four reset sites - differing only in startBay/endBay. Twenty-four of twenty-six
+ * fields were duplicated verbatim, so every new bay field had to be added in five
+ * places, and a miss would leave a stale value behind on reset rather than fail
+ * loudly. Adding suiteNumber and spaceGeneration is what made the cost obvious.
+ *
+ * Add new bay fields HERE and every reset picks them up automatically.
+ */
+function blankBayForm(startBay = "", endBay = "") {
+  return {
+    startBay,
+    endBay,
+    squareFootage: "",
+    standardDockDoors: "",
+    oversizedDockDoors: "",
+    hasStorefrontEntry: false,
+    hasSpeculativeOffice: false,
+    officeSquareFootage: "",
+    hasRestroom: false,
+    suiteNumber: "",
+    spaceGeneration: "",
+    canBeSplit: false,
+    splitNorthSquareFootage: "",
+    splitSouthSquareFootage: "",
+    splitNorthDockDoors: "",
+    splitSouthDockDoors: "",
+    splitNorthOversizedDoors: "",
+    splitSouthOversizedDoors: "",
+    splitNorthStorefront: false,
+    splitSouthStorefront: false,
+    splitNorthOffice: false,
+    splitSouthOffice: false,
+    splitNorthRestroom: false,
+    splitSouthRestroom: false,
+    splitNorthOfficeSquareFootage: "",
+    splitSouthOfficeSquareFootage: "",
+  };
+}
+
 export default function BayConfigurationManager({ property }: BayConfigurationManagerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,34 +90,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
   const [mechanicalRoomSF, setMechanicalRoomSF] = useState<string>(
     property.mechanicalRoomSquareFootage?.toString() || "0"
   );
-  const [newBay, setNewBay] = useState({ 
-    startBay: "", 
-    endBay: "", 
-    squareFootage: "", 
-    standardDockDoors: "", 
-    oversizedDockDoors: "", 
-    hasStorefrontEntry: false, 
-    hasSpeculativeOffice: false, 
-    officeSquareFootage: "",
-    hasRestroom: false,
-    suiteNumber: "",
-    spaceGeneration: "",
-    canBeSplit: false,
-    splitNorthSquareFootage: "",
-    splitSouthSquareFootage: "",
-    splitNorthDockDoors: "",
-    splitSouthDockDoors: "",
-    splitNorthOversizedDoors: "",
-    splitSouthOversizedDoors: "",
-    splitNorthStorefront: false,
-    splitSouthStorefront: false,
-    splitNorthOffice: false,
-    splitSouthOffice: false,
-    splitNorthRestroom: false,
-    splitSouthRestroom: false,
-    splitNorthOfficeSquareFootage: "",
-    splitSouthOfficeSquareFootage: ""
-  });
+  const [newBay, setNewBay] = useState(blankBayForm());
   const [editingBay, setEditingBay] = useState<BayConfiguration | null>(null);
   const [showBayDetails, setShowBayDetails] = useState(false);
 
@@ -306,34 +321,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     
     // Reset form with next starting bay number
     const nextStart = getNextStartingBay();
-    setNewBay({ 
-      startBay: nextStart.toString(), 
-      endBay: (nextStart + 1).toString(), 
-      squareFootage: "",
-      standardDockDoors: "",
-      oversizedDockDoors: "",
-      hasStorefrontEntry: false,
-      hasSpeculativeOffice: false,
-      officeSquareFootage: "",
-      hasRestroom: false,
-      suiteNumber: "",
-      spaceGeneration: "",
-      canBeSplit: false,
-      splitNorthSquareFootage: "",
-      splitSouthSquareFootage: "",
-      splitNorthDockDoors: "",
-      splitSouthDockDoors: "",
-      splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: "",
-      splitNorthStorefront: false,
-      splitSouthStorefront: false,
-      splitNorthOffice: false,
-      splitSouthOffice: false,
-      splitNorthOfficeSquareFootage: "",
-      splitSouthOfficeSquareFootage: "",
-      splitNorthRestroom: false,
-      splitSouthRestroom: false
-    });
+    setNewBay(blankBayForm(nextStart.toString(), (nextStart + 1).toString()));
   };
 
   // Calculate total square footage and dock doors
@@ -366,34 +354,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     
     // Calculate the next start bay based on the updated list
     const newNextStart = nextEndBay; // The end of what we just added becomes the start of the next
-    setNewBay({
-      startBay: newNextStart.toString(),
-      endBay: (newNextStart + 1).toString(),
-      squareFootage: "",
-      standardDockDoors: "",
-      oversizedDockDoors: "",
-      hasStorefrontEntry: false,
-      hasSpeculativeOffice: false,
-      officeSquareFootage: "",
-      hasRestroom: false,
-      suiteNumber: "",
-      spaceGeneration: "",
-      canBeSplit: false,
-      splitNorthSquareFootage: "",
-      splitSouthSquareFootage: "",
-      splitNorthDockDoors: "",
-      splitSouthDockDoors: "",
-      splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: "",
-      splitNorthStorefront: false,
-      splitSouthStorefront: false,
-      splitNorthOffice: false,
-      splitSouthOffice: false,
-      splitNorthOfficeSquareFootage: "",
-      splitSouthOfficeSquareFootage: "",
-      splitNorthRestroom: false,
-      splitSouthRestroom: false
-    });
+    setNewBay(blankBayForm(newNextStart.toString(), (newNextStart + 1).toString()));
 
     toast({
       title: "Bay Copied",
@@ -506,67 +467,13 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
     // Reset form
     setEditingBay(null);
     const nextStart = getNextStartingBay();
-    setNewBay({ 
-      startBay: nextStart.toString(), 
-      endBay: "", 
-      squareFootage: "",
-      standardDockDoors: "",
-      oversizedDockDoors: "",
-      hasStorefrontEntry: false,
-      hasSpeculativeOffice: false,
-      officeSquareFootage: "",
-      hasRestroom: false,
-      suiteNumber: "",
-      spaceGeneration: "",
-      canBeSplit: false,
-      splitNorthSquareFootage: "",
-      splitSouthSquareFootage: "",
-      splitNorthDockDoors: "",
-      splitSouthDockDoors: "",
-      splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: "",
-      splitNorthStorefront: false,
-      splitSouthStorefront: false,
-      splitNorthOffice: false,
-      splitSouthOffice: false,
-      splitNorthOfficeSquareFootage: "",
-      splitSouthOfficeSquareFootage: "",
-      splitNorthRestroom: false,
-      splitSouthRestroom: false
-    });
+    setNewBay(blankBayForm(nextStart.toString(), ""));
   };
 
   const cancelEdit = () => {
     setEditingBay(null);
     const nextStart = getNextStartingBay();
-    setNewBay({ 
-      startBay: nextStart.toString(), 
-      endBay: "", 
-      squareFootage: "",
-      standardDockDoors: "",
-      oversizedDockDoors: "",
-      hasStorefrontEntry: false,
-      hasSpeculativeOffice: false,
-      officeSquareFootage: "",
-      hasRestroom: false,
-      suiteNumber: "",
-      spaceGeneration: "",
-      canBeSplit: false,
-      splitNorthSquareFootage: "",
-      splitSouthSquareFootage: "",
-      splitNorthDockDoors: "",
-      splitSouthDockDoors: "",
-      splitNorthOversizedDoors: "",
-      splitSouthOversizedDoors: "",
-      splitNorthStorefront: false,
-      splitSouthStorefront: false,
-      splitNorthOffice: false,
-      splitSouthOffice: false,
-      splitNorthOfficeSquareFootage: "",
-      splitSouthOfficeSquareFootage: "",
-      splitNorthRestroom: false,
-      splitSouthRestroom: false
-    });
+    setNewBay(blankBayForm(nextStart.toString(), ""));
   };
 
   const startEditingMechRoom = () => {

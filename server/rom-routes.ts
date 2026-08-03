@@ -17,6 +17,8 @@ import { requireAuth, checkPermission } from './middleware';
 import { requireRfpOwnership, requireRomOwnership } from './ownership';
 import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
 import { computeLineTotal, applyFeeMinimum } from '@shared/line-total';
+import { classifyFeeRow, resolveFeeBase, feePassIndex, FEE_PASSES, type FeeBaseTotals } from '@shared/fee-bases';
+import { categorizeRomLineItem } from './rom-pricing-utils';
 import { eq, desc, and } from 'drizzle-orm';
 import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
 
@@ -1077,33 +1079,65 @@ function isPercentFeeItem(cat: any): boolean {
 
 // Mutates totals on percent rows; returns { subtotal, feeTotal, grandTotal, cmFeeTotal }.
 function computeRomFeeTotals(items: any[], catalogById: Map<any, any>) {
-  let subtotal = 0;
+  // ORDERED fee engine. Fees are computed in FEE_PASSES order and each pass may
+  // only consume totals produced by an EARLIER pass — this is what keeps CM and
+  // contingency non-circular (Q3). See shared/fee-bases.ts for the three base
+  // definitions decided by Adolfo 2026-08-03.
+  //
+  // WAS (until 2026-08-03): a single `subtotal` of every non-fee row, applied to
+  // every percent fee alike. That gave permit fees a base including design and
+  // other soft costs (contradicting Q1), gave contingency a base EXCLUDING the CM
+  // fee (contradicting Q2), and had no ordering at all (contradicting Q3). It also
+  // disagreed with the evaluation screen, so the same RFP produced different fee
+  // dollars depending on which path computed it.
+
+  // Split non-fee rows into TI hard costs vs. real-dollar soft costs.
+  let tiTotal = 0;
+  let nonFeeSoftCosts = 0;
   for (const it of items) {
     const cat = catalogById.get(it.scopeItemId);
-    if (!isPercentFeeItem(cat)) subtotal += parseFloat(it.totalPrice) || 0;
+    if (isPercentFeeItem(cat)) continue;
+    const amt = parseFloat(it.totalPrice) || 0;
+    const bucket = categorizeRomLineItem(cat?.category, []);
+    if (bucket === "designSoftCosts") nonFeeSoftCosts += amt;
+    else tiTotal += amt;
   }
+  const subtotal = tiTotal + nonFeeSoftCosts;
+
+  const totals: FeeBaseTotals = { tiTotal, nonFeeSoftCosts, pass1FeeTotal: 0, cmFeeTotal: 0 };
+
   let feeTotal = 0;
-  let cmFeeTotal = 0;
-  for (const it of items) {
-    const cat = catalogById.get(it.scopeItemId);
-    if (!isPercentFeeItem(cat)) continue;
-    const pct = extractPctFromName(cat?.name || "");
-    if (pct == null) continue;
-    // MAX(base x rate, catalog minimum) — the minimum is a floor on the FEE,
-    // matching a carrier's minimum policy premium. Without this the assignment
-    // below stomps any floor computeLineTotal applied. See shared/line-total.ts.
-    const floored = applyFeeMinimum(subtotal * (pct / 100), cat);
-    const computed = floored.total;
-    it.unitPrice = computed.toString();
-    it.quantity = "1";
-    it.tenantShare = 100;
-    it.totalPrice = computed.toString();
-    it.minimumApplied = floored.minimumApplied;
-    it.minimumCost = floored.minimumCost;
-    feeTotal += computed;
-    if (/construction management|cm fee/i.test(cat?.name || "")) cmFeeTotal += computed;
+  for (let pass = 0; pass < FEE_PASSES.length; pass++) {
+    let passTotal = 0;
+    for (const it of items) {
+      const cat = catalogById.get(it.scopeItemId);
+      if (!isPercentFeeItem(cat)) continue;
+      const kind = classifyFeeRow(cat?.name);
+      if (feePassIndex(kind) !== pass) continue;
+      const pct = extractPctFromName(cat?.name || "");
+      if (pct == null) continue;
+
+      const base = resolveFeeBase(kind, totals, cat?.budgetBucket);
+      // MAX(base x rate, catalog minimum) — the minimum is a floor on the FEE,
+      // matching a carrier's minimum policy premium. See shared/line-total.ts.
+      const floored = applyFeeMinimum(base * (pct / 100), cat);
+      const computed = floored.total;
+      it.unitPrice = computed.toString();
+      it.quantity = "1";
+      it.tenantShare = 100;
+      it.totalPrice = computed.toString();
+      it.minimumApplied = floored.minimumApplied;
+      it.minimumCost = floored.minimumCost;
+      it.feeBase = base;
+      passTotal += computed;
+    }
+    feeTotal += passTotal;
+    // Publish this pass's output so later passes can consume it.
+    if (pass === 0) totals.pass1FeeTotal = passTotal;
+    if (pass === 1) totals.cmFeeTotal = passTotal;
   }
-  return { subtotal, feeTotal, grandTotal: subtotal + feeTotal, cmFeeTotal };
+
+  return { subtotal, feeTotal, grandTotal: subtotal + feeTotal, cmFeeTotal: totals.cmFeeTotal };
 }
 
 async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[] } | { error: string }> {

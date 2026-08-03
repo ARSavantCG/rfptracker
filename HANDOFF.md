@@ -843,3 +843,75 @@ the `EvaluationLineItem` type were extended to carry `minimumCost`/`hasMinimumCo
   lines hit their floor, so re-verify minimums after those are answered.
 - Not verified against helium or Neon. Needs click-through on the RFP that showed
   the bug: builder's risk at 1% with a minimum-bearing catalog item.
+
+## 2026-08-03 (later still) — THREE FEE-BASE DEFINITIONS ANSWERED AND IMPLEMENTED
+
+Adolfo answered the three questions that had blocked fee-engine work since 07-19.
+Recorded in `shared/fee-bases.ts` — that file is the single source; do not encode
+these rules anywhere else.
+
+**Q1 — permit "construction costs" = TI HARD COSTS ONLY.** Design, engineering, CM,
+and other soft costs are OUT of the permit base. This is also now the meaning of the
+`pct-construction-total` calculation basis: construction total == TI hard costs.
+
+**Q2 — contingency carries ALL COSTS ABOVE IT**: TI + design + CM + permit +
+builder's risk. It excludes only itself.
+
+**Q3 — CM COMES BEFORE CONTINGENCY.** CM is computed on a base excluding contingency;
+contingency is then computed on a base INCLUDING the CM fee. Contingency earns on CM;
+CM does not earn on contingency.
+
+### What changed
+
+**`shared/fee-bases.ts` (new).** `classifyFeeRow()`, `FEE_PASSES` (the Q3 ordering),
+`feePassIndex()`, `resolveFeeBase()`. Client and server both consume it.
+
+**`server/rom-routes.ts` — fee engine rewritten from scratch.** It previously summed
+ONE `subtotal` across every non-fee row and applied it to every percent fee alike.
+That single line contradicted all three answers at once: permit got a base including
+soft costs (vs Q1), contingency got a base EXCLUDING the CM fee (vs Q2), and there was
+no ordering whatsoever (vs Q3). It also disagreed with the evaluation screen, so the
+same RFP produced different fee dollars depending on which path computed it.
+
+Now: non-fee rows are split into TI vs. real-dollar soft costs via
+`categorizeRomLineItem`, then fees compute in three passes, each consuming only
+earlier-pass output. Each row is stamped with `feeBase` for audit.
+
+**`client/.../evaluation-budget.tsx`** — `pct-construction-total` remapped from
+`cmBase` to `tiTotal` at both sites (permit and builder's risk), per Q1.
+
+Client contingency base and CM ordering already matched Q2/Q3 and were left alone —
+the client was right, the server was wrong.
+
+### Worked example now agreed by both paths
+TI 500,000 | non-fee soft costs 40,000 | permit 1.5% | BR 1% | CM 2.75% | contingency 5%
+- permit  = 1.5% x 500,000 = 7,500        (TI only, Q1)
+- BR      = 1%   x 500,000 = 5,000        (TI only, Q1)
+- CM base = 500,000 + 40,000 + 12,500 = 552,500 -> CM = 15,193.75  (Q3)
+- Cont.  base = 552,500 + 15,193.75 = 567,693.75 -> Cont. = 28,384.69  (Q2)
+- Grand total = 596,078.44
+
+**Tests.** `test-fee-bases.ts`, 32 assertions including the worked example above and a
+guard that "Construction Contingency" does not classify as CM. `test-line-total.ts`
+still 52. Run both with `npx tsx`.
+
+### Lessons banked
+- **Two implementations of the same business rule WILL diverge.** Client and server
+  each had a fee base; they disagreed on permit for months and nothing surfaced it
+  because no screen shows both numbers side by side. Business rules that move money
+  belong in `shared/`, consumed by both — same lesson as `shared/line-total.ts`, two
+  fixes running.
+- **The client was the correct implementation and the server was wrong.** Do not assume
+  the server is authoritative when reconciling; read both and reason from the rule.
+- Ordering constraints (Q3) must be structural, not incidental. `FEE_PASSES` makes the
+  order explicit and testable rather than an emergent property of statement order.
+
+### OPEN
+- **Minimums must be re-verified against the new bases.** A builder's risk minimum that
+  never triggered on the old (larger) permit base may now trigger on TI-only, and CM /
+  contingency dollars have both moved. This is expected, not a regression.
+- **Historical rows still hold old fee dollars.** No backfill. Any ROM issued before
+  this change was computed on the old bases; re-opening and saving it will re-price it.
+  Decide whether that is acceptable or whether issued ROMs need pinning.
+- Not verified against helium or Neon. Needs click-through on a real RFP carrying all
+  four fee rows; compare against the worked example above.

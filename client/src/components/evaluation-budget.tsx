@@ -1450,7 +1450,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
         // Explicit basis picks the total; otherwise default to TI total (legacy behavior).
         const newQty =
-          basis === "pct-construction-total" ? cmBase :
+          // Q1 (Adolfo 2026-08-03): "construction total" = TI HARD COSTS ONLY.
+          // Was cmBase (TI + design + other soft costs), which contradicted the
+          // permit-base decision and disagreed with the server. shared/fee-bases.ts
+          basis === "pct-construction-total" ? tiTotal :
           basis === "pct-rentable-sf" ? totalRentableArea :
           tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");
@@ -1476,7 +1479,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           return item;
         }
         const newQty =
-          basis === "pct-construction-total" ? cmBase :
+          // Q1 (Adolfo 2026-08-03): "construction total" = TI HARD COSTS ONLY.
+          // Was cmBase (TI + design + other soft costs), which contradicted the
+          // permit-base decision and disagreed with the server. shared/fee-bases.ts
+          basis === "pct-construction-total" ? tiTotal :
           basis === "pct-rentable-sf" ? totalRentableArea :
           tiTotal;
         const unitPx = parseFloat(item.unitPrice || "0");

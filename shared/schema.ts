@@ -1040,6 +1040,10 @@ export const executedLeases = pgTable("executed_leases", {
   accessibleParking: integer("accessible_parking").default(0),
   evParking: integer("ev_parking").default(0),
   trailerParking: integer("trailer_parking").default(0),
+  // Tenant electrical allocation in amps. Default is derived from the tenant's
+  // share of the building via shared/electrical-utils, but stored per-lease so
+  // a negotiated figure survives changes to the property's totals.
+  electricalAllocation: integer("electrical_allocation"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

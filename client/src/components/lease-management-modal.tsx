@@ -25,6 +25,7 @@ import { Calendar, Trash2, Edit, Plus, Building, Users, Printer } from "lucide-r
 import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { BaySelectionGrid } from "@/components/bay-selection-grid";
+import { defaultElectricalAllocation } from "@shared/electrical-utils";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
@@ -34,6 +35,7 @@ const leaseFormSchema = z.object({
   accessibleParking: z.number().min(0).default(0),
   evParking: z.number().min(0).default(0),
   trailerParking: z.number().min(0).default(0),
+  electricalAllocation: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
 
@@ -61,6 +63,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       accessibleParking: 0,
       evParking: 0,
       trailerParking: 0,
+      electricalAllocation: undefined,
       notes: "",
     },
   });
@@ -132,6 +135,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       accessibleParking: lease.accessibleParking || 0,
       evParking: lease.evParking || 0,
       trailerParking: lease.trailerParking || 0,
+      electricalAllocation: lease.electricalAllocation ?? undefined,
       notes: lease.notes || "",
     });
     setShowForm(true);
@@ -241,7 +245,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                         <FormItem>
                           <FormLabel>Assigned Bays</FormLabel>
                           <FormControl>
-                            <div className="border rounded-md min-w-0 overflow-x-auto max-h-[480px] overflow-y-auto">
+                            <div className="border rounded-md min-w-0 overflow-x-auto max-h-[300px] overflow-y-auto">
                               <BaySelectionGrid
                                 property={property}
                                 excludeLeaseId={editingLease?.id}
@@ -254,31 +258,6 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                               />
                             </div>
                           </FormControl>
-                          
-                          {/* Rentable Area Calculator */}
-                          {field.value.length > 0 && (
-                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                              <div className="text-sm font-medium text-blue-800 mb-2">Selected Bays Summary</div>
-                              <div className="space-y-1 text-sm text-blue-700">
-                                {field.value.map((bayId: string) => {
-                                  const bay = availableBays.find(b => b.id === bayId);
-                                  return bay ? (
-                                    <div key={bayId} className="flex justify-between">
-                                      <span>{bay.bayName}</span>
-                                      <span>{(bay.rentableSquareFootage || bay.squareFootage).toLocaleString()} SF</span>
-                                    </div>
-                                  ) : null;
-                                })}
-                                <div className="border-t border-blue-300 pt-2 mt-2 font-semibold flex justify-between">
-                                  <span>Total Rentable Area:</span>
-                                  <span>{field.value.reduce((total: number, bayId: string) => {
-                                    const bay = availableBays.find(b => b.id === bayId);
-                                    return total + (bay ? (bay.rentableSquareFootage || bay.squareFootage) : 0);
-                                  }, 0).toLocaleString()} SF</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                           
                           <FormMessage />
                         </FormItem>
@@ -310,6 +289,72 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+
+                    {/* Electrical Allocation */}
+                    <FormField
+                      control={form.control}
+                      name="electricalAllocation"
+                      render={({ field }) => {
+                        // Same rule the RFP validation screen uses: the tenant's
+                        // proportionate share of the building's total amps, floored
+                        // to the property's increment. Computed from the bays selected
+                        // above, so it moves as the selection changes.
+                        const selectedBayIds: string[] = form.watch("assignedBays") || [];
+                        const selectedSf = availableBays
+                          .filter((b) => selectedBayIds.includes(b.id))
+                          .reduce((sum, b) => sum + (b.rentableSquareFootage || b.squareFootage || 0), 0);
+                        const buildingSf = (property?.bayConfigurations || []).reduce(
+                          (sum: number, b: BayConfiguration) => sum + (b.rentableSquareFootage || b.squareFootage || 0), 0
+                        );
+                        const sharePct = buildingSf > 0 ? (selectedSf / buildingSf) * 100 : 0;
+                        const buildingAmps = property?.electricalAllocation || 0;
+                        const increment = property?.electricalAllocationIncrement || 200;
+                        const suggested = defaultElectricalAllocation({
+                          buildingTotalAmps: buildingAmps,
+                          tenantSharePercent: sharePct,
+                          increment,
+                        });
+
+                        return (
+                          <FormItem>
+                            <FormLabel>Electrical Allocation (AMPS)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                placeholder={suggested > 0 ? `${suggested}` : ""}
+                              />
+                            </FormControl>
+                            {buildingAmps > 0 && sharePct > 0 ? (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Suggested <strong>{suggested.toLocaleString()} A</strong> &mdash;{" "}
+                                {sharePct.toFixed(1)}% of {buildingAmps.toLocaleString()} A building total,
+                                rounded down to the {increment} A increment.
+                                {field.value == null && (
+                                  <button
+                                    type="button"
+                                    className="ml-2 underline text-blue-700"
+                                    onClick={() => field.onChange(suggested)}
+                                  >
+                                    Use suggested
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {buildingAmps > 0
+                                  ? "Select bays above to derive a suggested allocation."
+                                  : "No building electrical allocation recorded on this property."}
+                              </div>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
 
                     {/* Parking Information */}
@@ -473,7 +518,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <div className="text-sm">
                               <span className="text-gray-500">Parking:</span>
                               <span className="ml-2 font-medium">
-                                {`${lease.standardParking || 0} Std, ${lease.accessibleParking || 0} ADA, ${lease.evParking || 0} EV, ${lease.trailerParking || 0} Trailer`}
+                                {`${lease.standardParking || 0} Std, ${lease.accessibleParking || 0} ADA, ${lease.evParking || 0} EV, ${lease.trailerParking || 0} Trailer`}{lease.electricalAllocation ? ` · ${lease.electricalAllocation.toLocaleString()} A` : ''}
                               </span>
                             </div>
                           </div>

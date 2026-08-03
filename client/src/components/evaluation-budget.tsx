@@ -26,6 +26,7 @@ import { nanoid } from "nanoid";
 import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { defaultElectricalAllocation } from "@shared/electrical-utils";
 
 interface MasterCategory {
   id: number;
@@ -1743,22 +1744,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // Calculate tenant's percentage of the property
     const tenantPercentage = tenantRentableArea / totalPropertyArea;
     
-    // Get total electrical allocation from property
-    const totalElectricalAllocation = property.electricalAllocation || 0;
-    
-    // Get the increment for rounding (default 200 AMPS)
-    const increment = property.electricalAllocationIncrement || 200;
-    
-    // Calculate proportional electrical allocation
-    const rawAllocation = totalElectricalAllocation * tenantPercentage;
-    
-    // Round up to nearest increment (e.g., 450 AMPS → 600 AMPS if increment is 200)
-    const allocatedElectrical = increment > 0 
-      ? Math.ceil(rawAllocation / increment) * increment 
-      : Math.round(rawAllocation);
-    
-    
-    return allocatedElectrical;
+    // Delegates to shared/electrical-utils so this screen, the RFP validation
+    // modal, and the lease form all produce the same number for the same tenant.
+    // This was a fourth independent implementation.
+    //
+    // It also rounded UP (Math.ceil), where the other surfaces round DOWN, so the
+    // same tenant on the same deal read 1,000 A here and 800 A there on a 1,800 A
+    // building at 50% with a 200 A increment. Down is correct: rounding up
+    // over-commits, and if every tenant is rounded up the building promises more
+    // amps than it has. The figure stays editable.
+    //
+    // Note the unit change - tenantPercentage above is a 0-1 fraction, the helper
+    // takes 0-100.
+    return defaultElectricalAllocation({
+      buildingTotalAmps: property.electricalAllocation || 0,
+      tenantSharePercent: tenantPercentage * 100,
+      increment: property.electricalAllocationIncrement || 200,
+    });
   };
 
   // Auto-calculate demising wall quantities when building depth changes or items are added

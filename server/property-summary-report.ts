@@ -3,6 +3,7 @@ import { db } from './db';
 import { properties, executedLeases, propertyExistingImprovements, rfpRequests, transformers, mainPanels } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
+import { defaultElectricalAllocation } from "@shared/electrical-utils";
 
 // Helper function to calculate per-bay cost for spec office (bay-specific items)
 function getSpecOfficePerBayCost(improvements: any[], relevantBays: any[], totalSpecOfficeCost: number): number {
@@ -324,19 +325,16 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     // Calculate tenant's percentage of the property
     const tenantPercentage = tenantArea / totalPropertyArea;
     
-    // Calculate proportional electrical allocation
-    const totalElectrical = property.electricalAllocation || 0;
-    
-    // Get the increment for rounding (default 200 AMPS)
-    const increment = property.electricalAllocationIncrement || 200;
-    
-    // Calculate raw allocation and round up to nearest increment
-    const rawAllocation = totalElectrical * tenantPercentage;
-    
-    // Round up to nearest increment (e.g., 450 AMPS → 600 AMPS if increment is 200)
-    return increment > 0 
-      ? Math.ceil(rawAllocation / increment) * increment 
-      : Math.round(rawAllocation);
+    // Shared helper - see shared/electrical-utils. Previously a fifth independent
+    // copy of this calculation, and one that rounded UP where the client surfaces
+    // now round DOWN, so a printed property summary could disagree with the
+    // evaluation and lease screens for the same tenant.
+    // tenantPercentage is a 0-1 fraction here; the helper takes 0-100.
+    return defaultElectricalAllocation({
+      buildingTotalAmps: property.electricalAllocation || 0,
+      tenantSharePercent: tenantPercentage * 100,
+      increment: property.electricalAllocationIncrement || 200,
+    });
   };
 
   for (const property of allProperties) {

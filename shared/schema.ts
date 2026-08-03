@@ -1449,6 +1449,7 @@ export const users = pgTable("users", {
   role: varchar("role").notNull().default("user"), // admin, manager, user
   isActive: boolean("is_active").default(true),
   permissions: json("permissions").$type<Permission[]>().default([]),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

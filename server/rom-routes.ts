@@ -16,6 +16,7 @@ import { requireAuth, checkPermission } from './middleware';
 // owner match on createdByUserId, NULL owner fails closed to admin-only).
 import { requireRfpOwnership, requireRomOwnership } from './ownership';
 import { scopeItemContractorPricing, romScopeItems } from '@shared/schema';
+import { computeLineTotal } from '@shared/line-total';
 import { eq, desc, and } from 'drizzle-orm';
 import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
 
@@ -125,12 +126,21 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
     // Use activePrice from scope item if set, otherwise fall back to line item unitPrice
     const scopeItemForPrice = scopeItems.find((si: any) => si.id === item.scopeItemId);
     const unitPrice = (scopeItemForPrice?.activePrice ? parseFloat(scopeItemForPrice.activePrice) : null) ?? parseFloat(item.unitPrice) ?? 0;
-    const newTotalPrice = actualQuantity * unitPrice;
-    
+    // Minimum cost enforced here — a formula-derived quantity below the catalog
+    // minimum (e.g. 40 LF of a 200 LF-minimum demising wall) must still bill the
+    // floor. See shared/line-total.ts.
+    const computed = computeLineTotal({
+      quantity: actualQuantity,
+      unitPrice,
+      item: scopeItemForPrice,
+    });
+
     return {
       ...item,
       actualQuantity,
-      totalPrice: newTotalPrice.toString()
+      totalPrice: computed.total.toString(),
+      minimumApplied: computed.minimumApplied,
+      minimumCost: computed.minimumCost,
     };
   });
   
@@ -653,7 +663,10 @@ export function registerRomRoutes(app: Express): void {
               scopeItemId: cat.id,
               quantity: qty.toString(),
               unitPrice: price.toString(),
-              totalPrice: (qty * price * (share / 100)).toString(),
+              // Minimum floors the gross before tenant share (shared/line-total.ts).
+              totalPrice: computeLineTotal({
+                quantity: qty, unitPrice: price, tenantShare: share, item: cat,
+              }).total.toString(),
               tenantShare: share,
               notes: (specNote + (it.notes || (it.type === "percent" ? `${it.percent}% of ${it.percent_of || "subtotal"} — fee math finalized on report` : ""))).trim(),
               category: ((cat.category || "").toLowerCase().includes("soft") || (cat.category || "").toLowerCase().includes("design"))
@@ -1104,8 +1117,11 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
     }
     const locked = parseFloat((cat.activePrice ?? cat.unitPrice) || "0") || 0;
     const qty = parseFloat(item.quantity) || 0;
-    const share = (parseFloat(item.tenantShare) || 100) / 100;
-    out.push({ ...item, unitPrice: locked.toString(), totalPrice: (qty * locked * share).toString() });
+    const share = parseFloat(item.tenantShare) || 100;
+    // Rate lock also locks the catalog minimum — a client that posts a quantity
+    // under the floor cannot dodge it by editing the total (shared/line-total.ts).
+    const computed = computeLineTotal({ quantity: qty, unitPrice: locked, tenantShare: share, item: cat });
+    out.push({ ...item, unitPrice: locked.toString(), totalPrice: computed.total.toString() });
   }
   return { items: out };
 }

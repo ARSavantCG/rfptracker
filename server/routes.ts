@@ -41,6 +41,7 @@ import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-
 import { sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnownRomCategory } from "./rom-pricing-utils";
+import { computeLineTotal } from "@shared/line-total";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
 import {
   sanitizeProjectName,
@@ -3725,7 +3726,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: item.qty || 1,
           unit: normalizedUnit,
           unitPrice: resolved.unitPrice ? resolved.unitPrice.toString() : "0",
-          totalPrice: resolved.unitPrice && item.qty ? (resolved.unitPrice * item.qty).toString() : "0",
+          // Catalog minimum rides in resolved.snapshot (shared/line-total.ts).
+          totalPrice: computeLineTotal({
+            quantity: item.qty || 0,
+            unitPrice: resolved.unitPrice,
+            item: resolved.snapshot,
+          }).total.toString(),
           tenantShare: item.percent || 100,
           notes: item.notes || "",
           // Stamp stable integer link to the master scope items library.
@@ -3795,7 +3801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quantity,
               unit: normalizedUnit,
               unitPrice: unitPrice.toString(),
-              totalPrice: (unitPrice * quantity).toString(),
+              // Catalog minimum rides in resolved.snapshot (shared/line-total.ts).
+              totalPrice: computeLineTotal({
+                quantity, unitPrice, item: resolved.snapshot,
+              }).total.toString(),
               tenantShare: 100,
               masterItemId,
               romSnapshot: resolved.snapshot,

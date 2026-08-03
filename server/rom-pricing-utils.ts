@@ -49,6 +49,12 @@ export function resolveLiveRomItemPricing(romItem: any, fallback: RomLineItemFal
     itemGroup: romItem?.itemGroup || fallback.snapshot?.itemGroup,
     minSquareFootage: romItem?.minSquareFootage ?? fallback.snapshot?.minSquareFootage,
     maxSquareFootage: romItem?.maxSquareFootage ?? fallback.snapshot?.maxSquareFootage,
+    // Contractor minimum total cost travels WITH the line item so client-side
+    // recalcs (evaluation-budget.tsx) can enforce the floor without a catalog
+    // round-trip. Without these two keys the client silently loses the minimum
+    // the moment a user edits a quantity. See shared/line-total.ts.
+    minimumCost: romItem?.minimumCost ?? fallback.snapshot?.minimumCost ?? null,
+    hasMinimumCost: romItem?.hasMinimumCost ?? fallback.snapshot?.hasMinimumCost ?? false,
   };
 
   return { label, unitPrice, unit, category, snapshot };

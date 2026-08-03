@@ -10,6 +10,7 @@ import { Trash2, Plus, Calculator, Save, ChevronUp, ChevronDown, GripVertical } 
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { computeLineTotal } from "@shared/line-total";
 
 interface RomPilotScopeModalProps {
   isOpen: boolean;
@@ -143,7 +144,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     if (field === 'quantity' || field === 'unitPrice') {
       const quantity = parseFloat(field === 'quantity' ? value.toString() : updatedItems[index].quantity) || 0;
       const unitPrice = parseFloat(field === 'unitPrice' ? value.toString() : updatedItems[index].unitPrice) || 0;
-      updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
+      // Catalog minimum enforced via shared/line-total.ts.
+      updatedItems[index].totalPrice = computeLineTotal({
+        quantity, unitPrice, item: updatedItems[index].scopeItem,
+      }).total.toFixed(2);
     }
 
     // When scope item is selected, update unit price and scope item reference
@@ -154,7 +158,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
         updatedItems[index].scopeItem = selectedScopeItem;
         const quantity = parseFloat(updatedItems[index].quantity) || 0;
         const unitPrice = parseFloat(selectedScopeItem.unitPrice) || 0;
-        updatedItems[index].totalPrice = (quantity * unitPrice).toFixed(2);
+        // Selecting an item must pick up its minimum immediately, not on next edit.
+        updatedItems[index].totalPrice = computeLineTotal({
+          quantity, unitPrice, item: selectedScopeItem,
+        }).total.toFixed(2);
       }
     }
 

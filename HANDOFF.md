@@ -726,3 +726,68 @@ Behavior matrix to confirm: owner→yes, non-owner→403, manager-on-own→yes, 
 - Fee-base definitions still owed by Adolfo before fee-engine work (permit "construction
   costs" scope; does contingency exclude other fees; CM before/after contingency).
 - Slices 1–5 (move ROM onto the RFP) remain unstarted — blocked on 0/0b, now unblocked.
+
+## 2026-08-03 — MINIMUM COST WAS A DEAD FIELD (silent under-billing) — FIXED
+
+**Symptom (never reported — found during pricing-library recon):** every ROM and
+evaluation containing a catalog item with a contractor minimum was billing LOW.
+
+**Root cause.** `rom_scope_items.minimumCost` / `hasMinimumCost` shipped as schema
+columns AND as an admin checkbox + input in `rom-scope-items-modal.tsx`. The value
+saved correctly. Nothing read it. Fourteen separate call sites across `server/` and
+`client/` each computed `qty * unitPrice` inline. Exactly ONE surface —
+`rom-pilot-scope-modal-new.tsx` — implemented the floor, so the bug was invisible to
+anyone who happened to test through that modal and only that modal.
+
+Real-world impact: a demising wall priced at $48.75/LF with a 200 LF minimum
+($9,750 floor) entered at 40 LF billed $1,950 instead of $9,750. Under by $7,800
+on one line.
+
+**Fix.** New `shared/line-total.ts` — single source for line math, importable by
+both client and server (`@shared/*` is aliased in tsconfig AND vite.config).
+Exports `computeLineTotal()`, `effectiveMinimumCost()`, `parseMoney()`.
+
+All 14 sites now route through it:
+- `server/rom-routes.ts` — formula recalc, template seed, rate lock
+- `server/routes.ts` — template import, scope-of-work import
+- `client/.../evaluation-budget.tsx` — 2 recalc helpers, add-item, update-item
+- `client/.../rom-pilot-scope-modal.tsx` — quantity edit, scope-item select
+- `client/.../rom-pilot-scope-modal-new.tsx` — collapsed onto the shared helper
+
+`resolveLiveRomItemPricing()` now carries `minimumCost` / `hasMinimumCost` into
+`romSnapshot`, so client-side recalcs enforce the floor without a catalog round-trip.
+Without that, the client silently lost the minimum the instant a user edited a quantity.
+
+**Order of operations (decided, do not change casually).** The minimum floors the
+GROSS, THEN tenant share applies. A 200 LF minimum at 50% share bills half of the
+floored gross ($4,875), not a floored half. Flooring after the share would overcharge
+the tenant on every shared line — and demising walls default to 50%. This matches what
+`rom-pilot-scope-modal-new.tsx` already did independently.
+
+**Tests.** `test-line-total.ts`, 37 assertions. Run: `npx tsx test-line-total.ts`.
+Covers: below/at/above minimum, share interaction, ordering, checked-box-with-blank-value,
+zero vs null price, comma-formatted money.
+
+### Lessons banked
+- **A schema column + a form field is NOT a feature.** Both existed and looked
+  complete in the admin UI. Grep for the column name in calculation paths before
+  assuming a field is wired. `minimumCost` appeared in 15 lines of
+  `rom-scope-items-modal.tsx` and ZERO lines of any math.
+- **Edit-surface count strikes again.** The two ROM pilot modals were only caught by
+  re-grepping for inline `qty * price` AFTER patching the sites I first identified.
+  Patch, then re-grep for the pattern — do not trust the first inventory.
+- **When one surface implements logic correctly and the rest don't, that is the
+  tell.** The correct implementation existing in exactly one modal is what confirmed
+  the intent and the ordering, rather than a design doc.
+- Duplicated inline arithmetic is the failure class. Any math touching money belongs
+  in `shared/`, imported by both sides.
+
+### OPEN — not done in this session
+- **No backfill.** Existing ROM/evaluation line items still carry their old low
+  totals in the DB. New calculations are correct; historical rows are not. Decide
+  whether to re-total historical records or leave them as issued.
+- Not verified against helium or Neon — no DB access from the build environment.
+  Needs click-through: enter a below-minimum quantity on a minimum-bearing item in
+  (a) evaluation budget, (b) both ROM pilot modals, and confirm the floor holds.
+- Catalog-library integration (`pricing_library.xlsx`, 81 items, UNIT/ASSY,
+  includedBasisQty/overage, pricing_rounds, median mode) is specified but NOT built.

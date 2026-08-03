@@ -27,6 +27,7 @@ import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
+import { computeLineTotal } from "@shared/line-total";
 
 interface MasterCategory {
   id: number;
@@ -918,9 +919,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const recalculateTotalPrice = (item: any) => {
         const qty = parseFloat(item.quantity) || 0;
         const unitPx = parseFloat(item.unitPrice) || 0;
-        const totalPx = qty * unitPx;
-        
-        
+        // Catalog minimum travels on romSnapshot (shared/line-total.ts).
+        const totalPx = computeLineTotal({
+          quantity: qty, unitPrice: unitPx, item: item.romSnapshot,
+        }).total;
+
         return {
           ...item,
           totalPrice: totalPx.toString(),
@@ -1130,7 +1133,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const recalculateTotalPrice = (item: any) => {
         const qty = parseFloat(item.quantity) || 0;
         const unitPx = parseFloat(item.unitPrice) || 0;
-        const totalPx = qty * unitPx;
+        // Catalog minimum travels on romSnapshot (shared/line-total.ts).
+        const totalPx = computeLineTotal({
+          quantity: qty, unitPrice: unitPx, item: item.romSnapshot,
+        }).total;
         return {
           ...item,
           totalPrice: totalPx.toString(),
@@ -4154,7 +4160,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
     const quantity = newItem.quantity || 1;
     const unitPrice = parseFloat(newItem.unitPrice) || 0;
-    const totalPrice = (quantity * unitPrice).toFixed(2);
+    const totalPrice = computeLineTotal({
+      quantity, unitPrice, item: (newItem as any).romSnapshot,
+    }).total.toFixed(2);
 
     const item: EvaluationLineItem = {
       id: `${category}-${Date.now()}`,
@@ -4281,7 +4289,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
             const quantity = updatedItem.quantity;
             const unitPrice = parseFloat(updatedItem.unitPrice) || 0;
-            updatedItem.totalPrice = (quantity * unitPrice).toFixed(2);
+            updatedItem.totalPrice = computeLineTotal({
+              quantity, unitPrice, item: updatedItem.romSnapshot,
+            }).total.toFixed(2);
           }
           
           return updatedItem;

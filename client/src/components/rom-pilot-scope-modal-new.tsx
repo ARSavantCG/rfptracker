@@ -10,6 +10,7 @@ import { FormulaInput } from "@/components/formula-input";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { computeLineTotal } from "@shared/line-total";
 
 // Utility function to format currency with commas
 const formatCurrency = (amount: number | string): string => {
@@ -297,20 +298,13 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       const unitPrice = parseFloat(field === 'unitPrice' ? value.toString() : updatedItems[index].unitPrice) || 0;
       const tenantShare = parseFloat(field === 'tenantShare' ? value.toString() : updatedItems[index].tenantShare.toString()) || 100;
       
-      // Calculate base total
-      let baseTotal = quantity * unitPrice;
-      
-      // Check for minimum cost if scope item has it enabled
+      // Minimum-cost-aware math lives in shared/line-total.ts so server and every
+      // other edit surface stay in agreement. This modal had the ONLY correct
+      // implementation; the rest of the app computed qty * price and lost the floor.
       const scopeItem = updatedItems[index].scopeItem;
-      if (scopeItem?.hasMinimumCost && scopeItem.minimumCost) {
-        const minimumCost = parseFloat(scopeItem.minimumCost) || 0;
-        if (baseTotal < minimumCost) {
-          baseTotal = minimumCost;
-        }
-      }
-      
-      const tenantPortion = baseTotal * (tenantShare / 100);
-      updatedItems[index].totalPrice = tenantPortion.toString();
+      updatedItems[index].totalPrice = computeLineTotal({
+        quantity, unitPrice, tenantShare, item: scopeItem,
+      }).total.toString();
     }
 
     setItems(updatedItems);

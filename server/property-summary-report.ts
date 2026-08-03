@@ -334,6 +334,7 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
       buildingTotalAmps: property.electricalAllocation || 0,
       tenantSharePercent: tenantPercentage * 100,
       increment: property.electricalAllocationIncrement || 200,
+      minimum: property.electricalAllocationMinimum ?? 200,
     });
   };
 

@@ -675,6 +675,11 @@ export const properties = pgTable("properties", {
   // Electrical Allocation
   electricalAllocation: integer("electrical_allocation").default(0), // Total electrical allocation in amps
   electricalAllocationIncrement: integer("electrical_allocation_increment").default(200), // Increment for tenant allocation rounding (default 200 AMPS)
+  // Minimum service a tenant can be allocated, however small their share.
+  // Distinct from the increment: increment is rounding granularity, this is the
+  // smallest service that can actually run a space. A property can have 100 A
+  // increments and still a 200 A minimum.
+  electricalAllocationMinimum: integer("electrical_allocation_minimum").default(200),
   
   // Building Specifications
   buildingDepth: integer("building_depth"), // Building depth in feet (used for demising wall calculations)

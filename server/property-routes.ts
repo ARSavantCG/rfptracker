@@ -485,7 +485,8 @@ export function registerPropertyRoutes(app: Express): void {
       // Use partial schema for electrical allocation fields
       const electricalAllocationSchema = updatePropertySchema.pick({ 
         electricalAllocation: true, 
-        electricalAllocationIncrement: true 
+        electricalAllocationIncrement: true,
+        electricalAllocationMinimum: true
       });
       
       const result = electricalAllocationSchema.safeParse(req.body);
@@ -494,9 +495,10 @@ export function registerPropertyRoutes(app: Express): void {
       }
 
       // Ensure non-negative values
-      const { electricalAllocation, electricalAllocationIncrement } = result.data;
+      const { electricalAllocation, electricalAllocationIncrement, electricalAllocationMinimum } = result.data;
       if ((electricalAllocation !== undefined && electricalAllocation < 0) || 
-          (electricalAllocationIncrement !== undefined && electricalAllocationIncrement < 0)) {
+          (electricalAllocationIncrement !== undefined && electricalAllocationIncrement < 0) ||
+          (electricalAllocationMinimum !== undefined && electricalAllocationMinimum < 0)) {
         return res.status(400).json({ message: "Electrical allocation values must be non-negative" });
       }
 

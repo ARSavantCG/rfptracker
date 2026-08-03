@@ -344,6 +344,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           buildingTotalAmps: buildingAmps,
                           tenantSharePercent: sharePct,
                           increment,
+                          minimum: property?.electricalAllocationMinimum ?? 200,
                         });
 
                         return (

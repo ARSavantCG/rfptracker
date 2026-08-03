@@ -113,6 +113,7 @@ interface ElectricalCapacityManagementProps {
     id: number;
     electricalAllocation?: number | null;
     electricalAllocationIncrement?: number | null;
+    electricalAllocationMinimum?: number | null;
   };
 }
 
@@ -157,21 +158,23 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
   });
   
   // State for tenant allocation settings - use propertyData from query
-  const propData = propertyData as { electricalAllocation?: number | null; electricalAllocationIncrement?: number | null } | undefined;
+  const propData = propertyData as { electricalAllocation?: number | null; electricalAllocationIncrement?: number | null; electricalAllocationMinimum?: number | null } | undefined;
   const [tenantAllocation, setTenantAllocation] = useState<number>(propData?.electricalAllocation || initialProperty?.electricalAllocation || 0);
   const [allocationIncrement, setAllocationIncrement] = useState<number>(propData?.electricalAllocationIncrement || initialProperty?.electricalAllocationIncrement || 200);
+  const [allocationMinimum, setAllocationMinimum] = useState<number>(propData?.electricalAllocationMinimum ?? initialProperty?.electricalAllocationMinimum ?? 200);
   
   // Update state when property data changes
   useEffect(() => {
     if (propData) {
       setTenantAllocation(propData.electricalAllocation || 0);
       setAllocationIncrement(propData.electricalAllocationIncrement || 200);
+      setAllocationMinimum(propData.electricalAllocationMinimum ?? 200);
     }
   }, [propData]);
   
   // Mutation to update property tenant allocation settings
   const updateTenantAllocationMutation = useMutation({
-    mutationFn: async (data: { electricalAllocation: number; electricalAllocationIncrement: number }) =>
+    mutationFn: async (data: { electricalAllocation: number; electricalAllocationIncrement: number; electricalAllocationMinimum: number }) =>
       apiRequest(`/api/properties/${propertyId}/electrical-allocation`, 'PATCH', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${propertyId}`] });
@@ -664,13 +667,28 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                       className="mt-1"
                       data-testid="input-allocation-increment"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Minimum allocation per tenant</p>
+                    <p className="text-xs text-gray-500 mt-1">Allocations round down to a multiple of this</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="allocationMinimum" className="text-xs font-medium">Minimum Allocation (AMPS)</Label>
+                    <Input
+                      id="allocationMinimum"
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={allocationMinimum}
+                      onChange={(e) => setAllocationMinimum(parseInt(e.target.value) || 0)}
+                      className="mt-1"
+                      data-testid="input-allocation-minimum"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Smallest service any tenant gets, however small their share</p>
                   </div>
                   <div>
                     <Button
                       onClick={() => updateTenantAllocationMutation.mutate({ 
                         electricalAllocation: tenantAllocation, 
-                        electricalAllocationIncrement: allocationIncrement 
+                        electricalAllocationIncrement: allocationIncrement,
+                        electricalAllocationMinimum: allocationMinimum
                       })}
                       disabled={updateTenantAllocationMutation.isPending}
                       className="bg-cyan-600 hover:bg-cyan-700"

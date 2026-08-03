@@ -454,6 +454,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       buildingTotalAmps: propertyAllocation,
                       tenantSharePercent: tenantSharePercent,
                       increment: propertyIncrement,
+                      minimum: currentProperty?.electricalAllocationMinimum ?? 200,
                     })
                   : (propertyIncrement > 0
                       ? Math.floor(suggestedAmps / propertyIncrement) * propertyIncrement

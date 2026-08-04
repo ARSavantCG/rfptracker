@@ -59,6 +59,21 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // backfill means admin-only (fail closed).
   { table: 'rfp_requests', column: 'created_by_user_id', type: 'varchar' },
   { table: 'rom_pilots', column: 'created_by_user_id', type: 'varchar' },
+
+  // 2026-08-04. Added here rather than via `npm run db:push`: drizzle-kit push
+  // reconciles the WHOLE schema, and shared/schema.ts has drifted far enough from
+  // the deployed database that a push now proposes dropping the session and
+  // sessions tables and converting ~30 column types (including
+  // property_existing_improvements.total_cost from numeric to integer, which would
+  // truncate cents). See HANDOFF.md 2026-08-04. This path is additive only.
+  //
+  // It also solves a practical problem: the production Neon database is reachable
+  // from Replit only through a READ-ONLY sandbox connection, so DDL cannot be run
+  // against it from the shell. Running here means the app applies these columns
+  // itself, on boot, using its own production connection.
+  { table: 'executed_leases', column: 'lease_type', type: "text DEFAULT 'executed'" },
+  { table: 'executed_leases', column: 'electrical_allocation', type: 'integer' },
+  { table: 'properties', column: 'electrical_allocation_minimum', type: 'integer DEFAULT 200' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

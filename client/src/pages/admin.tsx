@@ -19,6 +19,7 @@ import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
 import AdminResetPasswordModal from "@/components/admin-reset-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
+import { FileIntegrityAuditPanel } from "@/components/file-integrity-audit-panel";
 import { RfpDocumentEditor } from "@/components/rfp-document-editor-fixed";
 import { EnhancedRfpCustomizer } from "@/components/enhanced-rfp-customizer";
 import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
@@ -1677,7 +1678,8 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="storage" className="mt-6">
+          <TabsContent value="storage" className="mt-6 space-y-6">
+            <FileIntegrityAuditPanel />
             <FileCleanupPanel />
           </TabsContent>
 

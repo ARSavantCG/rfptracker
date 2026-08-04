@@ -263,16 +263,12 @@ export default function BayConfigurationSelector({
     // Calculate proportional mechanical room allocation using property-level mechanical room SF
     const mechanicalRoomSF = property.mechanicalRoomSquareFootage || 0;
     
-    // For precision when all bays selected, use exact mechanical room SF to avoid floating point errors
-    let proportionalMechanical;
-    if (selectedBayConfigs.length === bayConfigurations.length) {
-      // All bays selected = 100% of mechanical room
-      proportionalMechanical = mechanicalRoomSF;
-    } else {
-      // Partial selection = proportional allocation
-      proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-    }
-    
+    // NOTE: a count-based "all bays selected" branch previously computed a
+    // `proportionalMechanical` here that the return statement never used - it
+    // returns proportionalMechanicalRoom, computed above. Dead code, and it
+    // carried the same split-bay over-allocation bug as the other copies.
+    // Removed rather than fixed. See shared/area-utils.
+
 
     
     

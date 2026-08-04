@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { formatDateForDisplay } from "@shared/date-utils";
 import type { RfpRequest } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { computeAreaSummary } from "@shared/area-utils";
 
 interface PublishSummaryProps {
   rfp: RfpRequest | null;
@@ -435,27 +436,19 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
   const getRentableArea = () => {
     if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
       // Calculate using correct proportional method: warehouse SF + proportional mechanical allocation
-      const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-      
-      // Get property data for mechanical room calculation
+      // shared/area-utils. The previous inline version decided "all bays
+      // selected" by comparing COUNTS, which split bays defeat: both halves of
+      // six bays in a twelve-bay building is twelve entries, so the check fired
+      // and granted 100% of the mechanical room to a tenant with half the
+      // building. The proportional formula returns the full room at a true full
+      // selection anyway, so the branch is gone rather than patched.
       const property = properties?.find((p: any) => p.id.toString() === rfp.property);
-      const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
-      
-      // Calculate proportional mechanical allocation
-      let proportionalMechanical = 0;
-      if (property?.bayConfigurations) {
-        const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-        if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
-          // All bays selected = 100% of mechanical room
-          proportionalMechanical = mechanicalRoomSF;
-        } else {
-          // Partial selection = proportional allocation
-          proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-        }
-      }
-      
-      const totalArea = selectedBaySquareFootage + proportionalMechanical;
-      return Math.round(totalArea).toLocaleString();
+      const summary = computeAreaSummary(
+        rfp.selectedBayConfigurations,
+        property?.bayConfigurations,
+        property?.mechanicalRoomSquareFootage,
+      );
+      return summary.totalRentableSf.toLocaleString();
     }
     return 'N/A';
   };

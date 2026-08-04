@@ -24,6 +24,7 @@ import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
+import { computeAreaSummary } from "@shared/area-utils";
 
 
 // Voltage options for electrical allocation
@@ -318,27 +319,16 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           // Check if bay configurations contain calculated area using correct proportional method
                           let calculatedArea = 0;
                           if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
-                            // Calculate warehouse area only from bay configurations
-                            const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                            
-                            // Get property data for mechanical room calculation
+                            // shared/area-utils - see the note in publish-summary.
+                            // The old count-based "all bays selected" branch
+                            // over-allocated the mechanical room whenever split
+                            // bays made the entry count match the bay count.
                             const property = properties?.find((p: any) => p.id.toString() === rfp.property);
-                            const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
-                            
-                            // Calculate proportional mechanical allocation
-                            let proportionalMechanical = 0;
-                            if (property?.bayConfigurations) {
-                              const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                              if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
-                                // All bays selected = 100% of mechanical room
-                                proportionalMechanical = mechanicalRoomSF;
-                              } else {
-                                // Partial selection = proportional allocation
-                                proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-                              }
-                            }
-                            
-                            calculatedArea = selectedBaySquareFootage + proportionalMechanical;
+                            calculatedArea = computeAreaSummary(
+                              rfp.selectedBayConfigurations,
+                              property?.bayConfigurations,
+                              property?.mechanicalRoomSquareFootage,
+                            ).totalRentableSf;
                           }
                           
                           // Priority: warehouseAreaOverride > calculated area from bays > warehouseArea > projectArea
@@ -377,26 +367,13 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                             let calculatedArea = 0;
                             if (rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
                               // Calculate warehouse area only from bay configurations
-                              const selectedBaySquareFootage = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                              
-                              // Get property data for mechanical room calculation
+                              // shared/area-utils - second occurrence in this file.
                               const property = properties?.find((p: any) => p.id.toString() === rfp.property);
-                              const mechanicalRoomSF = property?.mechanicalRoomSquareFootage || 0;
-                              
-                              // Calculate proportional mechanical allocation
-                              let proportionalMechanical = 0;
-                              if (property?.bayConfigurations) {
-                                const totalPropertyBaysSF = property.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                                if (rfp.selectedBayConfigurations.length === property.bayConfigurations.length) {
-                                  // All bays selected = 100% of mechanical room
-                                  proportionalMechanical = mechanicalRoomSF;
-                                } else {
-                                  // Partial selection = proportional allocation
-                                  proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-                                }
-                              }
-                              
-                              calculatedArea = selectedBaySquareFootage + proportionalMechanical;
+                              calculatedArea = computeAreaSummary(
+                                rfp.selectedBayConfigurations,
+                                property?.bayConfigurations,
+                                property?.mechanicalRoomSquareFootage,
+                              ).totalRentableSf;
                             }
                             
                             // Priority: calculated area from bays > warehouseArea > projectArea

@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { computeAreaSummary } from "@shared/area-utils";
 
 const createRfpSchema = z.object({
   property: z.string().min(1, "Property is required"),
@@ -700,8 +701,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Warehouse Area</label>
                           <div className="text-lg font-semibold text-green-600">
                             {(() => {
-                              const selectedBaySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-                              return selectedBaySquareFootage.toLocaleString();
+                              return computeAreaSummary(selectedBayConfigurations, selectedProperty?.bayConfigurations, selectedProperty?.mechanicalRoomSquareFootage).warehouseSf.toLocaleString();
                             })()} SF
                           </div>
                           <p className="text-xs text-gray-500">Available for tenant use</p>
@@ -710,15 +710,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                           <label className="text-sm font-medium text-gray-700">Mechanical Allocation</label>
                           <div className="text-lg font-semibold text-orange-600">
                             {(() => {
-                              const selectedBaySquareFootage = selectedBayConfigurations.reduce((sum, bay) => sum + (bay.squareFootage || 0), 0);
-                              const mechanicalRoomSF = selectedProperty?.mechanicalRoomSquareFootage || 0;
-
-                              if (selectedProperty?.bayConfigurations) {
-                                const totalPropertyBaysSF = selectedProperty.bayConfigurations.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0);
-                                const proportionalMechanical = totalPropertyBaysSF > 0 ? (selectedBaySquareFootage / totalPropertyBaysSF) * mechanicalRoomSF : 0;
-                                return Math.round(proportionalMechanical).toLocaleString();
-                              }
-                              return '0';
+                              return computeAreaSummary(selectedBayConfigurations, selectedProperty?.bayConfigurations, selectedProperty?.mechanicalRoomSquareFootage).mechanicalSf.toLocaleString();
                             })()} SF
                           </div>
                           <p className="text-xs text-gray-500">Building Systems</p>

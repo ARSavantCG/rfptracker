@@ -4,6 +4,7 @@ import { properties, executedLeases, propertyExistingImprovements, rfpRequests, 
 import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
+import { sumBayArea } from "@shared/area-utils";
 
 // Helper function to calculate per-bay cost for spec office (bay-specific items)
 function getSpecOfficePerBayCost(improvements: any[], relevantBays: any[], totalSpecOfficeCost: number): number {
@@ -277,8 +278,19 @@ async function getPropertySummaryData(options?: RfpOptions): Promise<PropertySum
     // Calculate tenant's rentable area
     const tenantArea = selectedBays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
     
-    // Get total property area
-    const totalPropertyArea = parseFloat(property.rentableSquareFootage || '0');
+    // Total property area from bay configurations, via shared/area-utils.
+    //
+    // WAS: parseFloat(property.rentableSquareFootage || '0'). There is no
+    // rentableSquareFootage column on the properties table, so this was always
+    // parseFloat('0') === 0, the guard below always fired, and this function
+    // ALWAYS returned zero parking. Every proportional line beneath it was
+    // unreachable, and the printed summary reported 0 vehicular and 0 trailer
+    // parking for every tenant on every property.
+    //
+    // calculateElectricalAllocation, immediately below, already derived its
+    // denominator from bayConfigurations correctly - the two adjacent functions
+    // disagreed.
+    const totalPropertyArea = sumBayArea(property.bayConfigurations || []);
     
     if (totalPropertyArea === 0 || tenantArea === 0) {
       return { vehicular: 0, trailer: 0 };
@@ -726,7 +738,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
     html += `
     <div class="property-section">
         <div class="property-header">
-            ${property.propertyName} ${property.buildingName ? `- Building ${property.buildingName}` : ''}
+            ${property.propertyName} ${property.building ? `- Building ${property.building}` : ''}
         </div>
         <div class="property-content">
             <!-- Property Overview -->

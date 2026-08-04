@@ -65,6 +65,7 @@ import { AuthService } from './auth';
 import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
+import { registerFileIntegrityAudit } from './file-integrity-audit';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
@@ -90,6 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerOwnershipAdminRoutes(app); // slice 0b: ownership report + reassign (admin-only)
   registerAuthRoutes(app);
   registerRomRoutes(app);
+  registerFileIntegrityAudit(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);

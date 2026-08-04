@@ -13,13 +13,63 @@ function getOSKey(filename: string): { bucketName: string; objectName: string } 
   return parseOSPath(`${privateDir}/uploads/${filename}`);
 }
 
+/**
+ * Back up an uploaded file to Object Storage.
+ *
+ * WHY THIS MATTERS: Replit deployments get a fresh container on every publish, so
+ * the local uploads directory is WIPED. Object Storage is the only durable copy.
+ * A file whose backup failed is not "degraded" - it is permanently lost the next
+ * time the app is published, silently, and nobody finds out until someone clicks
+ * download months later.
+ *
+ * Two hardenings over the original single-shot upload:
+ *   1. Retries with backoff. The observed failure mode on this platform is a
+ *      dropped connection mid-transfer, which is exactly what a retry fixes.
+ *   2. Verifies the object EXISTS after writing. bucket.upload() resolving is not
+ *      proof the object landed; without the read-back a partial or rejected write
+ *      logs as success.
+ *
+ * Throws if it cannot confirm the object after all attempts, so callers can
+ * record the failure rather than assume it worked.
+ */
 export async function backupToObjectStorage(localFilePath: string, filename: string): Promise<void> {
   const key = getOSKey(filename);
-  if (!key) return;
+  if (!key) {
+    throw new Error(`[OS Backup] PRIVATE_OBJECT_DIR not set — cannot back up ${filename}`);
+  }
   const { bucketName, objectName } = key;
   const bucket = objectStorageClient.bucket(bucketName);
-  await bucket.upload(localFilePath, { destination: objectName });
-  console.log(`[OS Backup] Uploaded ${filename} → bucket: ${bucketName}, key: ${objectName}`);
+
+  const MAX_ATTEMPTS = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await bucket.upload(localFilePath, { destination: objectName });
+
+      // Read back. Upload resolving is not proof the object is retrievable.
+      const [exists] = await bucket.file(objectName).exists();
+      if (!exists) {
+        throw new Error('upload reported success but object does not exist');
+      }
+
+      console.log(`[OS Backup] ✅ Verified ${filename} → bucket: ${bucketName}, key: ${objectName}${attempt > 1 ? ` (attempt ${attempt})` : ''}`);
+      return;
+    } catch (err) {
+      lastError = err as Error;
+      console.error(`[OS Backup] attempt ${attempt}/${MAX_ATTEMPTS} failed for ${filename}: ${lastError.message}`);
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      }
+    }
+  }
+
+  // Loud and unambiguous: this file exists ONLY on ephemeral disk right now.
+  console.error(
+    `[OS Backup] ❌ PERMANENT FAILURE for ${filename} after ${MAX_ATTEMPTS} attempts. ` +
+    `This file exists only on ephemeral disk and WILL BE LOST on the next publish.`
+  );
+  throw lastError ?? new Error(`[OS Backup] failed to back up ${filename}`);
 }
 
 export async function listObjectStorageFiles(): Promise<{ name: string; key: string }[]> {

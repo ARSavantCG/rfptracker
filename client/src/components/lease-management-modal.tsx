@@ -47,6 +47,30 @@ interface LeaseManagementModalProps {
   availableBays: BayConfiguration[];
 }
 
+/**
+ * The blank lease form.
+ *
+ * Must be passed EXPLICITLY to every form.reset(). react-hook-form treats the
+ * argument to reset() as the form's new defaultValues, so once handleEdit calls
+ * reset({...thatLease}), a later bare reset() restores THAT LEASE rather than an
+ * empty form. That is why "Add New Lease" came up pre-filled with the previous
+ * tenant's details, and why cleared numbers reappeared.
+ */
+function blankLeaseForm(): LeaseFormData {
+  return {
+    tenantName: "",
+    assignedBays: [],
+    rentableAreaOverride: undefined,
+    standardParking: 0,
+    accessibleParking: 0,
+    evParking: 0,
+    trailerParking: 0,
+    leaseType: 'executed' as const,
+    electricalAllocation: undefined,
+    notes: "",
+  };
+}
+
 export default function LeaseManagementModal({ property, availableBays }: LeaseManagementModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [editingLease, setEditingLease] = useState<ExecutedLease | null>(null);
@@ -56,18 +80,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
 
   const form = useForm<LeaseFormData>({
     resolver: zodResolver(leaseFormSchema),
-    defaultValues: {
-      tenantName: "",
-      assignedBays: [],
-      rentableAreaOverride: undefined,
-      standardParking: 0,
-      accessibleParking: 0,
-      evParking: 0,
-      trailerParking: 0,
-      leaseType: 'executed' as const,
-      electricalAllocation: undefined,
-      notes: "",
-    },
+    defaultValues: blankLeaseForm(),
   });
 
   const { data: leases = [], isLoading } = useQuery<ExecutedLease[]>({
@@ -80,9 +93,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       return apiRequest(`/api/properties/${property.id}/executed-leases`, "POST", data);
     },
     onSuccess: () => {
+      setEditingLease(null);
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
       setShowForm(false);
-      form.reset();
+      form.reset(blankLeaseForm());
       toast({ title: "Success", description: "Lease created successfully", duration: 4000 });
     },
     onError: () => {
@@ -98,7 +112,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       queryClient.invalidateQueries({ queryKey: [`/api/properties/${property.id}/executed-leases`] });
       setEditingLease(null);
       setShowForm(false);
-      form.reset();
+      form.reset(blankLeaseForm());
       toast({ title: "Success", description: "Lease updated successfully", duration: 4000 });
     },
     onError: () => {
@@ -147,7 +161,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
   const handleCancel = () => {
     setEditingLease(null);
     setShowForm(false);
-    form.reset();
+    form.reset(blankLeaseForm());
   };
 
   const handlePrint = async () => {
@@ -277,10 +291,11 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           <FormControl>
                             <Input
                               type="number"
+                              onWheel={(e) => e.currentTarget.blur()}
                               min="0"
                               className="border-orange-300 focus:border-orange-500"
                               {...field}
-                              value={field.value || ""}
+                              value={field.value ?? ""}
                               onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                               placeholder="Enter actual lease square footage if different from bay calculation"
                             />
@@ -353,6 +368,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <FormControl>
                               <Input
                                 type="number"
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min="0"
                                 {...field}
                                 value={field.value ?? ""}
@@ -399,9 +415,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <FormControl>
                               <Input
                                 type="number"
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min="0"
                                 {...field}
-                                value={field.value || ""}
+                                value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                                 placeholder=""
                               />
@@ -419,9 +436,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <FormControl>
                               <Input
                                 type="number"
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min="0"
                                 {...field}
-                                value={field.value || ""}
+                                value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                                 placeholder=""
                               />
@@ -439,9 +457,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <FormControl>
                               <Input
                                 type="number"
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min="0"
                                 {...field}
-                                value={field.value || ""}
+                                value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                                 placeholder=""
                               />
@@ -459,9 +478,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                             <FormControl>
                               <Input
                                 type="number"
+                                onWheel={(e) => e.currentTarget.blur()}
                                 min="0"
                                 {...field}
-                                value={field.value || ""}
+                                value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                                 placeholder=""
                               />

@@ -315,6 +315,7 @@ export default function DataMapping() {
                       <th className="border p-2 text-left">Project</th>
                       <th className="border p-2 text-left">Contractor</th>
                       <th className="border p-2 text-left">Raw Description</th>
+                      <th className="border p-2 text-right w-28">Quantity</th>
                       <th className="border p-2 text-right">Cost</th>
                       <th className="border p-2 text-left w-48">Master Category</th>
                       <th className="border p-2 text-center w-16">Clean</th>
@@ -397,6 +398,35 @@ function LineItemRow({
         {item.category && (
           <div className="text-xs text-gray-500 mt-1">Original: {item.category}</div>
         )}
+      </td>
+      <td className="border p-2 text-right text-sm whitespace-nowrap">
+        {(() => {
+          // Quantity and unit drive which master category a line belongs to - the
+          // same dollar figure means different things at 12,000 SF versus 3 EA.
+          // Both were already on the record and simply never rendered.
+          //
+          // parseFloat with separators stripped: these arrive as text and may be
+          // formatted ("12,000"), where parseInt would silently truncate to 12.
+          const raw = (item.quantity || "").toString().trim();
+          const qty = raw ? parseFloat(raw.replace(/[^0-9.\-]/g, "")) : NaN;
+          const unit = (item.unit || "").trim();
+          if (!raw || isNaN(qty)) {
+            return <span className="text-xs text-gray-400 italic">no qty</span>;
+          }
+          return (
+            <>
+              <div className="font-medium">
+                {qty.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {unit && <span className="text-gray-500 font-normal"> {unit}</span>}
+              </div>
+              {item.unitPrice && (
+                <div className="text-xs text-gray-500">
+                  {formatCurrency(item.unitPrice)}{unit ? `/${unit}` : " ea"}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </td>
       <td className="border p-2 text-right text-sm font-medium">
         {formatCurrency(item.totalPrice)}

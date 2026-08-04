@@ -75,6 +75,10 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
   const [isOpen, setIsOpen] = useState(false);
   const [editingLease, setEditingLease] = useState<ExecutedLease | null>(null);
   const [showForm, setShowForm] = useState(false);
+  // Bumped every time the form is opened. Used as a React key on the bay grid so
+  // it remounts with a clean internal selection each session - resetting the form
+  // field alone does not clear the grid's own state.
+  const [formInstance, setFormInstance] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -141,6 +145,28 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     }
   };
 
+  // The Add button previously did only setShowForm(true) - it neither cleared
+  // editingLease nor reset the form, so re-opening the form showed whatever was
+  // last in it. Worse, a stale editingLease routes onSubmit to updateMutation, so
+  // "adding" a lease would have PATCHed the one previously edited.
+  const startNewLease = () => {
+    setEditingLease(null);
+    form.reset(blankLeaseForm());
+    setFormInstance((n) => n + 1);
+    setShowForm(true);
+  };
+
+  // Closing the dialog (X, overlay click, Esc) bypassed handleCancel entirely, so
+  // form state, showForm, and editingLease all survived until the next open.
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      setEditingLease(null);
+      setShowForm(false);
+      form.reset(blankLeaseForm());
+    }
+    setIsOpen(open);
+  };
+
   const handleEdit = (lease: ExecutedLease) => {
     setEditingLease(lease);
     form.reset({
@@ -155,6 +181,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       electricalAllocation: lease.electricalAllocation ?? undefined,
       notes: lease.notes || "",
     });
+    setFormInstance((n) => n + 1);
     setShowForm(true);
   };
 
@@ -196,7 +223,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
   const unassignedBays = availableBays.filter(bay => !leasedBays.includes(bay.id));
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-1 text-xs px-2 py-1 h-6">
           <Building className="h-3 w-3" />
@@ -223,7 +250,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
         <div className="space-y-6">
           {/* Add New Lease Button */}
           {!showForm && (
-            <Button onClick={() => setShowForm(true)} className="mb-4">
+            <Button onClick={startNewLease} className="mb-4">
               <Plus className="h-4 w-4 mr-2" />
               Add New Lease
             </Button>
@@ -264,6 +291,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           <FormControl>
                             <div className="border rounded-md min-w-0 overflow-x-auto max-h-[300px] overflow-y-auto">
                               <BaySelectionGrid
+                                key={formInstance}
                                 property={property}
                                 excludeLeaseId={editingLease?.id}
                                 initialSelectedBays={(property?.bayConfigurations || []).filter(

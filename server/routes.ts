@@ -4212,6 +4212,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .status-inprogress { background: #F59E0B; }
             .status-completed { background: #10B981; }
             .status-onhold { background: #EF4444; }
+            .status-cancelled { background: #6B7280; text-decoration: line-through; }
+            .status-archived { background: #9CA3AF; }
             .status-in-progress { background: #F59E0B; }
             .status-on-hold { background: #EF4444; }
           </style>
@@ -4274,8 +4276,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 let phaseDisplay = '';
                 let phaseClass = '';
                 
-                // Check if completed by status first, then by workflow phase
-                if (rfp.status === 'completed') {
+                // TERMINAL STATUSES WIN OVER PHASE.
+                //
+                // Only 'completed' was checked here, so a cancelled, on-hold, or
+                // archived RFP still displayed whatever workflow phase it was
+                // sitting in when it stopped - a cancelled deal parked in the
+                // publish phase read "Publish" on an executive report, which is
+                // the opposite of true.
+                //
+                // workflowPhase records how far a record GOT; status records
+                // whether it is still live. When they disagree, status is the
+                // honest answer.
+                if (rfp.status === 'cancelled') {
+                  phaseDisplay = 'Cancelled';
+                  phaseClass = 'status-cancelled';
+                } else if (rfp.status === 'archived') {
+                  phaseDisplay = 'Archived';
+                  phaseClass = 'status-archived';
+                } else if (rfp.status === 'on-hold') {
+                  phaseDisplay = 'On Hold';
+                  phaseClass = 'status-onhold';
+                } else if (rfp.status === 'completed') {
                   phaseDisplay = 'Completed';
                   phaseClass = 'status-completed';
                 } else {
@@ -4506,6 +4527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .status-inprogress { background: #F59E0B; }
             .status-completed { background: #10B981; }
             .status-onhold { background: #EF4444; }
+            .status-cancelled { background: #6B7280; text-decoration: line-through; }
+            .status-archived { background: #9CA3AF; }
             .status-in-progress { background: #F59E0B; }
             .status-on-hold { background: #EF4444; }
           </style>
@@ -4572,8 +4595,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       let statusDisplay = value || 'N/A';
                       let statusClass = 'status-received';
                       
-                      // Use workflow phase for more detailed status if available
-                      if (rfp.workflowPhase) {
+                      // Terminal statuses win over phase - same rule as the
+                      // executive report above. This branch previously ran for
+                      // EVERY record and overwrote the status column with the
+                      // workflow phase, so a cancelled or completed RFP showed the
+                      // phase it stalled in.
+                      const TERMINAL = ['cancelled', 'archived', 'on-hold', 'completed'];
+                      if (TERMINAL.includes(rfp.status)) {
+                        statusDisplay = rfp.status === 'on-hold'
+                          ? 'On Hold'
+                          : rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1);
+                        statusClass =
+                          rfp.status === 'cancelled' ? 'status-cancelled' :
+                          rfp.status === 'archived'  ? 'status-archived'  :
+                          rfp.status === 'on-hold'   ? 'status-onhold'    :
+                                                       'status-completed';
+                      } else if (rfp.workflowPhase) {
                         switch (rfp.workflowPhase) {
                           case 'invitation-to-bid':
                             statusDisplay = 'Invitation to Bid';

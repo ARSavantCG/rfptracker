@@ -915,3 +915,129 @@ still 52. Run both with `npx tsx`.
   Decide whether that is acceptable or whether issued ROMs need pinning.
 - Not verified against helium or Neon. Needs click-through on a real RFP carrying all
   four fee rows; compare against the worked example above.
+
+---
+
+## 2026-08-04 — Area/electrical consolidation, phantom-field audit, and a DB-PUSH HAZARD
+
+### ⛔ DO NOT RUN `npm run db:push` ON THIS REPO
+
+`drizzle-kit push` reconciles the ENTIRE schema. `shared/schema.ts` has drifted far
+enough from the deployed database that a push now proposes destroying live data.
+Confirmed 2026-08-04, aborted before anything was applied. It proposed:
+
+- **Dropping `session` (4 rows) and `sessions` (2 rows)** — not declared in
+  `shared/schema.ts`, so Drizzle treats them as removable. Almost certainly Express
+  session storage.
+- **`total_cost` numeric → integer on 26 rows** — see the latent-bug section below.
+- ~30 further type conversions: `jsonb`→`json`, `varchar`→`text`,
+  `serial`→`integer`, `date`→`timestamp`, `quantity` integer→text.
+
+**Add new columns with targeted `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` instead.**
+Additive, idempotent, and it cannot touch anything else. This session's three columns
+were added that way:
+
+```sql
+ALTER TABLE executed_leases ADD COLUMN IF NOT EXISTS lease_type text DEFAULT 'executed';
+ALTER TABLE executed_leases ADD COLUMN IF NOT EXISTS electrical_allocation integer;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS electrical_allocation_minimum integer DEFAULT 200;
+```
+
+**Reaching production from Replit:** the shell's `DATABASE_URL` points at **helium**
+(dev). `NEON_DATABASE_URL` is empty in the shell. Production is reached only via
+`executeSql({ environment: "production" })` in the CodeExecution sandbox. A green
+result in the shell says nothing about production — always state which database a
+result came from.
+
+### LATENT BUG (unresolved): `property_existing_improvements.total_cost` type drift
+
+`shared/schema.ts:844` declares `integer("total_cost")` with the comment "in cents".
+The deployed column is `numeric`.
+
+Code is internally consistent on the cents convention — every write goes through
+`Math.round(x * 100)` (`server/property-routes.ts:582` create, `:667` update) and every
+read divides by 100 (`costs-in-place-report.ts:109`, `actuals-routes.ts:135`, the modal
+at `:420`). Only one create path and one update path exist.
+
+So values written by the app should already be whole numbers, and the conversion would
+be lossless. **But that is inference, not evidence.** Rows from the historical import,
+seeds, or manual SQL never passed through those handlers. Verify before trusting it:
+
+```sql
+-- Run against PRODUCTION. Any non-zero count = real cents that a
+-- numeric->integer conversion would silently truncate.
+SELECT COUNT(*) AS fractional_rows
+FROM property_existing_improvements
+WHERE total_cost IS NOT NULL AND total_cost <> ROUND(total_cost);
+
+SELECT id, property_id, description, total_cost
+FROM property_existing_improvements
+WHERE total_cost IS NOT NULL AND total_cost <> ROUND(total_cost)
+LIMIT 20;
+
+-- Sanity-check the cents assumption: dollar-denominated rows would look
+-- ~100x too small here.
+SELECT id, description, total_cost, total_cost / 100.0 AS as_dollars
+FROM property_existing_improvements ORDER BY total_cost DESC LIMIT 10;
+```
+
+If `fractional_rows` is 0, the drift is cosmetic and the column can be aligned safely.
+If not, those rows hold real cents and need a decision before any conversion.
+
+### Shipped
+
+- `shared/area-utils.ts` — warehouse area, mechanical proration, `exceedsBuilding`
+- `shared/electrical-utils.ts` — `defaultElectricalAllocation` with increment + minimum
+- Lease form: suite/generation/temporary-lease support, `blankLeaseForm()`
+- Occupancy report: tenant lease detail rows + over-allocation variance row
+- Bay grid: % of building on tiles and badges
+
+### Bugs found and fixed
+
+| Bug | Root cause |
+|---|---|
+| Warehouse 408,763 SF > rentable 128,808 SF | Two hardcoded string literals behind an "all bays selected" branch |
+| CM billed $48.4M vs $44,020.86 | `calculatedDesignTotal` ignored `manualOverrides`, re-reading a lump sum as a per-SF rate |
+| Rentable Area never displayed | Summed only `rentableSquareFootage` (null on many bays); `warehouseArea` fallback stranded in an `else if` |
+| Mechanical over-allocated on split bays | "All bays selected" compared COUNTS; split halves make the count match at half the area |
+| Tenant parking always 0 on the property summary | Denominator read `property.rentableSquareFootage`, a column that does not exist |
+| Grade Level Doors / Truck Courts / Car Parking columns | Fields exist nowhere; printed a hard 0 on every row |
+| `- Building X` never rendered | `property.buildingName`; the column is `property.building` |
+| New leases pre-filled with the previous tenant | `form.reset()` bare — RHF had adopted the edited lease as its defaults |
+| Scroll wheel silently edited lease area | Focused number inputs consume the wheel event |
+
+### Lessons banked
+
+- **A plausible number with nothing behind it is the dominant failure mode here.**
+  Four instances this session. None were found by looking at a number and asking
+  whether it looked right — all were found by asking *where does this come from*.
+  `408,763` looks like a building. A blank area looks like an empty screen. `$48M`
+  looks like a big project. `0 parking` looks like a property with no parking.
+- **Audit technique that worked:** parse every field declared in `shared/schema.ts`,
+  then grep report code for accessors on those types and diff. Found the parking bug
+  and the building-name bug in one pass. Worth re-running after schema changes.
+- **Count-based equality is not set equality.** `selected.length === bays.length` was
+  wrong in four places because split bays are separate entries. Compare identity, or
+  better, delete the special case — the general formula already handled it.
+- **`form.reset()` with no argument does not restore the original defaults.**
+  react-hook-form adopts the last `reset(values)` payload as its new defaults. Always
+  pass an explicit blank object.
+- **Falsy-zero bugs:** `field.value || ""` renders a real 0 as blank, and
+  `parseFloat(x || '0')` on a missing column silently yields 0 and looks like data.
+- **Duplication is the upstream cause of most of the above.** Six copies of the area
+  maths, five of the electrical rounding, five of the bay-form literal. Every incident
+  traced back to copies drifting. Business rules that move money or square footage
+  belong in `shared/`.
+
+### OPEN
+
+- `total_cost` fractional-row check above — run it.
+- Two dead fields in `property-summary-report.ts`: `gradeLevel` (hardcoded 0) and
+  `notes` (no such column on `BayConfiguration`). Assigned into the view model, never
+  rendered. Harmless today; a trap if someone renders them later.
+- Split bays inherit the parent bay's `suiteNumber`. A bay split between two tenants in
+  different suites cannot be represented.
+- Temporary leases still count toward occupied SF in the occupancy report. Labelled
+  "Temporary" in detail rows. Whether they should count as leased is a business call.
+- Electrical minimum returns 0 when a tenant's share is below one increment and no
+  minimum is set — intentional, but visible on small suites.

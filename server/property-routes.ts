@@ -19,6 +19,7 @@ import {
   applySymmetricalLegalCompliance
 } from './property-legal-compliance';
 import { applyLegalRounding, validateLegalCompliance, LEGAL_TOTALS } from './legal-rounding-system';
+import { getFileBuffer } from './storage-backup';
 import {
   insertPropertySchema,
   updatePropertySchema,
@@ -1440,22 +1441,29 @@ export function registerPropertyRoutes(app: Express): void {
         return res.status(404).json({ message: "Attachment not found" });
       }
 
-      const filePath = path.join(uploadsDir, attachment.filename);
-      console.log(`📂 Checking file path: ${filePath}`);
-      
-      if (!fs.existsSync(filePath)) {
-        console.log(`❌ File not found on disk: ${filePath}`);
-        return res.status(404).json({ message: "File not found on disk" });
+      // Disk-then-Object-Storage, via the shared helper in storage-backup.ts.
+      //
+      // This route previously checked local disk ONLY and 404'd if the file was
+      // missing. Replit deployments get a fresh container on every publish, so the
+      // ephemeral disk is wiped and every previously uploaded property attachment
+      // became undownloadable the moment the app was republished. The Object
+      // Storage copy written at upload time was never consulted here - the
+      // /uploads/* route had the fallback, this one did not.
+      //
+      // originalName is passed so getFileBuffer's suffix-scan can find objects
+      // stored under a nanoid-prefixed key.
+      console.log(`📂 Resolving file: ${attachment.filename}`);
+      const buffer = await getFileBuffer(attachment.filename, attachment.originalName);
+
+      if (!buffer) {
+        console.log(`❌ File not found on disk or in Object Storage: ${attachment.filename}`);
+        return res.status(404).json({ message: "File not found" });
       }
 
-      console.log(`✅ Starting download: ${attachment.originalName}`);
-      res.download(filePath, attachment.originalName, (err) => {
-        if (err) {
-          console.error("❌ Download error:", err);
-        } else {
-          console.log(`✅ Download completed: ${attachment.originalName}`);
-        }
-      });
+      console.log(`✅ Starting download: ${attachment.originalName} (${buffer.length} bytes)`);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(attachment.originalName)}"`);
+      if (attachment.mimeType) res.setHeader('Content-Type', attachment.mimeType);
+      res.send(buffer);
     } catch (error) {
       console.error("❌ Error downloading property attachment:", error);
       res.status(500).json({ message: "Failed to download attachment" });

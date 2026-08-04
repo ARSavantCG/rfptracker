@@ -842,9 +842,9 @@ export function registerPropertyRoutes(app: Express): void {
                 <th>Square Footage</th>
                 <th>Standard Dock Doors</th>
                 <th>Oversized Dock Doors</th>
-                <th>Grade Level Doors</th>
-                <th>Truck Courts</th>
-                <th>Car Parking</th>
+                <th>Suite</th>
+                <th>Generation</th>
+                <th>Office SF</th>
               </tr>
             </thead>
             <tbody>
@@ -854,9 +854,9 @@ export function registerPropertyRoutes(app: Express): void {
                   <td>${bay.squareFootage.toLocaleString()}</td>
                   <td>${bay.standardDockDoors || 0}</td>
                   <td>${bay.oversizedDockDoors || 0}</td>
-                  <td>${bay.gradeLevelDoors || 0}</td>
-                  <td>${bay.truckCourts || 0}</td>
-                  <td>${bay.carParking || 0}</td>
+                  <td>${bay.suiteNumber || ''}</td>
+                  <td>${bay.spaceGeneration === 'second' ? '2nd Gen' : bay.spaceGeneration === 'first' ? '1st Gen' : ''}</td>
+                  <td>${bay.hasSpeculativeOffice ? (bay.officeSquareFootage || 0).toLocaleString() : ''}</td>
                 </tr>
               `).join('')}
             </tbody>

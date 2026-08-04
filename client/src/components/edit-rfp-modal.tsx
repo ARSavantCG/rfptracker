@@ -92,8 +92,24 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     selectedBaysPerBuilding?: {[propertyName: string]: BayConfiguration[]},
     costsPerBuilding?: {[propertyName: string]: BuildingCosts}
   ) => {
-    // Use the area calculated by the Bay Configuration Selector (already includes proportional mechanical allocation)
-    setCalculatedFloorArea(area);
+    // Rentable = warehouse (selected bays) + the tenant's prorated share of the
+    // mechanical room. Recomputed here via shared/area-utils rather than trusting
+    // the `area` argument.
+    //
+    // The comment previously here claimed the selector's figure "already includes
+    // proportional mechanical allocation". BaySelectionGrid does NOT - it reports
+    // bay square footage only. bay-configuration-selector DOES add it. The two
+    // selectors disagreed, and this modal used the one that omits it, so Total
+    // Rentable Area rendered identical to Warehouse Area while a non-zero
+    // Mechanical Allocation sat beside them - visibly failing to add up. The
+    // mechanical share was displayed and then dropped from the stored area.
+    const areaSummary = computeAreaSummary(
+      bayConfigs,
+      selectedProperty?.bayConfigurations,
+      selectedProperty?.mechanicalRoomSquareFootage,
+    );
+    const rentableTotal = areaSummary.totalRentableSf > 0 ? areaSummary.totalRentableSf : area;
+    setCalculatedFloorArea(rentableTotal);
     setSelectedBayConfigurations(bayConfigs);
     
     // Update multi-building data if provided
@@ -105,10 +121,10 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
     }
     
     // Auto-populate the project area field with pre-calculated value
-    if (area > 0) {
+    if (rentableTotal > 0) {
       const areaText = overrideArea 
-        ? `${area.toLocaleString()} SF (override area for existing lease)`
-        : `${area.toLocaleString()} SF (calculated from selected bay configurations)`;
+        ? `${rentableTotal.toLocaleString()} SF (override area for existing lease)`
+        : `${rentableTotal.toLocaleString()} SF (bays + prorated mechanical)`;
       form.setValue("projectArea", areaText);
     } else {
       form.setValue("projectArea", "");

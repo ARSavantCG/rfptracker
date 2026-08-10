@@ -111,7 +111,13 @@ export function registerProjectTeamRoutes(app: Express) {
       // rejects that comparison outright and the whole report 500s. Every other
       // caller in this codebase resolves it in JS with p.id.toString() === rfp.property.
       // Fetched separately and matched the same way.
-      const rows = await db
+      // Driven from rfpRequests, NOT from projectTeamMembers.
+      //
+      // Previously this started at the assignments table, so a project with
+      // nobody assigned simply did not exist in the report. That hid exactly the
+      // thing worth seeing: which projects have no architect or engineer on
+      // record. Every project is listed now; the gaps are the point.
+      const projectRows = await db
         .select({
           rfpId: rfpRequests.id,
           rfpNumber: rfpRequests.rfpNumber,
@@ -119,6 +125,13 @@ export function registerProjectTeamRoutes(app: Express) {
           tenantName: rfpRequests.tenantName,
           status: rfpRequests.status,
           propertyRef: rfpRequests.property,
+        })
+        .from(rfpRequests)
+        .orderBy(asc(rfpRequests.projectName));
+
+      const memberRows = await db
+        .select({
+          rfpId: projectTeamMembers.rfpId,
           role: projectTeamMembers.role,
           isPrimary: projectTeamMembers.isPrimary,
           roleTitle: projectTeamMembers.roleTitle,
@@ -128,9 +141,8 @@ export function registerProjectTeamRoutes(app: Express) {
           company: contacts.company,
         })
         .from(projectTeamMembers)
-        .leftJoin(rfpRequests, eq(projectTeamMembers.rfpId, rfpRequests.id))
         .leftJoin(contacts, eq(projectTeamMembers.contactId, contacts.id))
-        .orderBy(asc(rfpRequests.projectName), asc(projectTeamMembers.role));
+        .orderBy(asc(projectTeamMembers.role));
 
       // Project only what is needed: a bare select().from(properties) throws if
       // ANY column on that wide table has drifted, taking the report with it.
@@ -147,24 +159,38 @@ export function registerProjectTeamRoutes(app: Express) {
         .from(properties);
       const propById = new Map(propRows.map((p) => [String(p.id), p]));
 
-      // Group by project. Projects with no team assigned do not appear here at
-      // all — that absence is itself the useful signal, so it is stated in the
-      // report rather than left for the reader to notice.
-      const byProject = new Map<number, typeof rows>();
-      for (const r of rows) {
-        if (r.rfpId == null) continue;
-        if (!byProject.has(r.rfpId)) byProject.set(r.rfpId, [] as any);
-        byProject.get(r.rfpId)!.push(r);
+      const membersByRfp = new Map<number, typeof memberRows>();
+      for (const m of memberRows) {
+        if (m.rfpId == null) continue;
+        if (!membersByRfp.has(m.rfpId)) membersByRfp.set(m.rfpId, [] as any);
+        membersByRfp.get(m.rfpId)!.push(m);
       }
+
+      // Terminal projects are excluded by default - a cancelled deal has no team
+      // to staff. ?includeClosed=1 brings them back.
+      const CLOSED = ['cancelled', 'archived', 'completed'];
+      const includeClosed = req.query.includeClosed === '1';
+      const visibleProjects = includeClosed
+        ? projectRows
+        : projectRows.filter((p) => !CLOSED.includes(String(p.status || '')));
+
+      const staffedCount = visibleProjects.filter((p) => (membersByRfp.get(p.rfpId) || []).length > 0).length;
 
       if (req.query.format === 'json') {
-        return res.json({ projects: Array.from(byProject.entries()).map(([id, members]) => ({ rfpId: id, members })) });
+        return res.json({
+          summary: { total: visibleProjects.length, staffed: staffedCount, unstaffed: visibleProjects.length - staffedCount },
+          projects: visibleProjects.map((p) => ({ ...p, members: membersByRfp.get(p.rfpId) || [] })),
+        });
       }
 
-      const sections = Array.from(byProject.values()).map((members) => {
-        const first = members[0];
-        const prop = first.propertyRef ? propById.get(String(first.propertyRef)) : undefined;
-        const heading = [first.projectName, first.tenantName].filter(Boolean).join(' — ');
+      // Roles always shown as rows even when unassigned, so the report doubles as
+      // a coverage checklist. The rest are shown only when someone is in them.
+      const CORE_ROLES = ['architect', 'mep_engineer', 'general_contractor'];
+
+      const sections = visibleProjects.map((proj) => {
+        const members = membersByRfp.get(proj.rfpId) || [];
+        const prop = proj.propertyRef ? propById.get(String(proj.propertyRef)) : undefined;
+        const heading = [proj.projectName, proj.tenantName].filter(Boolean).join(' — ');
 
         const propertyLine = prop
           ? `${prop.propertyName}${prop.building ? ` — Building ${prop.building}` : ''}`
@@ -173,24 +199,42 @@ export function registerProjectTeamRoutes(app: Express) {
           ? [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
               .filter(Boolean).join(' · ')
           : null;
-        const sub = [first.rfpNumber, propertyLine].filter(Boolean).join(' · ');
-        const memberRows = members.map((m) => `
+        const sub = [proj.rfpNumber, propertyLine].filter(Boolean).join(' · ');
+
+        const rolesToShow = Array.from(new Set([...CORE_ROLES, ...members.map((m) => m.role)]))
+          .sort((a, b) => PROJECT_TEAM_ROLES.indexOf(a as any) - PROJECT_TEAM_ROLES.indexOf(b as any));
+
+        const bodyRows = rolesToShow.map((role) => {
+          const inRole = members.filter((m) => m.role === role);
+          const label = PROJECT_TEAM_ROLE_LABELS[role] || role;
+          if (inRole.length === 0) {
+            // Blank row rather than an omitted one: an unassigned role is
+            // information, and hiding it makes an incomplete team look complete.
+            return `
+          <tr class="unassigned">
+            <td>${escapeHtml(label)}</td>
+            <td colspan="4">Not assigned</td>
+          </tr>`;
+          }
+          return inRole.map((m) => `
           <tr>
-            <td>${escapeHtml(PROJECT_TEAM_ROLE_LABELS[m.role] || m.role)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
+            <td>${escapeHtml(label)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
             <td>${escapeHtml(m.company || '—')}</td>
             <td>${escapeHtml(m.contactName || '—')}${m.roleTitle ? `<br><span class="muted">${escapeHtml(m.roleTitle)}</span>` : ''}</td>
             <td>${escapeHtml(m.contactEmail || '—')}</td>
             <td>${escapeHtml(m.contactPhone || '—')}</td>
           </tr>`).join('');
+        }).join('');
+
         return `
         <div class="project">
-          <div class="project-head">${escapeHtml(heading)}</div>
+          <div class="project-head">${escapeHtml(heading)}${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
           <div class="project-sub">${escapeHtml(sub)}</div>
           ${addressLine ? `<div class="project-address">${escapeHtml(addressLine)}</div>` : ''}
-          ${!prop ? `<div class="project-address warn">Property record not found for reference "${escapeHtml(first.propertyRef ?? '')}" — address unavailable.</div>` : ''}
+          ${!prop ? `<div class="project-address warn">Property record not found for reference "${escapeHtml(proj.propertyRef ?? '')}" — address unavailable.</div>` : ''}
           <table>
-            <thead><tr><th>Role</th><th>Firm</th><th>Contact</th><th>Email</th><th>Phone</th></tr></thead>
-            <tbody>${memberRows}</tbody>
+            <thead><tr><th style="width:18%">Role</th><th style="width:22%">Firm</th><th style="width:22%">Contact</th><th style="width:22%">Email</th><th style="width:16%">Phone</th></tr></thead>
+            <tbody>${bodyRows}</tbody>
           </table>
         </div>`;
       }).join('');
@@ -211,11 +255,20 @@ export function registerProjectTeamRoutes(app: Express) {
   td { padding: 5px; border: 1px solid #ddd; vertical-align: top; }
   .muted { color: #777; font-size: 10px; }
   .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; }
+  .unassigned td { color: #9a3412; background: #fff7ed; font-style: italic; }
+  .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
+  .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
 </style></head><body>
   <div class="document-title">Project Team Directory</div>
   <div class="generated">Generated ${new Date().toLocaleString()}</div>
-  ${byProject.size === 0
-    ? `<div class="empty">No project team members have been assigned yet. Assign architects, engineers, and other roles on an RFP and they will appear here.</div>`
+  <div class="summary">
+    <strong>${visibleProjects.length}</strong> project${visibleProjects.length === 1 ? '' : 's'} ·
+    <strong>${staffedCount}</strong> with a team assigned ·
+    <strong>${visibleProjects.length - staffedCount}</strong> with none
+    ${includeClosed ? '' : ' &nbsp;<span class="muted">(cancelled, archived and completed projects excluded)</span>'}
+  </div>
+  ${visibleProjects.length === 0
+    ? `<div class="empty">No active projects found.</div>`
     : sections}
 </body></html>`;
 

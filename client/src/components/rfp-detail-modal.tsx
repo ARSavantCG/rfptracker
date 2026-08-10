@@ -12,6 +12,7 @@ import type { RfpRequest } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { parseRfpVariant } from "@shared/rfp-variant";
 import { RfpActualsSection } from "@/components/rfp-actuals-section";
+import { ProjectTeamSection } from "@/components/project-team-section";
 
 interface RfpDetailModalProps {
   isOpen: boolean;
@@ -821,6 +822,9 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                     </div>
                   </div>
                 )}
+
+                {/* ── Project Team ── */}
+                <ProjectTeamSection rfpId={rfp.id} />
 
                 {/* ── Contract Actuals ── */}
                 <RfpActualsSection

@@ -71,7 +71,7 @@ export default function Reports() {
     setFilters({});
   };
 
-  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload") => {
+  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload" | "project-team") => {
     if (reportType === "custom") {
       setCustomReportModalOpen(true);
       return;
@@ -87,6 +87,12 @@ export default function Reports() {
       if (reportType === "vendor-workload") {
         url = `/api/reports/vendor-workload/html`;
         if (incompleteOnly) params.append('incompleteOnly', 'true');
+      }
+
+      // Project team ignores the date/status filters — it is a directory of who
+      // is on what, not a period report.
+      if (reportType === "project-team") {
+        url = `/api/reports/project-team`;
       }
 
       const response = await fetch(`${url}?${params}`, {
@@ -442,6 +448,36 @@ export default function Reports() {
               <Button 
                 className="w-full h-8 text-xs" 
                 onClick={() => generateReport("vendor-workload")}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <Users className="h-4 w-4" />
+                <span>Project Team Directory</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-xs text-gray-600">
+                <p className="mb-1">Who is working on each project:</p>
+                <ul className="space-y-0.5">
+                  <li>• Architect, MEP, structural, civil</li>
+                  <li>• GC, expediter, landlord &amp; tenant reps</li>
+                  <li>• Firm, person, email and phone</li>
+                </ul>
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Assign people on each RFP under Project Team. Projects with nobody assigned
+                will not appear.
+              </p>
+              <Button
+                className="w-full h-8 text-xs"
+                onClick={() => generateReport("project-team")}
               >
                 <Download className="h-3 w-3 mr-1" />
                 Generate Report

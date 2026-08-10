@@ -166,13 +166,28 @@ export function registerProjectTeamRoutes(app: Express) {
         membersByRfp.get(m.rfpId)!.push(m);
       }
 
-      // Terminal projects are excluded by default - a cancelled deal has no team
-      // to staff. ?includeClosed=1 brings them back.
-      const CLOSED = ['cancelled', 'archived', 'completed'];
-      const includeClosed = req.query.includeClosed === '1';
-      const visibleProjects = includeClosed
+      // Only CANCELLED and ARCHIVED are hidden by default.
+      //
+      // 'completed' was originally excluded too, which was wrong: this is a
+      // DIRECTORY, and a finished job is exactly the institutional memory it
+      // exists to hold - "who did we use on MG Westside?" is most often asked
+      // about work that is already done. Excluding it left a portfolio-wide
+      // report showing a single project.
+      //
+      //   default        cancelled + archived hidden
+      //   ?activeOnly=1  also hides completed
+      //   ?includeAll=1  hides nothing
+      const activeOnly = req.query.activeOnly === '1';
+      const includeAll = req.query.includeAll === '1';
+      const HIDDEN = activeOnly
+        ? ['cancelled', 'archived', 'completed']
+        : ['cancelled', 'archived'];
+
+      const visibleProjects = includeAll
         ? projectRows
-        : projectRows.filter((p) => !CLOSED.includes(String(p.status || '')));
+        : projectRows.filter((p) => !HIDDEN.includes(String(p.status || '')));
+
+      const hiddenCount = projectRows.length - visibleProjects.length;
 
       const staffedCount = visibleProjects.filter((p) => (membersByRfp.get(p.rfpId) || []).length > 0).length;
 
@@ -243,7 +258,10 @@ export function registerProjectTeamRoutes(app: Express) {
         const projHead = [proj.projectName, proj.tenantName].filter(Boolean).join(' — ');
         return `
           <div class="project">
-            <div class="project-head">${escapeHtml(projHead)}${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
+            <div class="project-head">${escapeHtml(projHead)}${
+              proj.status && proj.status !== 'in-progress' && proj.status !== 'received'
+                ? ` <span class="pill status">${escapeHtml(String(proj.status).replace('-', ' '))}</span>` : ''
+            }${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
             <div class="project-sub">${escapeHtml(proj.rfpNumber || '')}</div>
             <table>
               <thead><tr><th style="width:18%">Role</th><th style="width:22%">Firm</th><th style="width:22%">Contact</th><th style="width:22%">Email</th><th style="width:16%">Phone</th></tr></thead>
@@ -299,6 +317,7 @@ export function registerProjectTeamRoutes(app: Express) {
   .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; }
   .unassigned td { color: #9a3412; background: #fff7ed; font-style: italic; }
   .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
+  .pill.status { background: #eef2f9; color: #1e3a5f; border-color: #b6c6dd; text-transform: capitalize; }
   .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
   .park { margin-top: 22px; page-break-inside: auto; }
   .park-head { font-size: 16px; font-weight: bold; color: #fff; background: ${BRAND_COLOR_PRIMARY}; padding: 6px 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: baseline; }
@@ -313,7 +332,9 @@ export function registerProjectTeamRoutes(app: Express) {
     <strong>${visibleProjects.length}</strong> project${visibleProjects.length === 1 ? '' : 's'} ·
     <strong>${staffedCount}</strong> with a team assigned ·
     <strong>${visibleProjects.length - staffedCount}</strong> with none
-    ${includeClosed ? '' : ' &nbsp;<span class="muted">(cancelled, archived and completed projects excluded)</span>'}
+    ${hiddenCount > 0
+      ? ` &nbsp;<span class="muted">(${hiddenCount} ${activeOnly ? 'cancelled, archived or completed' : 'cancelled or archived'} project${hiddenCount === 1 ? '' : 's'} hidden — add ?includeAll=1 to the URL to show everything)</span>`
+      : ''}
   </div>
   ${visibleProjects.length === 0
     ? `<div class="empty">No active projects found.</div>`

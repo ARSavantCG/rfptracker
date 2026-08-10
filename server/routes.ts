@@ -43,6 +43,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnownRomCategory } from "./rom-pricing-utils";
 import { computeLineTotal } from "@shared/line-total";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
+import { extractBidLineItemsWithAi, shouldUseAiFallback } from "./ai-bid-extractor";
 import {
   sanitizeProjectName,
   createProjectFolderStructure,
@@ -149,16 +150,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const result = await parsePdfBuffer(req.file.buffer);
-      
+
       if (!result.success) {
         return res.status(400).json({ message: result.error || "Failed to parse PDF" });
       }
-      
+
+      // Measure the heuristic result before deciding whether it is usable.
+      //
+      // Tested against two real bids on 2026-08-05, both from contractors who
+      // supply most of our pricing:
+      //   Excel Construction  -> 22 rows extracted, ALL CELLS EMPTY, 0 prices
+      //   Nova Construction   -> 0 tables, 0 rows
+      // The heuristic produced nothing usable on either, for different reasons.
+      // Excel's PDF text layer separates the description column from the
+      // RATE/PRICE column by ~85 lines, which no line-based parser can rejoin;
+      // Nova's rows are single-space delimited, which the column splitter does
+      // not segment. So AI extraction is the working path, not a rare fallback.
+      const heurRows = result.tables.flatMap(t => t.rows);
+      const rowsWithPrice = heurRows.filter(row =>
+        row.cells.some(c => /\$|\d+\.\d{2}/.test(c.value || ''))
+      ).length;
+      const averageConfidence = heurRows.length
+        ? heurRows.reduce((sum, row) => sum + (row.confidence || 0), 0) / heurRows.length
+        : 0;
+
+      const decision = shouldUseAiFallback({
+        rowCount: heurRows.length,
+        rowsWithPrice,
+        averageConfidence,
+      });
+
+      let ai: Awaited<ReturnType<typeof extractBidLineItemsWithAi>> | null = null;
+      if (decision.use && req.query.skipAi !== '1') {
+        console.log(`[bid-import] heuristic insufficient — ${decision.reason} Falling through to AI extraction.`);
+        ai = await extractBidLineItemsWithAi(result.rawText);
+      }
+
       res.json({
         success: true,
         tables: result.tables,
         pageCount: result.pageCount,
-        rawText: result.rawText.substring(0, 5000)
+        rawText: result.rawText.substring(0, 5000),
+        // How the rows were obtained, so the review UI can say so plainly rather
+        // than presenting AI output as if it were deterministic extraction.
+        extraction: {
+          method: ai?.success ? 'ai' : 'heuristic',
+          reason: decision.reason,
+          heuristicRowCount: heurRows.length,
+          heuristicRowsWithPrice: rowsWithPrice,
+        },
+        aiResult: ai,
       });
     } catch (error) {
       console.error("PDF parsing error:", error);

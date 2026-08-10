@@ -184,23 +184,40 @@ export function registerProjectTeamRoutes(app: Express) {
       }
 
       // Roles always shown as rows even when unassigned, so the report doubles as
-      // a coverage checklist. The rest are shown only when someone is in them.
+      // a coverage checklist. The rest appear only when someone is in them.
       const CORE_ROLES = ['architect', 'mep_engineer', 'general_contractor'];
 
-      const sections = visibleProjects.map((proj) => {
-        const members = membersByRfp.get(proj.rfpId) || [];
+      // GROUPED BY PARK, THEN BUILDING.
+      //
+      // properties.propertyName is the park ("Bridge Point Doral") and
+      // properties.building is the building within it ("1", "B"). Most of the
+      // portfolio is multi-building parks, so a flat project list scattered
+      // buildings of the same park across the page. Park is the unit people think
+      // in; building is the unit the deal sits in.
+      type ProjRow = typeof visibleProjects[number];
+      const parks = new Map<string, Map<string, { prop: any; projects: ProjRow[] }>>();
+      const UNKNOWN_PARK = 'Unassigned property';
+
+      for (const proj of visibleProjects) {
         const prop = proj.propertyRef ? propById.get(String(proj.propertyRef)) : undefined;
-        const heading = [proj.projectName, proj.tenantName].filter(Boolean).join(' — ');
+        const parkName = prop?.propertyName || UNKNOWN_PARK;
+        const buildingKey = prop?.building ? String(prop.building) : '—';
+        if (!parks.has(parkName)) parks.set(parkName, new Map());
+        const buildings = parks.get(parkName)!;
+        if (!buildings.has(buildingKey)) buildings.set(buildingKey, { prop, projects: [] });
+        buildings.get(buildingKey)!.projects.push(proj);
+      }
 
-        const propertyLine = prop
-          ? `${prop.propertyName}${prop.building ? ` — Building ${prop.building}` : ''}`
-          : null;
-        const addressLine = prop
-          ? [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
-              .filter(Boolean).join(' · ')
-          : null;
-        const sub = [proj.rfpNumber, propertyLine].filter(Boolean).join(' · ');
+      // Parks alphabetical, but the unresolved bucket always last so it reads as
+      // an exception rather than an entry.
+      const sortedParks = Array.from(parks.entries()).sort((a, b) => {
+        if (a[0] === UNKNOWN_PARK) return 1;
+        if (b[0] === UNKNOWN_PARK) return -1;
+        return a[0].localeCompare(b[0]);
+      });
 
+      const renderTeamTable = (proj: ProjRow) => {
+        const members = membersByRfp.get(proj.rfpId) || [];
         const rolesToShow = Array.from(new Set([...CORE_ROLES, ...members.map((m) => m.role)]))
           .sort((a, b) => PROJECT_TEAM_ROLES.indexOf(a as any) - PROJECT_TEAM_ROLES.indexOf(b as any));
 
@@ -211,32 +228,57 @@ export function registerProjectTeamRoutes(app: Express) {
             // Blank row rather than an omitted one: an unassigned role is
             // information, and hiding it makes an incomplete team look complete.
             return `
-          <tr class="unassigned">
-            <td>${escapeHtml(label)}</td>
-            <td colspan="4">Not assigned</td>
-          </tr>`;
+            <tr class="unassigned"><td>${escapeHtml(label)}</td><td colspan="4">Not assigned</td></tr>`;
           }
           return inRole.map((m) => `
-          <tr>
-            <td>${escapeHtml(label)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
-            <td>${escapeHtml(m.company || '—')}</td>
-            <td>${escapeHtml(m.contactName || '—')}${m.roleTitle ? `<br><span class="muted">${escapeHtml(m.roleTitle)}</span>` : ''}</td>
-            <td>${escapeHtml(m.contactEmail || '—')}</td>
-            <td>${escapeHtml(m.contactPhone || '—')}</td>
-          </tr>`).join('');
+            <tr>
+              <td>${escapeHtml(label)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
+              <td>${escapeHtml(m.company || '—')}</td>
+              <td>${escapeHtml(m.contactName || '—')}${m.roleTitle ? `<br><span class="muted">${escapeHtml(m.roleTitle)}</span>` : ''}</td>
+              <td>${escapeHtml(m.contactEmail || '—')}</td>
+              <td>${escapeHtml(m.contactPhone || '—')}</td>
+            </tr>`).join('');
+        }).join('');
+
+        const projHead = [proj.projectName, proj.tenantName].filter(Boolean).join(' — ');
+        return `
+          <div class="project">
+            <div class="project-head">${escapeHtml(projHead)}${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
+            <div class="project-sub">${escapeHtml(proj.rfpNumber || '')}</div>
+            <table>
+              <thead><tr><th style="width:18%">Role</th><th style="width:22%">Firm</th><th style="width:22%">Contact</th><th style="width:22%">Email</th><th style="width:16%">Phone</th></tr></thead>
+              <tbody>${bodyRows}</tbody>
+            </table>
+          </div>`;
+      };
+
+      const sections = sortedParks.map(([parkName, buildings]) => {
+        const buildingKeys = Array.from(buildings.keys()).sort((a, b) =>
+          a.localeCompare(b, undefined, { numeric: true }));
+        const projectCount = Array.from(buildings.values()).reduce((n, b) => n + b.projects.length, 0);
+
+        const buildingBlocks = buildingKeys.map((bk) => {
+          const { prop, projects } = buildings.get(bk)!;
+          const addressLine = prop
+            ? [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
+                .filter(Boolean).join(' · ')
+            : null;
+          return `
+        <div class="building">
+          <div class="building-head">${prop ? `Building ${escapeHtml(bk)}` : 'Building unknown'}</div>
+          ${addressLine ? `<div class="project-address">${escapeHtml(addressLine)}</div>` : ''}
+          ${!prop ? `<div class="project-address warn">Property record not found — address unavailable.</div>` : ''}
+          ${projects.map(renderTeamTable).join('')}
+        </div>`;
         }).join('');
 
         return `
-        <div class="project">
-          <div class="project-head">${escapeHtml(heading)}${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
-          <div class="project-sub">${escapeHtml(sub)}</div>
-          ${addressLine ? `<div class="project-address">${escapeHtml(addressLine)}</div>` : ''}
-          ${!prop ? `<div class="project-address warn">Property record not found for reference "${escapeHtml(proj.propertyRef ?? '')}" — address unavailable.</div>` : ''}
-          <table>
-            <thead><tr><th style="width:18%">Role</th><th style="width:22%">Firm</th><th style="width:22%">Contact</th><th style="width:22%">Email</th><th style="width:16%">Phone</th></tr></thead>
-            <tbody>${bodyRows}</tbody>
-          </table>
-        </div>`;
+      <div class="park">
+        <div class="park-head">${escapeHtml(parkName)}
+          <span class="park-count">${buildingKeys.length} building${buildingKeys.length === 1 ? '' : 's'} · ${projectCount} project${projectCount === 1 ? '' : 's'}</span>
+        </div>
+        ${buildingBlocks}
+      </div>`;
       }).join('');
 
       const html = `<!DOCTYPE html>
@@ -258,6 +300,12 @@ export function registerProjectTeamRoutes(app: Express) {
   .unassigned td { color: #9a3412; background: #fff7ed; font-style: italic; }
   .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
   .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
+  .park { margin-top: 22px; page-break-inside: auto; }
+  .park-head { font-size: 16px; font-weight: bold; color: #fff; background: ${BRAND_COLOR_PRIMARY}; padding: 6px 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+  .park-count { font-size: 10px; font-weight: normal; opacity: 0.9; }
+  .building { margin: 10px 0 0 14px; }
+  .building-head { font-size: 12px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+  .project { margin: 8px 0 0 12px; page-break-inside: avoid; }
 </style></head><body>
   <div class="document-title">Project Team Directory</div>
   <div class="generated">Generated ${new Date().toLocaleString()}</div>

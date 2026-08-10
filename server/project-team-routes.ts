@@ -106,6 +106,11 @@ export function registerProjectTeamRoutes(app: Express) {
   // ?token=, the way the other printable reports work.
   app.get('/api/reports/project-team', requireAuthFlexible, async (req, res) => {
     try {
+      // NO JOIN TO properties HERE. rfp_requests.property is TEXT holding the
+      // property id as a string, while properties.id is INTEGER - Postgres
+      // rejects that comparison outright and the whole report 500s. Every other
+      // caller in this codebase resolves it in JS with p.id.toString() === rfp.property.
+      // Fetched separately and matched the same way.
       const rows = await db
         .select({
           rfpId: rfpRequests.id,
@@ -113,8 +118,7 @@ export function registerProjectTeamRoutes(app: Express) {
           projectName: rfpRequests.projectName,
           tenantName: rfpRequests.tenantName,
           status: rfpRequests.status,
-          propertyName: properties.propertyName,
-          building: properties.building,
+          propertyRef: rfpRequests.property,
           role: projectTeamMembers.role,
           isPrimary: projectTeamMembers.isPrimary,
           roleTitle: projectTeamMembers.roleTitle,
@@ -126,8 +130,22 @@ export function registerProjectTeamRoutes(app: Express) {
         .from(projectTeamMembers)
         .leftJoin(rfpRequests, eq(projectTeamMembers.rfpId, rfpRequests.id))
         .leftJoin(contacts, eq(projectTeamMembers.contactId, contacts.id))
-        .leftJoin(properties, eq(rfpRequests.property, properties.id))
         .orderBy(asc(rfpRequests.projectName), asc(projectTeamMembers.role));
+
+      // Project only what is needed: a bare select().from(properties) throws if
+      // ANY column on that wide table has drifted, taking the report with it.
+      const propRows = await db
+        .select({
+          id: properties.id,
+          propertyName: properties.propertyName,
+          building: properties.building,
+          streetAddress: properties.streetAddress,
+          city: properties.city,
+          state: properties.state,
+          zip: properties.zip,
+        })
+        .from(properties);
+      const propById = new Map(propRows.map((p) => [String(p.id), p]));
 
       // Group by project. Projects with no team assigned do not appear here at
       // all — that absence is itself the useful signal, so it is stated in the
@@ -145,9 +163,17 @@ export function registerProjectTeamRoutes(app: Express) {
 
       const sections = Array.from(byProject.values()).map((members) => {
         const first = members[0];
+        const prop = first.propertyRef ? propById.get(String(first.propertyRef)) : undefined;
         const heading = [first.projectName, first.tenantName].filter(Boolean).join(' — ');
-        const sub = [first.rfpNumber, first.propertyName && `${first.propertyName}${first.building ? ` (Bldg ${first.building})` : ''}`]
-          .filter(Boolean).join(' · ');
+
+        const propertyLine = prop
+          ? `${prop.propertyName}${prop.building ? ` — Building ${prop.building}` : ''}`
+          : null;
+        const addressLine = prop
+          ? [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
+              .filter(Boolean).join(' · ')
+          : null;
+        const sub = [first.rfpNumber, propertyLine].filter(Boolean).join(' · ');
         const memberRows = members.map((m) => `
           <tr>
             <td>${escapeHtml(PROJECT_TEAM_ROLE_LABELS[m.role] || m.role)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
@@ -160,6 +186,8 @@ export function registerProjectTeamRoutes(app: Express) {
         <div class="project">
           <div class="project-head">${escapeHtml(heading)}</div>
           <div class="project-sub">${escapeHtml(sub)}</div>
+          ${addressLine ? `<div class="project-address">${escapeHtml(addressLine)}</div>` : ''}
+          ${!prop ? `<div class="project-address warn">Property record not found for reference "${escapeHtml(first.propertyRef ?? '')}" — address unavailable.</div>` : ''}
           <table>
             <thead><tr><th>Role</th><th>Firm</th><th>Contact</th><th>Email</th><th>Phone</th></tr></thead>
             <tbody>${memberRows}</tbody>
@@ -175,7 +203,9 @@ export function registerProjectTeamRoutes(app: Express) {
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
   .project { margin-top: 18px; page-break-inside: avoid; }
   .project-head { font-weight: bold; font-size: 14px; border-bottom: 2px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 3px; }
-  .project-sub { color: #666; font-size: 10px; margin: 3px 0 6px; }
+  .project-sub { color: #666; font-size: 10px; margin: 3px 0 2px; }
+  .project-address { color: #444; font-size: 10px; margin: 0 0 6px; }
+  .project-address.warn { color: #92400e; background: #fef3c7; padding: 2px 5px; border-radius: 3px; display: inline-block; }
   table { width: 100%; border-collapse: collapse; }
   th { background: #eef2f9; text-align: left; padding: 5px; border: 1px solid #ccc; font-size: 11px; }
   td { padding: 5px; border: 1px solid #ddd; vertical-align: top; }

@@ -85,6 +85,12 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
   const [templateName, setTemplateName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+  // How the current rows were obtained. Rendered in the preview so AI output is
+  // never presented as if it were deterministic extraction.
+  const [extractionInfo, setExtractionInfo] = useState<{
+    method: string; reason: string; warnings: string[];
+    contractorName: string | null; grandTotal: number | null;
+  } | null>(null);
 
   const { data: contractorTemplates } = useQuery<PdfMappingTemplate[]>({
     queryKey: ['/api/pdf-mapping-templates/contractor', contractorId],
@@ -124,6 +130,43 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
       return response.json();
     },
     onSuccess: async (data) => {
+      // AI EXTRACTION PATH.
+      //
+      // The AI already returns structured fields, so the column-mapping step has
+      // nothing to map - it goes straight to review. Measured 2026-08-05: the
+      // heuristic returned 22 empty rows for Excel Construction and 0 rows for
+      // Nova Construction, so for our two main contractors this is the path that
+      // actually runs.
+      if (data.aiResult?.success && data.aiResult.lineItems?.length > 0) {
+        const ai = data.aiResult;
+        // Subtotals are kept but unchecked: useful for reconciling against the
+        // bid, wrong to import as scope lines.
+        const rows: PreviewRow[] = ai.lineItems.map((li: any) => ({
+          description: li.division ? `${li.division} — ${li.description}` : li.description,
+          quantity: li.quantity != null ? String(li.quantity) : "",
+          unit: li.unit || "",
+          unitPrice: li.unitPrice != null ? String(li.unitPrice) : "",
+          totalPrice: li.totalPrice != null ? String(li.totalPrice) : "",
+          included: !li.isSubtotal && li.totalPrice != null,
+          confidence: li.confidence ?? 0.5,
+        }));
+
+        setPreviewRows(rows);
+        setExtractionInfo({
+          method: 'ai',
+          reason: data.extraction?.reason || '',
+          warnings: ai.warnings || [],
+          contractorName: ai.contractorName ?? null,
+          grandTotal: ai.grandTotal ?? null,
+        });
+        setStep("preview");
+        toast({
+          title: "Extracted with AI",
+          description: `${rows.length} rows found. Review each line before importing.`,
+        });
+        return;
+      }
+
       if (data.tables && data.tables.length > 0) {
         const table = data.tables[0] as ParsedTable;
         setParsedData(table);
@@ -172,6 +215,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
         }
         
         setMapping(appliedMapping);
+        setExtractionInfo(null);
         setStep("mapping");
         
         if (contractorName) {
@@ -523,6 +567,32 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
 
         {step === "preview" && (
           <div className="space-y-4">
+            {extractionInfo?.method === 'ai' && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm space-y-1">
+                <div className="flex items-center gap-2 font-medium text-purple-900">
+                  <AlertTriangle className="h-4 w-4" />
+                  Extracted by AI — check every line before importing
+                </div>
+                <p className="text-purple-800 text-xs">{extractionInfo.reason}</p>
+                {(extractionInfo.contractorName || extractionInfo.grandTotal != null) && (
+                  <p className="text-purple-800 text-xs">
+                    {extractionInfo.contractorName && <>Contractor read as <strong>{extractionInfo.contractorName}</strong>. </>}
+                    {extractionInfo.grandTotal != null && (
+                      <>Bid total read as <strong>${extractionInfo.grandTotal.toLocaleString()}</strong> — reconcile against the PDF.</>
+                    )}
+                  </p>
+                )}
+                {extractionInfo.warnings.length > 0 && (
+                  <ul className="list-disc pl-5 text-xs text-purple-900">
+                    {extractionInfo.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                )}
+                <p className="text-xs text-purple-700">
+                  Subtotal rows are listed but left unchecked. Rows with no price are unchecked too —
+                  "Not Included" and "By Tenant" are absences, not zeros.
+                </p>
+              </div>
+            )}
             <div className="flex gap-3">
               <div className="bg-blue-50 p-3 rounded-lg text-sm flex-1">
                 <p><strong>{includedCount}</strong> of {previewRows.length} items selected for import</p>
@@ -647,7 +717,11 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
               </table>
             </div>
 
-            {!selectedTemplateId && (
+            {/* Column-mapping templates key off a header signature the AI path
+                never produces, and the save is already guarded by parsedData
+                being non-null - so the control would do nothing. Hide it rather
+                than offer a checkbox that silently has no effect. */}
+            {!selectedTemplateId && extractionInfo?.method !== 'ai' && (
               <div className="border rounded-lg p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -674,8 +748,14 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
             )}
             
             <div className="flex justify-between items-center">
-              <Button variant="outline" onClick={() => setStep("mapping")}>
-                Back to Mapping
+              {/* The AI path never visits the mapping step - it returns structured
+                  fields, so there are no columns to map. Sending the user there
+                  would strand them on an empty screen with parsedData null. */}
+              <Button
+                variant="outline"
+                onClick={() => setStep(extractionInfo?.method === 'ai' ? "upload" : "mapping")}
+              >
+                {extractionInfo?.method === 'ai' ? "Back to Upload" : "Back to Mapping"}
               </Button>
               <Button
                 onClick={() => importMutation.mutate()}

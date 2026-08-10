@@ -27,6 +27,7 @@
  * parse that fails loudly.
  */
 import Anthropic from '@anthropic-ai/sdk';
+import { PDFParse } from 'pdf-parse';
 
 export interface AiLineItem {
   division: string | null;
@@ -82,7 +83,7 @@ export async function extractBidLineItemsWithAi(rawText: string): Promise<AiExtr
   if (!rawText || rawText.trim().length < 50) {
     return {
       ...empty,
-      error: 'The PDF contains almost no extractable text. It is most likely a scan; AI extraction of scanned bids requires page images, which this path does not yet support.',
+      error: 'The PDF contains almost no extractable text. Use extractBidLineItemsFromScan() for scanned documents.',
     };
   }
 
@@ -185,4 +186,118 @@ export function shouldUseAiFallback(heuristic: {
     return { use: true, reason: `Low average row confidence (${averageConfidence.toFixed(2)}).` };
   }
   return { use: false, reason: 'Heuristic parsing produced a clean table.' };
+}
+
+
+/**
+ * Scanned-bid extraction — reads page IMAGES instead of a text layer.
+ *
+ * A scanned or photographed bid has no text layer at all, so
+ * extractBidLineItemsWithAi has nothing to work with. This renders each page to
+ * a PNG via pdf-parse's getScreenshot (already a dependency — no new packages)
+ * and sends the images to the model.
+ *
+ * Deliberately capped at MAX_PAGES. Bid packages run to dozens of pages of work
+ * letters and drawings; sending all of them is slow and expensive for no gain.
+ * Pages beyond the cap are reported as a warning rather than silently dropped —
+ * a truncated read that looks complete is how a missing line item reaches a
+ * budget.
+ */
+const MAX_SCAN_PAGES = 12;
+
+export async function extractBidLineItemsFromScan(pdfBuffer: Buffer): Promise<AiExtractionResult> {
+  const empty: AiExtractionResult = {
+    success: false, lineItems: [], contractorName: null,
+    projectName: null, bidDate: null, grandTotal: null, warnings: [],
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { ...empty, error: 'ANTHROPIC_API_KEY is not configured — AI bid extraction is unavailable.' };
+  }
+
+  let images: { data: Buffer | Uint8Array; pageNumber: number }[] = [];
+  let totalPages = 0;
+  try {
+    const parser = new PDFParse({ data: new Uint8Array(pdfBuffer) });
+    const info = await parser.getInfo();
+    totalPages = (info as any)?.total ?? (info as any)?.numPages ?? 0;
+    const shot = await parser.getScreenshot({ first: 1, last: MAX_SCAN_PAGES });
+    await parser.destroy();
+    images = (shot as any).pages || [];
+  } catch (error) {
+    return { ...empty, error: `Could not render PDF pages to images: ${(error as Error).message}` };
+  }
+
+  if (images.length === 0) {
+    return { ...empty, error: 'PDF produced no renderable pages.' };
+  }
+
+  const warnings: string[] = [];
+  if (totalPages > images.length) {
+    warnings.push(`Only the first ${images.length} of ${totalPages} pages were read. Any pricing on later pages is NOT included.`);
+  }
+
+  const toBase64 = (d: Buffer | Uint8Array) => Buffer.from(d as any).toString('base64');
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 8000,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: [
+          ...images.map((img) => ({
+            type: 'image' as const,
+            source: { type: 'base64' as const, media_type: 'image/png' as const, data: toBase64(img.data) },
+          })),
+          { type: 'text' as const, text: 'These are scanned pages of a construction bid. Extract the line items.' },
+        ],
+      }],
+    });
+
+    const block = response.content.find((c) => c.type === 'text');
+    if (!block || block.type !== 'text') return { ...empty, error: 'Model returned no text content.' };
+
+    const cleaned = block.text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+    const a = cleaned.indexOf('{'), b = cleaned.lastIndexOf('}');
+    if (a === -1 || b === -1) return { ...empty, error: 'Model response did not contain a JSON object.' };
+    const parsed = JSON.parse(cleaned.slice(a, b + 1));
+
+    const num = (v: any): number | null => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const lineItems: AiLineItem[] = (Array.isArray(parsed.lineItems) ? parsed.lineItems : [])
+      .filter((r: any) => r && typeof r.description === 'string' && r.description.trim())
+      .map((r: any) => ({
+        division: r.division ?? null,
+        description: String(r.description).trim(),
+        location: r.location ?? null,
+        quantity: num(r.quantity),
+        unit: r.unit ? String(r.unit).trim() : null,
+        unitPrice: num(r.unitPrice),
+        totalPrice: num(r.totalPrice),
+        isSubtotal: !!r.isSubtotal,
+        // Scans are read from pixels, so cap confidence below the text ceiling —
+        // OCR-grade reads deserve more human attention than a clean text layer.
+        confidence: Math.min(0.85, typeof r.confidence === 'number' ? r.confidence : 0.5),
+      }));
+
+    return {
+      success: true,
+      lineItems,
+      contractorName: parsed.contractorName ?? null,
+      projectName: parsed.projectName ?? null,
+      bidDate: parsed.bidDate ?? null,
+      grandTotal: num(parsed.grandTotal),
+      warnings: [...warnings, ...(Array.isArray(parsed.warnings) ? parsed.warnings : [])],
+    };
+  } catch (error) {
+    console.error('[ai-bid-extractor:scan] failed:', error);
+    return { ...empty, error: error instanceof Error ? error.message : 'Scan extraction failed' };
+  }
 }

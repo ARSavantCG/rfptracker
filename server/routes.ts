@@ -43,7 +43,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnownRomCategory } from "./rom-pricing-utils";
 import { computeLineTotal } from "@shared/line-total";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
-import { extractBidLineItemsWithAi, shouldUseAiFallback } from "./ai-bid-extractor";
+import { extractBidLineItemsWithAi, extractBidLineItemsFromScan, shouldUseAiFallback } from "./ai-bid-extractor";
 import {
   sanitizeProjectName,
   createProjectFolderStructure,
@@ -183,7 +183,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let ai: Awaited<ReturnType<typeof extractBidLineItemsWithAi>> | null = null;
       if (decision.use && req.query.skipAi !== '1') {
         console.log(`[bid-import] heuristic insufficient — ${decision.reason} Falling through to AI extraction.`);
-        ai = await extractBidLineItemsWithAi(result.rawText);
+
+        // A PDF with essentially no text layer is a scan or a photo. Text
+        // extraction has nothing to read, so render the pages and let the model
+        // read the images instead.
+        const hasTextLayer = (result.rawText || '').trim().length >= 50;
+        ai = hasTextLayer
+          ? await extractBidLineItemsWithAi(result.rawText)
+          : await extractBidLineItemsFromScan(req.file.buffer);
+
+        if (!hasTextLayer) {
+          console.log('[bid-import] no text layer detected — used image-based scan extraction.');
+        }
       }
 
       res.json({

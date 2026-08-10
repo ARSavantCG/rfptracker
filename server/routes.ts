@@ -67,6 +67,7 @@ import { registerRomRoutes } from './rom-routes';
 import { registerActualsRoutes } from './actuals-routes';
 import { registerPropertyRoutes } from './property-routes';
 import { registerFileIntegrityAudit } from './file-integrity-audit';
+import { registerProjectTeamRoutes } from './project-team-routes';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
@@ -93,6 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAuthRoutes(app);
   registerRomRoutes(app);
   registerFileIntegrityAudit(app);
+  registerProjectTeamRoutes(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);

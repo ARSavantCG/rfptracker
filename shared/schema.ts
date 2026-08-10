@@ -236,6 +236,68 @@ export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({
 export type InsertRfpRequest = z.infer<typeof insertRfpRequestSchema>;
 export type UpdateRfpRequest = z.infer<typeof updateRfpRequestSchema>;
 export type RfpRequest = typeof rfpRequests.$inferSelect;
+/**
+ * Project team — who is working on a given RFP, in what role.
+ *
+ * Roles are stored per-assignment rather than taken from contacts.type, because
+ * the same person can be the architect on one deal and a consultant on another,
+ * and because a project needs SEVERAL people in the same role (a firm's project
+ * architect and its principal, say).
+ *
+ * The FIRM is not a separate entity: contacts.company already carries it, so
+ * picking a person brings their firm along. That keeps this additive and avoids
+ * migrating every existing contact. The known cost is that company is free text,
+ * so "RLC Architects" and "RLC Architects, Inc." group as two firms — worth
+ * normalising later, not worth blocking this on.
+ */
+export const PROJECT_TEAM_ROLES = [
+  'architect',
+  'mep_engineer',
+  'structural_engineer',
+  'civil_engineer',
+  'general_contractor',
+  'permit_expediter',
+  'landlord_rep',
+  'tenant_rep',
+  'broker',
+  'other',
+] as const;
+
+export type ProjectTeamRole = typeof PROJECT_TEAM_ROLES[number];
+
+export const PROJECT_TEAM_ROLE_LABELS: Record<string, string> = {
+  architect: 'Architect',
+  mep_engineer: 'MEP Engineer',
+  structural_engineer: 'Structural Engineer',
+  civil_engineer: 'Civil Engineer',
+  general_contractor: 'General Contractor',
+  permit_expediter: 'Permit Expediter',
+  landlord_rep: 'Landlord Representative',
+  tenant_rep: 'Tenant Representative',
+  broker: 'Broker',
+  other: 'Other',
+};
+
+export const projectTeamMembers = pgTable("project_team_members", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").notNull().references(() => rfpRequests.id, { onDelete: "cascade" }),
+  contactId: integer("contact_id").notNull().references(() => contacts.id),
+  role: text("role").notNull(),
+  // One primary per role — who to actually call. Others are cc's.
+  isPrimary: boolean("is_primary").default(false),
+  // Role on THIS project, e.g. "Project Architect", "Principal in Charge".
+  roleTitle: text("role_title"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProjectTeamMemberSchema = createInsertSchema(projectTeamMembers).omit({
+  id: true,
+  createdAt: true,
+});
+export type ProjectTeamMember = typeof projectTeamMembers.$inferSelect;
+export type InsertProjectTeamMember = z.infer<typeof insertProjectTeamMemberSchema>;
+
 // Contacts table for architects and contractors
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),

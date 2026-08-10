@@ -79,6 +79,20 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
 // Same safety as columns: if creation fails, log and continue, never crash boot.
 const ADDITIVE_TABLES: string[] = [
+  // Project team (2026-08-05): who is working on an RFP, in what role. Roles are
+  // per-assignment rather than taken from contacts.type, because the same person
+  // can be architect on one deal and consultant on another, and a project needs
+  // several people in one role. Firm comes from contacts.company.
+  `CREATE TABLE IF NOT EXISTS project_team_members (
+    id serial PRIMARY KEY,
+    rfp_id integer NOT NULL REFERENCES rfp_requests(id) ON DELETE CASCADE,
+    contact_id integer NOT NULL REFERENCES contacts(id),
+    role text NOT NULL,
+    is_primary boolean DEFAULT false,
+    role_title text,
+    notes text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
   `CREATE TABLE IF NOT EXISTS scope_bundles (
     id serial PRIMARY KEY,
     name text NOT NULL,

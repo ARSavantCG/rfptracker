@@ -74,6 +74,8 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'executed_leases', column: 'lease_type', type: "text DEFAULT 'executed'" },
   { table: 'executed_leases', column: 'electrical_allocation', type: 'integer' },
   { table: 'properties', column: 'electrical_allocation_minimum', type: 'integer DEFAULT 200' },
+  // Free-text discipline for project team members whose role is 'other'.
+  { table: 'project_team_members', column: 'custom_role', type: 'text' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

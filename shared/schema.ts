@@ -251,16 +251,36 @@ export type RfpRequest = typeof rfpRequests.$inferSelect;
  * normalising later, not worth blocking this on.
  */
 export const PROJECT_TEAM_ROLES = [
+  // CORE — always rendered on the directory report even when unassigned, so the
+  // report doubles as a coverage checklist. Every project has a design team.
   'architect',
   'mep_engineer',
   'structural_engineer',
   'civil_engineer',
+  // OPTIONAL — rendered only when someone is assigned. Not every job has an
+  // environmental or fire protection engineer, and printing four empty rows for
+  // consultants that are usually absent makes a complete team look incomplete.
   'general_contractor',
+  'fire_protection_engineer',
+  'environmental_engineer',
+  'landscape_architect',
+  'geotechnical_engineer',
   'permit_expediter',
   'landlord_rep',
   'tenant_rep',
   'broker',
   'other',
+] as const;
+
+/**
+ * Roles printed on every project whether or not anyone is assigned.
+ * Everything else appears only when filled.
+ */
+export const PROJECT_TEAM_CORE_ROLES = [
+  'architect',
+  'mep_engineer',
+  'structural_engineer',
+  'civil_engineer',
 ] as const;
 
 export type ProjectTeamRole = typeof PROJECT_TEAM_ROLES[number];
@@ -271,6 +291,10 @@ export const PROJECT_TEAM_ROLE_LABELS: Record<string, string> = {
   structural_engineer: 'Structural Engineer',
   civil_engineer: 'Civil Engineer',
   general_contractor: 'General Contractor',
+  fire_protection_engineer: 'Fire Protection Engineer',
+  environmental_engineer: 'Environmental Engineer',
+  landscape_architect: 'Landscape Architect',
+  geotechnical_engineer: 'Geotechnical Engineer',
   permit_expediter: 'Permit Expediter',
   landlord_rep: 'Landlord Representative',
   tenant_rep: 'Tenant Representative',
@@ -287,6 +311,10 @@ export const projectTeamMembers = pgTable("project_team_members", {
   isPrimary: boolean("is_primary").default(false),
   // Role on THIS project, e.g. "Project Architect", "Principal in Charge".
   roleTitle: text("role_title"),
+  // Free-text discipline used when role = 'other'. Keeps the standard list short
+  // and ordered while still allowing a one-off ("Acoustical Consultant") without
+  // a schema change every time a new discipline turns up on a job.
+  customRole: text("custom_role"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

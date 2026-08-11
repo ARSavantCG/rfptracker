@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Users, Star } from "lucide-react";
-import { PROJECT_TEAM_ROLES, PROJECT_TEAM_ROLE_LABELS } from "@shared/schema";
+import { PROJECT_TEAM_ROLES, PROJECT_TEAM_ROLE_LABELS, PROJECT_TEAM_CORE_ROLES } from "@shared/schema";
 
 interface TeamMember {
   id: number;
@@ -17,6 +17,7 @@ interface TeamMember {
   role: string;
   isPrimary: boolean | null;
   roleTitle: string | null;
+  customRole: string | null;
   notes: string | null;
   contactName: string | null;
   contactEmail: string | null;
@@ -43,6 +44,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
   const [search, setSearch] = useState("");
   const [contactId, setContactId] = useState<number | null>(null);
   const [roleTitle, setRoleTitle] = useState("");
+  const [customRole, setCustomRole] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
 
   const teamKey = [`/api/rfp-requests/${rfpId}/team`];
@@ -66,7 +68,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
 
   const reset = () => {
     setAdding(false); setSearch(""); setContactId(null);
-    setRoleTitle(""); setIsPrimary(false); setRole("architect");
+    setRoleTitle(""); setCustomRole(""); setIsPrimary(false); setRole("architect");
   };
 
   const addMutation = useMutation({
@@ -75,6 +77,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
       return apiRequest(`/api/rfp-requests/${rfpId}/team`, "POST", {
         contactId, role, isPrimary,
         roleTitle: roleTitle.trim() || null,
+        customRole: role === "other" ? customRole.trim() || null : null,
       });
     },
     onSuccess: () => {
@@ -133,19 +136,41 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                {PROJECT_TEAM_ROLES.map((r) => (
-                  <option key={r} value={r}>{PROJECT_TEAM_ROLE_LABELS[r]}</option>
-                ))}
+                <optgroup label="Core design team">
+                  {PROJECT_TEAM_CORE_ROLES.map((r) => (
+                    <option key={r} value={r}>{PROJECT_TEAM_ROLE_LABELS[r]}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Add as needed">
+                  {PROJECT_TEAM_ROLES.filter((r) => !PROJECT_TEAM_CORE_ROLES.includes(r as any) && r !== "other").map((r) => (
+                    <option key={r} value={r}>{PROJECT_TEAM_ROLE_LABELS[r]}</option>
+                  ))}
+                  <option value="other">Other — type the discipline…</option>
+                </optgroup>
               </select>
             </div>
             <div>
-              <Label className="text-xs">Title on this project</Label>
-              <Input
-                className="h-9 text-sm"
-                placeholder="Optional, e.g. Project Architect"
-                value={roleTitle}
-                onChange={(e) => setRoleTitle(e.target.value)}
-              />
+              {role === "other" ? (
+                <>
+                  <Label className="text-xs">Discipline</Label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="e.g. Acoustical Consultant"
+                    value={customRole}
+                    onChange={(e) => setCustomRole(e.target.value)}
+                  />
+                </>
+              ) : (
+                <>
+                  <Label className="text-xs">Title on this project</Label>
+                  <Input
+                    className="h-9 text-sm"
+                    placeholder="Optional, e.g. Project Architect"
+                    value={roleTitle}
+                    onChange={(e) => setRoleTitle(e.target.value)}
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -192,7 +217,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
           </div>
 
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => addMutation.mutate()} disabled={!contactId || addMutation.isPending}>
+            <Button size="sm" onClick={() => addMutation.mutate()} disabled={!contactId || addMutation.isPending || (role === "other" && !customRole.trim())}>
               {addMutation.isPending ? "Adding…" : "Add to team"}
             </Button>
             <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
@@ -212,7 +237,9 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
           {grouped.map(([r, members]) => (
             <div key={r}>
               <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                {PROJECT_TEAM_ROLE_LABELS[r] || r}
+                {r === "other"
+                  ? (members.find((m) => m.customRole)?.customRole || "Other")
+                  : (PROJECT_TEAM_ROLE_LABELS[r] || r)}
               </div>
               <div className="border rounded divide-y">
                 {members.map((m) => (

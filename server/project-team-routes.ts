@@ -9,6 +9,7 @@ import { db } from './db';
 import {
   projectTeamMembers, contacts, rfpRequests, properties,
   insertProjectTeamMemberSchema, PROJECT_TEAM_ROLE_LABELS, PROJECT_TEAM_ROLES,
+  PROJECT_TEAM_CORE_ROLES,
 } from '@shared/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireAuthFlexible, checkPermission } from './middleware';
@@ -37,6 +38,7 @@ export function registerProjectTeamRoutes(app: Express) {
           role: projectTeamMembers.role,
           isPrimary: projectTeamMembers.isPrimary,
           roleTitle: projectTeamMembers.roleTitle,
+          customRole: projectTeamMembers.customRole,
           notes: projectTeamMembers.notes,
           contactName: contacts.name,
           contactEmail: contacts.email,
@@ -67,6 +69,11 @@ export function registerProjectTeamRoutes(app: Express) {
       }
       if (!PROJECT_TEAM_ROLES.includes(parsed.data.role as any)) {
         return res.status(400).json({ message: `Unknown role: ${parsed.data.role}` });
+      }
+      // 'other' without a discipline produces a directory row labelled "Other",
+      // which tells a reader nothing. Reject it rather than store it.
+      if (parsed.data.role === 'other' && !String(parsed.data.customRole || '').trim()) {
+        return res.status(400).json({ message: 'Specify the discipline when the role is Other.' });
       }
 
       // One primary per role. Demote the incumbent rather than ending up with two,
@@ -135,6 +142,7 @@ export function registerProjectTeamRoutes(app: Express) {
           role: projectTeamMembers.role,
           isPrimary: projectTeamMembers.isPrimary,
           roleTitle: projectTeamMembers.roleTitle,
+          customRole: projectTeamMembers.customRole,
           contactName: contacts.name,
           contactEmail: contacts.email,
           contactPhone: contacts.phone,
@@ -198,9 +206,10 @@ export function registerProjectTeamRoutes(app: Express) {
         });
       }
 
-      // Roles always shown as rows even when unassigned, so the report doubles as
-      // a coverage checklist. The rest appear only when someone is in them.
-      const CORE_ROLES = ['architect', 'mep_engineer', 'general_contractor'];
+      // Core roles print on every project whether filled or not; the rest appear
+      // only when assigned. Defined in shared/schema so the panel and the report
+      // cannot disagree about which roles are expected.
+      const CORE_ROLES = [...PROJECT_TEAM_CORE_ROLES];
 
       // GROUPED BY PARK, THEN BUILDING.
       //
@@ -238,7 +247,12 @@ export function registerProjectTeamRoutes(app: Express) {
 
         const bodyRows = rolesToShow.map((role) => {
           const inRole = members.filter((m) => m.role === role);
-          const label = PROJECT_TEAM_ROLE_LABELS[role] || role;
+          // For 'other', the discipline the user typed is the useful label —
+          // a directory listing three consultants all as "Other" is useless.
+          const baseLabel = PROJECT_TEAM_ROLE_LABELS[role] || role;
+          const label = role === 'other'
+            ? (inRole.find((m) => m.customRole)?.customRole || baseLabel)
+            : baseLabel;
           if (inRole.length === 0) {
             // Blank row rather than an omitted one: an unassigned role is
             // information, and hiding it makes an incomplete team look complete.

@@ -76,10 +76,24 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'properties', column: 'electrical_allocation_minimum', type: 'integer DEFAULT 200' },
   // Free-text discipline for project team members whose role is 'other'.
   { table: 'project_team_members', column: 'custom_role', type: 'text' },
+  // Team can attach to an executed lease rather than an RFP (2026-08-10).
+  { table: 'project_team_members', column: 'lease_id', type: 'integer REFERENCES executed_leases(id) ON DELETE CASCADE' },
+  // Tenant performs its own construction: no landlord design team required.
+  { table: 'executed_leases', column: 'construction_by_tenant', type: 'boolean DEFAULT false' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
 // Same safety as columns: if creation fails, log and continue, never crash boot.
+// Constraint relaxations. NOT destructive - dropping NOT NULL loses no data and
+// cannot fail against existing rows. Kept separate from ADDITIVE_TABLES so the
+// distinction stays visible.
+const SAFE_ALTERS: string[] = [
+  // project_team_members.rfp_id was NOT NULL. A member attached to an executed
+  // lease has no RFP, so the constraint has to go. The API enforces
+  // exactly-one-of rfp_id / lease_id in its place.
+  `ALTER TABLE project_team_members ALTER COLUMN rfp_id DROP NOT NULL`,
+];
+
 const ADDITIVE_TABLES: string[] = [
   // Project team (2026-08-05): who is working on an RFP, in what role. Roles are
   // per-assignment rather than taken from contacts.type, because the same person
@@ -147,6 +161,13 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
       await dbi.execute(sql.raw(ddl));
     } catch (error) {
       console.warn(`⚠️  Startup table migration skipped:`, (error as Error).message);
+    }
+  }
+  for (const ddl of SAFE_ALTERS) {
+    try {
+      await dbi.execute(sql.raw(ddl));
+    } catch (error) {
+      console.warn(`⚠️  Startup constraint relaxation skipped:`, (error as Error).message);
     }
   }
   for (const m of ADDITIVE_COLUMNS) {

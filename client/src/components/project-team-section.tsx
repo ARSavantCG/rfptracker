@@ -35,7 +35,13 @@ interface Contact {
   isActive: boolean | null;
 }
 
-export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
+export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId?: number }) {
+  // One base path for both owners. A team hangs off an RFP (a deal being priced)
+  // or an executed lease (the signed deal that gets built); the directory report
+  // reads the lease side.
+  const base = leaseId != null
+    ? `/api/executed-leases/${leaseId}/team`
+    : `/api/rfp-requests/${rfpId}/team`;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,7 +53,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
   const [customRole, setCustomRole] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
 
-  const teamKey = [`/api/rfp-requests/${rfpId}/team`];
+  const teamKey = [base];
 
   const { data: team = [], isLoading } = useQuery<TeamMember[]>({ queryKey: teamKey });
   const { data: contacts = [] } = useQuery<Contact[]>({ queryKey: ["/api/contacts"] });
@@ -74,7 +80,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
   const addMutation = useMutation({
     mutationFn: async () => {
       if (!contactId) throw new Error("Select a person first");
-      return apiRequest(`/api/rfp-requests/${rfpId}/team`, "POST", {
+      return apiRequest(base, "POST", {
         contactId, role, isPrimary,
         roleTitle: roleTitle.trim() || null,
         customRole: role === "other" ? customRole.trim() || null : null,
@@ -90,7 +96,7 @@ export function ProjectTeamSection({ rfpId }: { rfpId: number }) {
 
   const removeMutation = useMutation({
     mutationFn: async (memberId: number) =>
-      apiRequest(`/api/rfp-requests/${rfpId}/team/${memberId}`, "DELETE"),
+      apiRequest(`${base}/${memberId}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKey });
       toast({ title: "Removed from project team" });

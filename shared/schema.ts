@@ -304,7 +304,11 @@ export const PROJECT_TEAM_ROLE_LABELS: Record<string, string> = {
 
 export const projectTeamMembers = pgTable("project_team_members", {
   id: serial("id").primaryKey(),
-  rfpId: integer("rfp_id").notNull().references(() => rfpRequests.id, { onDelete: "cascade" }),
+  // EXACTLY ONE of rfpId / leaseId is set. A team can hang off an RFP (a deal
+  // still being priced) or off an executed lease (the signed deal that actually
+  // gets built). Both are nullable; the API enforces exactly-one.
+  rfpId: integer("rfp_id").references(() => rfpRequests.id, { onDelete: "cascade" }),
+  leaseId: integer("lease_id").references(() => executedLeases.id, { onDelete: "cascade" }),
   contactId: integer("contact_id").notNull().references(() => contacts.id),
   role: text("role").notNull(),
   // One primary per role — who to actually call. Others are cc's.
@@ -1160,6 +1164,11 @@ export const executedLeases = pgTable("executed_leases", {
   // share of the building via shared/electrical-utils, but stored per-lease so
   // a negotiated figure survives changes to the property's totals.
   electricalAllocation: integer("electrical_allocation"),
+
+  // Tenant is performing its own construction, so there is no landlord-side
+  // design team to assemble. Distinct from "team not yet assigned": one is a
+  // decision, the other is a gap, and the directory must not report them alike.
+  constructionByTenant: boolean("construction_by_tenant").default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import type { Property, ExecutedLease, BayConfiguration } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { BaySelectionGrid } from "@/components/bay-selection-grid";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
+import { ProjectTeamSection } from "@/components/project-team-section";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
@@ -36,6 +38,7 @@ const leaseFormSchema = z.object({
   evParking: z.number().min(0).default(0),
   trailerParking: z.number().min(0).default(0),
   leaseType: z.enum(['executed', 'temporary']).default('executed'),
+  constructionByTenant: z.boolean().default(false),
   electricalAllocation: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
@@ -178,6 +181,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
       evParking: lease.evParking || 0,
       trailerParking: lease.trailerParking || 0,
       leaseType: (lease.leaseType === 'temporary' ? 'temporary' : 'executed') as 'executed' | 'temporary',
+      constructionByTenant: !!lease.constructionByTenant,
       electricalAllocation: lease.electricalAllocation ?? undefined,
       notes: lease.notes || "",
     });
@@ -360,6 +364,27 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                               : 'Blocks its bays from selection in the bay grid.'}
                           </div>
                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Construction responsibility */}
+                    <FormField
+                      control={form.control}
+                      name="constructionByTenant"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start gap-2 space-y-0 rounded-md border p-3">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(!!v)} />
+                          </FormControl>
+                          <div className="leading-tight">
+                            <FormLabel className="cursor-pointer">Construction by tenant</FormLabel>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Tenant performs its own build-out, so no landlord design team is required.
+                              The Project Team Directory will show this lease as N/A rather than flagging
+                              it as missing a team.
+                            </p>
+                          </div>
                         </FormItem>
                       )}
                     />
@@ -605,6 +630,18 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                               </span>
                             </div>
                           </div>
+
+                          {/* Design team for this lease. Lives here rather than on
+                              the RFP because the lease is the deal that actually
+                              gets built, and it is what the directory report reads. */}
+                          {lease.constructionByTenant ? (
+                            <div className="mt-3 text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded px-2 py-1.5">
+                              Construction by tenant — no landlord design team required. Shown as N/A on the
+                              Project Team Directory.
+                            </div>
+                          ) : (
+                            <ProjectTeamSection leaseId={lease.id} />
+                          )}
                           {lease.notes && (
                             <p className="text-sm text-gray-600">{lease.notes}</p>
                           )}

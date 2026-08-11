@@ -8,7 +8,7 @@ import type { Express } from 'express';
 import { db } from './db';
 import {
   projectTeamMembers, contacts, rfpRequests, properties,
-  insertProjectTeamMemberSchema, PROJECT_TEAM_ROLE_LABELS, PROJECT_TEAM_ROLES,
+  insertProjectTeamMemberSchema, PROJECT_TEAM_ROLE_LABELS, PROJECT_TEAM_ROLES, executedLeases,
   PROJECT_TEAM_CORE_ROLES,
 } from '@shared/schema';
 import { eq, and, asc } from 'drizzle-orm';
@@ -108,37 +108,119 @@ export function registerProjectTeamRoutes(app: Express) {
     }
   });
 
+  // ── Lease-scoped team (what the directory report reads) ──────────────────
+  app.get('/api/executed-leases/:leaseId/team', requireAuth, async (req, res) => {
+    try {
+      const leaseId = parseInt(req.params.leaseId);
+      if (isNaN(leaseId)) return res.status(400).json({ message: 'Invalid lease id' });
+      const rows = await db
+        .select({
+          id: projectTeamMembers.id,
+          leaseId: projectTeamMembers.leaseId,
+          contactId: projectTeamMembers.contactId,
+          role: projectTeamMembers.role,
+          isPrimary: projectTeamMembers.isPrimary,
+          roleTitle: projectTeamMembers.roleTitle,
+          customRole: projectTeamMembers.customRole,
+          notes: projectTeamMembers.notes,
+          contactName: contacts.name,
+          contactEmail: contacts.email,
+          contactPhone: contacts.phone,
+          company: contacts.company,
+        })
+        .from(projectTeamMembers)
+        .leftJoin(contacts, eq(projectTeamMembers.contactId, contacts.id))
+        .where(eq(projectTeamMembers.leaseId, leaseId))
+        .orderBy(asc(projectTeamMembers.role), asc(projectTeamMembers.id));
+      res.json(rows);
+    } catch (error) {
+      console.error('[project-team] lease fetch failed:', error);
+      res.status(500).json({ message: 'Failed to load lease team' });
+    }
+  });
+
+  app.post('/api/executed-leases/:leaseId/team', requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const leaseId = parseInt(req.params.leaseId);
+      if (isNaN(leaseId)) return res.status(400).json({ message: 'Invalid lease id' });
+
+      const parsed = insertProjectTeamMemberSchema.safeParse({ ...req.body, leaseId, rfpId: null });
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid team member', errors: parsed.error.errors });
+      }
+      if (!PROJECT_TEAM_ROLES.includes(parsed.data.role as any)) {
+        return res.status(400).json({ message: `Unknown role: ${parsed.data.role}` });
+      }
+      if (parsed.data.role === 'other' && !String(parsed.data.customRole || '').trim()) {
+        return res.status(400).json({ message: 'Specify the discipline when the role is Other.' });
+      }
+
+      if (parsed.data.isPrimary) {
+        await db.update(projectTeamMembers)
+          .set({ isPrimary: false })
+          .where(and(eq(projectTeamMembers.leaseId, leaseId), eq(projectTeamMembers.role, parsed.data.role)));
+      }
+
+      const [created] = await db.insert(projectTeamMembers).values(parsed.data).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error('[project-team] lease create failed:', error);
+      res.status(500).json({ message: 'Failed to add team member' });
+    }
+  });
+
+  app.delete('/api/executed-leases/:leaseId/team/:memberId', requireAuth, checkPermission('properties.edit'), async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId);
+      const leaseId = parseInt(req.params.leaseId);
+      if (isNaN(memberId) || isNaN(leaseId)) return res.status(400).json({ message: 'Invalid id' });
+      await db.delete(projectTeamMembers)
+        .where(and(eq(projectTeamMembers.id, memberId), eq(projectTeamMembers.leaseId, leaseId)));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[project-team] lease delete failed:', error);
+      res.status(500).json({ message: 'Failed to remove team member' });
+    }
+  });
+
   // ── Cross-project directory report ───────────────────────────────────────
   // requireAuthFlexible so the printable report can be opened in a new tab with
   // ?token=, the way the other printable reports work.
   app.get('/api/reports/project-team', requireAuthFlexible, async (req, res) => {
     try {
-      // NO JOIN TO properties HERE. rfp_requests.property is TEXT holding the
-      // property id as a string, while properties.id is INTEGER - Postgres
-      // rejects that comparison outright and the whole report 500s. Every other
-      // caller in this codebase resolves it in JS with p.id.toString() === rfp.property.
-      // Fetched separately and matched the same way.
-      // Driven from rfpRequests, NOT from projectTeamMembers.
+      // SPINE IS PROPERTIES AND EXECUTED LEASES, not RFPs.
       //
-      // Previously this started at the assignments table, so a project with
-      // nobody assigned simply did not exist in the report. That hid exactly the
-      // thing worth seeing: which projects have no architect or engineer on
-      // record. Every project is listed now; the gaps are the point.
-      const projectRows = await db
+      // An RFP is a deal being priced; many never sign, and several can exist for
+      // one space. The thing that actually gets built is the LEASE. Driving the
+      // directory from RFPs listed speculative deals and omitted signed ones.
+      const propRows = await db
         .select({
-          rfpId: rfpRequests.id,
-          rfpNumber: rfpRequests.rfpNumber,
-          projectName: rfpRequests.projectName,
-          tenantName: rfpRequests.tenantName,
-          status: rfpRequests.status,
-          propertyRef: rfpRequests.property,
+          id: properties.id,
+          propertyName: properties.propertyName,
+          building: properties.building,
+          streetAddress: properties.streetAddress,
+          city: properties.city,
+          state: properties.state,
+          zip: properties.zip,
         })
-        .from(rfpRequests)
-        .orderBy(asc(rfpRequests.projectName));
+        .from(properties);
+
+      const leaseRows = await db
+        .select({
+          id: executedLeases.id,
+          propertyId: executedLeases.propertyId,
+          tenantName: executedLeases.tenantName,
+          suiteNumber: executedLeases.suiteNumber,
+          bayNumbers: executedLeases.bayNumbers,
+          leaseStartDate: executedLeases.leaseStartDate,
+          leaseEndDate: executedLeases.leaseEndDate,
+          constructionByTenant: executedLeases.constructionByTenant,
+        })
+        .from(executedLeases);
 
       const memberRows = await db
         .select({
-          rfpId: projectTeamMembers.rfpId,
+          leaseId: projectTeamMembers.leaseId,
           role: projectTeamMembers.role,
           isPrimary: projectTeamMembers.isPrimary,
           roleTitle: projectTeamMembers.roleTitle,
@@ -152,131 +234,92 @@ export function registerProjectTeamRoutes(app: Express) {
         .leftJoin(contacts, eq(projectTeamMembers.contactId, contacts.id))
         .orderBy(asc(projectTeamMembers.role));
 
-      // Project only what is needed: a bare select().from(properties) throws if
-      // ANY column on that wide table has drifted, taking the report with it.
-      const propRows = await db
-        .select({
-          id: properties.id,
-          propertyName: properties.propertyName,
-          building: properties.building,
-          streetAddress: properties.streetAddress,
-          city: properties.city,
-          state: properties.state,
-          zip: properties.zip,
-        })
-        .from(properties);
-      const propById = new Map(propRows.map((p) => [String(p.id), p]));
-
-      const membersByRfp = new Map<number, typeof memberRows>();
+      const membersByLease = new Map<number, typeof memberRows>();
       for (const m of memberRows) {
-        if (m.rfpId == null) continue;
-        if (!membersByRfp.has(m.rfpId)) membersByRfp.set(m.rfpId, [] as any);
-        membersByRfp.get(m.rfpId)!.push(m);
+        if (m.leaseId == null) continue;
+        if (!membersByLease.has(m.leaseId)) membersByLease.set(m.leaseId, [] as any);
+        membersByLease.get(m.leaseId)!.push(m);
       }
 
-      // Only CANCELLED and ARCHIVED are hidden by default.
-      //
-      // 'completed' was originally excluded too, which was wrong: this is a
-      // DIRECTORY, and a finished job is exactly the institutional memory it
-      // exists to hold - "who did we use on MG Westside?" is most often asked
-      // about work that is already done. Excluding it left a portfolio-wide
-      // report showing a single project.
-      //
-      //   default        cancelled + archived hidden
-      //   ?activeOnly=1  also hides completed
-      //   ?includeAll=1  hides nothing
-      const activeOnly = req.query.activeOnly === '1';
-      const includeAll = req.query.includeAll === '1';
-      const HIDDEN = activeOnly
-        ? ['cancelled', 'archived', 'completed']
-        : ['cancelled', 'archived'];
+      const leasesByProperty = new Map<number, typeof leaseRows>();
+      for (const l of leaseRows) {
+        if (l.propertyId == null) continue;
+        if (!leasesByProperty.has(l.propertyId)) leasesByProperty.set(l.propertyId, [] as any);
+        leasesByProperty.get(l.propertyId)!.push(l);
+      }
 
-      const visibleProjects = includeAll
-        ? projectRows
-        : projectRows.filter((p) => !HIDDEN.includes(String(p.status || '')));
+      // Every building is listed, including those with no leases — an empty
+      // building is real information on a portfolio report.
+      const parks = new Map<string, typeof propRows>();
+      for (const prop of propRows) {
+        const park = prop.propertyName || 'Unnamed property';
+        if (!parks.has(park)) parks.set(park, [] as any);
+        parks.get(park)!.push(prop);
+      }
+      const sortedParks = Array.from(parks.entries()).sort((a, b) => a[0].localeCompare(b[0]));
 
-      const hiddenCount = projectRows.length - visibleProjects.length;
-
-      const staffedCount = visibleProjects.filter((p) => (membersByRfp.get(p.rfpId) || []).length > 0).length;
+      const allLeases = leaseRows.length;
+      const naLeases = leaseRows.filter((l) => l.constructionByTenant).length;
+      const staffedLeases = leaseRows.filter(
+        (l) => !l.constructionByTenant && (membersByLease.get(l.id) || []).length > 0
+      ).length;
+      const gapLeases = allLeases - naLeases - staffedLeases;
 
       if (req.query.format === 'json') {
         return res.json({
-          summary: { total: visibleProjects.length, staffed: staffedCount, unstaffed: visibleProjects.length - staffedCount },
-          projects: visibleProjects.map((p) => ({ ...p, members: membersByRfp.get(p.rfpId) || [] })),
+          summary: { leases: allLeases, staffed: staffedLeases, tenantBuilt: naLeases, unstaffed: gapLeases },
+          properties: propRows.map((p) => ({
+            ...p,
+            leases: (leasesByProperty.get(p.id) || []).map((l) => ({ ...l, members: membersByLease.get(l.id) || [] })),
+          })),
         });
       }
 
-      // Core roles print on every project whether filled or not; the rest appear
-      // only when assigned. Defined in shared/schema so the panel and the report
-      // cannot disagree about which roles are expected.
       const CORE_ROLES = [...PROJECT_TEAM_CORE_ROLES];
 
-      // GROUPED BY PARK, THEN BUILDING.
-      //
-      // properties.propertyName is the park ("Bridge Point Doral") and
-      // properties.building is the building within it ("1", "B"). Most of the
-      // portfolio is multi-building parks, so a flat project list scattered
-      // buildings of the same park across the page. Park is the unit people think
-      // in; building is the unit the deal sits in.
-      type ProjRow = typeof visibleProjects[number];
-      const parks = new Map<string, Map<string, { prop: any; projects: ProjRow[] }>>();
-      const UNKNOWN_PARK = 'Unassigned property';
+      const renderLease = (lease: typeof leaseRows[number]) => {
+        const members = membersByLease.get(lease.id) || [];
+        const label = [
+          lease.tenantName,
+          lease.suiteNumber ? `Suite ${lease.suiteNumber}` : null,
+          lease.bayNumbers || null,
+        ].filter(Boolean).join(' · ');
 
-      for (const proj of visibleProjects) {
-        const prop = proj.propertyRef ? propById.get(String(proj.propertyRef)) : undefined;
-        const parkName = prop?.propertyName || UNKNOWN_PARK;
-        const buildingKey = prop?.building ? String(prop.building) : '—';
-        if (!parks.has(parkName)) parks.set(parkName, new Map());
-        const buildings = parks.get(parkName)!;
-        if (!buildings.has(buildingKey)) buildings.set(buildingKey, { prop, projects: [] });
-        buildings.get(buildingKey)!.projects.push(proj);
-      }
+        // Tenant-built work is a DECISION, not a gap. Rendering blank core roles
+        // here would report it as missing a design team it was never going to have.
+        if (lease.constructionByTenant) {
+          return `
+          <div class="project">
+            <div class="project-head">${escapeHtml(label)} <span class="pill na">Construction by tenant — N/A</span></div>
+          </div>`;
+        }
 
-      // Parks alphabetical, but the unresolved bucket always last so it reads as
-      // an exception rather than an entry.
-      const sortedParks = Array.from(parks.entries()).sort((a, b) => {
-        if (a[0] === UNKNOWN_PARK) return 1;
-        if (b[0] === UNKNOWN_PARK) return -1;
-        return a[0].localeCompare(b[0]);
-      });
-
-      const renderTeamTable = (proj: ProjRow) => {
-        const members = membersByRfp.get(proj.rfpId) || [];
         const rolesToShow = Array.from(new Set([...CORE_ROLES, ...members.map((m) => m.role)]))
           .sort((a, b) => PROJECT_TEAM_ROLES.indexOf(a as any) - PROJECT_TEAM_ROLES.indexOf(b as any));
 
         const bodyRows = rolesToShow.map((role) => {
           const inRole = members.filter((m) => m.role === role);
-          // For 'other', the discipline the user typed is the useful label —
-          // a directory listing three consultants all as "Other" is useless.
           const baseLabel = PROJECT_TEAM_ROLE_LABELS[role] || role;
-          const label = role === 'other'
+          const roleLabel = role === 'other'
             ? (inRole.find((m) => m.customRole)?.customRole || baseLabel)
             : baseLabel;
           if (inRole.length === 0) {
-            // Blank row rather than an omitted one: an unassigned role is
-            // information, and hiding it makes an incomplete team look complete.
             return `
-            <tr class="unassigned"><td>${escapeHtml(label)}</td><td colspan="4">Not assigned</td></tr>`;
+              <tr class="unassigned"><td>${escapeHtml(roleLabel)}</td><td colspan="4">Not assigned</td></tr>`;
           }
           return inRole.map((m) => `
-            <tr>
-              <td>${escapeHtml(label)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
-              <td>${escapeHtml(m.company || '—')}</td>
-              <td>${escapeHtml(m.contactName || '—')}${m.roleTitle ? `<br><span class="muted">${escapeHtml(m.roleTitle)}</span>` : ''}</td>
-              <td>${escapeHtml(m.contactEmail || '—')}</td>
-              <td>${escapeHtml(m.contactPhone || '—')}</td>
-            </tr>`).join('');
+              <tr>
+                <td>${escapeHtml(roleLabel)}${m.isPrimary ? ' <strong>(primary)</strong>' : ''}</td>
+                <td>${escapeHtml(m.company || '—')}</td>
+                <td>${escapeHtml(m.contactName || '—')}${m.roleTitle ? `<br><span class="muted">${escapeHtml(m.roleTitle)}</span>` : ''}</td>
+                <td>${escapeHtml(m.contactEmail || '—')}</td>
+                <td>${escapeHtml(m.contactPhone || '—')}</td>
+              </tr>`).join('');
         }).join('');
 
-        const projHead = [proj.projectName, proj.tenantName].filter(Boolean).join(' — ');
         return `
           <div class="project">
-            <div class="project-head">${escapeHtml(projHead)}${
-              proj.status && proj.status !== 'in-progress' && proj.status !== 'received'
-                ? ` <span class="pill status">${escapeHtml(String(proj.status).replace('-', ' '))}</span>` : ''
-            }${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
-            <div class="project-sub">${escapeHtml(proj.rfpNumber || '')}</div>
+            <div class="project-head">${escapeHtml(label)}${members.length === 0 ? ' <span class="pill">No team assigned</span>' : ''}</div>
             <table>
               <thead><tr><th style="width:18%">Role</th><th style="width:22%">Firm</th><th style="width:22%">Contact</th><th style="width:22%">Email</th><th style="width:16%">Phone</th></tr></thead>
               <tbody>${bodyRows}</tbody>
@@ -285,29 +328,30 @@ export function registerProjectTeamRoutes(app: Express) {
       };
 
       const sections = sortedParks.map(([parkName, buildings]) => {
-        const buildingKeys = Array.from(buildings.keys()).sort((a, b) =>
-          a.localeCompare(b, undefined, { numeric: true }));
-        const projectCount = Array.from(buildings.values()).reduce((n, b) => n + b.projects.length, 0);
+        const sortedBuildings = [...buildings].sort((a, b) =>
+          String(a.building || '').localeCompare(String(b.building || ''), undefined, { numeric: true }));
+        const leaseCount = sortedBuildings.reduce((n, b) => n + (leasesByProperty.get(b.id) || []).length, 0);
 
-        const buildingBlocks = buildingKeys.map((bk) => {
-          const { prop, projects } = buildings.get(bk)!;
-          const addressLine = prop
-            ? [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
-                .filter(Boolean).join(' · ')
-            : null;
+        const buildingBlocks = sortedBuildings.map((prop) => {
+          const leases = leasesByProperty.get(prop.id) || [];
+          const addressLine = [prop.streetAddress, [prop.city, prop.state].filter(Boolean).join(', '), prop.zip]
+            .filter(Boolean).join(' · ');
           return `
         <div class="building">
-          <div class="building-head">${prop ? `Building ${escapeHtml(bk)}` : 'Building unknown'}</div>
+          <div class="building-head">Building ${escapeHtml(prop.building || '—')}
+            <span class="muted">${leases.length} lease${leases.length === 1 ? '' : 's'}</span>
+          </div>
           ${addressLine ? `<div class="project-address">${escapeHtml(addressLine)}</div>` : ''}
-          ${!prop ? `<div class="project-address warn">Property record not found — address unavailable.</div>` : ''}
-          ${projects.map(renderTeamTable).join('')}
+          ${leases.length === 0
+            ? `<div class="project-address muted">No executed leases on this building.</div>`
+            : leases.map(renderLease).join('')}
         </div>`;
         }).join('');
 
         return `
       <div class="park">
         <div class="park-head">${escapeHtml(parkName)}
-          <span class="park-count">${buildingKeys.length} building${buildingKeys.length === 1 ? '' : 's'} · ${projectCount} project${projectCount === 1 ? '' : 's'}</span>
+          <span class="park-count">${sortedBuildings.length} building${sortedBuildings.length === 1 ? '' : 's'} · ${leaseCount} lease${leaseCount === 1 ? '' : 's'}</span>
         </div>
         ${buildingBlocks}
       </div>`;
@@ -319,39 +363,35 @@ export function registerProjectTeamRoutes(app: Express) {
   body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
   .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
-  .project { margin-top: 18px; page-break-inside: avoid; }
-  .project-head { font-weight: bold; font-size: 14px; border-bottom: 2px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 3px; }
-  .project-sub { color: #666; font-size: 10px; margin: 3px 0 2px; }
-  .project-address { color: #444; font-size: 10px; margin: 0 0 6px; }
-  .project-address.warn { color: #92400e; background: #fef3c7; padding: 2px 5px; border-radius: 3px; display: inline-block; }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #eef2f9; text-align: left; padding: 5px; border: 1px solid #ccc; font-size: 11px; }
-  td { padding: 5px; border: 1px solid #ddd; vertical-align: top; }
-  .muted { color: #777; font-size: 10px; }
-  .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; }
-  .unassigned td { color: #9a3412; background: #fff7ed; font-style: italic; }
-  .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
-  .pill.status { background: #eef2f9; color: #1e3a5f; border-color: #b6c6dd; text-transform: capitalize; }
   .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
-  .park { margin-top: 22px; page-break-inside: auto; }
+  .park { margin-top: 22px; }
   .park-head { font-size: 16px; font-weight: bold; color: #fff; background: ${BRAND_COLOR_PRIMARY}; padding: 6px 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: baseline; }
   .park-count { font-size: 10px; font-weight: normal; opacity: 0.9; }
   .building { margin: 10px 0 0 14px; }
   .building-head { font-size: 12px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
   .project { margin: 8px 0 0 12px; page-break-inside: avoid; }
+  .project-head { font-weight: bold; font-size: 12px; padding-bottom: 3px; }
+  .project-address { color: #444; font-size: 10px; margin: 2px 0 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #eef2f9; text-align: left; padding: 5px; border: 1px solid #ccc; font-size: 11px; }
+  td { padding: 5px; border: 1px solid #ddd; vertical-align: top; }
+  .muted { color: #777; font-size: 10px; font-weight: normal; }
+  .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; }
+  .unassigned td { color: #9a3412; background: #fff7ed; font-style: italic; }
+  .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
+  .pill.na { background: #eef2f9; color: #1e3a5f; border-color: #b6c6dd; }
 </style></head><body>
   <div class="document-title">Project Team Directory</div>
   <div class="generated">Generated ${new Date().toLocaleString()}</div>
   <div class="summary">
-    <strong>${visibleProjects.length}</strong> project${visibleProjects.length === 1 ? '' : 's'} ·
-    <strong>${staffedCount}</strong> with a team assigned ·
-    <strong>${visibleProjects.length - staffedCount}</strong> with none
-    ${hiddenCount > 0
-      ? ` &nbsp;<span class="muted">(${hiddenCount} ${activeOnly ? 'cancelled, archived or completed' : 'cancelled or archived'} project${hiddenCount === 1 ? '' : 's'} hidden — add ?includeAll=1 to the URL to show everything)</span>`
-      : ''}
+    <strong>${propRows.length}</strong> building${propRows.length === 1 ? '' : 's'} ·
+    <strong>${allLeases}</strong> executed lease${allLeases === 1 ? '' : 's'} ·
+    <strong>${staffedLeases}</strong> with a team ·
+    <strong>${gapLeases}</strong> needing one ·
+    <strong>${naLeases}</strong> built by tenant (N/A)
   </div>
-  ${visibleProjects.length === 0
-    ? `<div class="empty">No active projects found.</div>`
+  ${propRows.length === 0
+    ? `<div class="empty">No properties on record.</div>`
     : sections}
 </body></html>`;
 

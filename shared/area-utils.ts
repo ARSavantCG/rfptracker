@@ -26,6 +26,8 @@ export interface BayLike {
   id?: string;
   squareFootage?: number | null;
   rentableSquareFootage?: number | null;
+  /** Set on split-bay halves; identifies the whole bay they came from. */
+  parentBayId?: string | null;
 }
 
 /**
@@ -36,12 +38,50 @@ export interface BayLike {
  */
 export function bayArea(bay: BayLike | null | undefined): number {
   if (!bay) return 0;
-  return bay.rentableSquareFootage || bay.squareFootage || 0;
+  // squareFootage FIRST, rentable only as a fallback.
+  //
+  // On split-bay halves, rentableSquareFootage is built as
+  // (half squareFootage + that half's mechanical allocation) — so preferring it
+  // folded the mechanical room into the warehouse figure, and computeAreaSummary
+  // then added prorated mechanical again on top. Warehouse area is raw bay area;
+  // mechanical is added once, separately.
+  return bay.squareFootage || bay.rentableSquareFootage || 0;
+}
+
+/**
+ * Remove double-counted bays before summing.
+ *
+ * Two ways a selection double-counts:
+ *   - the same bay appears twice (duplicate id)
+ *   - a whole bay appears alongside its own split halves, so its area is counted
+ *     once as the parent and again as north + south
+ *
+ * Halves win over the parent: if both are present the selection was made at the
+ * half level and the parent is a stale leftover. A silent 2x on a rentable area
+ * is the kind of error that reaches a proposal, so this is stripped rather than
+ * trusted.
+ */
+export function dedupeBays(bays: readonly BayLike[] | null | undefined): BayLike[] {
+  if (!Array.isArray(bays)) return [];
+
+  const byId = new Map<string, BayLike>();
+  for (const bay of bays) {
+    const key = bay?.id != null ? String(bay.id) : `__anon_${byId.size}`;
+    if (!byId.has(key)) byId.set(key, bay);
+  }
+
+  const parentIdsCoveredByHalves = new Set<string>();
+  for (const bay of byId.values()) {
+    if (bay?.parentBayId) parentIdsCoveredByHalves.add(String(bay.parentBayId));
+  }
+
+  return Array.from(byId.entries())
+    .filter(([id]) => !parentIdsCoveredByHalves.has(id))
+    .map(([, bay]) => bay);
 }
 
 export function sumBayArea(bays: readonly BayLike[] | null | undefined): number {
-  if (!Array.isArray(bays)) return 0;
-  return bays.reduce((sum, bay) => sum + bayArea(bay), 0);
+  return dedupeBays(bays).reduce((sum, bay) => sum + bayArea(bay), 0);
 }
 
 /**

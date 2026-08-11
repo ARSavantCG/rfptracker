@@ -134,6 +134,7 @@ import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte, ne } from "drizzle-orm";
 import { formatDateForDisplay, parseInputDate } from "@shared/date-utils";
 import { LEGAL_PROPERTY_TOTALS } from './property-legal-compliance';
+import { dedupeBays } from "@shared/area-utils";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -835,8 +836,22 @@ export class DatabaseStorage implements IStorage {
   private processRfpDates(rfp: RfpRequest): RfpRequest {
     // Process all date fields WITHOUT timezone conversion to preserve original dates
     // Leave dates as ISO strings from database to avoid timezone conversion issues
+    //
+    // ALSO sanitises selectedBayConfigurations. Every read of an RFP funnels
+    // through here, so cleaning the stored selection ONCE at this boundary fixes
+    // every consumer at the same time - there are ~20 places that sum
+    // rfp.selectedBayConfigurations inline, and patching them individually would
+    // have missed some and re-drifted the moment a new one was written.
+    //
+    // The stored array can contain a whole bay AND its two split halves, which
+    // double-counts that bay's area. Observed 2026-08-10: 198,581 SF of selected
+    // bays reported as 397,164 on the step 5 badge and 397,761 on the project
+    // summary (the same doubled figure plus mechanical).
     return {
       ...rfp,
+      selectedBayConfigurations: Array.isArray((rfp as any).selectedBayConfigurations)
+        ? dedupeBays((rfp as any).selectedBayConfigurations) as any
+        : (rfp as any).selectedBayConfigurations,
       receivedOn: rfp.receivedOn,
       internalDueDate: rfp.internalDueDate,
       dueDate: rfp.dueDate,

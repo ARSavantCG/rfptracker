@@ -1041,3 +1041,97 @@ If not, those rows hold real cents and need a decision before any conversion.
   "Temporary" in detail rows. Whether they should count as leased is a business call.
 - Electrical minimum returns 0 when a tenant's share is below one increment and no
   minimum is set — intentional, but visible on small suites.
+
+---
+
+## 2026-08-17 — Area consolidation, AI bid extraction, project team, and a stale-data lesson
+
+### THE LESSON: correct code, stale data
+
+The longest-running bug of this session (rentable area reporting 2x) survived
+**three** correct code fixes. Each found a real defect and none fixed the record:
+
+1. mechanical double-counted (`bayArea` preferred `rentableSquareFootage`, which on
+   split halves already contains that half's allocation)
+2. no dedupe (a parent bay stored beside its own halves counted twice)
+3. `dedupeBays` was **blind** — the grid's three mapping sites stripped `parentBayId`
+   before storage, and `BayConfiguration` didn't declare it, so it was dropped on write
+
+Even with all three fixed, one RFP stayed wrong and another came right. **The code was
+correct; the stored array was written before provenance existed and could not be
+repaired retroactively.** Re-selecting the bays and saving fixed it in one click.
+
+**What actually resolved it was making the data visible**, not another fix. The RFP
+detail modal now lists every stored bay entry with its SF and whether it is a whole bay
+or a half. That turned a fourth round of guessing into one look.
+
+**Generalise:** when a figure is wrong on one record and right on another through the
+same code path, stop fixing the code. Show the input.
+
+**Still outstanding:** any RFP created before 2026-08-17 with split-bay selections holds
+the same stale array. It shows an amber note in the bay breakdown. Fix is re-select and
+save. Whole-bay selections were never affected.
+
+### Area maths — now one resolver
+
+`shared/area-utils.ts` owns all of it. **Zero** area sums over a stored selection remain
+outside it. Consolidating 14 inline sums turned up four distinct faults:
+
+| Fault | Where |
+|---|---|
+| Mechanical added twice (summed rentable, then added `mechanicalRoomArea`) | 2 sites |
+| Mechanical folded into warehouse (preferred rentable over raw SF) | most sites |
+| No dedupe of parent + halves | all sites |
+| **Legal-total lookup keyed on `rfp.property`** (an ID, not a name) — never matched, silently fell through to the raw bay sum | 3 of 5 |
+
+That last one had been broken since it was written and was invisible, because falling
+through produces a plausible number.
+
+Exports: `bayArea`, `sumBayArea`, `dedupeBays`, `computeAreaSummary`,
+`resolveRfpRentableArea`, `PROPERTY_LEGAL_TOTALS`. Dock-door sums were deliberately left
+inline — they count doors, not area.
+
+Also: `computeAreaSummary` and `generateIndividualBays` now warn when a selection exceeds
+its building, or when configured split halves exceed their parent bay.
+
+### Shipped this session
+
+- **AI bid extraction** — `server/ai-bid-extractor.ts`. Measured first: the existing
+  heuristic returned 22 empty rows for Excel Construction and 0 rows for Nova, the two
+  contractors supplying most pricing. Excel's PDF separates the description column from
+  the RATE/PRICE column by ~85 lines; Nova's rows are single-space delimited. AI is the
+  working path, not a fallback. Scanned bids supported via `getScreenshot` (no new
+  dependency). Uses the **same `ANTHROPIC_API_KEY`** as the step-2 intake parser.
+  Nothing writes to the DB — rows land in the existing review step.
+- **Project Team Directory** — `project_team_members`, roles per assignment, firm from
+  `contacts.company`. Report is driven by **properties + executed leases**, not RFPs (an
+  RFP is a deal being priced; the lease is what gets built). `construction_by_tenant`
+  renders N/A rather than a gap.
+- **File integrity audit** — Admin → Storage. Object Storage backup now retries and
+  **reads the object back** (upload resolving is not proof it landed).
+- Suite numbers, 1st/2nd generation, temporary leases, electrical minimum, quantity
+  column in Data Mapping.
+
+### Bugs fixed
+
+| Bug | Root cause |
+|---|---|
+| Cancelled RFPs showed "Publish" | Only `completed` checked before falling through to phase; the detailed report overwrote status unconditionally |
+| Project Team report 500 | Joined `rfp_requests.property` (text) to `properties.id` (serial) — Postgres rejects it |
+| Report showed 1 project | I excluded `completed` by default; wrong for a directory |
+| Attachments 404 after publish | Download checked local disk only; Replit wipes it every publish |
+| New leases pre-filled | `form.reset()` bare — RHF adopts the last reset payload as defaults |
+| Scroll wheel edited lease area | Focused number inputs consume the wheel event |
+| Actuals invisible | Wrote `source='rfp_tracker'`; every read filters `'leased_actuals'`. **Verified zero orphaned rows in production** |
+
+### Process notes
+
+- **`db:push` remains off-limits.** Production DDL now goes through
+  `startup-migrations.ts` — `ADDITIVE_COLUMNS`, `ADDITIVE_TABLES`, and a new
+  `SAFE_ALTERS` for constraint relaxations. Production is reachable from Replit only via
+  `executeSql({ environment: "production" })`, which is **read-only** — it cannot run DDL.
+- **Two near-misses worth remembering.** An import was inserted inside a multi-line
+  `import {` block (heuristic matched the opener). And a replacement **invented two
+  variable names that don't exist** — it parsed because they sat inside an `as any`
+  chain. Both caught before commit. Grep for identifiers before trusting a splice.
+- Run `npm run build` before every push, not just a per-file parse check.

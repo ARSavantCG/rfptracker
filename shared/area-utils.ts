@@ -218,3 +218,23 @@ export function resolveRfpRentableArea(params: {
 
   return { rentableSf: summary.totalRentableSf, usedLegalTotal: false, source: 'bays' };
 }
+
+
+/**
+ * Parse a user-typed area or quantity string.
+ *
+ * parseInt("12,000") returns 12. Silently. These fields are free text - people
+ * type thousands separators, "SF", and stray spaces - so every one of them needs
+ * separators stripped before parsing.
+ *
+ * Same failure that truncated "397,164 SF" to 397 in the property summary, and
+ * the reason the bid-import quantity column parses with parseFloat.
+ */
+export function parseAreaInput(value: unknown): number {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value).replace(/[^0-9.\-]/g, '');
+  if (!cleaned || cleaned === '-' || cleaned === '.') return 0;
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}

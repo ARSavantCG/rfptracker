@@ -24,7 +24,7 @@ import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
-import { computeAreaSummary, sumBayArea } from "@shared/area-utils";
+import { computeAreaSummary, sumBayArea , parseAreaInput } from "@shared/area-utils";
 
 
 // Voltage options for electrical allocation
@@ -344,7 +344,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           {form.watch("areaBreakdown").map((area, index) => (
                             <div key={area.id} className="flex justify-between ml-4">
                               <span>• {area.description || `Area ${index + 1}`}:</span>
-                              <span className="font-medium">{area.squareFootage ? parseInt(area.squareFootage).toLocaleString() : 0} SF</span>
+                              <span className="font-medium">{area.squareFootage ? parseAreaInput(area.squareFootage).toLocaleString() : 0} SF</span>
                             </div>
                           ))}
                         </div>
@@ -381,7 +381,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                           }
                           
                           const additionalAreas = form.watch("areaBreakdown").reduce((sum, area) => 
-                            sum + parseInt(area.squareFootage || "0"), 0);
+                            sum + parseAreaInput(area.squareFootage), 0);
                           const remaining = totalArea - additionalAreas;
                           return remaining.toLocaleString();
                         })()} SF

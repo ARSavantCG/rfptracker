@@ -9,6 +9,7 @@ import { Trash2, Plus, CheckCircle, X, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { parseAreaInput } from "@shared/area-utils";
 
 interface LineItemRow {
   category: string;
@@ -92,8 +93,10 @@ export function RecordProjectActuals({
       : [{ category: "", totalCost: "", areaType: "combined", notes: "" }]
   );
 
-  const officeSf = parseInt(form.officeAreaSf) || 0;
-  const warehouseSf = parseInt(form.warehouseAreaSf) || 0;
+  // parseAreaInput, not parseInt: these are free-text fields and
+  // parseInt("12,000") returns 12 without complaint.
+  const officeSf = parseAreaInput(form.officeAreaSf);
+  const warehouseSf = parseAreaInput(form.warehouseAreaSf);
   const totalSf = officeSf + warehouseSf;
   const totalCost = parseMoney(form.totalActualCost);
   const overallCostPerSf = totalSf > 0 ? totalCost / totalSf : 0;

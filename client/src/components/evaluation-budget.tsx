@@ -94,6 +94,10 @@ interface EvaluationBudgetData {
   electricalAllocation: number;
   calculatedElectricalAllocation: number;
   electricalAllocationOverride: number | null;
+  // Manual door counts. null = follow the auto-calculation; a number = the user
+  // set it deliberately and it must survive recalculation and reload.
+  oversizedDoorsOverride: number | null;
+  regularDoorsOverride: number | null;
   tenantVoltage: string;
   // Multi-voltage electrical allocations
   electricalAllocations: ElectricalAllocationEntry[];
@@ -1321,6 +1325,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     electricalAllocation: 0,
     calculatedElectricalAllocation: 0,
     electricalAllocationOverride: null,
+    oversizedDoorsOverride: null,
+    regularDoorsOverride: null,
     tenantVoltage: "480",
     electricalAllocations: [],
   });
@@ -1881,10 +1887,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const existingOverride = prev.electricalAllocationOverride;
         const effectiveElectrical = existingOverride !== null ? existingOverride : calculatedElectrical;
         
+        // Doors follow the same rule as electrical directly above: a manual entry
+        // wins over the recalculated value. Previously doorCounts overwrote them
+        // unconditionally, so an edit made in the premises panel was discarded the
+        // next time this effect ran - the counts looked right until save.
         return {
           ...prev,
-          oversizedDoors: doorCounts.oversized,
-          regularDoors: doorCounts.regular,
+          oversizedDoors: prev.oversizedDoorsOverride ?? doorCounts.oversized,
+          regularDoors: prev.regularDoorsOverride ?? doorCounts.regular,
           vehicularParking: parkingCounts.vehicular,
           trailerParking: parkingCounts.trailer,
           calculatedElectricalAllocation: calculatedElectrical,
@@ -2095,6 +2105,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const savedTrailer = (existingBudget as any).metadata?.trailerParking;
       const savedElectrical = (existingBudget as any).metadata?.electricalAllocation;
       const savedElectricalOverride = (existingBudget as any).metadata?.electricalAllocationOverride;
+      const savedOversizedOverride = (existingBudget as any).metadata?.oversizedDoorsOverride;
+      const savedRegularOverride = (existingBudget as any).metadata?.regularDoorsOverride;
       const savedCalculatedElectrical = (existingBudget as any).metadata?.calculatedElectricalAllocation;
       const savedTenantVoltage = (existingBudget as any).metadata?.tenantVoltage;
       const savedElectricalAllocations = (existingBudget as any).metadata?.electricalAllocations || [];
@@ -2245,8 +2257,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         lineItemRollups: (existingBudget as any).lineItemRollups || {},
         customAssemblies: savedAssemblies,
         assemblies: (existingBudget as any).assemblies || {},
-        oversizedDoors: doorCounts.oversized,
-        regularDoors: doorCounts.regular,
+        oversizedDoors: savedOversizedOverride ?? doorCounts.oversized,
+        regularDoors: savedRegularOverride ?? doorCounts.regular,
+        oversizedDoorsOverride: savedOversizedOverride ?? null,
+        regularDoorsOverride: savedRegularOverride ?? null,
         vehicularParking: savedVehicular !== undefined ? savedVehicular : 0,
         trailerParking: savedTrailer !== undefined ? savedTrailer : 0,
         electricalAllocation: effectiveElectrical,
@@ -4437,6 +4451,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           electricalAllocation: budgetData.electricalAllocation,
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
           electricalAllocationOverride: budgetData.electricalAllocationOverride,
+          // Door overrides persist for the same reason electrical does: a manually
+          // entered count that resets on reload is worse than one that cannot be
+          // entered at all, because the user believes it was saved.
+          oversizedDoorsOverride: budgetData.oversizedDoorsOverride,
+          regularDoorsOverride: budgetData.regularDoorsOverride,
           tenantVoltage: budgetData.tenantVoltage,
           electricalAllocations: budgetData.electricalAllocations,
           // Manual overrides are intentionally NOT persisted here - they are session-only
@@ -4517,6 +4536,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           electricalAllocation: budgetData.electricalAllocation,
           calculatedElectricalAllocation: budgetData.calculatedElectricalAllocation,
           electricalAllocationOverride: budgetData.electricalAllocationOverride,
+          // Door overrides persist for the same reason electrical does: a manually
+          // entered count that resets on reload is worse than one that cannot be
+          // entered at all, because the user believes it was saved.
+          oversizedDoorsOverride: budgetData.oversizedDoorsOverride,
+          regularDoorsOverride: budgetData.regularDoorsOverride,
           tenantVoltage: budgetData.tenantVoltage,
           electricalAllocations: budgetData.electricalAllocations,
           // Persist manual overrides to prevent auto-population from overwriting user changes
@@ -5868,10 +5892,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     type="number"
                     min="0"
                     value={budgetData.oversizedDoors}
-                    onChange={(e) => setBudgetData(prev => ({
-                      ...prev,
-                      oversizedDoors: parseInt(e.target.value) || 0
-                    }))}
+                    onChange={(e) => {
+                      // Empty must stay empty. `parseInt(v) || 0` turned a cleared
+                      // field into 0 instantly, so the box could never be emptied -
+                      // a digit reappeared as fast as it was deleted, and the only
+                      // way to change it was to type a new number first.
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setBudgetData(prev => ({ ...prev, oversizedDoors: 0, oversizedDoorsOverride: 0 }));
+                        return;
+                      }
+                      const n = parseInt(raw, 10);
+                      if (Number.isNaN(n)) return;
+                      // Record it as an override so the recalculation effect and the
+                      // next load both leave it alone.
+                      setBudgetData(prev => ({ ...prev, oversizedDoors: n, oversizedDoorsOverride: n }));
+                    }}
                     className="mt-1"
                     placeholder="0"
                     readOnly={!premisesEditMode}
@@ -5885,10 +5921,22 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                     type="number"
                     min="0"
                     value={budgetData.regularDoors}
-                    onChange={(e) => setBudgetData(prev => ({
-                      ...prev,
-                      regularDoors: parseInt(e.target.value) || 0
-                    }))}
+                    onChange={(e) => {
+                      // Empty must stay empty. `parseInt(v) || 0` turned a cleared
+                      // field into 0 instantly, so the box could never be emptied -
+                      // a digit reappeared as fast as it was deleted, and the only
+                      // way to change it was to type a new number first.
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setBudgetData(prev => ({ ...prev, regularDoors: 0, regularDoorsOverride: 0 }));
+                        return;
+                      }
+                      const n = parseInt(raw, 10);
+                      if (Number.isNaN(n)) return;
+                      // Record it as an override so the recalculation effect and the
+                      // next load both leave it alone.
+                      setBudgetData(prev => ({ ...prev, regularDoors: n, regularDoorsOverride: n }));
+                    }}
                     className="mt-1"
                     placeholder="0"
                     readOnly={!premisesEditMode}

@@ -1182,3 +1182,50 @@ its building, or when configured split halves exceed their parent bay.
 11. **Dead fields** in `property-summary-report.ts`: `gradeLevel` (hardcoded 0) and
     `notes` (no such column). Assigned into the view model, never rendered. Harmless
     today, a trap if someone renders them.
+
+---
+
+## PROPOSED — Uniform GC Proposal Summary (Adolfo, 2026-08-17)
+
+**The ask.** Pull a summary sheet from any general contractor's proposal in ONE
+format, so different contractors become comparable without reading two different
+documents. The contractor's original PDF stays attached for download.
+
+**Why the shape matters.** The two bids on file are structured completely
+differently:
+
+| | Nova Construction | Excel Construction |
+|---|---|---|
+| Grouping | Tenant Buildout / Warehouse Buildout / Demising Wall | CSI divisions 3–17 |
+| Detail | SF and $/unit per line | qty, unit, rate, price per line |
+| Fees | GC, liability, contingency 2.5%, contractor's fee | 10% GC, 1% insurance, 4% permit, 3% contingency, 2% OH, 4% profit |
+
+Reprinting their lines in one document is not uniformity — it is two shapes in one
+file. **What makes them comparable is mapping both onto OUR categories**, which
+already exist: master categories and the four-bucket Budget by Contract structure.
+
+**Proposed pipeline** (each stage already exists except the middle one):
+1. Extract line items — `server/ai-bid-extractor.ts`, built
+2. **Map each line to a master category** — NEW, the actual work
+3. Render our structure with their numbers — reuses the four-bucket report
+4. Bid leveling across contractors falls out of 2 nearly free
+
+**DECIDED AGAINST: a "upload my own format" path.** Adolfo raised it; recommend no.
+It creates a second source of truth for the same numbers, and this codebase has
+demonstrated repeatedly what follows — six copies of the area maths, five of the
+electrical rounding, two Area Summary implementations. They drift, and the drift is
+invisible. The contractor's proposal stays the single source; the summary is
+DERIVED from it and editable where the parse is wrong. Their PDF remains attached
+either way.
+
+**BLOCKED ON:** worklist item 4. The AI extraction has never made a live model
+call. A summary layer built on an extractor that returns garbage for Excel-format
+bids is worse than no summary. Sequence: publish → upload one real bid → read the
+output → then decide whether this is a summary layer or a parser fix.
+
+**Category mapping approach, when unblocked:** map on the AI pass rather than as a
+separate step — it already reads the whole document and has the context to judge
+that "PLASTER AND GYPSUM" and "Drywall and Framing" are the same category. Store
+the mapping per line with a confidence, and surface low-confidence mappings in the
+existing review step rather than silently guessing. Same rule as the extraction
+itself: nothing reaches the database without a human seeing it.

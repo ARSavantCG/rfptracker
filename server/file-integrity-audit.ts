@@ -33,6 +33,81 @@ interface AuditRow {
 }
 
 export function registerFileIntegrityAudit(app: Express) {
+
+  /**
+   * Purge records whose bytes are gone.
+   *
+   * Deletes DATABASE ROWS ONLY, and only for records this endpoint has just
+   * re-verified as unretrievable. Nothing is deleted on the strength of what the
+   * client sends: the client sends ids, the server re-resolves each one through
+   * getFileBuffer, and any file that turns out to BE retrievable is skipped and
+   * reported. A stale audit result therefore cannot delete a live file.
+   *
+   * There is nothing to delete on disk or in Object Storage - that is the whole
+   * point, the bytes are already gone. This only clears the dangling records.
+   */
+  app.post('/api/admin/file-audit/purge', requireAuth, checkPermission('admin.access'), async (req, res) => {
+    const targets: { source: string; id: number }[] = Array.isArray(req.body?.files) ? req.body.files : [];
+    if (targets.length === 0) {
+      return res.status(400).json({ message: 'No files specified.' });
+    }
+
+    const deleted: { source: string; id: number; name: string }[] = [];
+    const skipped: { source: string; id: number; reason: string }[] = [];
+
+    try {
+      for (const t of targets) {
+        // Re-verify before deleting. This is the guard that makes the endpoint
+        // safe to expose at all.
+        let filename: string | null = null;
+        let originalName: string | null = null;
+
+        if (t.source === 'property_attachment') {
+          const [row] = await db.select({ f: propertyAttachments.filename, o: propertyAttachments.originalName })
+            .from(propertyAttachments).where(eq(propertyAttachments.id, t.id));
+          if (row) { filename = row.f; originalName = row.o; }
+        } else if (t.source === 'project_file') {
+          const [row] = await db.select({ f: projectFiles.filePath, o: projectFiles.originalName })
+            .from(projectFiles).where(eq(projectFiles.id, t.id));
+          if (row) { filename = row.f; originalName = row.o; }
+        } else if (t.source === 'evaluation_budget_attachment') {
+          const [row] = await db.select({ f: evaluationBudgetAttachments.filename, o: evaluationBudgetAttachments.originalName })
+            .from(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.id, t.id));
+          if (row) { filename = row.f; originalName = row.o; }
+        } else {
+          skipped.push({ ...t, reason: 'unknown source' });
+          continue;
+        }
+
+        if (!filename) {
+          skipped.push({ ...t, reason: 'record no longer exists' });
+          continue;
+        }
+
+        const buf = await getFileBuffer(filename, originalName || undefined);
+        if (buf) {
+          skipped.push({ ...t, reason: 'file IS retrievable — not deleted' });
+          continue;
+        }
+
+        if (t.source === 'property_attachment') {
+          await db.delete(propertyAttachments).where(eq(propertyAttachments.id, t.id));
+        } else if (t.source === 'project_file') {
+          await db.delete(projectFiles).where(eq(projectFiles.id, t.id));
+        } else {
+          await db.delete(evaluationBudgetAttachments).where(eq(evaluationBudgetAttachments.id, t.id));
+        }
+        deleted.push({ source: t.source, id: t.id, name: originalName || filename });
+        console.log(`[file-audit] purged dangling record ${t.source}#${t.id} (${originalName})`);
+      }
+
+      res.json({ deleted, skipped, deletedCount: deleted.length, skippedCount: skipped.length });
+    } catch (error) {
+      console.error('[file-audit] purge failed:', error);
+      res.status(500).json({ message: 'Purge failed', error: (error as Error).message });
+    }
+  });
+
   app.get('/api/admin/file-audit', requireAuth, checkPermission('admin.access'), async (req, res) => {
     const includeAll = req.query.all === '1';
     const rows: AuditRow[] = [];

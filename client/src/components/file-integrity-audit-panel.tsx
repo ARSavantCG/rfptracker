@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ShieldCheck, AlertTriangle, RefreshCw, FileWarning, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, AlertTriangle, RefreshCw, FileWarning, CheckCircle2, Trash2 } from "lucide-react";
 
 interface AuditFile {
   source: string;
@@ -39,6 +42,9 @@ export function FileIntegrityAuditPanel() {
   // Storage round-trips, so it is deliberately on-demand rather than firing on
   // every visit to the Storage tab.
   const [hasRun, setHasRun] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  const { toast } = useToast();
 
   const { data, isFetching, refetch, error } = useQuery<AuditResult>({
     queryKey: ["/api/admin/file-audit"],
@@ -51,6 +57,31 @@ export function FileIntegrityAuditPanel() {
     if (!hasRun) setHasRun(true);
     else refetch();
   };
+
+  const rowKey = (f: AuditFile) => `${f.source}:${f.id}`;
+
+  const purgeMutation = useMutation({
+    mutationFn: async (files: AuditFile[]) =>
+      apiRequest('/api/admin/file-audit/purge', 'POST', {
+        files: files.map((f) => ({ source: f.source, id: f.id })),
+      }),
+    onSuccess: (res: any) => {
+      setSelected(new Set());
+      setConfirming(false);
+      // The server re-verifies before deleting, so a skip here means a file was
+      // actually retrievable — worth surfacing rather than swallowing.
+      const skipped = res?.skippedCount || 0;
+      toast({
+        title: `Removed ${res?.deletedCount ?? 0} dangling record${res?.deletedCount === 1 ? '' : 's'}`,
+        description: skipped > 0
+          ? `${skipped} skipped — see console. Files that turned out to be retrievable are never deleted.`
+          : 'The files themselves were already gone; only the empty records were cleared.',
+      });
+      refetch();
+    },
+    onError: (e: Error) =>
+      toast({ title: 'Purge failed', description: e.message, variant: 'destructive' }),
+  });
 
   const summary = data?.summary;
   const allHealthy = summary && summary.missing === 0;
@@ -177,7 +208,7 @@ export function FileIntegrityAuditPanel() {
                   </AlertDescription>
                 </Alert>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -202,8 +233,46 @@ export function FileIntegrityAuditPanel() {
                   >
                     Download list as CSV
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setSelected(selected.size === data.missingFiles.length
+                        ? new Set()
+                        : new Set(data.missingFiles.map(rowKey)))}
+                  >
+                    {selected.size === data.missingFiles.length ? 'Clear selection' : 'Select all'}
+                  </Button>
+
+                  {selected.size > 0 && !confirming && (
+                    <Button size="sm" variant="destructive" onClick={() => setConfirming(true)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      Remove {selected.size} record{selected.size === 1 ? '' : 's'}
+                    </Button>
+                  )}
+
+                  {confirming && (
+                    <span className="flex items-center gap-2 text-xs">
+                      <span className="text-red-700 font-medium">
+                        Permanently remove {selected.size} record{selected.size === 1 ? '' : 's'}?
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={purgeMutation.isPending}
+                        onClick={() =>
+                          purgeMutation.mutate(data.missingFiles.filter((f) => selected.has(rowKey(f))))}
+                      >
+                        {purgeMutation.isPending ? 'Removing…' : 'Yes, remove'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
+                    </span>
+                  )}
+
                   <span className="text-xs text-muted-foreground">
-                    Re-upload recovered files against the property or RFP named below.
+                    Re-upload recovered files against the property or RFP named below, or remove the
+                    record if the deal is dead. The bytes are already gone either way — this only
+                    clears the empty record.
                   </span>
                 </div>
 
@@ -211,6 +280,7 @@ export function FileIntegrityAuditPanel() {
                   <table className="w-full text-xs">
                     <thead className="bg-muted sticky top-0">
                       <tr>
+                        <th className="w-8 p-2"></th>
                         <th className="text-left p-2">File</th>
                         <th className="text-left p-2">Belongs to</th>
                         <th className="text-left p-2">Type</th>
@@ -219,6 +289,16 @@ export function FileIntegrityAuditPanel() {
                     <tbody>
                       {data.missingFiles.map((f) => (
                         <tr key={`${f.source}-${f.id}`} className="border-t">
+                          <td className="p-2">
+                            <Checkbox
+                              checked={selected.has(rowKey(f))}
+                              onCheckedChange={(v) => {
+                                const next = new Set(selected);
+                                if (v) next.add(rowKey(f)); else next.delete(rowKey(f));
+                                setSelected(next);
+                              }}
+                            />
+                          </td>
                           <td className="p-2 font-medium">{f.originalName}</td>
                           <td className="p-2">{f.ownerLabel}</td>
                           <td className="p-2 text-muted-foreground">

@@ -246,8 +246,31 @@ export function BaySelectionGrid({
       
       // If this bay is splittable, create north and south halves
       if (bayConfig.canBeSplit) {
-        const northSquareFootage = bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2);
-        const southSquareFootage = bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2);
+        // Configured half areas, falling back to an even split.
+        let northSquareFootage = bayConfig.splitNorthSquareFootage || Math.floor(squareFootage / 2);
+        let southSquareFootage = bayConfig.splitSouthSquareFootage || Math.ceil(squareFootage / 2);
+
+        // INVARIANT: the two halves cannot exceed the whole bay.
+        //
+        // splitNorth/SouthSquareFootage are entered by hand on the property. If
+        // either was filled in with the FULL bay area rather than its half, each
+        // half reports the whole bay and a half-building selection reads as a
+        // whole one - which is exactly the 2x observed on RFP-2026-030
+        // (13 bays valued at 30,551 each instead of 15,275).
+        //
+        // Fall back to an even split rather than trusting the override, and say so
+        // in the console. Silently accepting it is how a doubled rentable area
+        // reaches a tenant proposal.
+        if (northSquareFootage + southSquareFootage > squareFootage) {
+          console.warn(
+            `[bay-split] ${bayConfig.bayName}: configured halves ` +
+            `(${northSquareFootage} + ${southSquareFootage} = ${northSquareFootage + southSquareFootage}) ` +
+            `exceed the bay's ${squareFootage} SF. Falling back to an even split. ` +
+            `Check splitNorthSquareFootage / splitSouthSquareFootage on this property.`
+          );
+          northSquareFootage = Math.floor(squareFootage / 2);
+          southSquareFootage = Math.ceil(squareFootage / 2);
+        }
         
         // Calculate proportional mechanical room allocation and rentable SF
         const totalRentableSF = typeof bayConfig.rentableSquareFootage === 'number' 

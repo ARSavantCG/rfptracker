@@ -138,6 +138,18 @@ export function computeAreaSummary(
   const proportion = buildingSf > 0 ? warehouseSf / buildingSf : 0;
   const mechanicalSf = Math.round(proportion * mechRoom);
 
+  // A selection cannot exceed the building it sits in. When it does, the numbers
+  // downstream are wrong in a way that still looks plausible - which is how a
+  // doubled rentable area reaches a proposal. Logged loudly; exceedsBuilding is
+  // returned so callers can surface it rather than print a confident bad figure.
+  if (buildingSf > 0 && warehouseSf > buildingSf) {
+    console.warn(
+      `[area-utils] selected ${warehouseSf.toLocaleString()} SF exceeds the building's ` +
+      `${buildingSf.toLocaleString()} SF. The selection is double-counting - most often a ` +
+      `split bay stored alongside its own halves, or configured half areas larger than the bay.`
+    );
+  }
+
   return {
     warehouseSf,
     mechanicalSf,

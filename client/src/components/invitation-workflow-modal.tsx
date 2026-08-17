@@ -28,8 +28,16 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
   });
 
   // Fetch existing invitations for this RFP
+  // Single URL string, not a multi-part array.
+  //
+  // The default queryFn does fetch(queryKey[0]) — every element after the first
+  // is DISCARDED. This key fetched /api/rfp-requests (the whole RFP list) and
+  // assigned it to existingInvitations, which line 95 then maps over reading
+  // .contactId. RFP records have no contactId, so invitedContactIds was always
+  // an empty set and the "already invited" check never once worked. No error,
+  // because a successful fetch of the wrong URL looks identical to success.
   const { data: existingInvitations = [], isLoading: invitationsLoading } = useQuery({
-    queryKey: ["/api/rfp-requests", rfp?.id, "invitations"],
+    queryKey: [`/api/rfp-requests/${rfp?.id}/invitations`],
     enabled: isOpen && !!rfp?.id,
   });
 
@@ -50,7 +58,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
       return Promise.all(invitationPromises);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfp?.id, "invitations"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/invitations`] });
       toast({
         title: "Invitations sent",
         description: `Successfully sent ${selectedContacts.length} invitation(s)`,

@@ -506,6 +506,62 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                             : 'Not specified')}
                       </span>
                     </div>
+
+                    {/* Selected bay breakdown.
+                        Rentable area is derived from this array, so when the total
+                        looks wrong the answer is almost always visible here: whole
+                        bays stored where halves were intended, a parent bay sitting
+                        beside its own halves, or entries missing parentBayId (written
+                        before provenance was carried, and therefore not deduplicable).
+                        Showing the raw entries beats guessing at the total. */}
+                    {(() => {
+                      const bays: any[] = (displayRfp?.selectedBayConfigurations as any[]) || [];
+                      if (bays.length === 0) return null;
+                      const halves = bays.filter((b) => b?.parentBayId || b?.isSplitBay).length;
+                      const noProvenance = bays.filter((b) => !b?.parentBayId && !b?.isSplitBay && String(b?.id || '').match(/_(north|south)$/)).length;
+                      return (
+                        <details className="col-span-2 mt-1">
+                          <summary className="cursor-pointer text-xs text-blue-700 hover:underline">
+                            Show selected bays ({bays.length}
+                            {halves > 0 ? `, ${halves} split half${halves === 1 ? '' : 'ves'}` : ', all whole bays'})
+                          </summary>
+                          <div className="mt-1 max-h-44 overflow-y-auto border rounded bg-white">
+                            <table className="w-full text-[11px]">
+                              <thead className="bg-gray-50 sticky top-0">
+                                <tr>
+                                  <th className="text-left p-1">Bay</th>
+                                  <th className="text-right p-1">SF</th>
+                                  <th className="text-left p-1">Type</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {bays.map((b, i) => (
+                                  <tr key={b?.id ?? i} className="border-t">
+                                    <td className="p-1">{b?.bayName || b?.id || `#${i + 1}`}</td>
+                                    <td className="p-1 text-right tabular-nums">
+                                      {Number(b?.squareFootage || 0).toLocaleString()}
+                                    </td>
+                                    <td className="p-1 text-gray-600">
+                                      {b?.parentBayId || b?.isSplitBay
+                                        ? `half of ${b?.parentBayId ?? '?'}`
+                                        : 'whole bay'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {noProvenance > 0 && (
+                            <p className="text-[11px] text-amber-700 mt-1">
+                              {noProvenance} entr{noProvenance === 1 ? 'y is' : 'ies are'} named like a split half but
+                              carry no parentBayId — saved before split provenance was recorded. Re-select the bays on
+                              this RFP and save to rewrite the selection.
+                            </p>
+                          )}
+                        </details>
+                      );
+                    })()}
+
                     <div className="flex items-start">
                       <span className="text-blue-700 font-medium">Received Date:</span>
                       <span className="ml-2 text-blue-900">

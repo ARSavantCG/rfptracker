@@ -714,6 +714,15 @@ export type BayConfiguration = {
   // tenant's leftovers. Undefined means "not yet assessed" and renders nothing -
   // it is not the same as first generation.
   spaceGeneration?: 'first' | 'second';
+
+  // Split-bay provenance. Present only on generated halves, and REQUIRED on the
+  // stored selection: without parentBayId nothing can tell a half from a whole
+  // bay, so a selection holding a parent and its two halves double-counts that
+  // bay's area silently. Declared here because anything absent from this type is
+  // dropped on write.
+  parentBayId?: string;
+  isSplitBay?: boolean;
+  splitSide?: 'north' | 'south';
   standardDockDoors: number; // Count of standard overhead dock doors
   oversizedDockDoors: number; // Count of oversized dock doors
   mechanicalRoomAllocation?: number; // Calculated mechanical room square footage allocation for this bay

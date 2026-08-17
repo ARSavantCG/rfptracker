@@ -374,6 +374,13 @@ export function BaySelectionGrid({
       hasStorefrontEntry: bay.hasStorefrontEntry || false,
       hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
       hasRestroom: bay.hasRestroom || false,
+      // Split-bay provenance MUST survive the mapping. Without parentBayId the
+      // stored selection cannot be told apart from a whole-bay selection, so
+      // nothing downstream can detect a parent and its halves both being present
+      // - which is what let a half-building selection report as a whole one.
+      parentBayId: bay.parentBayId,
+      isSplitBay: bay.isSplitBay || false,
+      splitSide: bay.splitSide,
       rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
       mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
     }));
@@ -532,6 +539,13 @@ export function BaySelectionGrid({
         hasStorefrontEntry: bay.hasStorefrontEntry || false,
         hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
         hasRestroom: bay.hasRestroom || false,
+      // Split-bay provenance MUST survive the mapping. Without parentBayId the
+        // stored selection cannot be told apart from a whole-bay selection, so
+        // nothing downstream can detect a parent and its halves both being present
+        // - which is what let a half-building selection report as a whole one.
+        parentBayId: bay.parentBayId,
+        isSplitBay: bay.isSplitBay || false,
+        splitSide: bay.splitSide,
         rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
         mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
       }));
@@ -594,6 +608,13 @@ export function BaySelectionGrid({
       hasStorefrontEntry: bay.hasStorefrontEntry || false,
       hasSpeculativeOffice: bay.hasSpeculativeOffice || false,
       hasRestroom: bay.hasRestroom || false,
+      // Split-bay provenance MUST survive the mapping. Without parentBayId the
+      // stored selection cannot be told apart from a whole-bay selection, so
+      // nothing downstream can detect a parent and its halves both being present
+      // - which is what let a half-building selection report as a whole one.
+      parentBayId: bay.parentBayId,
+      isSplitBay: bay.isSplitBay || false,
+      splitSide: bay.splitSide,
       rentableSquareFootage: bay.rentableSquareFootage || bay.squareFootage,
       mechanicalRoomAllocation: bay.mechanicalRoomAllocation || 0
     }));

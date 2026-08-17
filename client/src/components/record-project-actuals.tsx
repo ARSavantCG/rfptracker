@@ -141,7 +141,15 @@ export function RecordProjectActuals({
       ...form,
       officeAreaSf: officeSf,
       warehouseAreaSf: warehouseSf,
-      source: "rfp_tracker",
+      // MUST be "leased_actuals". Every read filters on that value:
+      //   actuals-routes.ts:182 and :205, routes.ts:7291
+      // This previously sent "rfp_tracker", which the server writes verbatim
+      // (source: body.source || "historical_import"), so the row saved fine,
+      // reported success, and was then invisible to every consumer - cost
+      // intelligence, the actuals lookup, and the report path all skipped it.
+      // A write that succeeds into a value nothing queries is worse than a
+      // failure, because nobody goes looking.
+      source: "leased_actuals",
       lineItems: validLineItems,
     });
   };

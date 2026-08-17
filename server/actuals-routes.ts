@@ -5,6 +5,14 @@ import { requireAuth, checkPermission } from "./middleware";
 import { projectActuals, projectActualLineItems, rfpRequests } from "@shared/schema";
 import { eq, desc, and, isNotNull, sql } from "drizzle-orm";
 
+/**
+ * The only source values any read path recognises.
+ *   leased_actuals    — entered through the app against a real project
+ *   historical_import — bulk-loaded prior history
+ * A row with any other source is stored but unreachable.
+ */
+const VALID_ACTUALS_SOURCES = ['leased_actuals', 'historical_import'];
+
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 function dollarsToCents(d: number | string | null | undefined): number {
@@ -254,7 +262,16 @@ export function registerActualsRoutes(app: Express): void {
           totalAreaSf,
           totalActualCost,
           costPerSf,
-          source: body.source || "historical_import",
+          // Only two sources are meaningful, and every read filters on one of
+          // them. Anything else writes a row that saves cleanly and is then
+          // invisible to cost intelligence, the actuals lookup, and the report
+          // path. The client sent "rfp_tracker" for a period; those rows exist
+          // and are unreachable until their source is corrected.
+          source: VALID_ACTUALS_SOURCES.includes(body.source)
+            ? body.source
+            : (body.source
+                ? (console.warn(`[actuals] rejecting unknown source "${body.source}" — storing as leased_actuals`), "leased_actuals")
+                : "historical_import"),
           notes: body.notes || null,
         })
         .returning();

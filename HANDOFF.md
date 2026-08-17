@@ -1135,3 +1135,50 @@ its building, or when configured split halves exceed their parent bay.
   variable names that don't exist** — it parsed because they sat inside an `as any`
   chain. Both caught before commit. Grep for identifiers before trusting a splice.
 - Run `npm run build` before every push, not just a per-file parse check.
+
+---
+
+## OPEN WORKLIST — 2026-08-17 (Adolfo: no bandwidth now, wants to get to these)
+
+### Needs Adolfo, not code
+1. **Sync + republish.** Live is several commits behind `d0af7dd1`: audit purge,
+   CSV export, `parseAreaInput`, invitation query-key fix.
+2. **Work the missing-file list.** Admin → Storage → Run audit → download CSV.
+   15 missing at last run (3 property attachments, 10 project files, 2 evaluation
+   budget attachments). Most are `.msg` and `.docx` that still exist in Outlook or
+   Egnyte — re-upload against the named property/RFP. Purge the dead deals. Re-run
+   after to confirm the count drops.
+3. **Stale split-bay selections.** Any RFP created before 2026-08-17 with split bays
+   holds an array written before `parentBayId` was carried, so it cannot be
+   deduplicated. Shows an amber note in the bay breakdown on the RFP detail modal.
+   Fix per record: re-select the bays and save. Whole-bay selections unaffected.
+
+### Needs verification against real data (built, never tested live)
+4. **AI bid extraction.** The single biggest untested item. All plumbing is in —
+   heuristic → AI fallback, scanned-bid support via page images, review UI — but
+   **no live model call has ever been made**. First upload of a real Excel or Nova
+   bid is the actual test. If output is wrong or empty, tune the prompt in
+   `server/ai-bid-extractor.ts` against those two formats.
+5. **Invitation "already invited" indicator** — never worked before `d0af7dd1`.
+   Confirm invited contractors now show as invited.
+6. **`parseAreaInput`** — type `12,000` into an actuals area field, confirm it
+   records 12,000 rather than 12.
+
+### Known debt, deliberately deferred
+7. **`evaluation-budget.tsx` is ~6,600 lines** and holds the fee engine, the CM
+   cascade, and the auto-calc effect. Wants breaking up. Not while it is the source
+   of numbers still being verified in production.
+8. **Two duplicated bay edit forms** in `bay-configuration-manager.tsx` (add form +
+   inline edit form, each with its own element ids). `blankBayForm()` fixed the
+   state duplication; the render duplication remains. Every new bay field must be
+   added to BOTH.
+9. **`property_existing_improvements.total_cost` type drift** — schema says
+   `integer` (cents), database says `numeric`. Code is internally consistent, so it
+   is probably lossless, but the fractional-row count in the 2026-08-04 entry has
+   still not been run.
+10. **`contacts.company` is free text**, so "RLC Architects" and "RLC Architects,
+    Inc." read as two firms on the Project Team Directory. Wants normalising if that
+    report gets real use.
+11. **Dead fields** in `property-summary-report.ts`: `gradeLevel` (hardcoded 0) and
+    `notes` (no such column). Assigned into the view model, never rendered. Harmless
+    today, a trap if someone renders them.

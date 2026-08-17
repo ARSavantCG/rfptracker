@@ -1457,7 +1457,14 @@ export function registerPropertyRoutes(app: Express): void {
 
       if (!buffer) {
         console.log(`❌ File not found on disk or in Object Storage: ${attachment.filename}`);
-        return res.status(404).json({ message: "File not found" });
+        // Say WHY. A bare "File not found" reads like a broken button; these
+        // records are intact and only the bytes are gone, which is a different
+        // problem with a different fix (re-upload from email or Egnyte).
+        // Admin > Storage > File Integrity Audit lists every affected file.
+        return res.status(404).json({
+          message: `"${attachment.originalName}" is no longer stored. The record exists but the file itself was lost before Object Storage backup was in place. Re-upload it to restore access — see Admin > Storage > File Integrity Audit for the full list.`,
+          reason: 'bytes_missing',
+        });
       }
 
       console.log(`✅ Starting download: ${attachment.originalName} (${buffer.length} bytes)`);

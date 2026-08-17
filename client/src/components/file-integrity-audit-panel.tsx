@@ -177,6 +177,36 @@ export function FileIntegrityAuditPanel() {
                   </AlertDescription>
                 </Alert>
 
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      // Plain CSV so the list can be worked through offline. Most
+                      // missing files are .msg and .docx that still exist in email
+                      // or Egnyte, so this is a re-upload worklist, not an obituary.
+                      const rows = [
+                        ['File', 'Belongs to', 'Type'],
+                        ...data.missingFiles.map((f) => [f.originalName, f.ownerLabel, SOURCE_LABEL[f.source] || f.source]),
+                      ];
+                      const csv = rows
+                        .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+                        .join('\n');
+                      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `missing-files-${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Download list as CSV
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Re-upload recovered files against the property or RFP named below.
+                  </span>
+                </div>
+
                 <div className="max-h-80 overflow-y-auto rounded-lg border">
                   <table className="w-full text-xs">
                     <thead className="bg-muted sticky top-0">

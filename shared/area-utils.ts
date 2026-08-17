@@ -158,3 +158,63 @@ export function computeAreaSummary(
     exceedsBuilding: buildingSf > 0 && warehouseSf > buildingSf,
   };
 }
+
+
+/**
+ * Legally-compliant published totals, by property NAME.
+ *
+ * Some properties have a surveyed/published rentable total that differs by a few
+ * SF from the sum of their bay areas. Where a selection is effectively the whole
+ * property, the published figure is the one that belongs on a document.
+ *
+ * Previously inlined in five places in evaluation-budget.tsx. Three of those
+ * keyed the lookup on `rfp.property`, which holds the property ID as TEXT, not a
+ * name — so those three could never match and silently fell through to the raw
+ * bay sum. Kept here so there is one table and one key convention.
+ */
+export const PROPERTY_LEGAL_TOTALS: Record<string, number> = {
+  'Bridge Point Gratigny': 409189,
+  'Bridge 595': 290307,
+  'MG Westside': 794334,
+  'Bridge Point Port Everglades': 171983,
+};
+
+/** Selections within this many SF of the published total snap to it. */
+export const LEGAL_TOTAL_TOLERANCE_SF = 100;
+
+/**
+ * The tenant's rentable area for an RFP: warehouse from the selected bays plus a
+ * prorated share of the mechanical room, snapped to the property's published
+ * total when the selection is effectively the whole building.
+ *
+ * Replaces fourteen inline reduce() sums that each got some part of this wrong:
+ * summing rentableSquareFootage (which on split halves already contains that
+ * half's mechanical allocation) and then adding mechanicalRoomArea again;
+ * missing the dedupe that drops a parent bay stored beside its own halves; and
+ * looking the legal total up by the wrong key.
+ */
+export function resolveRfpRentableArea(params: {
+  selectedBays: readonly BayLike[] | null | undefined;
+  allPropertyBays: readonly BayLike[] | null | undefined;
+  mechanicalRoomSf: number | null | undefined;
+  /** Property NAME, not the id. Pass propertyData?.propertyName. */
+  propertyName?: string | null;
+  /** Used only when no bays are selected. */
+  fallbackArea?: number | null;
+}): { rentableSf: number; usedLegalTotal: boolean; source: 'bays' | 'legal' | 'fallback' | 'none' } {
+  const { selectedBays, allPropertyBays, mechanicalRoomSf, propertyName, fallbackArea } = params;
+
+  if (!Array.isArray(selectedBays) || selectedBays.length === 0) {
+    const fb = Number(fallbackArea) || 0;
+    return { rentableSf: fb, usedLegalTotal: false, source: fb > 0 ? 'fallback' : 'none' };
+  }
+
+  const summary = computeAreaSummary(selectedBays, allPropertyBays, mechanicalRoomSf);
+
+  const legalTotal = propertyName ? PROPERTY_LEGAL_TOTALS[propertyName.trim()] : undefined;
+  if (legalTotal && Math.abs(summary.totalRentableSf - legalTotal) <= LEGAL_TOTAL_TOLERANCE_SF) {
+    return { rentableSf: legalTotal, usedLegalTotal: true, source: 'legal' };
+  }
+
+  return { rentableSf: summary.totalRentableSf, usedLegalTotal: false, source: 'bays' };
+}

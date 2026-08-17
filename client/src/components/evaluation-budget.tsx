@@ -28,6 +28,7 @@ import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
 import { computeLineTotal, applyFeeMinimum } from "@shared/line-total";
+import { resolveRfpRentableArea, sumBayArea } from "@shared/area-utils";
 
 interface MasterCategory {
   id: number;
@@ -1335,9 +1336,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // entirely, since it is rendered only when the value is truthy. Every other
     // call site in the app already uses `rentableSquareFootage || squareFootage`.
     if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
-      const fromBays = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-        return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
-      }, 0));
+      const fromBays = resolveRfpRentableArea({
+        selectedBays: rfp.selectedBayConfigurations,
+        allPropertyBays: (propertyData as any)?.bayConfigurations,
+        mechanicalRoomSf: (propertyData as any)?.mechanicalRoomSquareFootage,
+        propertyName: (propertyData as any)?.propertyName,
+      }).rentableSf;
       // Fall THROUGH to warehouseArea when the bays sum to nothing, rather than
       // returning 0 - previously an empty bay list short-circuited the fallback.
       if (fromBays > 0) return fromBays;
@@ -1633,7 +1637,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         : propertyData;
       const property = activePropertyData as any;
       if (property?.bayConfigurations && property.bayConfigurations.length > 0) {
-        const tenantSF = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || 0), 0);
+        // sumBayArea: dedupes parent+halves and uses raw bay SF, so the door
+        // proration is against a real share rather than an inflated one.
+        const tenantSF = sumBayArea(rfp.selectedBayConfigurations as any);
         const totalPropertySF = property.bayConfigurations.reduce((total: number, bay: any) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
         if (totalPropertySF > 0 && tenantSF > 0) {
           const proportion = tenantSF / totalPropertySF;
@@ -1695,11 +1701,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const property = activePropertyData as any;
     
     // Calculate tenant's rentable area from selected bays
-    const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-      const raw = bay.rentableSquareFootage;
-      const numeric = typeof raw === 'number' ? raw : parseFloat(String(raw ?? '').replace(/[^0-9.]/g, '')) || 0;
-      return total + numeric;
-    }, 0) + (rfp.mechanicalRoomArea || 0);
+    // shared/area-utils. This summed rentableSquareFootage - which on split
+    // halves ALREADY includes that half's mechanical allocation - and then added
+    // rfp.mechanicalRoomArea on top, counting the mechanical room twice.
+    const tenantRentableArea = resolveRfpRentableArea({
+      selectedBays: rfp.selectedBayConfigurations,
+      allPropertyBays: property?.bayConfigurations,
+      mechanicalRoomSf: property?.mechanicalRoomSquareFootage,
+      propertyName: property?.propertyName,
+    }).rentableSf;
     
     // Get total property rentable area - calculate from bay configurations
     const totalPropertyArea = property.bayConfigurations 
@@ -1758,9 +1768,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const property = activePropertyData as any;
     
     // Calculate tenant's rentable area from selected bays
-    const tenantRentableArea = rfp.selectedBayConfigurations.reduce((total, bay) => {
-      return total + (bay.rentableSquareFootage || 0);
-    }, 0) + (rfp.mechanicalRoomArea || 0);
+    // shared/area-utils. This summed rentableSquareFootage - which on split
+    // halves ALREADY includes that half's mechanical allocation - and then added
+    // rfp.mechanicalRoomArea on top, counting the mechanical room twice.
+    const tenantRentableArea = resolveRfpRentableArea({
+      selectedBays: rfp.selectedBayConfigurations,
+      allPropertyBays: property?.bayConfigurations,
+      mechanicalRoomSf: property?.mechanicalRoomSquareFootage,
+      propertyName: property?.propertyName,
+    }).rentableSf;
     
     // Get total property rentable area from bay configurations
     const totalPropertyArea = property.bayConfigurations 
@@ -1908,7 +1924,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       const legalTotal = propertyLegalTotals[propertyName];
       if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
         // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
+        const rawTotal = resolveRfpRentableArea({
+          selectedBays: rfp.selectedBayConfigurations,
+          allPropertyBays: (propertyData as any)?.bayConfigurations,
+          mechanicalRoomSf: (propertyData as any)?.mechanicalRoomSquareFootage,
+        }).rentableSf;
         // If raw total is close to legal total (within 100 SF), use legal total for accuracy
         if (Math.abs(rawTotal - legalTotal) <= 100) {
           totalSelectedArea = legalTotal;
@@ -1918,7 +1938,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
       } else {
         // Fallback to calculated total if no legal total available
-        totalSelectedArea = Math.round(rfp.selectedBayConfigurations.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0));
+        totalSelectedArea = resolveRfpRentableArea({
+          selectedBays: rfp.selectedBayConfigurations,
+          allPropertyBays: (propertyData as any)?.bayConfigurations,
+          mechanicalRoomSf: (propertyData as any)?.mechanicalRoomSquareFootage,
+          propertyName: (propertyData as any)?.propertyName,
+        }).rentableSf;
       }
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
@@ -2656,31 +2681,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     let rentableArea = 0;
     if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
-      const propertyLegalTotals: Record<string, number> = {
-        'Bridge Point Gratigny': 409189,
-        'Bridge 595': 290307,
-        'MG Westside': 794334,
-        'Bridge Point Port Everglades': 171983
-      };
-      
-      // Get legally compliant total for this property
-      const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal) {
-        // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
-        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
-        if (Math.abs(rawTotal - legalTotal) <= 100) {
-          rentableArea = legalTotal;
-        } else {
-          // For partial selections, use calculated total
-          rentableArea = Math.round(rawTotal);
-        }
-      } else {
-        // Fallback to calculated total if no legal total available
-        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
-        }, 0));
-      }
+      // shared/area-utils. This block appeared here three times verbatim, each
+      // copy carrying the same two faults:
+      //   - it summed rentableSquareFootage, which on split halves already
+      //     contains that half's mechanical allocation, so mechanical was
+      //     double-counted
+      //   - it looked the legal total up by rfp.property, which holds the
+      //     property ID as TEXT rather than a name, so the lookup NEVER matched
+      //     and always fell through to the raw bay sum
+      const legalProp = (rfp?.isMultiBuilding
+        ? (multiBuildingProperties?.[0] || propertyData)
+        : (propertyData || propertyByIdData)) as any;
+      rentableArea = resolveRfpRentableArea({
+        selectedBays: rfp.selectedBayConfigurations,
+        allPropertyBays: legalProp?.bayConfigurations,
+        mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
+        propertyName: legalProp?.propertyName,
+      }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
       rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
@@ -2865,31 +2882,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     let rentableArea = 0;
     if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
-      const propertyLegalTotals: Record<string, number> = {
-        'Bridge Point Gratigny': 409189,
-        'Bridge 595': 290307,
-        'MG Westside': 794334,
-        'Bridge Point Port Everglades': 171983
-      };
-      
-      // Get legally compliant total for this property
-      const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal) {
-        // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
-        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
-        if (Math.abs(rawTotal - legalTotal) <= 100) {
-          rentableArea = legalTotal;
-        } else {
-          // For partial selections, use calculated total
-          rentableArea = Math.round(rawTotal);
-        }
-      } else {
-        // Fallback to calculated total if no legal total available
-        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
-        }, 0));
-      }
+      // shared/area-utils. This block appeared here three times verbatim, each
+      // copy carrying the same two faults:
+      //   - it summed rentableSquareFootage, which on split halves already
+      //     contains that half's mechanical allocation, so mechanical was
+      //     double-counted
+      //   - it looked the legal total up by rfp.property, which holds the
+      //     property ID as TEXT rather than a name, so the lookup NEVER matched
+      //     and always fell through to the raw bay sum
+      const legalProp = (rfp?.isMultiBuilding
+        ? (multiBuildingProperties?.[0] || propertyData)
+        : (propertyData || propertyByIdData)) as any;
+      rentableArea = resolveRfpRentableArea({
+        selectedBays: rfp.selectedBayConfigurations,
+        allPropertyBays: legalProp?.bayConfigurations,
+        mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
+        propertyName: legalProp?.propertyName,
+      }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
       rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));
@@ -3208,31 +3217,23 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     let rentableArea = 0;
     if (rfp?.selectedBayConfigurations && Array.isArray(rfp.selectedBayConfigurations) && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property
-      const propertyLegalTotals: Record<string, number> = {
-        'Bridge Point Gratigny': 409189,
-        'Bridge 595': 290307,
-        'MG Westside': 794334,
-        'Bridge Point Port Everglades': 171983
-      };
-      
-      // Get legally compliant total for this property
-      const legalTotal = propertyLegalTotals[rfp.property];
-      if (legalTotal) {
-        // Use legal total if we have all bays selected or close to full property
-        const rawTotal = rfp.selectedBayConfigurations.reduce((total, bay) => total + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
-        // If raw total is close to legal total (within 100 SF), use legal total for accuracy
-        if (Math.abs(rawTotal - legalTotal) <= 100) {
-          rentableArea = legalTotal;
-        } else {
-          // For partial selections, use calculated total
-          rentableArea = Math.round(rawTotal);
-        }
-      } else {
-        // Fallback to calculated total if no legal total available
-        rentableArea = Math.round(rfp.selectedBayConfigurations.reduce((total, bay) => {
-          return total + (bay.rentableSquareFootage || bay.squareFootage || 0);
-        }, 0));
-      }
+      // shared/area-utils. This block appeared here three times verbatim, each
+      // copy carrying the same two faults:
+      //   - it summed rentableSquareFootage, which on split halves already
+      //     contains that half's mechanical allocation, so mechanical was
+      //     double-counted
+      //   - it looked the legal total up by rfp.property, which holds the
+      //     property ID as TEXT rather than a name, so the lookup NEVER matched
+      //     and always fell through to the raw bay sum
+      const legalProp = (rfp?.isMultiBuilding
+        ? (multiBuildingProperties?.[0] || propertyData)
+        : (propertyData || propertyByIdData)) as any;
+      rentableArea = resolveRfpRentableArea({
+        selectedBays: rfp.selectedBayConfigurations,
+        allPropertyBays: legalProp?.bayConfigurations,
+        mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
+        propertyName: legalProp?.propertyName,
+      }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
       rentableArea = parseFloat(rfp.warehouseArea.toString().replace(/[^0-9.]/g, ''));

@@ -19,7 +19,7 @@ import { Edit, Save, X, Download, Trash2, Grid3x3, ChevronDown, Printer } from "
 import { formatDateForInput } from "@shared/date-utils";
 import type { RfpRequest, RfpFile, Property, BayConfiguration, Contact, BuildingCosts } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
-import { computeAreaSummary } from "@shared/area-utils";
+import { computeAreaSummary, resolveRfpRentableArea } from "@shared/area-utils";
 
 const editRfpSchema = z.object({
   rfpNumber: z.string().min(1, "RFP number is required"),
@@ -287,10 +287,16 @@ export function EditRfpModal({ isOpen, onClose, rfp }: EditRfpModalProps) {
         // Calculate total from stored rentableSquareFootage (already includes mechanical allocation)
         // Don't recalculate - the stored values are authoritative
         if (!isMultiBuildingRfp) {
-          const totalRentableArea = rfp.selectedBayConfigurations.reduce((sum: number, bay: any) => 
-            sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0
-          );
-          setCalculatedFloorArea(Math.round(totalRentableArea));
+          // shared/area-utils rather than an inline sum: dedupes a parent bay
+          // stored beside its own halves, and uses raw bay SF so a split half's
+          // bundled mechanical allocation is not counted inside the warehouse
+          // figure and then again as prorated mechanical.
+          setCalculatedFloorArea(resolveRfpRentableArea({
+            selectedBays: rfp.selectedBayConfigurations,
+            allPropertyBays: selectedProperty?.bayConfigurations,
+            mechanicalRoomSf: selectedProperty?.mechanicalRoomSquareFootage,
+            propertyName: (selectedProperty as any)?.propertyName,
+          }).rentableSf);
         }
       } else if (isMultiBuildingRfp && rfp.selectedBaysPerBuilding) {
         // Calculate total area for multi-building RFPs using rentableSquareFootage (already includes mechanical)

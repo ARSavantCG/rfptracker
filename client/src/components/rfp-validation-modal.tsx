@@ -24,7 +24,7 @@ import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
-import { computeAreaSummary } from "@shared/area-utils";
+import { computeAreaSummary, sumBayArea } from "@shared/area-utils";
 
 
 // Voltage options for electrical allocation
@@ -409,7 +409,11 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                 const propertyIncrement = currentProperty?.electricalAllocationIncrement || 200;
                 
                 // Calculate tenant's share of building
-                const tenantSF = rfp?.selectedBayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
+                // sumBayArea rather than a raw reduce: this one already used
+                // squareFootage (correct), but a parent bay stored beside its own
+                // halves would still be counted twice, inflating the tenant share
+                // that drives the electrical allocation.
+                const tenantSF = sumBayArea(rfp?.selectedBayConfigurations as any);
                 const propertySF = currentProperty?.bayConfigurations?.reduce((sum: number, bay: any) => sum + (bay.squareFootage || 0), 0) || 0;
                 const tenantSharePercent = propertySF > 0 ? (tenantSF / propertySF) * 100 : 0;
                 

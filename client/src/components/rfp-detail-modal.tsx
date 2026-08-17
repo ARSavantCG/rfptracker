@@ -13,6 +13,7 @@ import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { parseRfpVariant } from "@shared/rfp-variant";
 import { RfpActualsSection } from "@/components/rfp-actuals-section";
 import { ProjectTeamSection } from "@/components/project-team-section";
+import { computeAreaSummary } from "@shared/area-utils";
 
 interface RfpDetailModalProps {
   isOpen: boolean;
@@ -61,6 +62,10 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
     id: number;
     propertyName: string;
     building: string;
+    // Needed for the rentable-area badge: mechanical is prorated against the
+    // building's full bay list, so both must be fetched, not just the name.
+    bayConfigurations?: any[];
+    mechanicalRoomSquareFootage?: number;
   }>({
     queryKey: [`/api/properties/${displayRfp?.property}`],
     enabled: !!displayRfp?.property,
@@ -463,10 +468,23 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                               : rfp?.selectedBayConfigurations;
 
                           if (bays && bays.length > 0) {
-                            const totalRentable = bays.reduce((sum: number, bay: any) => {
-                              return sum + (bay.rentableSquareFootage || bay.squareFootage || 0);
-                            }, 0);
-                            return totalRentable > 0 ? `${Math.round(totalRentable).toLocaleString()} SF` : 'Not specified';
+                            // shared/area-utils, not an inline reduce.
+                            //
+                            // This badge summed the raw array and preferred
+                            // rentableSquareFootage, which on split halves already
+                            // includes that half's mechanical allocation - so it
+                            // double-counted mechanical AND could not drop a parent
+                            // bay stored alongside its own halves. It was the last
+                            // surface still reporting 397,164 after the workflow
+                            // screens were corrected.
+                            const summary = computeAreaSummary(
+                              bays,
+                              property?.bayConfigurations,
+                              property?.mechanicalRoomSquareFootage,
+                            );
+                            return summary.totalRentableSf > 0
+                              ? `${summary.totalRentableSf.toLocaleString()} SF`
+                              : 'Not specified';
                           }
 
                           // Fallback to stored warehouseArea only if no bay configurations available

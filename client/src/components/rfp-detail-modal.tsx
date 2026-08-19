@@ -658,7 +658,14 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                       </>
                     )}
                     
-                    {/* Always show completion dates for admin users */}
+                    {/* Completed date: shown only once the RFP IS completed.
+                        Adolfo: "the completion date might be excessive". It is
+                        redundant with Status on an RFP that is not finished -
+                        "Completed: Not completed" beside "Status: In Progress"
+                        says the same thing twice - and nothing outside this modal
+                        reads it. Kept for completed records, where the date is
+                        real information; hidden otherwise. */}
+                    {(rfp.status === 'completed' || rfp.completedDate) && (
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Completed:</span>
                       {isAdmin && isEditingDates ? (
@@ -686,6 +693,7 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         </button>
                       )}
                     </div>
+                    )}
 
                     <div className="flex items-center gap-2">
                       <span className="text-blue-700 font-medium">Published:</span>
@@ -701,7 +709,9 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         </div>
                       ) : (
                         <span className="text-blue-900">
-                          {rfp.publishedDate ? formatDateForDisplay(rfp.publishedDate) : "Not published"}
+                          {rfp.publishedDate
+                            ? formatDateForDisplay(rfp.publishedDate)
+                            : "— set automatically when published"}
                         </span>
                       )}
                       {isAdmin && !isEditingDates && (

@@ -3061,7 +3061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       <div style="margin-bottom: 24px;">
         <h2 style="color: #1e3a5f; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Attached Files (${files.length})</h2>
         <ul style="list-style: none; padding: 0; margin: 0;">
-          ${files.map(f => `<li style="padding: 10px 12px; background: #f9fafb; margin-bottom: 6px; border-radius: 4px; border: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${f.fileName}</li>`).join('')}
+          ${files.map(f => `<li style="padding: 10px 12px; background: #f9fafb; margin-bottom: 6px; border-radius: 4px; border: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${f.name || f.filename || 'Unnamed file'}</li>`).join('')}
         </ul>
       </div>
       ` : ''}

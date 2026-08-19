@@ -875,11 +875,25 @@ export class DatabaseStorage implements IStorage {
     // Status changes to "in-progress" when advancing beyond validation phase
     // Note: 'publish' phase stays 'in-progress' until explicitly marked complete
     
+    // Stamp publishedDate the first time an RFP reaches the publish phase.
+    //
+    // Nothing set it automatically - it was read in three places (the detail
+    // modal, the publish email, the summary report) but only ever written by hand
+    // through a pencil icon, so it was blank on every RFP unless someone
+    // remembered. Both advance routes funnel through here, so one stamp covers
+    // them.
+    //
+    // Only set when currently null: re-entering the phase must not overwrite the
+    // original publish date with today's.
+    const existing = await this.getRfpRequest(rfpId);
+    const shouldStampPublished = newPhase === 'publish' && !existing?.publishedDate;
+
     const [updated] = await db
       .update(rfpRequests)
       .set({ 
         workflowPhase: newPhase, 
         status: newStatus,
+        ...(shouldStampPublished ? { publishedDate: new Date() } : {}),
         updatedAt: new Date() 
       })
       .where(eq(rfpRequests.id, rfpId))

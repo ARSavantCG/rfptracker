@@ -2163,7 +2163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
-      const owners = await storage.getContactsByType('owner');
+      // Same source and same filter the sender uses, so the diagnostic cannot
+      // report a recipient list the alert would not actually use.
+      const allOwners = await storage.getContactsByType('owner');
+      const owners = allOwners.filter((o: any) => o.isActive !== false);
+      const deactivated = allOwners.length - owners.length;
       const withEmail = owners.filter((o: any) => o.email && String(o.email).trim());
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
@@ -2184,6 +2188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sendgridKeyConfigured: hasKey,
         ownerContacts: withEmail.map((o: any) => ({ id: o.id, name: o.name, email: o.email })),
         ownerContactsWithoutEmail: owners.length - withEmail.length,
+        deactivatedOwnersExcluded: deactivated,
       });
     } catch (error) {
       console.error('[notification-status] failed:', error);

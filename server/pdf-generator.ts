@@ -1775,7 +1775,10 @@ async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, 
   const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'contact@kurvindustrial.com';
+  // Blank rather than a hardcoded address. Missed on the first pass because I
+  // grepped for "bridgeindustrial" instead of for the PATTERN - two more sites
+  // carried a different hardcoded fallback doing the same wrong thing.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
 
   const formattedDeadline = bidDeadline ? bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.') : 'TBD';
 
@@ -1981,7 +1984,7 @@ async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, 
 
   <!-- 13. FOOTER -->
   <div class="enh-footer">
-    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson} at ${contactEmail}. Confidential — do not distribute without authorization.
+    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson}${contactEmail ? ` at ${contactEmail}` : ''}. Confidential — do not distribute without authorization.
   </div>
 
 </body>
@@ -1999,7 +2002,10 @@ async function generateArchitectEnhancedRfpHtml(options: PdfGenerationOptions, d
   const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'contact@kurvindustrial.com';
+  // Blank rather than a hardcoded address. Missed on the first pass because I
+  // grepped for "bridgeindustrial" instead of for the PATTERN - two more sites
+  // carried a different hardcoded fallback doing the same wrong thing.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
 
   const formattedDeadline = bidDeadline ? bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.') : 'TBD';
   const rfpNumberArch = `${rfp.rfpNumber}-A`;
@@ -2243,7 +2249,7 @@ async function generateArchitectEnhancedRfpHtml(options: PdfGenerationOptions, d
 
   <!-- 15. FOOTER -->
   <div class="enh-footer">
-    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson} at ${contactEmail}. Confidential — do not distribute without authorization.
+    This document was generated on ${today} for broker response purposes. For questions, contact ${contactPerson}${contactEmail ? ` at ${contactEmail}` : ''}. Confidential — do not distribute without authorization.
   </div>
 
 </body>

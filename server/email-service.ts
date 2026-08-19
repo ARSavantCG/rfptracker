@@ -64,8 +64,22 @@ export async function getUncachableSendGridClient() {
   };
 }
 
+/**
+ * Alert recipients: every ACTIVE contact typed 'owner'.
+ *
+ * Sourced live from the Contacts directory, so the recipient list is maintained
+ * in exactly one place. Add someone as an owner and they start receiving alerts;
+ * deactivate them and they stop. No hardcoded list, no second place to update
+ * when the team changes.
+ *
+ * The isActive filter matters: getContactsByType returns deactivated rows too, so
+ * without it a departed colleague would keep receiving new-RFP alerts after being
+ * deactivated in the app - which looks exactly like the app being ignored.
+ * Rows predating the column read null and are treated as active.
+ */
 export async function getOwnerContacts(): Promise<Contact[]> {
-  return await storage.getContactsByType('owner');
+  const owners = await storage.getContactsByType('owner');
+  return owners.filter((c) => c.isActive !== false);
 }
 
 function formatDate(date: Date | string | null | undefined): string {

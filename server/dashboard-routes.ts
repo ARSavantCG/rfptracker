@@ -20,6 +20,17 @@ export function registerDashboardRoutes(app: Express): void {
   app.get('/api/dashboard/metrics', requireAuth, async (req, res) => {
     try {
       const now = new Date();
+
+      // Day boundaries, not the current instant.
+      //
+      // Overdue used `lt(internalDueDate, now)` where now is a TIMESTAMP. A due
+      // date stored at midnight today is less than 2pm today, so an RFP was
+      // flagged overdue from the first minute of the day it was actually due -
+      // and Upcoming used gte(now), so it fell out of that list at the same
+      // moment. Today belonged to neither.
+      //
+      // Overdue now means strictly BEFORE today; upcoming includes all of today.
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
       const currentYear = now.getFullYear();
@@ -37,7 +48,7 @@ export function registerDashboardRoutes(app: Express): void {
         .from(rfpRequests)
         .where(
           and(
-            lt(rfpRequests.internalDueDate, now),
+            lt(rfpRequests.internalDueDate, startOfToday),
             notInArray(rfpRequests.status, INACTIVE_STATUSES)
           )
         );
@@ -45,7 +56,16 @@ export function registerDashboardRoutes(app: Express): void {
       const overdueRfps = overdueRows
         .map(r => ({
           ...r,
-          daysOverdue: Math.floor((now.getTime() - r.internalDueDate.getTime()) / 86400000),
+          // Whole days between calendar dates. Using raw timestamps made an
+          // RFP due yesterday evening read as "0d overdue".
+          daysOverdue: Math.round(
+            (startOfToday.getTime() -
+              new Date(
+                r.internalDueDate.getFullYear(),
+                r.internalDueDate.getMonth(),
+                r.internalDueDate.getDate()
+              ).getTime()) / 86400000
+          ),
         }))
         .sort((a, b) => b.daysOverdue - a.daysOverdue)
         .slice(0, 20);
@@ -96,7 +116,7 @@ export function registerDashboardRoutes(app: Express): void {
         .from(rfpRequests)
         .where(
           and(
-            gte(rfpRequests.internalDueDate, now),
+            gte(rfpRequests.internalDueDate, startOfToday),
             lte(rfpRequests.internalDueDate, sevenDaysFromNow),
             notInArray(rfpRequests.status, INACTIVE_STATUSES)
           )

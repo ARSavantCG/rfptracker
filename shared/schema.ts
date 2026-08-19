@@ -55,6 +55,18 @@ export const rfpRequests = pgTable("rfp_requests", {
   // self-serve pricing via the ROM Pilot, skipping steps 2-3. Column created by
   // startup migration, NOT drizzle-kit push.
   pricingPath: text("pricing_path").default("development"),
+  /**
+   * Which of the three routes this request is on.
+   *
+   *   development  full process, priced by the development team      RFP-
+   *   rom_pilot    self-served through ROM Pilot                     RFP-
+   *   allowance    pure tracking, no pricing at all                  ALW-
+   *
+   * pricingPath already separates the first two, and both draw on the pricing
+   * database, so both keep the RFP- sequence. Allowance touches no pricing and
+   * gets its own, so it cannot inflate the RFP count.
+   */
+  trackType: text("track_type").default("development"),
   // Ownership scoping (slice 0b, 2026-07-21). rfp_requests never had a
   // createdBy column (the design doc was wrong about that) — sentBy is the
   // closest historical signal and is only a display string. This is the REAL

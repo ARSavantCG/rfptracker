@@ -461,30 +461,46 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private async generateRfpNumber(): Promise<string> {
+  /**
+   * Next number in a prefix's own sequence.
+   *
+   * TWO INDEPENDENT SEQUENCES, deliberately:
+   *
+   *   RFP-  development AND ROM Pilot. Anything that draws on the pricing
+   *         database - a real request with real scope, whether or not the
+   *         development team priced it.
+   *   ALW-  allowance deals. Pure tracking, no pricing at all.
+   *
+   * They are separate because the RFP number is used to describe workload. If
+   * sixty allowance deals shared the sequence, RFP-2026-100 would imply a hundred
+   * priced requests when twenty were real - inflating the denominator on the one
+   * figure that is meant to demonstrate the team's throughput.
+   *
+   * Counting only its own prefix means neither sequence can be skewed by the
+   * other, and nothing existing is renumbered.
+   */
+  private async generateNumberForPrefix(prefix: string): Promise<string> {
     const year = new Date().getFullYear();
-    
-    // Get all RFP numbers for the current year to find the highest number
-    const allRfps = await db.select({ rfpNumber: rfpRequests.rfpNumber })
+
+    const existing = await db.select({ rfpNumber: rfpRequests.rfpNumber })
       .from(rfpRequests)
-      .where(like(rfpRequests.rfpNumber, `RFP-${year}-%`));
-    
-    // Extract numeric parts and find the highest
+      .where(like(rfpRequests.rfpNumber, `${prefix}-${year}-%`));
+
     let maxNumber = 0;
-    for (const rfp of allRfps) {
-      // Extract the base number (before any dot for alternates/counters)
-      const match = rfp.rfpNumber.match(new RegExp(`RFP-${year}-(\\d+)`));
+    for (const rfp of existing) {
+      // Base number only — ignore any .N alternate suffix.
+      const match = rfp.rfpNumber.match(new RegExp(`^${prefix}-${year}-(\\d+)`));
       if (match) {
         const num = parseInt(match[1], 10);
-        if (num > maxNumber) {
-          maxNumber = num;
-        }
+        if (num > maxNumber) maxNumber = num;
       }
     }
-    
-    // Next sequential number is always +1 from the highest existing
-    const nextNumber = (maxNumber + 1).toString().padStart(3, '0');
-    return `RFP-${year}-${nextNumber}`;
+
+    return `${prefix}-${year}-${(maxNumber + 1).toString().padStart(3, '0')}`;
+  }
+
+  private async generateRfpNumber(trackType?: string): Promise<string> {
+    return this.generateNumberForPrefix(trackType === 'allowance' ? 'ALW' : 'RFP');
   }
 
   private async generateProjectName(propertyId: string, tenantName: string, confidential: boolean): Promise<string> {
@@ -521,7 +537,7 @@ export class DatabaseStorage implements IStorage {
 
   async createRfpRequest(request: InsertRfpRequest): Promise<RfpRequest> {
     // Use provided RFP number for counter offers, or generate new one for regular RFPs
-    const rfpNumber = request.rfpNumber || await this.generateRfpNumber();
+    const rfpNumber = request.rfpNumber || await this.generateRfpNumber((request as any).trackType);
     
     // Check if project area indicates override and extract the override value
     let warehouseAreaOverride = null;

@@ -81,6 +81,8 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'contacts', column: 'receives_notifications', type: 'boolean DEFAULT true' },
   // Who hit publish (2026-08-19). Distinct from sent_by, the inbound broker.
   { table: 'rfp_requests', column: 'published_by', type: 'text' },
+  // Route: development | rom_pilot | allowance (2026-08-19).
+  { table: 'rfp_requests', column: 'track_type', type: "text DEFAULT 'development'" },
   // Team can attach to an executed lease rather than an RFP (2026-08-10).
   { table: 'project_team_members', column: 'lease_id', type: 'integer REFERENCES executed_leases(id) ON DELETE CASCADE' },
   // Tenant performs its own construction: no landlord design team required.

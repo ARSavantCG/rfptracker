@@ -81,6 +81,44 @@ async function primeSoftCostIds(): Promise<void> {
   }
 }
 
+/**
+ * Street address for an RFP's property.
+ *
+ * The four RFP generators read rfp.propertyAddress, which DOES NOT EXIST on
+ * rfp_requests. The chain was:
+ *   rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property
+ * The first term is always undefined, projectLocation defaults to an empty
+ * string (falsy), so contractor and architect RFPs fell through to rfp.property
+ * - the property ID stored as text. Bid packages went out showing "3" where an
+ * address belongs.
+ *
+ * Matched on String(id) because rfp_requests.property is text and properties.id
+ * is serial; Postgres rejects that comparison in SQL.
+ */
+async function resolvePropertyAddress(rfp: any, invitationToBid?: any): Promise<string> {
+  const fromItb = (invitationToBid?.projectLocation || '').trim();
+  if (fromItb) return fromItb;
+
+  try {
+    const props = await storage.getAllProperties();
+    const match = props.find((p: any) => String(p.id) === String(rfp?.property ?? '').trim());
+    if (match) {
+      const parts = [
+        match.streetAddress,
+        [match.city, match.state].filter(Boolean).join(', '),
+        match.zip,
+      ].filter(Boolean);
+      if (parts.length) return parts.join(', ');
+    }
+  } catch (error) {
+    console.warn('[pdf] could not resolve property address:', (error as Error).message);
+  }
+
+  // Last resort: whatever is stored. Better than blank on a bid package, but it
+  // may be an id - which is the bug this function exists to avoid.
+  return String(rfp?.property ?? '');
+}
+
 function bidableScope(items: any): any[] {
   if (!Array.isArray(items)) return [];
   return items.filter((row: any) =>
@@ -701,7 +739,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
   const projectName = rfp.projectName;
   
   // Use Project Address from RFP data
-  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+  const projectAddress = await resolvePropertyAddress(rfp, invitationToBid);
   
   // Use contact info from RFP development contact or invitation fallback
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
@@ -1018,8 +1056,8 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, projectStart, projectEnd, warehouseArea, existingOffice, newOffice, totalArea } = dates;
   
-  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
-  const projectLocation = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+  const projectLocation = await resolvePropertyAddress(rfp, invitationToBid);
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${projectLocation}` : `${rfp.tenantName} @ ${projectLocation}`);
   // Use contact info from RFP development contact or invitation fallback
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
   const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
@@ -1352,6 +1390,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
+  const projectAddress = await resolvePropertyAddress(rfp, invitationToBid);
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
@@ -1415,7 +1454,7 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
         <div class="info-grid">
           <div>
             <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
+            <div class="info-item"><span class="label">Property Address:</span><span class="value">${projectAddress}</span></div>
           </div>
           <div>
             <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
@@ -1549,6 +1588,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
+  const projectAddress = await resolvePropertyAddress(rfp, invitationToBid);
 
   // Format bid deadline with E.O.B.
   const formattedDeadline = bidDeadline.replace(/(\d{4})$/, '$1 E.O.B.');
@@ -1692,7 +1732,7 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
         <div class="info-grid">
           <div>
             <div class="info-item"><span class="label">Project:</span><span class="value">${invitationToBid?.projectScope || rfp.tenantName}</span></div>
-            <div class="info-item"><span class="label">Property Address:</span><span class="value">${invitationToBid?.projectLocation || rfp.propertyAddress || rfp.property}</span></div>
+            <div class="info-item"><span class="label">Property Address:</span><span class="value">${projectAddress}</span></div>
           </div>
           <div>
             <div class="info-item"><span class="label">Requested Response:</span><span class="value">${formattedDeadline}</span></div>
@@ -1768,8 +1808,8 @@ async function generateContractorEnhancedRfpHtml(options: PdfGenerationOptions, 
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 
-  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
-  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+  const projectAddress = await resolvePropertyAddress(rfp, invitationToBid);
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${projectAddress}` : `${rfp.tenantName} @ ${projectAddress}`);
 
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
   const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];
@@ -1995,8 +2035,8 @@ async function generateArchitectEnhancedRfpHtml(options: PdfGenerationOptions, d
   const { rfp, invitationToBid, recipientName, recipientCompany } = options;
   const { today, bidDeadline, warehouseArea, existingOffice, newOffice, totalArea, areaBreakdown, warehouseNotes } = dates;
 
-  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${rfp.propertyAddress || rfp.property}` : `${rfp.tenantName} @ ${rfp.propertyAddress || rfp.property}`);
-  const projectAddress = rfp.propertyAddress || invitationToBid?.projectLocation || rfp.property;
+  const projectAddress = await resolvePropertyAddress(rfp, invitationToBid);
+  const projectName = rfp.projectName || (rfp.confidential ? `Confidential @ ${projectAddress}` : `${rfp.tenantName} @ ${projectAddress}`);
 
   const developmentContactInfo = rfp.developmentContact ? rfp.developmentContact.split(' - ') : [];
   const invitationContactInfo = invitationToBid?.contactForQuestions?.split(' - ') || [];

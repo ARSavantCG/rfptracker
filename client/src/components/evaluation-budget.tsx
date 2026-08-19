@@ -5205,7 +5205,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                   Assigning a line to an assembly is a property of
                                   that line, so it belongs on the line. */}
                               <TableCell className="text-sm text-center">
-                                {budgetData.customAssemblies.filter(a => a.category === category).length === 0 ? (
+                                {/* The dropdown must ALSO appear when this item is
+                                    already assigned, even if no assembly record
+                                    matches - otherwise a line whose assembly was
+                                    deleted, or whose record sits in another
+                                    category, is struck through forever with no
+                                    control to clear it. There must always be a way
+                                    out of a state the UI put you in. */}
+                                {budgetData.customAssemblies.filter(a => a.category === category).length === 0 && !item.assemblyId ? (
                                   <span className="text-xs text-gray-400">—</span>
                                 ) : (
                                   <select
@@ -5237,6 +5244,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       .map(a => (
                                         <option key={a.id} value={a.id}>{a.name}</option>
                                       ))}
+                                    {/* Assigned to something that is not in the list.
+                                        Named so it is obviously wrong rather than
+                                        rendering as an empty selection. */}
+                                    {item.assemblyId &&
+                                      !budgetData.customAssemblies.some(a => a.id === item.assemblyId && a.category === category) && (
+                                        <option value={item.assemblyId}>
+                                          (unlinked assembly — select “none” to release)
+                                        </option>
+                                      )}
                                   </select>
                                 )}
                               </TableCell>

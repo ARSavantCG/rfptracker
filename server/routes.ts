@@ -76,7 +76,7 @@ import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
-import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR } from "@shared/schema";
+import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, RFP_TERMINAL_STATUSES } from "@shared/schema";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -4780,7 +4780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       // EVERY record and overwrote the status column with the
                       // workflow phase, so a cancelled or completed RFP showed the
                       // phase it stalled in.
-                      const TERMINAL = ['cancelled', 'archived', 'on-hold', 'completed'];
+                      const TERMINAL = RFP_TERMINAL_STATUSES;
                       if (TERMINAL.includes(rfp.status)) {
                         statusDisplay = rfp.status === 'on-hold'
                           ? 'On Hold'
@@ -4804,6 +4804,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             statusDisplay = 'Evaluation';
                             statusClass = 'status-inprogress';
                             break;
+                          // DEAD BRANCH: 'award' is not in RFP_WORKFLOW_PHASES and is
+                          // never written by any code path, so this can never match.
+                          // Left rather than removed blind - if an award phase is
+                          // wanted, add it to the shared list first.
                           case 'award':
                             statusDisplay = 'Award';
                             statusClass = 'status-completed';

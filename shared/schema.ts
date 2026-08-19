@@ -250,6 +250,55 @@ export type RfpRequest = typeof rfpRequests.$inferSelect;
  * so "RLC Architects" and "RLC Architects, Inc." group as two firms — worth
  * normalising later, not worth blocking this on.
  */
+/**
+ * RFP status classification — the single definition of "is this deal live".
+ *
+ * Was duplicated: dashboard-routes.ts held INACTIVE_STATUSES / ACTIVE_STATUSES,
+ * and routes.ts held a TERMINAL array with the same four values under a different
+ * name. Two lists that must agree, in two files, with nothing enforcing it - and
+ * a status added to one but not the other silently changes what a dashboard
+ * counts versus what a report shows.
+ *
+ * Terminal = work has stopped, whatever the workflow phase says. These win over
+ * phase on every report; see the 2026-08-04 fix where cancelled RFPs displayed
+ * "Publish" because only 'completed' was being checked.
+ */
+/**
+ * Workflow phases, in order. The single list.
+ *
+ * The same values were written out inline in routes.ts, email-service.ts,
+ * edit-rfp-modal and workflow-status. routes.ts additionally handles an 'award'
+ * phase that IS NOT IN THIS LIST and is never written anywhere - three dead
+ * branches that can never fire. Left in place rather than removed blind, but
+ * flagged: if an award phase is wanted it belongs here first.
+ */
+export const RFP_WORKFLOW_PHASES = [
+  'rfp-entry',
+  'rfp-validation',
+  'invitation-to-bid',
+  'bid-collection',
+  'evaluation',
+  'publish',
+] as const;
+
+export type RfpWorkflowPhase = typeof RFP_WORKFLOW_PHASES[number];
+
+export const RFP_WORKFLOW_PHASE_LABELS: Record<string, string> = {
+  'rfp-entry': 'RFP Entry',
+  'rfp-validation': 'RFP Validation',
+  'invitation-to-bid': 'Invitation to Bid',
+  'bid-collection': 'Bid Collection',
+  'evaluation': 'Evaluation',
+  'publish': 'Publish',
+};
+
+export const RFP_TERMINAL_STATUSES = ['completed', 'on-hold', 'archived', 'cancelled'] as const;
+export const RFP_ACTIVE_STATUSES = ['received', 'in-progress'] as const;
+
+export function isTerminalRfpStatus(status: string | null | undefined): boolean {
+  return RFP_TERMINAL_STATUSES.includes(String(status ?? '') as any);
+}
+
 export const PROJECT_TEAM_ROLES = [
   // CORE — always rendered on the directory report even when unassigned, so the
   // report doubles as a coverage checklist. Every project has a design team.

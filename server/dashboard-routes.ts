@@ -3,6 +3,7 @@ import { db } from './db';
 import { rfpRequests, bidCollections, properties, projectActuals } from '@shared/schema';
 import { and, eq, lt, gte, lte, notInArray, inArray, isNotNull } from 'drizzle-orm';
 import { requireAuth } from './middleware';
+import { RFP_TERMINAL_STATUSES, RFP_ACTIVE_STATUSES } from "@shared/schema";
 
 const parseTiValue = (val: any): number => {
   if (!val) return 0;
@@ -10,8 +11,10 @@ const parseTiValue = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-const INACTIVE_STATUSES = ['completed', 'on-hold', 'archived', 'cancelled'];
-const ACTIVE_STATUSES = ['received', 'in-progress'];
+// shared/schema - one definition. routes.ts held the same four values under the
+// name TERMINAL, with nothing keeping the two lists in step.
+const INACTIVE_STATUSES = [...RFP_TERMINAL_STATUSES];
+const ACTIVE_STATUSES = [...RFP_ACTIVE_STATUSES];
 
 export function registerDashboardRoutes(app: Express): void {
   app.get('/api/dashboard/metrics', requireAuth, async (req, res) => {

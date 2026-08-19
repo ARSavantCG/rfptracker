@@ -71,7 +71,7 @@ export default function Reports() {
     setFilters({});
   };
 
-  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload" | "project-team") => {
+  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload" | "project-team" | "turnaround") => {
     if (reportType === "custom") {
       setCustomReportModalOpen(true);
       return;
@@ -87,6 +87,12 @@ export default function Reports() {
       if (reportType === "vendor-workload") {
         url = `/api/reports/vendor-workload/html`;
         if (incompleteOnly) params.append('incompleteOnly', 'true');
+      }
+
+      // Turnaround measures every RFP against its own internal due date, so the
+      // page-level date filters do not apply.
+      if (reportType === "turnaround") {
+        url = `/api/reports/turnaround`;
       }
 
       // Project team ignores the date/status filters — it is a directory of who
@@ -448,6 +454,36 @@ export default function Reports() {
               <Button 
                 className="w-full h-8 text-xs" 
                 onClick={() => generateReport("vendor-workload")}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <Clock className="h-4 w-4" />
+                <span>Turnaround vs. Internal Due Date</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-xs text-gray-600">
+                <p className="mb-1">Were we on time?</p>
+                <ul className="space-y-0.5">
+                  <li>• On-time rate and average days early/late</li>
+                  <li>• Average receipt to publish</li>
+                  <li>• Open and already overdue</li>
+                </ul>
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Publish dates began recording automatically on 19 Aug 2026. Earlier RFPs are
+                listed as not measurable rather than counted as misses.
+              </p>
+              <Button
+                className="w-full h-8 text-xs"
+                onClick={() => generateReport("turnaround")}
               >
                 <Download className="h-3 w-3 mr-1" />
                 Generate Report

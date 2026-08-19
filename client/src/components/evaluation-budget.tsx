@@ -2511,6 +2511,28 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Calculate distributed costs including rolled-up items
   const calculateDistributedCosts = (item: EvaluationLineItem) => {
+    // AN ASSEMBLY HEAD IS THE SUM OF ITS CHILDREN.
+    //
+    // The head is stored as an ordinary line item with totalPrice '0.00', and
+    // nothing updated that figure when components were assigned to it. So the
+    // head displayed $0.00 while its children were struck out of the category
+    // total - the whole assembly's cost vanished from the budget.
+    //
+    // Derived rather than written back: the children ARE the source of truth
+    // (Adolfo, 2026-08-19), so storing a copy on the head would be a second
+    // source that drifts the moment a child changes.
+    const headAssembly = budgetData.customAssemblies.find(a => a.id === item.id);
+    if (headAssembly) {
+      const all = [
+        ...budgetData.tenantImprovements,
+        ...budgetData.designSoftCosts,
+        ...budgetData.existingImprovements,
+      ];
+      return all
+        .filter(i => i.assemblyId === item.id)
+        .reduce((sum, i) => sum + (parseFloat(i.totalPrice) || 0) * ((i.tenantShare || 100) / 100), 0);
+    }
+
     const baseItemCost = parseFloat(item.totalPrice) || 0;
     const tenantShare = (item.tenantShare || 100) / 100;
     const itemCost = baseItemCost * tenantShare;

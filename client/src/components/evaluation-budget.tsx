@@ -4782,9 +4782,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     
     return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg text-black">{title}</CardTitle>
-        <div className="flex items-center gap-2">
+      {/* flex-wrap and min-w-0, not a fixed row.
+          This was `flex flex-row items-center justify-between` with no wrapping
+          and no overflow, so on a phone the import buttons extended past the
+          right edge with no way to reach them - the row could not scroll and the
+          buttons could not be tapped. Reported 2026-08-17. */}
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <CardTitle className="text-lg text-black min-w-0">{title}</CardTitle>
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className={`text-lg font-bold ${category === 'existingImprovements' ? 'text-cyan-600 italic' : 'text-green-600'}`}>{formatCurrency(totalWithRollups)}</span>
           {totalWithRollups !== total && (
             <span className="text-sm text-gray-500">

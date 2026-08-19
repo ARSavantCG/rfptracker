@@ -67,9 +67,35 @@ export function LegalCompliancePanel() {
     },
   });
 
+  /**
+   * The area this property is legally expected to total.
+   *
+   * LEGAL_REQUIREMENTS holds surveyed/published figures for the properties that
+   * have one. Everything else falls back to the property's own recorded rentable
+   * total, which still catches the case this panel exists for: bay configurations
+   * drifting away from the figure the property is documented at.
+   */
+  const getRequirement = (property: any): { name: string; requiredSF: number; published: boolean } | null => {
+    const published = LEGAL_REQUIREMENTS[property.id as keyof typeof LEGAL_REQUIREMENTS];
+    if (published) return { name: published.name, requiredSF: published.requiredSF, published: true };
+
+    // There is NO recorded rentable total on the properties table - only
+    // mechanical_room_square_footage and the bay array. So for a property with no
+    // published figure there is genuinely nothing to compare against, and
+    // inventing a baseline from the bays themselves would compare a number to
+    // itself and always read Compliant. That is worse than saying nothing.
+    return null;
+  };
+
   const getComplianceStatus = (property: any) => {
-    const legalReq = LEGAL_REQUIREMENTS[property.id as keyof typeof LEGAL_REQUIREMENTS];
-    if (!legalReq) return { status: 'unknown', variance: 0 };
+    // Published legal total if we have one; otherwise the property's own recorded
+    // rentable figure. Previously a property without a hardcoded entry returned
+    // 'unknown' and was then dropped from the list entirely - 15 buildings in the
+    // portfolio, 4 in this table, and nothing said the other 11 were unchecked.
+    const legalReq = getRequirement(property);
+    if (!legalReq) {
+      return { status: 'no-baseline' as const, variance: 0, required: 0, actual: 0 };
+    }
     
     // property.warehouseTotal DOES NOT EXIST. It was the only reference to that
     // name in the entire codebase, so this read undefined, `|| 0` made it zero,
@@ -144,22 +170,55 @@ export function LegalCompliancePanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground">
-          Monitors exact leasable area totals to prevent legal issues. Overstating even by 1 SF can result in lawsuits.
+          Compares each property's bay configurations against the total it is documented at.
+          A variance means the two disagree and one of them needs correcting before the figure
+          reaches a lease or a proposal.
         </div>
         
         <Separator />
-        
+
         <div className="space-y-3">
+          {(() => {
+            const total = (properties || []).length;
+            const checked = (properties || []).filter((p: any) => getRequirement(p)).length;
+            if (total === 0 || checked === total) return null;
+            return (
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                Checking <strong>{checked}</strong> of <strong>{total}</strong> properties. The rest
+                have no published leasable total on file, so there is nothing to compare their bay
+                configurations against — they are listed below rather than hidden.
+              </div>
+            );
+          })()}
+
           {(properties || []).map((property: any) => {
             const compliance = getComplianceStatus(property);
-            const legalReq = LEGAL_REQUIREMENTS[property.id as keyof typeof LEGAL_REQUIREMENTS];
-            
-            if (!legalReq) return null;
+            const legalReq = getRequirement(property);
+
+            // No baseline at all: still LISTED, so an unchecked property is
+            // visible rather than silently absent from a compliance panel.
+            if (!legalReq) {
+              return (
+                <div key={property.id} className="border rounded-lg p-4 flex items-center justify-between">
+                  <div className="font-medium text-muted-foreground">
+                    {property.building ? `${property.propertyName} - Bldg. ${property.building}` : property.propertyName}
+                  </div>
+                  <Badge variant="outline">No published total on file</Badge>
+                </div>
+              );
+            }
             
             return (
               <div key={property.id} className="border rounded-lg p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="font-medium">{legalReq.name}</div>
+                  <div className="font-medium">
+                    {legalReq.name}
+                    {!legalReq.published && (
+                      <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                        vs recorded total
+                      </span>
+                    )}
+                  </div>
                   <Badge
                     variant={compliance.status === 'compliant' ? 'default'
                       : compliance.status === 'unconfigured' ? 'outline' : 'destructive'}

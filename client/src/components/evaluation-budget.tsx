@@ -2718,6 +2718,44 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     });
   };
 
+  /**
+   * Move the ticked line items under an existing assembly head.
+   *
+   * This did not exist. createAssembly could build a head from a selection, and
+   * removeFromAssembly could detach a component, but there was no way to add to
+   * an assembly AFTER creating it - which is the whole point of the head-first
+   * flow. My own toast and empty-state text both told the user to press an
+   * "Add to assembly" button that was never built.
+   */
+  const addSelectedToAssembly = (assemblyId: string) => {
+    const ids = Array.from(selectedItems);
+    if (ids.length === 0) return;
+
+    setBudgetData(prev => {
+      const tag = (items: EvaluationLineItem[]) =>
+        items.map(item => (ids.includes(item.id) ? { ...item, assemblyId } : item));
+
+      return {
+        ...prev,
+        tenantImprovements: tag(prev.tenantImprovements),
+        designSoftCosts: tag(prev.designSoftCosts),
+        existingImprovements: tag(prev.existingImprovements),
+        customAssemblies: prev.customAssemblies.map(a =>
+          a.id === assemblyId
+            ? { ...a, items: Array.from(new Set([...a.items, ...ids])) }
+            : a
+        ),
+      };
+    });
+
+    setSelectedItems(new Set());
+    const assembly = budgetData.customAssemblies.find(a => a.id === assemblyId);
+    toast({
+      title: `Added to ${assembly?.name ?? 'assembly'}`,
+      description: `${ids.length} line item${ids.length === 1 ? '' : 's'} now roll up into this head.`,
+    });
+  };
+
   const removeFromAssembly = (itemId: string, assemblyId: string) => {
     setBudgetData(prev => {
       const updateCategory = (items: EvaluationLineItem[]) => 
@@ -5006,6 +5044,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                 <Package className="h-4 w-4 mr-1" />
                 Add Assembly
               </Button>
+
+              {/* Add ticked items to an EXISTING head. Only shown when there is
+                  both a selection and an assembly to add to, so it does not sit
+                  there disabled and unexplained the way Add Assembly used to. */}
+              {selectedItems.size > 0 && budgetData.customAssemblies.filter(a => a.category === category).length > 0 && (
+                <select
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) addSelectedToAssembly(e.target.value);
+                  }}
+                >
+                  <option value="">Add {selectedItems.size} to assembly…</option>
+                  {budgetData.customAssemblies
+                    .filter(a => a.category === category)
+                    .map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                </select>
+              )}
             </>
           )}
         </div>

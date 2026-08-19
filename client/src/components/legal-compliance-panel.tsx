@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle, RefreshCw, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { sumBayArea } from "@shared/area-utils";
 
 interface LegalComplianceResult {
   propertyId: number;
@@ -70,9 +71,30 @@ export function LegalCompliancePanel() {
     const legalReq = LEGAL_REQUIREMENTS[property.id as keyof typeof LEGAL_REQUIREMENTS];
     if (!legalReq) return { status: 'unknown', variance: 0 };
     
-    const actualTotal = property.warehouseTotal || 0;
+    // property.warehouseTotal DOES NOT EXIST. It was the only reference to that
+    // name in the entire codebase, so this read undefined, `|| 0` made it zero,
+    // and every property reported its full required area as a shortfall - three
+    // scary red "Legal risk" cards describing a problem that was not there.
+    //
+    // The real total is the sum of the property's bay areas, via the shared
+    // helper: raw bay SF, deduped, with a rentable fallback for records where
+    // squareFootage is absent.
+    const bays = property.bayConfigurations;
+    const actualTotal = Math.round(sumBayArea(bays));
+
+    // No bays configured is NOT a compliance failure - it is missing data, and
+    // reporting it as legal risk trains the reader to ignore this panel.
+    if (!Array.isArray(bays) || bays.length === 0) {
+      return {
+        status: 'unconfigured' as const,
+        variance: 0,
+        required: legalReq.requiredSF,
+        actual: 0,
+      };
+    }
+
     const variance = actualTotal - legalReq.requiredSF;
-    
+
     return {
       status: variance === 0 ? 'compliant' : variance > 0 ? 'overstate' : 'understate',
       variance,
@@ -127,7 +149,8 @@ export function LegalCompliancePanel() {
                 <div className="flex items-center justify-between">
                   <div className="font-medium">{legalReq.name}</div>
                   <Badge
-                    variant={compliance.status === 'compliant' ? 'default' : 'destructive'}
+                    variant={compliance.status === 'compliant' ? 'default'
+                      : compliance.status === 'unconfigured' ? 'outline' : 'destructive'}
                     className={compliance.status === 'compliant' ? 'bg-green-100 text-green-800' : ''}
                   >
                     {compliance.status === 'compliant' ? (
@@ -135,7 +158,8 @@ export function LegalCompliancePanel() {
                     ) : (
                       <AlertTriangle className="h-3 w-3 mr-1" />
                     )}
-                    {compliance.status === 'compliant' ? 'Compliant' : 'At Risk'}
+                    {compliance.status === 'compliant' ? 'Compliant'
+                      : compliance.status === 'unconfigured' ? 'No bays configured' : 'At Risk'}
                   </Badge>
                 </div>
                 
@@ -150,13 +174,21 @@ export function LegalCompliancePanel() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">Variance</div>
-                    <div className={`font-mono ${compliance.variance === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`font-mono ${compliance.status === 'unconfigured' ? 'text-muted-foreground' : compliance.variance === 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {compliance.variance === 0 ? '0' : `${compliance.variance > 0 ? '+' : ''}${formatNumber(compliance.variance)}`} SF
                     </div>
                   </div>
                 </div>
 
-                {compliance.status !== 'compliant' && (
+                {compliance.status === 'unconfigured' && (
+                  <div className="text-sm text-amber-800 bg-amber-50 p-2 rounded">
+                    <AlertTriangle className="h-4 w-4 inline mr-2" />
+                    No bay configurations on this property, so the actual total cannot be computed.
+                    This is missing data, not a legal exposure.
+                  </div>
+                )}
+
+                {compliance.status !== 'compliant' && compliance.status !== 'unconfigured' && (
                   <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
                     <AlertTriangle className="h-4 w-4 inline mr-2" />
                     Legal risk: Total {compliance.variance > 0 ? 'exceeds' : 'below'} requirement by {formatNumber(Math.abs(compliance.variance))} SF

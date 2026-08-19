@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle, RefreshCw, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { sumBayArea } from "@shared/area-utils";
+import { computeAreaSummary } from "@shared/area-utils";
 
 interface LegalComplianceResult {
   propertyId: number;
@@ -80,7 +80,19 @@ export function LegalCompliancePanel() {
     // helper: raw bay SF, deduped, with a rentable fallback for records where
     // squareFootage is absent.
     const bays = property.bayConfigurations;
-    const actualTotal = Math.round(sumBayArea(bays));
+
+    // Rentable = bays + the mechanical room, NOT bays alone.
+    //
+    // The published legal totals are RENTABLE figures. sumBayArea returns
+    // warehouse area only, so every property came up short by exactly its
+    // mechanical allocation - Gratigny by 426 SF, which is precisely the
+    // mechanical figure shown on its Area Summary. A shortfall that equals a
+    // known constant is a missing term, not a discrepancy.
+    //
+    // Whole property, so the tenant-share proration collapses to 1.0 and this is
+    // simply bays + the full mechanical room.
+    const summary = computeAreaSummary(bays, bays, property.mechanicalRoomSquareFootage);
+    const actualTotal = summary.totalRentableSf;
 
     // No bays configured is NOT a compliance failure - it is missing data, and
     // reporting it as legal risk trains the reader to ignore this panel.

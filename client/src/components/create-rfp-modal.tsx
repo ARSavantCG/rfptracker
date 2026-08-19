@@ -35,7 +35,7 @@ const createRfpSchema = z.object({
   developmentContact: z.string().optional(),
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
-  requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  requestTypes: z.array(z.string()),
   trackType: z.enum(["development", "allowance"]).default("development"),
   anticipatedLeaseExecutionDate: z.string().min(1, "Anticipated lease execution date is required"),
   anticipatedOccupancyDate: z.string().optional(),
@@ -47,6 +47,17 @@ const createRfpSchema = z.object({
     squareFootage: z.string(),
     notes: z.string().optional()
   })).optional().default([]),
+}).superRefine((data, ctx) => {
+  // Request types are required for DEVELOPMENT requests only. An allowance deal
+  // asks for no pricing, schedule or space plan, so the field is hidden - and a
+  // hidden required field is an unsubmittable form with no visible reason why.
+  if (data.trackType !== "allowance" && (!data.requestTypes || data.requestTypes.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["requestTypes"],
+      message: "At least one request type is required",
+    });
+  }
 });
 
 type CreateRfpFormData = z.infer<typeof createRfpSchema>;
@@ -819,7 +830,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               />
             </div>
 
-            {/* Request Types */}
+            {/* Request Types.
+                Hidden on the allowance route: pricing / schedule / space plan are
+                all things the development team would produce, and an allowance
+                deal asks for none of them. Leaving the question on screen implies
+                a choice that does not exist. */}
+            {form.watch("trackType") !== "allowance" && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Request Type *</h3>
               
@@ -848,6 +864,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 </p>
               )}
             </div>
+            )}
 
             {/* Additional Information */}
             <div className="space-y-4">
@@ -895,6 +912,9 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                 />
               </div>
               
+              {/* Notes for a team that will not see this record. Hidden on the
+                  allowance route. */}
+              {form.watch("trackType") !== "allowance" && (
               <FormField
                 control={form.control}
                 name="notes"
@@ -916,6 +936,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                   </FormItem>
                 )}
               />
+              )}
 
               <FormField
                 control={form.control}
@@ -970,25 +991,41 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={createMutation.isPending || romForkPending}
-                className="border-purple-400 text-purple-700 hover:bg-purple-50"
-                onClick={() => {
-                  pricingPathRef.current = "rom_pilot";
-                  form.handleSubmit(onSubmit)();
-                }}
-              >
-                {romForkPending ? "Creating ROM..." : "ROM Pilot"}
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createMutation.isPending || romForkPending}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {createMutation.isPending && !romForkPending ? "Creating..." : "Route to Dev Team"}
-              </Button>
+              {/* The buttons ARE the route decision.
+                  ROM Pilot and Route to Dev Team are both development paths; an
+                  allowance deal is neither, and offering all three implied the
+                  route picker above had not already been answered. */}
+              {form.watch("trackType") === "allowance" ? (
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {createMutation.isPending ? "Recording..." : "Record Allowance Deal"}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={createMutation.isPending || romForkPending}
+                    className="border-purple-400 text-purple-700 hover:bg-purple-50"
+                    onClick={() => {
+                      pricingPathRef.current = "rom_pilot";
+                      form.handleSubmit(onSubmit)();
+                    }}
+                  >
+                    {romForkPending ? "Creating ROM..." : "ROM Pilot"}
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createMutation.isPending || romForkPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {createMutation.isPending && !romForkPending ? "Creating..." : "Route to Dev Team"}
+                  </Button>
+                </>
+              )}
             </div>
           </form>
         </Form>

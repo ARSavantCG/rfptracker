@@ -586,8 +586,9 @@ export async function sendWorkflowCompletionEmail(
       .map(owner => owner.email);
     
     if (recipientEmails.length === 0) {
-      console.log('No valid email addresses found for owners');
-      return { success: true };
+      const noEmailMsg = `${owners.length} owner contact(s) exist but none has an email address.`;
+      console.warn(`[email] ⚠️  ${noEmailMsg}`);
+      return { success: false, error: noEmailMsg };
     }
 
     const subjectPrefix = completionType === 'rfp-entry' ? '📋 New RFP' : '✅ Project Published';

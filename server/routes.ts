@@ -2154,6 +2154,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contact routes
+  /**
+   * Why is the new-RFP alert not arriving?
+   *
+   * The alert already fires when Step 1 completes, but every prerequisite could
+   * fail quietly: no owner contacts, owners with no email, no API key, or an
+   * unverified from-address. Reports all four rather than leaving it to guesswork.
+   */
+  app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const owners = await storage.getContactsByType('owner');
+      const withEmail = owners.filter((o: any) => o.email && String(o.email).trim());
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@bridgeindustrial.com';
+      const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
+
+      const blockers: string[] = [];
+      if (!hasKey) blockers.push('SENDGRID_API_KEY is not set — no email can be sent.');
+      if (owners.length === 0) blockers.push('No contacts have type "owner", so the alert has no recipients.');
+      else if (withEmail.length === 0) blockers.push(`${owners.length} owner contact(s) exist but none has an email address.`);
+      if (!process.env.SENDGRID_FROM_EMAIL) {
+        blockers.push(`SENDGRID_FROM_EMAIL is unset, so sends use ${fromEmail}. If that domain is not verified in SendGrid, delivery is rejected.`);
+      }
+
+      res.json({
+        willSend: blockers.length === 0,
+        blockers,
+        firesOn: ['Step 1 (RFP entry) completion', 'Publish'],
+        fromEmail,
+        sendgridKeyConfigured: hasKey,
+        ownerContacts: withEmail.map((o: any) => ({ id: o.id, name: o.name, email: o.email })),
+        ownerContactsWithoutEmail: owners.length - withEmail.length,
+      });
+    } catch (error) {
+      console.error('[notification-status] failed:', error);
+      res.status(500).json({ message: 'Failed to read notification status' });
+    }
+  });
+
   app.get("/api/contacts", requireAuth, async (req, res) => {
     try {
       const contacts = await storage.getAllContacts();

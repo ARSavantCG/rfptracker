@@ -193,8 +193,9 @@ export function RecordProjectActuals({
           <div>
             <CardTitle className="text-base text-blue-900">Record Project Actuals</CardTitle>
             <p className="text-sm text-blue-700 mt-1">
-              Optionally save this project's final costs to the pricing intelligence database.
-              This helps improve ROM estimates for future projects.
+              This project is complete. Recording what it actually cost builds the history
+              that future ROM estimates are checked against — the more real projects in here,
+              the better the next estimate. Optional, and you can do it later.
             </p>
           </div>
           <Button

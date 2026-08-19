@@ -6299,8 +6299,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         </CardContent>
       </Card>
 
-      {/* Record Project Actuals — optional section after workflow actions */}
-      {rfp && (
+      {/* Record Project Actuals.
+          Shown ONLY once the project is actually finished. It asks for FINAL
+          BUILT COSTS, and evaluation is where a deal is being PRICED - the job
+          has not started, so there is nothing to record and the panel reads as a
+          form you are supposed to fill in but cannot. Confusing for the whole
+          team, per Adolfo 2026-08-17.
+
+          The feedback loop it serves is real (actuals calibrate future ROMs), so
+          it is gated rather than removed: it appears when the RFP is marked
+          completed, or leased, or already has actuals recorded. */}
+      {rfp && (rfp.status === 'completed' || rfp.isLeased === true) && (
         <RecordProjectActuals
           rfpId={rfp.id}
           projectName={rfp.projectName}

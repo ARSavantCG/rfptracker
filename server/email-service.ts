@@ -1,4 +1,4 @@
-import { COMPANY_NAME } from './lib/branding';
+import { COMPANY_NAME, BRAND_COLOR_PRIMARY } from './lib/branding';
 import sgMail from '@sendgrid/mail';
 import { storage } from './storage';
 import { RfpRequest, Contact } from '@shared/schema';
@@ -286,7 +286,12 @@ export function generateWorkflowCompletionHtml(
 ): string {
   const isNewProject = completionType === 'rfp-entry';
   const title = isNewProject ? 'New RFP Initiated' : 'Project Published';
-  const headerColor = isNewProject ? '#3b82f6' : '#10b981';
+  // Brand navy on every notification. These were '#3b82f6' (blue) for a new RFP
+  // and '#10b981' (green) for a publish - neither is the brand colour, so the
+  // emails did not match a single report. The status is already stated in the
+  // subject line and the banner text; the colour was carrying no information it
+  // needed to carry.
+  const headerColor = BRAND_COLOR_PRIMARY;
   const icon = isNewProject ? '📋' : '✅';
   
   const today = new Date().toLocaleDateString('en-US', { 
@@ -310,6 +315,7 @@ export function generateWorkflowCompletionHtml(
         <div style="background: ${headerColor}; color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
           <div style="font-size: 48px; margin-bottom: 8px;">${icon}</div>
           <h1 style="margin: 0; font-size: 24px;">${title}</h1>
+          <div style="margin-top: 6px; font-size: 12px; opacity: 0.85;">${COMPANY_NAME}</div>
         </div>
         
         <div style="padding: 24px;">

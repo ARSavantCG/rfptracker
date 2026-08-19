@@ -17,7 +17,7 @@ import { db } from './db';
 import { rfpRequests, properties } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
-import { BRAND_COLOR_PRIMARY } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -196,6 +196,7 @@ export function registerTurnaroundReport(app: Express) {
 <html><head><meta charset="utf-8"><title>RFP Turnaround Report</title>
 <style>
   body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
+  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
   .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
   .cards { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
@@ -214,8 +215,14 @@ export function registerTurnaroundReport(app: Express) {
   .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; margin-top: 12px; }
   tr { page-break-inside: avoid; }
 </style></head><body>
-  <div class="document-title">RFP Turnaround Report</div>
-  <div class="generated">Generated ${new Date().toLocaleString()}</div>
+  <div class="header">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    <div class="document-title">RFP Turnaround Report</div>
+    <div class="report-subtitle">Internal Due Date vs. Actual Publish Date</div>
+  </div>
 
   <div class="cards">
     <div class="card"><div class="label">On-time rate</div><div class="value">${onTimePct === null ? '—' : onTimePct + '%'}</div></div>

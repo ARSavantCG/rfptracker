@@ -19,6 +19,7 @@
 import type { Express } from "express";
 import { storage } from "./storage";
 import { requireAuth } from "./middleware";
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 
 type Bucket = "contractor" | "design" | "cm" | "balance";
 const BUCKETS: Bucket[] = ["contractor", "design", "cm", "balance"];
@@ -130,8 +131,16 @@ export function registerFourBucketBudgetReportRoutes(app: Express): void {
   td.num { text-align: right; white-space: nowrap; }
   tr.grand td { font-weight: 800; font-size: 16px; border-top: 3px double #111827; }
   tr.info td { color: #6b7280; font-style: italic; }
+  .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 10px; margin-bottom: 14px; }
+  .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
 </style></head><body>
-  <h1>Budget by Contract Counterparty</h1>
+  <div class="header">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    <div class="document-title">Budget by Contract Counterparty</div>
+  </div>
   <span class="badge">${isRom ? "ROM PILOT — ALLOWANCE / SELF-SERVE" : "BID-BASED EVALUATION"}</span>
   <div class="meta">${rfp.rfpNumber} — ${rfp.projectName || ""} · ${rfp.property || ""} · Source: ${sourceLabel}
     · Generated ${new Date().toLocaleDateString("en-US")}</div>

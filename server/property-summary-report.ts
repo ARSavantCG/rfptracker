@@ -5,6 +5,10 @@ import { eq, sql } from 'drizzle-orm';
 import { formatDateForDisplay } from '../shared/date-utils';
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
 import { sumBayArea } from "@shared/area-utils";
+import { getBrandLogo as getBridgeLogo } from './lib/branding';
+// Hex form of BRAND_COLOR_PRIMARY. This file's CSS used the literal #003282 in
+// 16 places; referencing one constant means a brand change lands everywhere.
+const BRAND_COLOR_PRIMARY_HEX = '#003282';
 
 // Helper function to calculate per-bay cost for spec office (bay-specific items)
 function getSpecOfficePerBayCost(improvements: any[], relevantBays: any[], totalSpecOfficeCost: number): number {
@@ -587,7 +591,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         }
         
         .header {
-            background: linear-gradient(135deg, #003282 0%, #0056b3 100%);
+            background: linear-gradient(135deg, ${BRAND_COLOR_PRIMARY_HEX} 0%, #0056b3 100%);
             color: white;
             padding: 15px;
             border-radius: 6px;
@@ -618,7 +622,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         }
         
         .property-header {
-            background: #003282;
+            background: ${BRAND_COLOR_PRIMARY_HEX};
             color: white;
             padding: 10px 15px;
             font-size: 0.9rem;
@@ -640,12 +644,12 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
             background: #f8f9fa;
             border-radius: 4px;
             padding: 10px;
-            border-left: 2px solid #003282;
+            border-left: 2px solid ${BRAND_COLOR_PRIMARY_HEX};
         }
         
         .info-card h4 {
             margin: 0 0 5px 0;
-            color: #003282;
+            color: ${BRAND_COLOR_PRIMARY_HEX};
             font-size: 0.55rem;
         }
         
@@ -659,7 +663,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         }
         
         .subsection h3 {
-            color: #003282;
+            color: ${BRAND_COLOR_PRIMARY_HEX};
             border-bottom: 1px solid #e9ecef;
             padding-bottom: 5px;
             margin-bottom: 10px;
@@ -679,7 +683,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         }
         
         th {
-            background: #003282;
+            background: ${BRAND_COLOR_PRIMARY_HEX};
             color: white;
             padding: 6px 5px;
             text-align: left;
@@ -700,7 +704,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         
         .metric-value {
             font-weight: 600;
-            color: #003282;
+            color: ${BRAND_COLOR_PRIMARY_HEX};
         }
         
         .footer {
@@ -722,12 +726,15 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
         @media print {
             body { background: white; }
             .property-section { page-break-after: always; }
-            .header { background: #003282 !important; }
+            .header { background: ${BRAND_COLOR_PRIMARY_HEX} !important; }
         }
     </style>
 </head>
 <body>
     <div class="header">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 28px; width: auto;" />
+        </div>
         <h1>${data.rfpContext ? `RFP Property Summary - ${data.rfpContext.rfpNumber}` : 'Property Portfolio Summary Report'}</h1>
         <div class="subtitle">${data.rfpContext ? `${data.rfpContext.projectName} | Tenant: ${data.rfpContext.tenantName}` : 'Comprehensive Property Information & Analysis'}</div>
         <div class="subtitle">Generated: ${data.generatedAt}</div>

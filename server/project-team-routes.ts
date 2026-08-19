@@ -13,7 +13,7 @@ import {
 } from '@shared/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireAuthFlexible, checkPermission } from './middleware';
-import { BRAND_COLOR_PRIMARY } from './lib/branding';
+import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -361,6 +361,7 @@ export function registerProjectTeamRoutes(app: Express) {
 <html><head><meta charset="utf-8"><title>Project Team Directory</title>
 <style>
   body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
+  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
   .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
   .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
@@ -381,8 +382,14 @@ export function registerProjectTeamRoutes(app: Express) {
   .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
   .pill.na { background: #eef2f9; color: #1e3a5f; border-color: #b6c6dd; }
 </style></head><body>
-  <div class="document-title">Project Team Directory</div>
-  <div class="generated">Generated ${new Date().toLocaleString()}</div>
+  <div class="header">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    <div class="document-title">Project Team Directory</div>
+    <div class="report-subtitle">Who is working on each executed lease</div>
+  </div>
   <div class="summary">
     <strong>${propRows.length}</strong> building${propRows.length === 1 ? '' : 's'} ·
     <strong>${allLeases}</strong> executed lease${allLeases === 1 ? '' : 's'} ·

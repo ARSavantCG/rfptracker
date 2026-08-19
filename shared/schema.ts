@@ -231,14 +231,21 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
     squareFootage: z.string(),
     notes: z.string().optional()
   })).optional().default([]),
-}).superRefine((data, ctx) => {
-  // Request types are required for DEVELOPMENT requests only.
-  //
-  // This was an unconditional .min(1). The client was made conditional for the
-  // allowance route, but the SERVER still rejected the payload - a 400 with an
-  // error against a field the user could not see, because it is hidden on that
-  // route. Client-side relaxation alone is never enough; the server is the one
-  // that refuses.
+});
+
+/**
+ * Request types are required for DEVELOPMENT requests only.
+ *
+ * Applied as a SEPARATE refined schema rather than chained onto
+ * insertRfpRequestSchema. superRefine returns a ZodEffects, which has no
+ * .partial() / .omit() / .extend() - and updateRfpRequestSchema below calls
+ * .partial() on it. Chaining it directly threw
+ * "insertRfpRequestSchema.partial is not a function" at MODULE LOAD, so the
+ * server built cleanly and then failed to start.
+ *
+ * Validate creates against this; everything else keeps the plain object schema.
+ */
+export const insertRfpRequestSchemaWithRules = insertRfpRequestSchema.superRefine((data, ctx) => {
   if (data.trackType !== "allowance" && (!data.requestTypes || data.requestTypes.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

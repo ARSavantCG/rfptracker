@@ -13,7 +13,7 @@ import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, contacts, insertRfpRequestSchema, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema, bidLineItems, properties, projectActuals, projectActualLineItems } from "@shared/schema";
+import { users, contacts, insertRfpRequestSchema, insertRfpRequestSchemaWithRules, updateRfpRequestSchema, insertContactSchema, updateContactSchema, insertInvitationSchema, updateInvitationSchema, insertInvitationToBidSchema, updateInvitationToBidSchema, insertPdfTemplateSchema, auditLog, romScopeItems, masterItemReviewQueue, evaluationBudgets, projectAlternates, insertProjectAlternateSchema, bidLineItems, properties, projectActuals, projectActualLineItems } from "@shared/schema";
 import { convertFormDateToDbDate } from "@shared/date-utils";
 import { parseRfpVariant } from "@shared/rfp-variant";
 import { eq, desc, and, or, gte, lte, ilike, inArray, sql as drizzleSql } from "drizzle-orm";
@@ -905,7 +905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formData.propertyId = parseInt(formData.propertyId);
       }
       
-      const parsed = insertRfpRequestSchema.parse(formData);
+      const parsed = insertRfpRequestSchemaWithRules.parse(formData);
       
       // Create RFP without files initially
       const requestData = {
@@ -1034,7 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure sentBy field is present (frontend should send this directly now)
 
       // Parse with schema first, then convert dates for database
-      const parsed = insertRfpRequestSchema.parse(formData);
+      const parsed = insertRfpRequestSchemaWithRules.parse(formData);
       
       // Convert date strings to Date objects for database storage using centralized utility
       if (parsed.receivedOn && typeof parsed.receivedOn === 'string') {

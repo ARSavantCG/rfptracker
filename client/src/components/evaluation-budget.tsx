@@ -62,6 +62,18 @@ interface CustomAssembly {
   category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements';
   items: string[]; // Array of line item IDs
   primaryItemId?: string; // ID of the first-clicked item that defines base quantity and unit
+  /**
+   * The head's own quantity and unit, when set.
+   *
+   * The head's PRICE is always the sum of its children - that is the source of
+   * truth and is never typed. But the quantity it is expressed in is a
+   * presentation choice: $150,000 of switchgear and circuiting can read as
+   * 1 LS @ $150,000/LS or 100 LF @ $1,500/LF. Same total, different rate.
+   *
+   * Unset means keep the existing behaviour of borrowing from primaryItemId.
+   */
+  headQuantity?: number;
+  headUnit?: string;
 }
 
 // Multi-voltage electrical allocation entry
@@ -2677,6 +2689,30 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     return assemblyItems.reduce((total, item) => {
       return total + (parseFloat(item.totalPrice) || 0);
     }, 0);
+  };
+
+  /**
+   * Assembly head figures: total from the children, rate from the head's own
+   * quantity.
+   *
+   * The children ARE the source of truth for the money - $100k switchgear plus
+   * $50k circuiting is a $150,000 assembly, and the head is never typed. The
+   * quantity is separate and presentational: express that same $150,000 as 1 LS
+   * and the rate is $150,000/LS; as 100 LF and it is $1,500/LF.
+   *
+   * Falls back to the primary item's quantity and unit when the head has none,
+   * so existing assemblies are unchanged.
+   */
+  const getAssemblyHead = (assembly: CustomAssembly) => {
+    const total = calculateAssemblyTotal(assembly.id);
+    const items = getAssemblyItems(assembly.id);
+    const primary = items.find((i) => i.id === assembly.primaryItemId) ?? items[0];
+
+    const quantity = assembly.headQuantity ?? primary?.quantity ?? 1;
+    const unit = assembly.headUnit ?? primary?.unit ?? 'LS';
+    const unitPrice = quantity > 0 ? total / quantity : total;
+
+    return { total, quantity, unit, unitPrice, componentCount: items.length };
   };
 
   const exportToExcel = () => {
@@ -5470,6 +5506,73 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         budgetData.designSoftCosts,
         'designSoftCosts',
         calculateCategoryTotal(budgetData.designSoftCosts)
+      )}
+
+      {/* Assembly Breakdown — INTERNAL.
+          Assemblies roll up to a single line everywhere a client or broker sees
+          them (the Excel export already filters children out). This is the view
+          for the conversation Adolfo described: a $375,000 electrical line gets
+          questioned, and he needs to show what is inside it without exposing the
+          breakdown on the document itself. */}
+      {budgetData.customAssemblies.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>Assembly Breakdown</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                Internal only — not included in exports or client documents
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {budgetData.customAssemblies.map((assembly) => {
+              const head = getAssemblyHead(assembly);
+              const items = getAssemblyItems(assembly.id);
+              return (
+                <div key={assembly.id} className="border rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-3 py-2 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm">{assembly.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {head.componentCount} component{head.componentCount === 1 ? '' : 's'} ·{' '}
+                        {head.quantity.toLocaleString()} {head.unit} @ $
+                        {head.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/{head.unit}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold tabular-nums">
+                        ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">sum of components</div>
+                    </div>
+                  </div>
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-1.5">{item.description}</td>
+                          <td className="px-3 py-1.5 text-right whitespace-nowrap text-muted-foreground">
+                            {item.quantity?.toLocaleString()} {item.unit}
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums whitespace-nowrap">
+                            ${(parseFloat(item.totalPrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                      {items.length === 0 && (
+                        <tr className="border-t">
+                          <td colSpan={3} className="px-3 py-2 text-muted-foreground italic">
+                            No components — this assembly totals $0 until line items are added to it.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
 
       {/* Existing Improvements */}

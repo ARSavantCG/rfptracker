@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Building, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Property, InsertProperty } from "@shared/schema";
+import { parseCountInput } from "@shared/area-utils";
 
 interface PropertyFormModalProps {
   property?: Property;
@@ -361,7 +362,14 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     type="number"
                     min="0"
                     value={formData.standardParking || 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, standardParking: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                    // parseCountInput: an empty box stays empty-as-0 rather than
+                    // instantly refilling, and junk input is ignored instead of
+                    // silently becoming 0.
+                    const v = parseCountInput(e.target.value);
+                    if (v === null) return;
+                    setFormData(prev => ({ ...prev, standardParking: v }));
+                  }}
                     placeholder="0"
                   />
                 </div>
@@ -373,7 +381,14 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     type="number"
                     min="0"
                     value={formData.accessibleParking || 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, accessibleParking: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                    // parseCountInput: an empty box stays empty-as-0 rather than
+                    // instantly refilling, and junk input is ignored instead of
+                    // silently becoming 0.
+                    const v = parseCountInput(e.target.value);
+                    if (v === null) return;
+                    setFormData(prev => ({ ...prev, accessibleParking: v }));
+                  }}
                     placeholder="0"
                   />
                 </div>
@@ -385,7 +400,14 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     type="number"
                     min="0"
                     value={formData.evParking || 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, evParking: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                    // parseCountInput: an empty box stays empty-as-0 rather than
+                    // instantly refilling, and junk input is ignored instead of
+                    // silently becoming 0.
+                    const v = parseCountInput(e.target.value);
+                    if (v === null) return;
+                    setFormData(prev => ({ ...prev, evParking: v }));
+                  }}
                     placeholder="0"
                   />
                 </div>
@@ -397,7 +419,14 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     type="number"
                     min="0"
                     value={formData.trailerParking || 0}
-                    onChange={(e) => setFormData(prev => ({ ...prev, trailerParking: parseInt(e.target.value) || 0 }))}
+                    onChange={(e) => {
+                    // parseCountInput: an empty box stays empty-as-0 rather than
+                    // instantly refilling, and junk input is ignored instead of
+                    // silently becoming 0.
+                    const v = parseCountInput(e.target.value);
+                    if (v === null) return;
+                    setFormData(prev => ({ ...prev, trailerParking: v }));
+                  }}
                     placeholder="0"
                   />
                 </div>

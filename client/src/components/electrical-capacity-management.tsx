@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Zap, Cable, Building2, Activity, ChevronDown, Save, Users, AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { parseCountInput } from "@shared/area-utils";
 
 interface Transformer {
   id: number;
@@ -641,7 +642,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                       min="0"
                       step="100"
                       value={tenantAllocation}
-                      onChange={(e) => setTenantAllocation(parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        // Clearable: empty stays 0, junk is ignored. `|| 0` refilled
+                        // the box the instant it was emptied.
+                        const v = parseCountInput(e.target.value);
+                        if (v !== null) setTenantAllocation(v);
+                      }}
                       className={`mt-1 ${isOverAllocated ? 'border-orange-400 bg-orange-50' : ''}`}
                       data-testid="input-total-electrical-allocation"
                     />
@@ -677,7 +683,12 @@ export function ElectricalCapacityManagement({ propertyId, propertyName, propert
                       min="0"
                       step="50"
                       value={allocationMinimum}
-                      onChange={(e) => setAllocationMinimum(parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        // Clearable: empty stays 0, junk is ignored. `|| 0` refilled
+                        // the box the instant it was emptied.
+                        const v = parseCountInput(e.target.value);
+                        if (v !== null) setAllocationMinimum(v);
+                      }}
                       className="mt-1"
                       data-testid="input-allocation-minimum"
                     />

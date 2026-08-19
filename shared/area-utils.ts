@@ -173,20 +173,6 @@ export function computeAreaSummary(
  * bay sum. Kept here so there is one table and one key convention.
  */
 /**
- * DEPRECATED — name-keyed lookup, DERIVED from the map above so it cannot drift.
- *
- * These are PRE-RENAME names and match nothing in production; a lookup through
- * this map falls through silently. Retained only for callers with no property id
- * to hand. Use PROPERTY_LEGAL_TOTALS_BY_ID.
- */
-export const PROPERTY_LEGAL_TOTALS: Record<string, number> = {
-  'Bridge Point Gratigny': PROPERTY_LEGAL_TOTALS_BY_ID[1],
-  'Bridge 595': PROPERTY_LEGAL_TOTALS_BY_ID[2],
-  'MG Westside': PROPERTY_LEGAL_TOTALS_BY_ID[3],
-  'Bridge Point Port Everglades': PROPERTY_LEGAL_TOTALS_BY_ID[4],
-};
-
-/**
  * THE SINGLE SOURCE for published leasable totals, keyed by property ID.
  *
  * There were FIVE copies of these four figures across four files, already
@@ -202,6 +188,21 @@ export const PROPERTY_LEGAL_TOTALS_BY_ID: Record<number, number> = {
   3: 794334, // formerly MG Westside
   4: 171983, // formerly Bridge Point Port Everglades
 };
+
+/**
+ * DEPRECATED — name-keyed lookup, DERIVED from the map above so it cannot drift.
+ *
+ * These are PRE-RENAME names and match nothing in production; a lookup through
+ * this map falls through silently. Retained only for callers with no property id
+ * to hand. Use PROPERTY_LEGAL_TOTALS_BY_ID.
+ */
+export const PROPERTY_LEGAL_TOTALS: Record<string, number> = {
+  'Bridge Point Gratigny': PROPERTY_LEGAL_TOTALS_BY_ID[1],
+  'Bridge 595': PROPERTY_LEGAL_TOTALS_BY_ID[2],
+  'MG Westside': PROPERTY_LEGAL_TOTALS_BY_ID[3],
+  'Bridge Point Port Everglades': PROPERTY_LEGAL_TOTALS_BY_ID[4],
+};
+
 
 /** Selections within this many SF of the published total snap to it. */
 export const LEGAL_TOTAL_TOLERANCE_SF = 100;
@@ -267,4 +268,23 @@ export function parseAreaInput(value: unknown): number {
   if (!cleaned || cleaned === '-' || cleaned === '.') return 0;
   const n = parseFloat(cleaned);
   return Number.isFinite(n) ? n : 0;
+}
+
+
+/**
+ * onChange handler value for a whole-number input that must be CLEARABLE.
+ *
+ * `parseInt(e.target.value) || 0` is the standard version and it is wrong twice:
+ *   - clearing the box yields "", which parses to NaN, which `|| 0` turns into 0,
+ *     so a digit reappears as fast as it is deleted and the only way to change
+ *     the value is to type a new number first
+ *   - any non-numeric keystroke silently becomes 0 rather than being ignored
+ *
+ * Returns the parsed number, or `empty` (default 0) for a cleared field, or null
+ * for junk the caller should ignore.
+ */
+export function parseCountInput(raw: string, empty: number | undefined = 0): number | null {
+  if (raw === '') return empty ?? 0;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? null : n;
 }

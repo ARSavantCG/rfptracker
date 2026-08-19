@@ -2608,9 +2608,29 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     if (item.quantity === 0) {
       return parseFloat(item.unitPrice) || 0;
     }
-    
-    // Calculate new unit price based on distributed total (includes design costs and rollups)
+
     const distributedTotal = calculateDistributedCosts(item);
+
+    // When NOTHING is being distributed onto this line, show the rate the user
+    // actually entered rather than recomputing it.
+    //
+    // total / quantity is not the entered rate whenever the line has a minimum
+    // cost: computeLineTotal applies MAX(qty x price, minimum), so a line that
+    // hit its minimum has a total ABOVE rate x quantity, and dividing it back
+    // produces a higher rate. Reported: a design line entered at $0.75 displayed
+    // as $0.82 while the edit form still showed $0.75, with no rollups
+    // configured and nothing touched.
+    //
+    // Once design distribution or a rollup IS adding cost to the line, the
+    // derived rate is the meaningful one - it is what this line now effectively
+    // costs per unit - so that case still recomputes.
+    const baseTotal = (parseFloat(item.totalPrice) || 0) * ((item.tenantShare || 100) / 100);
+    const nothingDistributed = Math.abs(distributedTotal - baseTotal) < 0.005;
+    if (nothingDistributed) {
+      const entered = parseFloat(item.unitPrice);
+      if (Number.isFinite(entered)) return entered;
+    }
+
     return distributedTotal / item.quantity;
   };
 

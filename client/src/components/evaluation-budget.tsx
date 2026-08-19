@@ -28,7 +28,7 @@ import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
 import { computeLineTotal, applyFeeMinimum } from "@shared/line-total";
-import { resolveRfpRentableArea, sumBayArea } from "@shared/area-utils";
+import { resolveRfpRentableArea, sumBayArea, PROPERTY_LEGAL_TOTALS_BY_ID } from "@shared/area-utils";
 
 interface MasterCategory {
   id: number;
@@ -1715,6 +1715,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       allPropertyBays: property?.bayConfigurations,
       mechanicalRoomSf: property?.mechanicalRoomSquareFootage,
       propertyName: property?.propertyName,
+      propertyId: property?.id,
     }).rentableSf;
     
     // Get total property rentable area - calculate from bay configurations
@@ -1782,6 +1783,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       allPropertyBays: property?.bayConfigurations,
       mechanicalRoomSf: property?.mechanicalRoomSquareFootage,
       propertyName: property?.propertyName,
+      propertyId: property?.id,
     }).rentableSf;
     
     // Get total property rentable area from bay configurations
@@ -1922,16 +1924,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     let totalSelectedArea = 0;
     if (rfp?.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0) {
       // Use legal compliance totals based on property name
-      const propertyLegalTotals: Record<string, number> = {
-        'Bridge Point Gratigny': 409189,
-        'Bridge 595': 290307,
-        'MG Westside': 794334,
-        'Bridge Point Port Everglades': 171983
-      };
+      // PROPERTY_LEGAL_TOTALS_BY_ID from shared/area-utils. The inline map here was
+      // keyed by NAME and the portfolio has been renamed to Kurv, so it stopped
+      // matching entirely and fell through to the raw bay sum - silently.
       
       // Get legally compliant total for this property using property name from propertyData
       const propertyName = propertyData?.propertyName || '';
-      const legalTotal = propertyLegalTotals[propertyName];
+      const legalTotal = PROPERTY_LEGAL_TOTALS_BY_ID[Number((propertyData as any)?.id)];
       if (legalTotal && rfp.selectedBayConfigurations.length > 0) {
         // Use legal total if we have all bays selected or close to full property
         const rawTotal = resolveRfpRentableArea({
@@ -1953,6 +1952,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           allPropertyBays: (propertyData as any)?.bayConfigurations,
           mechanicalRoomSf: (propertyData as any)?.mechanicalRoomSquareFootage,
           propertyName: (propertyData as any)?.propertyName,
+          propertyId: (propertyData as any)?.id,
         }).rentableSf;
       }
     } else if (rfp?.warehouseArea) {
@@ -2015,16 +2015,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           unit = 'sf';
           
           // Get total property area using legally compliant totals
-          const propertyLegalTotals: Record<string, number> = {
-            'Bridge Point Gratigny': 409189,
-            'Bridge 595': 290307,
-            'MG Westside': 794334,
-            'Bridge Point Port Everglades': 171983
-          };
+          // PROPERTY_LEGAL_TOTALS_BY_ID from shared/area-utils - see note above.
           
           // Use property name from propertyData for legal total lookup
           const propertyName = propertyData?.propertyName || '';
-          let propertyTotalArea = propertyLegalTotals[propertyName] || 0;
+          let propertyTotalArea = PROPERTY_LEGAL_TOTALS_BY_ID[Number((propertyData as any)?.id)] || 0;
           
           // If no legal total available, calculate from property data
           if (!propertyTotalArea && propertyData) {
@@ -2711,6 +2706,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         allPropertyBays: legalProp?.bayConfigurations,
         mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
         propertyName: legalProp?.propertyName,
+        propertyId: legalProp?.id,
       }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
@@ -2912,6 +2908,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         allPropertyBays: legalProp?.bayConfigurations,
         mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
         propertyName: legalProp?.propertyName,
+        propertyId: legalProp?.id,
       }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations
@@ -3247,6 +3244,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         allPropertyBays: legalProp?.bayConfigurations,
         mechanicalRoomSf: legalProp?.mechanicalRoomSquareFootage,
         propertyName: legalProp?.propertyName,
+        propertyId: legalProp?.id,
       }).rentableSf;
     } else if (rfp?.warehouseArea) {
       // Final fallback to stored warehouseArea only if no bay configurations

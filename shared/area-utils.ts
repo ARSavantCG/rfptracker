@@ -179,6 +179,24 @@ export const PROPERTY_LEGAL_TOTALS: Record<string, number> = {
   'Bridge Point Port Everglades': 171983,
 };
 
+/**
+ * The same published totals keyed by property ID.
+ *
+ * The name-keyed map above cannot survive a rename, and the portfolio HAS been
+ * renamed - "MG Westside" is now "Kurv Commerce Center (West)". Every name-keyed
+ * lookup therefore stopped matching and silently fell through to the raw bay sum,
+ * with no error and a plausible number.
+ *
+ * IDs do not change. Prefer this map; the name-keyed one is kept only for callers
+ * that have no id to hand.
+ */
+export const PROPERTY_LEGAL_TOTALS_BY_ID: Record<number, number> = {
+  1: 409189, // formerly Bridge Point Gratigny
+  2: 290307, // formerly Bridge 595
+  3: 794334, // formerly MG Westside
+  4: 171983, // formerly Bridge Point Port Everglades
+};
+
 /** Selections within this many SF of the published total snap to it. */
 export const LEGAL_TOTAL_TOLERANCE_SF = 100;
 
@@ -197,8 +215,10 @@ export function resolveRfpRentableArea(params: {
   selectedBays: readonly BayLike[] | null | undefined;
   allPropertyBays: readonly BayLike[] | null | undefined;
   mechanicalRoomSf: number | null | undefined;
-  /** Property NAME, not the id. Pass propertyData?.propertyName. */
+  /** Property NAME. Only used when propertyId is not supplied - names can change. */
   propertyName?: string | null;
+  /** Property ID. Preferred: survives renames. */
+  propertyId?: number | string | null;
   /** Used only when no bays are selected. */
   fallbackArea?: number | null;
 }): { rentableSf: number; usedLegalTotal: boolean; source: 'bays' | 'legal' | 'fallback' | 'none' } {
@@ -211,7 +231,11 @@ export function resolveRfpRentableArea(params: {
 
   const summary = computeAreaSummary(selectedBays, allPropertyBays, mechanicalRoomSf);
 
-  const legalTotal = propertyName ? PROPERTY_LEGAL_TOTALS[propertyName.trim()] : undefined;
+  // ID first. A name lookup silently stops matching the moment a property is
+  // renamed, which is exactly what happened when the portfolio moved to Kurv.
+  const idKey = params.propertyId != null ? Number(params.propertyId) : NaN;
+  const legalTotal = (!isNaN(idKey) ? PROPERTY_LEGAL_TOTALS_BY_ID[idKey] : undefined)
+    ?? (propertyName ? PROPERTY_LEGAL_TOTALS[propertyName.trim()] : undefined);
   if (legalTotal && Math.abs(summary.totalRentableSf - legalTotal) <= LEGAL_TOTAL_TOLERANCE_SF) {
     return { rentableSf: legalTotal, usedLegalTotal: true, source: 'legal' };
   }

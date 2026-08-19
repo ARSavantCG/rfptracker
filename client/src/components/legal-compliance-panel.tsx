@@ -25,11 +25,21 @@ interface ComplianceResponse {
   details: LegalComplianceResult[];
 }
 
+/**
+ * Published leasable totals, by property id.
+ *
+ * NUMBERS ONLY. Names were removed: they were captured before the portfolio was
+ * renamed to Kurv and overrode the live record, so these four properties showed
+ * stale names while every other row read correctly from the database. A surveyed
+ * total is a fact worth pinning; a name is editable data and belongs in one place.
+ *
+ * Comments are for orientation only and are NOT rendered.
+ */
 const LEGAL_REQUIREMENTS = {
-  1: { name: 'Bridge Point Gratigny', requiredSF: 409189 },
-  2: { name: 'Bridge 595', requiredSF: 290307 },
-  3: { name: 'MG Westside', requiredSF: 794334 },
-  4: { name: 'Bridge Point Port Everglades', requiredSF: 171983 }
+  1: { requiredSF: 409189 }, // formerly Bridge Point Gratigny
+  2: { requiredSF: 290307 }, // formerly Bridge 595
+  3: { requiredSF: 794334 }, // formerly MG Westside
+  4: { requiredSF: 171983 }, // formerly Bridge Point Port Everglades
 };
 
 export function LegalCompliancePanel() {
@@ -75,9 +85,24 @@ export function LegalCompliancePanel() {
    * total, which still catches the case this panel exists for: bay configurations
    * drifting away from the figure the property is documented at.
    */
+  const propertyDisplayName = (property: any): string =>
+    property.building ? `${property.propertyName} - Bldg. ${property.building}` : property.propertyName;
+
   const getRequirement = (property: any): { name: string; requiredSF: number; published: boolean } | null => {
     const published = LEGAL_REQUIREMENTS[property.id as keyof typeof LEGAL_REQUIREMENTS];
-    if (published) return { name: published.name, requiredSF: published.requiredSF, published: true };
+    // Name comes from the LIVE property record, never from LEGAL_REQUIREMENTS.
+    //
+    // That map carries names captured whenever it was written - "Bridge Point
+    // Gratigny", "MG Westside", "Bridge Point Port Everglades" - and the
+    // portfolio has since been renamed to Kurv. Only the four hardcoded
+    // properties showed stale names; the rest read from the database and were
+    // correct, which is exactly the tell.
+    //
+    // Only the NUMBER is worth hardcoding. A published leasable total is a
+    // surveyed fact; a property name is editable data and must not be duplicated.
+    const displayName = propertyDisplayName(property);
+
+    if (published) return { name: displayName, requiredSF: published.requiredSF, published: true };
 
     // There is NO recorded rentable total on the properties table - only
     // mechanical_room_square_footage and the bay array. So for a property with no
@@ -201,7 +226,7 @@ export function LegalCompliancePanel() {
               return (
                 <div key={property.id} className="border rounded-lg p-4 flex items-center justify-between">
                   <div className="font-medium text-muted-foreground">
-                    {property.building ? `${property.propertyName} - Bldg. ${property.building}` : property.propertyName}
+                    {propertyDisplayName(property)}
                   </div>
                   <Badge variant="outline">No published total on file</Badge>
                 </div>

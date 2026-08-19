@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, FileText, Calendar, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon, DollarSign, Building2 } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Clock, ListChecks, CheckCircle, AlertTriangle, BarChart3, ChevronDown, Users, TableIcon, DollarSign, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
@@ -71,7 +71,7 @@ export default function Reports() {
     setFilters({});
   };
 
-  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload" | "project-team" | "turnaround") => {
+  const generateReport = async (reportType: "executive" | "detailed" | "historical" | "custom" | "vendor-workload" | "project-team" | "turnaround" | "open-items") => {
     if (reportType === "custom") {
       setCustomReportModalOpen(true);
       return;
@@ -87,6 +87,12 @@ export default function Reports() {
       if (reportType === "vendor-workload") {
         url = `/api/reports/vendor-workload/html`;
         if (incompleteOnly) params.append('incompleteOnly', 'true');
+      }
+
+      // Open items is a point-in-time snapshot for the standing meeting; the
+      // page-level date filters do not apply.
+      if (reportType === "open-items") {
+        url = `/api/reports/open-items`;
       }
 
       // Turnaround measures every RFP against its own internal due date, so the
@@ -454,6 +460,32 @@ export default function Reports() {
               <Button 
                 className="w-full h-8 text-xs" 
                 onClick={() => generateReport("vendor-workload")}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Generate Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center space-x-2 text-sm">
+                <ListChecks className="h-4 w-4" />
+                <span>Open Items (Tuesday meeting)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-xs text-gray-600">
+                <p className="mb-1">Everything still in flight:</p>
+                <ul className="space-y-0.5">
+                  <li>&bull; Grouped by route, overdue first</li>
+                  <li>&bull; Development, ROM Pilot, allowance</li>
+                  <li>&bull; Current stage and who sent it</li>
+                </ul>
+              </div>
+              <Button
+                className="w-full h-8 text-xs"
+                onClick={() => generateReport("open-items")}
               >
                 <Download className="h-3 w-3 mr-1" />
                 Generate Report

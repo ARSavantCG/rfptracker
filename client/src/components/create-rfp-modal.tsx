@@ -36,6 +36,7 @@ const createRfpSchema = z.object({
   projectArea: z.string().optional(),
   confidential: z.boolean().default(false),
   requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  trackType: z.enum(["development", "allowance"]).default("development"),
   anticipatedLeaseExecutionDate: z.string().min(1, "Anticipated lease execution date is required"),
   anticipatedOccupancyDate: z.string().optional(),
   notes: z.string().optional(), // Development Team Notes
@@ -87,6 +88,7 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       projectArea: "",
       confidential: false,
       requestTypes: [],
+      trackType: "development" as const,
       anticipatedLeaseExecutionDate: "",
       anticipatedOccupancyDate: "",
       notes: "",
@@ -766,6 +768,52 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
                         Mark this project as confidential
                       </p>
                     </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Route.
+                Determines the number sequence and how far the request travels.
+                Allowance deals get ALW- numbers so they cannot inflate the RFP
+                count, and they skip steps 2-5 entirely - nothing is priced. */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Route *</h3>
+              <FormField
+                control={form.control}
+                name="trackType"
+                render={({ field }) => (
+                  <FormItem className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => field.onChange("development")}
+                        className={`text-left rounded-lg border p-3 ${field.value === "development" ? "border-blue-600 bg-blue-50" : "hover:bg-gray-50"}`}
+                      >
+                        <div className="font-medium text-sm">Development request</div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Priced against the database, by the development team or self-served
+                          through ROM Pilot. Numbered <strong>RFP-</strong>.
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange("allowance")}
+                        className={`text-left rounded-lg border p-3 ${field.value === "allowance" ? "border-blue-600 bg-blue-50" : "hover:bg-gray-50"}`}
+                      >
+                        <div className="font-medium text-sm">Allowance deal — tracking only</div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Nothing is priced. Recorded so the deal is visible, then closed.
+                          Numbered <strong>ALW-</strong>.
+                        </div>
+                      </button>
+                    </div>
+                    {field.value === "allowance" && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                        This will be saved and closed immediately — no pricing steps, and no
+                        notification to the development team.
+                      </p>
+                    )}
                   </FormItem>
                 )}
               />

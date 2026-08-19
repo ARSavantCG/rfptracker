@@ -69,6 +69,7 @@ import { registerPropertyRoutes } from './property-routes';
 import { registerFileIntegrityAudit } from './file-integrity-audit';
 import { registerProjectTeamRoutes } from './project-team-routes';
 import { registerTurnaroundReport } from './turnaround-report';
+import { registerOpenItemsReport } from './open-items-report';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
@@ -98,6 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFileIntegrityAudit(app);
   registerProjectTeamRoutes(app);
   registerTurnaroundReport(app);
+  registerOpenItemsReport(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);

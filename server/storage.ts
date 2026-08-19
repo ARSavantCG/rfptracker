@@ -567,10 +567,26 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    // ALLOWANCE FAST EXIT.
+    //
+    // An allowance deal is recorded so the deal is visible, then closed. There is
+    // nothing to price, so routing it through steps 2-5 would leave a permanently
+    // "in progress" record nobody intends to work - exactly the clutter that
+    // makes a tracker stop being trusted.
+    //
+    // Completed rather than published: publishing notifies every owner, and an
+    // allowance deal is not news to the development team. Change these two values
+    // to route it through the normal workflow instead.
+    const isAllowance = (request as any).trackType === 'allowance';
+
     const [rfp] = await db
       .insert(rfpRequests)
       .values({
         rfpNumber,
+        trackType: (request as any).trackType || 'development',
+        ...(isAllowance
+          ? { workflowPhase: 'publish', status: 'completed', completedDate: new Date() }
+          : {}),
         parentRfpId: request.parentRfpId || null,
         isCounterOffer: request.isCounterOffer || false,
         isOption: request.isOption || false,

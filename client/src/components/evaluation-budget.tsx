@@ -5173,15 +5173,50 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                 </div>
                               </TableCell>
 
-                              {/* Assembly Group Column */}
-                              <TableCell className="text-sm text-gray-600 text-center">
-                                {item.assemblyId ? (
-                                  // Find the assembly header name
-                                  (() => {
-                                    const assemblyHeader = items.find(i => i.id === item.assemblyId);
-                                    return assemblyHeader ? assemblyHeader.description : 'Unknown Assembly';
-                                  })()
-                                ) : ''}
+                              {/* Assembly Group.
+                                  A DROPDOWN, not a label.
+                                  It previously displayed the assembly name as
+                                  static text, so a line could only be assigned by
+                                  finding the checkbox two columns left, ticking
+                                  it, then using a picker in the toolbar - a
+                                  three-step path with no visible starting point.
+                                  Assigning a line to an assembly is a property of
+                                  that line, so it belongs on the line. */}
+                              <TableCell className="text-sm text-center">
+                                {budgetData.customAssemblies.filter(a => a.category === category).length === 0 ? (
+                                  <span className="text-xs text-gray-400">—</span>
+                                ) : (
+                                  <select
+                                    value={item.assemblyId || ''}
+                                    onChange={(e) => {
+                                      const next = e.target.value;
+                                      setBudgetData(prev => {
+                                        const retag = (list: EvaluationLineItem[]) =>
+                                          list.map(i => i.id === item.id ? { ...i, assemblyId: next || undefined } : i);
+                                        return {
+                                          ...prev,
+                                          tenantImprovements: retag(prev.tenantImprovements),
+                                          designSoftCosts: retag(prev.designSoftCosts),
+                                          existingImprovements: retag(prev.existingImprovements),
+                                          customAssemblies: prev.customAssemblies.map(a => ({
+                                            ...a,
+                                            items: a.id === next
+                                              ? Array.from(new Set([...a.items, item.id]))
+                                              : a.items.filter(id => id !== item.id),
+                                          })),
+                                        };
+                                      });
+                                    }}
+                                    className="w-full text-xs bg-background border border-input rounded-md py-1 px-2"
+                                  >
+                                    <option value="">— none —</option>
+                                    {budgetData.customAssemblies
+                                      .filter(a => a.category === category)
+                                      .map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                      ))}
+                                  </select>
+                                )}
                               </TableCell>
 
                               {/* Rollup Select */}

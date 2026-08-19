@@ -16,7 +16,7 @@ async function getCredentials() {
   // noreply@bridgeindustrial.com, a domain this app does not control and cannot
   // verify in SendGrid - so unset config silently produced a from-address that
   // would be rejected, and borrowed someone else's identity while doing it.
-  const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
+  const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'notifications@rfptracker.app';
   
   if (envApiKey) {
     // Log API key format for debugging (first 5 and last 4 chars only for security)

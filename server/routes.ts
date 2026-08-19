@@ -2194,7 +2194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const owners = allOwners.filter((o: any) => o.isActive !== false);
       const deactivated = allOwners.length - owners.length;
       const withEmail = owners.filter((o: any) => o.email && String(o.email).trim());
-      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'notifications@rfptracker.app';
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
 
       const muted = await areNotificationsMuted();

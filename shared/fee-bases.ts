@@ -38,6 +38,23 @@ export type FeeKind =
  * change BOTH at once. Order matters: 'contingency' is checked before the
  * broader patterns so "construction contingency" does not classify as CM.
  */
+/**
+ * KNOWN DIVERGENCE — evaluation-budget.tsx does NOT use this function.
+ *
+ * It classifies fee rows inline in ~25 places, most commonly as
+ *   desc.includes("construction") && desc.includes("management")
+ * which misses the `cm fee` shorthand this function accepts. Verified
+ * 2026-08-17: "CM Fee" and "CM Fee (2.75%)" classify as 'cm' here and 'other'
+ * there, which puts them in a different fee base and produces a different total.
+ *
+ * The server path (rom-routes ordered fee engine) DOES use this function, so a
+ * bid named "CM Fee" is treated differently depending on which path computes it.
+ *
+ * Not consolidated yet: 25 call sites inside a 6,600-line file that holds the fee
+ * engine and the CM cascade. Tracked in HANDOFF. Until then, treat THIS as the
+ * reference definition and keep any new classification here rather than adding a
+ * 26th inline copy.
+ */
 export function classifyFeeRow(name: string | null | undefined): FeeKind {
   const n = (name || '').toLowerCase();
   if (!n.trim()) return 'other';

@@ -1229,3 +1229,44 @@ that "PLASTER AND GYPSUM" and "Drywall and Framing" are the same category. Store
 the mapping per line with a confidence, and surface low-confidence mappings in the
 existing review step rather than silently guessing. Same rule as the extraction
 itself: nothing reaches the database without a human seeing it.
+
+---
+
+## SINGLE SOURCE OF TRUTH — audit, 2026-08-17
+
+| Domain rule | Single source? | Notes |
+|---|---|---|
+| Property legal totals | **Yes**, now | Was FIVE copies across four files, one already diverged (only 2 of 4 figures). All derive from `PROPERTY_LEGAL_TOTALS_BY_ID` in `shared/area-utils`. One literal set remains, at `area-utils.ts:200`. |
+| Area / rentable maths | **Yes** | `shared/area-utils` — `bayArea`, `sumBayArea`, `dedupeBays`, `computeAreaSummary`, `resolveRfpRentableArea`, `parseAreaInput`. Zero area sums over a stored selection remain outside it. |
+| Electrical allocation | **Yes** | `shared/electrical-utils` — was five independent implementations, two rounding in opposite directions. |
+| Line totals / minimum cost | **Yes** | `shared/line-total`, 5 callers, no inline `MAX(qty × price, minimum)` remains. |
+| Contacts / recipients | **Yes** | No hardcoded lists. All reads via `storage.getContactsByType` / `getAllContacts`; recipients derive from `type='owner'` + `isActive` + `receivesNotifications`. |
+| Property names | **Yes** | Read from the live record everywhere. Names removed from the legal-totals maps after they went stale on the Kurv rename. |
+| **Fee classification** | **NO — known divergence** | See below. |
+
+### Open divergence: fee row classification
+
+`shared/fee-bases.ts` `classifyFeeRow()` is the reference and the **server** uses it.
+`evaluation-budget.tsx` does **not** — it classifies inline in ~25 places, usually as
+`desc.includes("construction") && desc.includes("management")`, which misses the
+`cm fee` shorthand the shared function accepts.
+
+Verified 2026-08-17:
+
+| Line item | shared | client inline |
+|---|---|---|
+| `Construction Management (2.75%)` | cm | cm |
+| **`CM Fee`** | **cm** | **other** |
+| **`CM Fee (2.75%)`** | **cm** | **other** |
+| `Design & Construction Contingency (5%)` | contingency | contingency |
+
+A row named "CM Fee" therefore lands in a different fee base — and produces a
+different total — depending on whether the client or the server computed it.
+
+**Not consolidated because** it is 25 call sites inside a 6,600-line file that holds
+the fee engine and the CM cascade, and those numbers are still being verified in
+production. Until it is done: treat `classifyFeeRow` as the definition and add any
+new classification there rather than a 26th inline copy.
+
+**Practical mitigation meanwhile:** name CM rows "Construction Management", not
+"CM Fee", and both paths agree.

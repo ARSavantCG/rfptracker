@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 // Removed Select import - using native HTML selects for consistency
-import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info, Lock, Unlock, ListChecks } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, ArrowRight, Copy, FileDown, Upload, Package, Users, ChevronUp, ChevronDown, ChevronRight, GripVertical, Check as CheckIcon, FileText, AlertTriangle, Zap, Info, Lock, Unlock, ListChecks } from "lucide-react";
 import { EvaluationAttachments } from "./evaluation-attachments";
 import { EvaluationLabeledUploads } from "./evaluation-labeled-uploads";
 import { EvaluationBudgetHistory } from "./evaluation-budget-history";
@@ -74,6 +74,15 @@ interface CustomAssembly {
    */
   headQuantity?: number;
   headUnit?: string;
+  /**
+   * Collapsed hides the component lines under the head.
+   *
+   * NOT the same as a rollup. A rolled-up item is struck through and absorbed
+   * into another category - it stops being its own line. Assembly components
+   * remain real, editable lines that happen to be tucked under their head, so
+   * this is expand/collapse, not strike-through.
+   */
+  collapsed?: boolean;
 }
 
 // Multi-voltage electrical allocation entry
@@ -2565,10 +2574,17 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   // Assembly management functions
   const createCustomAssembly = () => {
-    if (!newAssemblyName.trim() || selectedItems.size === 0) {
+    // Components are NO LONGER REQUIRED up front.
+    //
+    // The old flow was: build every line item, tick them, then declare what they
+    // belonged to - the assembly did not exist until it was finished. Adolfo
+    // thinks the other way round ("electrical upgrade, and then the switchgear
+    // and all that stuff below"), which is also how the work is actually scoped.
+    // An assembly can now be created empty and populated afterwards.
+    if (!newAssemblyName.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter an assembly name and select at least one item.",
+        title: "Name required",
+        description: "Give the assembly a name — e.g. \"Electrical Upgrade\".",
         variant: "destructive",
         duration: 6000,
       });
@@ -2590,7 +2606,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       id: assemblyId,
       name: newAssemblyName.trim(),
       category: newAssemblyCategory as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
+      // Pre-fill from a selection if one exists, otherwise start empty and let
+      // the user add components underneath.
       items: Array.from(selectedItems),
+      collapsed: false,
     };
 
     setBudgetData(prev => ({
@@ -2703,6 +2722,24 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
    * Falls back to the primary item's quantity and unit when the head has none,
    * so existing assemblies are unchanged.
    */
+  const updateAssemblyHead = (assemblyId: string, patch: Partial<CustomAssembly>) => {
+    setBudgetData(prev => ({
+      ...prev,
+      customAssemblies: prev.customAssemblies.map(a =>
+        a.id === assemblyId ? { ...a, ...patch } : a
+      ),
+    }));
+  };
+
+  const toggleAssemblyCollapsed = (assemblyId: string) => {
+    setBudgetData(prev => ({
+      ...prev,
+      customAssemblies: prev.customAssemblies.map(a =>
+        a.id === assemblyId ? { ...a, collapsed: !a.collapsed } : a
+      ),
+    }));
+  };
+
   const getAssemblyHead = (assembly: CustomAssembly) => {
     const total = calculateAssemblyTotal(assembly.id);
     const items = getAssemblyItems(assembly.id);
@@ -4888,7 +4925,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                   setShowAssemblyCreator(true);
                 }}
                 className="h-8"
-                disabled={selectedItems.size === 0}
+                /* No longer gated on a selection. The button was greyed out until
+                   line items were ticked, which made the head-first flow
+                   impossible and the feature hard to find at all. Ticking items
+                   first still works and pre-fills the assembly. */
               >
                 <Package className="h-4 w-4 mr-1" />
                 Add Assembly
@@ -5535,22 +5575,62 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               const items = getAssemblyItems(assembly.id);
               return (
                 <div key={assembly.id} className="border rounded-lg overflow-hidden">
-                  <div className="bg-slate-50 px-3 py-2 flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">{assembly.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {head.componentCount} component{head.componentCount === 1 ? '' : 's'} ·{' '}
-                        {head.quantity.toLocaleString()} {head.unit} @ $
-                        {head.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/{head.unit}
+                  <div className="bg-slate-50 px-3 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleAssemblyCollapsed(assembly.id)}
+                        className="flex items-center gap-1.5 text-left min-w-0"
+                        title={assembly.collapsed ? 'Show components' : 'Hide components'}
+                      >
+                        {assembly.collapsed
+                          ? <ChevronRight className="h-4 w-4 shrink-0" />
+                          : <ChevronDown className="h-4 w-4 shrink-0" />}
+                        <span className="font-medium text-sm">{assembly.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          ({head.componentCount})
+                        </span>
+                      </button>
+                      <div className="text-right shrink-0">
+                        <div className="font-semibold tabular-nums">
+                          ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">sum of components</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold tabular-nums">
-                        ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">sum of components</div>
+
+                    {/* Head quantity and unit. The PRICE is never typed - it is
+                        always the children's sum. These only change how that same
+                        total is expressed: 1 LS @ $150,000/LS, or 100 LF @
+                        $1,500/LF. */}
+                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                      <span className="text-muted-foreground">Show as</span>
+                      <Input
+                        type="number"
+                        className="h-7 w-24 text-xs"
+                        value={assembly.headQuantity ?? head.quantity}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value.replace(/[^0-9.\-]/g, ''));
+                          updateAssemblyHead(assembly.id, {
+                            headQuantity: Number.isFinite(v) ? v : undefined,
+                          });
+                        }}
+                      />
+                      <Input
+                        className="h-7 w-20 text-xs"
+                        placeholder="LS"
+                        value={assembly.headUnit ?? head.unit}
+                        onChange={(e) =>
+                          updateAssemblyHead(assembly.id, { headUnit: e.target.value || undefined })}
+                      />
+                      <span className="text-muted-foreground">
+                        = <strong className="text-foreground tabular-nums">
+                          ${head.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>/{head.unit}
+                      </span>
                     </div>
                   </div>
+                  {!assembly.collapsed && (
                   <table className="w-full text-xs">
                     <tbody>
                       {items.map((item) => (
@@ -5567,12 +5647,14 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                       {items.length === 0 && (
                         <tr className="border-t">
                           <td colSpan={3} className="px-3 py-2 text-muted-foreground italic">
-                            No components — this assembly totals $0 until line items are added to it.
+                            No components yet. Tick line items in the category above and use
+                            “Add to assembly”, and their costs will roll up into this head.
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
+                  )}
                 </div>
               );
             })}

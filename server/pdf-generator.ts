@@ -710,7 +710,9 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  // Blank rather than a hardcoded personal address. A PDF that silently carries
+  // the wrong person's contact details is worse than one that carries none.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
   
   // Use Project Description from invitation data
@@ -853,7 +855,7 @@ async function generateContractorRfpHtml(options: PdfGenerationOptions, dates: a
         close of business on the date outlined below. Below, you will also find a series of 
         information to assist you throughout the pricing exercise.</p>
         <p>In the event you have any questions, please feel free to contact 
-        ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
+        ${contactPerson}${contactEmail ? ` at ${contactEmail}` : ''} at your earliest convenience.</p>
       </div>
       
       <div class="section">
@@ -1025,7 +1027,9 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  // Blank rather than a hardcoded personal address. A PDF that silently carries
+  // the wrong person's contact details is worse than one that carries none.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
   
   return `
@@ -1159,7 +1163,7 @@ async function generateArchitectRfpHtml(options: PdfGenerationOptions, dates: an
         a comprehensive proposal outlining your approach, timeline, and fee structure for 
         this project.</p>
         <p>For any questions regarding this RFP, please contact 
-        ${contactPerson} at ${contactEmail} at your earliest convenience.</p>
+        ${contactPerson}${contactEmail ? ` at ${contactEmail}` : ''} at your earliest convenience.</p>
       </div>
       
       ${rfp.requestTypes && rfp.requestTypes.length > 0 ? `
@@ -1342,7 +1346,9 @@ async function generateBrokerArchitectRfpHtml(options: PdfGenerationOptions, dat
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  // Blank rather than a hardcoded personal address. A PDF that silently carries
+  // the wrong person's contact details is worse than one that carries none.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);
@@ -1537,7 +1543,9 @@ async function generateBrokerContractorRfpHtml(options: PdfGenerationOptions, da
   // Prefer development contact from RFP, fallback to invitation contact
   const contactInfo = developmentContactInfo.length >= 2 ? developmentContactInfo : invitationContactInfo;
   const contactPerson = contactInfo[0] || rfp.developmentContact || 'Development Contact';
-  const contactEmail = options.userEmail || contactInfo[1] || 'AReutlinger@bridgeindustrial.com';
+  // Blank rather than a hardcoded personal address. A PDF that silently carries
+  // the wrong person's contact details is worse than one that carries none.
+  const contactEmail = options.userEmail || contactInfo[1] || '';
   const contactPhone = contactInfo[2] || '';
 
   const projectName = rfp.projectName || invitationToBid?.projectScope || (rfp.confidential ? `Confidential @ ${rfp.property}` : `${rfp.tenantName} @ ${rfp.property}`);

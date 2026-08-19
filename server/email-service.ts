@@ -9,7 +9,11 @@ import puppeteer from 'puppeteer';
 async function getCredentials() {
   // First, check for environment variables (highest priority - user-provided secrets)
   const envApiKey = process.env.SENDGRID_API_KEY?.trim();
-  const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@bridgeindustrial.com';
+  // Default to the app's own domain. It previously fell back to
+  // noreply@bridgeindustrial.com, a domain this app does not control and cannot
+  // verify in SendGrid - so unset config silently produced a from-address that
+  // would be rejected, and borrowed someone else's identity while doing it.
+  const envFromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
   
   if (envApiKey) {
     // Log API key format for debugging (first 5 and last 4 chars only for security)
@@ -556,7 +560,7 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
           return { success: false, error: 'SendGrid email quota exceeded. Please upgrade your SendGrid plan or wait for your monthly limit to reset.' };
         }
         if (firstError.message?.includes('Sender not verified')) {
-          return { success: false, error: 'Sender email not verified in SendGrid. Please verify noreply@bridgeindustrial.com in Settings → Sender Authentication.' };
+          return { success: false, error: `Sender address ${fromEmail} is not verified in SendGrid. Verify the rfptracker.app domain under Settings → Sender Authentication → Domain Authentication.` };
         }
         return { success: false, error: `SendGrid error: ${firstError.message}` };
       }

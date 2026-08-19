@@ -2165,7 +2165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const owners = await storage.getContactsByType('owner');
       const withEmail = owners.filter((o: any) => o.email && String(o.email).trim());
-      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@bridgeindustrial.com';
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
 
       const blockers: string[] = [];
@@ -2173,7 +2173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (owners.length === 0) blockers.push('No contacts have type "owner", so the alert has no recipients.');
       else if (withEmail.length === 0) blockers.push(`${owners.length} owner contact(s) exist but none has an email address.`);
       if (!process.env.SENDGRID_FROM_EMAIL) {
-        blockers.push(`SENDGRID_FROM_EMAIL is unset, so sends use ${fromEmail}. If that domain is not verified in SendGrid, delivery is rejected.`);
+        blockers.push(`SENDGRID_FROM_EMAIL is unset, so sends use ${fromEmail}. Verify the rfptracker.app domain in SendGrid (Settings → Sender Authentication → Domain Authentication), then set SENDGRID_FROM_EMAIL to confirm it deliberately.`);
       }
 
       res.json({
@@ -2753,7 +2753,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user email for contact information
       const user = (req as any).user;
-      const userEmail = user?.email || user?.username || 'AReutlinger@bridgeindustrial.com';
+      // No hardcoded personal fallback. This put a specific person's address on a
+      // document whenever the session had no email - wrong for any other user, and
+      // it tied app output to an account this app does not control.
+      const userEmail = user?.email || user?.username || '';
 
       const pdfOptions = {
         rfp: rfpWithAddress,
@@ -3044,7 +3047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get user email for contact information
       const user = (req as any).user;
-      const userEmail = user?.email || user?.username || 'AReutlinger@bridgeindustrial.com';
+      // No hardcoded personal fallback. This put a specific person's address on a
+      // document whenever the session had no email - wrong for any other user, and
+      // it tied app output to an account this app does not control.
+      const userEmail = user?.email || user?.username || '';
 
       const pdfOptions = {
         rfp: rfpWithAddress,

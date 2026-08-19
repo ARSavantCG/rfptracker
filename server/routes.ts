@@ -2186,13 +2186,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle one owner's notification opt-in.
+  app.post("/api/admin/notifications/recipient", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const contactId = parseInt(req.body?.contactId);
+      const receives = req.body?.receives !== false;
+      if (isNaN(contactId)) return res.status(400).json({ message: 'Invalid contact id' });
+      await db.update(contacts)
+        .set({ receivesNotifications: receives } as any)
+        .where(eq(contacts.id, contactId));
+      res.json({ contactId, receivesNotifications: receives });
+    } catch (error) {
+      console.error('[notifications/recipient] failed:', error);
+      res.status(500).json({ message: 'Failed to update recipient' });
+    }
+  });
+
   app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       // Same source and same filter the sender uses, so the diagnostic cannot
       // report a recipient list the alert would not actually use.
       const allOwners = await storage.getContactsByType('owner');
-      const owners = allOwners.filter((o: any) => o.isActive !== false);
-      const deactivated = allOwners.length - owners.length;
+      const active = allOwners.filter((o: any) => o.isActive !== false);
+      const deactivated = allOwners.length - active.length;
+      // Opted-out owners are still LISTED so they can be switched back on; they
+      // are simply excluded from the count that will actually be emailed.
+      const owners = active.filter((o: any) => o.receivesNotifications !== false);
       const withEmail = owners.filter((o: any) => o.email && String(o.email).trim());
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'notifications@rfptracker.app';
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
@@ -2215,6 +2234,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fromEmail,
         sendgridKeyConfigured: hasKey,
         ownerContacts: withEmail.map((o: any) => ({ id: o.id, name: o.name, email: o.email })),
+        // Every active owner with the flag, so the panel can render a checkbox per person.
+        allOwners: active
+          .filter((o: any) => o.email && String(o.email).trim())
+          .map((o: any) => ({ id: o.id, name: o.name, email: o.email, receivesNotifications: o.receivesNotifications !== false })),
         ownerContactsWithoutEmail: owners.length - withEmail.length,
         deactivatedOwnersExcluded: deactivated,
       });

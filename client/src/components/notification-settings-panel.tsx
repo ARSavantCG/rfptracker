@@ -2,6 +2,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +18,7 @@ interface NotificationStatus {
   fromEmail: string;
   sendgridKeyConfigured: boolean;
   ownerContacts: { id: number; name: string; email: string }[];
+  allOwners: { id: number; name: string; email: string; receivesNotifications: boolean }[];
   ownerContactsWithoutEmail: number;
   deactivatedOwnersExcluded: number;
 }
@@ -42,6 +45,22 @@ export function NotificationSettingsPanel() {
     onError: (e: Error) =>
       toast({ title: "Could not change setting", description: e.message, variant: "destructive" }),
   });
+
+  const recipientMutation = useMutation({
+    mutationFn: async ({ contactId, receives }: { contactId: number; receives: boolean }) =>
+      apiRequest("/api/admin/notifications/recipient", "POST", { contactId, receives }),
+    onSuccess: () => refetch(),
+    onError: (e: Error) =>
+      toast({ title: "Could not update recipient", description: e.message, variant: "destructive" }),
+  });
+
+  const setAll = (receives: boolean) => {
+    (data?.allOwners ?? []).forEach((o) => {
+      if (o.receivesNotifications !== receives) {
+        recipientMutation.mutate({ contactId: o.id, receives });
+      }
+    });
+  };
 
   return (
     <Card>
@@ -132,14 +151,41 @@ export function NotificationSettingsPanel() {
           )}
         </div>
 
-        {data?.ownerContacts && data.ownerContacts.length > 0 && (
-          <div className="rounded border divide-y">
-            {data.ownerContacts.map((o) => (
-              <div key={o.id} className="flex justify-between px-2 py-1.5 text-xs">
-                <span className="font-medium">{o.name}</span>
-                <span className="text-muted-foreground">{o.email}</span>
+        {data?.allOwners && data.allOwners.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Who receives alerts</Label>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setAll(true)}>
+                  Select all
+                </Button>
+                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setAll(false)}>
+                  Clear all
+                </Button>
               </div>
-            ))}
+            </div>
+            <div className="rounded border divide-y">
+              {data.allOwners.map((o) => (
+                <label
+                  key={o.id}
+                  className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-50"
+                >
+                  <Checkbox
+                    checked={o.receivesNotifications}
+                    onCheckedChange={(v) =>
+                      recipientMutation.mutate({ contactId: o.id, receives: !!v })}
+                  />
+                  <span className={`font-medium ${o.receivesNotifications ? "" : "text-muted-foreground line-through"}`}>
+                    {o.name}
+                  </span>
+                  <span className="text-muted-foreground ml-auto">{o.email}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Unchecking silences that person without deactivating the contact. Use this to send only
+              to yourself while testing; the mute switch above stops everything at once.
+            </p>
           </div>
         )}
       </CardContent>

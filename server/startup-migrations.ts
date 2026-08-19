@@ -76,6 +76,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'properties', column: 'electrical_allocation_minimum', type: 'integer DEFAULT 200' },
   // Free-text discipline for project team members whose role is 'other'.
   { table: 'project_team_members', column: 'custom_role', type: 'text' },
+  // Per-owner notification opt-out (2026-08-17). Default true so existing owners
+  // keep receiving alerts.
+  { table: 'contacts', column: 'receives_notifications', type: 'boolean DEFAULT true' },
   // Team can attach to an executed lease rather than an RFP (2026-08-10).
   { table: 'project_team_members', column: 'lease_id', type: 'integer REFERENCES executed_leases(id) ON DELETE CASCADE' },
   // Tenant performs its own construction: no landlord design team required.

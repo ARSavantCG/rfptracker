@@ -370,6 +370,11 @@ export const contacts = pgTable("contacts", {
   notes: text("notes"),
   hasSystemAccess: boolean("has_system_access").default(false),
   isActive: boolean("is_active").default(true),
+  // Owner contacts only: receives new-RFP and publish alerts. Defaults TRUE so
+  // adding an owner opts them in - the common case - and existing rows keep
+  // working without a backfill. Uncheck to silence one person without
+  // deactivating the contact, which is what testing needs.
+  receivesNotifications: boolean("receives_notifications").default(true),
   permissions: json("permissions").$type<Permission[]>().default([]),
   passwordHash: text("password_hash"),
   resetToken: text("reset_token"),

@@ -104,7 +104,8 @@ export async function areNotificationsMuted(): Promise<boolean> {
 
 export async function getOwnerContacts(): Promise<Contact[]> {
   const owners = await storage.getContactsByType('owner');
-  return owners.filter((c) => c.isActive !== false);
+  // null is treated as opted IN, so rows predating the column keep working.
+  return owners.filter((c) => c.isActive !== false && (c as any).receivesNotifications !== false);
 }
 
 function formatDate(date: Date | string | null | undefined): string {

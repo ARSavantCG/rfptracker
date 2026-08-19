@@ -13,12 +13,30 @@ import { storage } from './storage';
  * Legal square footage requirements for each property
  * CRITICAL: These totals are exact legal requirements - overstating even by 1 SF can result in lawsuits
  */
+/**
+ * Published leasable totals by property ID.
+ *
+ * The `name` field held pre-rename names (Bridge Point / MG Westside; the
+ * portfolio is now Kurv) and was interpolated into every user-facing enforcement
+ * message, so "Enforce Compliance" reported results under names that no longer
+ * exist. Names now come from the live property record - see propertyLabel below.
+ * Kept as a field only because removing it would ripple through more call sites
+ * than the fix warrants; it is no longer READ anywhere.
+ */
 export const LEGAL_PROPERTY_TOTALS: Record<number, { name: string; requiredSF: number }> = {
-  1: { name: 'Bridge Point Gratigny', requiredSF: 409189 },
-  2: { name: 'Bridge 595', requiredSF: 290307 },
-  3: { name: 'MG Westside', requiredSF: 794334 }, // Current total - verify this is correct
-  4: { name: 'Bridge Point Port Everglades', requiredSF: 171983 }
+  1: { name: '', requiredSF: 409189 },
+  2: { name: '', requiredSF: 290307 },
+  3: { name: '', requiredSF: 794334 },
+  4: { name: '', requiredSF: 171983 }
 };
+
+/** Live display name, falling back to the id so a message is never blank. */
+function propertyLabel(property: any, propertyId: number): string {
+  if (!property?.propertyName) return `Property ${propertyId}`;
+  return property.building
+    ? `${property.propertyName} - Bldg. ${property.building}`
+    : property.propertyName;
+}
 
 /**
  * Validates and enforces legal compliance for a single property
@@ -63,7 +81,7 @@ export async function enforcePropertyLegalCompliance(propertyId: number): Promis
     if (originalTotal === legalReq.requiredSF) {
       return {
         success: true,
-        message: `✅ ${legalReq.name}: Already compliant at ${originalTotal} SF`,
+        message: `✅ ${propertyLabel(property, propertyId)}: Already compliant at ${originalTotal} SF`,
         adjustmentsMade: false,
         originalTotal,
         finalTotal: originalTotal
@@ -103,7 +121,7 @@ export async function enforcePropertyLegalCompliance(propertyId: number): Promis
     if (!result.success) {
       return {
         success: false,
-        message: `❌ ${legalReq.name}: ${result.message}`,
+        message: `❌ ${propertyLabel(property, propertyId)}: ${result.message}`,
         adjustmentsMade: false,
         originalTotal,
         finalTotal: result.finalTotal
@@ -120,7 +138,7 @@ export async function enforcePropertyLegalCompliance(propertyId: number): Promis
 
     return {
       success: true,
-      message: `✅ ${legalReq.name}: ${result.message}`,
+      message: `✅ ${propertyLabel(property, propertyId)}: ${result.message}`,
       adjustmentsMade: true,
       originalTotal,
       finalTotal: result.finalTotal
@@ -162,26 +180,30 @@ export async function enforceAllPropertiesLegalCompliance(): Promise<{
 
   for (const [propertyId, legalReq] of Object.entries(LEGAL_PROPERTY_TOTALS)) {
     const id = parseInt(propertyId);
-    console.log(`📋 Processing ${legalReq.name} (Property ${id})...`);
+    // Load the live record for its CURRENT name - `property` from the
+    // single-property function is not in scope here.
+    const loopProperty = await storage.getProperty(id);
+    const label = propertyLabel(loopProperty, id);
+    console.log(`📋 Processing ${label} (Property ${id})...`);
     
     const result = await enforcePropertyLegalCompliance(id);
     
     results.push({
       propertyId: id,
-      propertyName: legalReq.name,
+      propertyName: label,
       ...result
     });
 
     if (result.success) {
       if (result.adjustmentsMade) {
         totalAdjustments++;
-        console.log(`✅ ${legalReq.name}: Legal compliance enforced (${result.originalTotal} → ${result.finalTotal} SF)`);
+        console.log(`✅ ${label}: Legal compliance enforced (${result.originalTotal} → ${result.finalTotal} SF)`);
       } else {
-        console.log(`✅ ${legalReq.name}: Already compliant (${result.finalTotal} SF)`);
+        console.log(`✅ ${label}: Already compliant (${result.finalTotal} SF)`);
       }
     } else {
       totalErrors++;
-      console.log(`❌ ${legalReq.name}: ${result.message}`);
+      console.log(`❌ ${label}: ${result.message}`);
     }
   }
 

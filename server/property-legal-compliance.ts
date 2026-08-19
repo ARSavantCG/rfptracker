@@ -8,6 +8,7 @@
 import { applyLegalRounding, validateLegalCompliance } from './legal-rounding-system';
 import { applyLegalIncrease } from './legal-increase-system';
 import { storage } from './storage';
+import { PROPERTY_LEGAL_TOTALS_BY_ID } from "@shared/area-utils";
 
 /**
  * Legal square footage requirements for each property
@@ -23,12 +24,22 @@ import { storage } from './storage';
  * Kept as a field only because removing it would ripple through more call sites
  * than the fix warrants; it is no longer READ anywhere.
  */
-export const LEGAL_PROPERTY_TOTALS: Record<number, { name: string; requiredSF: number }> = {
-  1: { name: '', requiredSF: 409189 },
-  2: { name: '', requiredSF: 290307 },
-  3: { name: '', requiredSF: 794334 },
-  4: { name: '', requiredSF: 171983 }
-};
+/**
+ * Single source: shared/area-utils PROPERTY_LEGAL_TOTALS_BY_ID.
+ *
+ * This file used to carry its own copy of the four figures. Counting this one
+ * there were FIVE copies across four files, and they had already begun to
+ * diverge - legal-rounding-system.ts held only two of the four. Divergence in a
+ * set of published legal totals is the worst possible place for it.
+ *
+ * Shape preserved (name + requiredSF) so existing call sites keep compiling.
+ * `name` is intentionally empty and no longer read; display names come from the
+ * live property record via propertyLabel().
+ */
+export const LEGAL_PROPERTY_TOTALS: Record<number, { name: string; requiredSF: number }> =
+  Object.fromEntries(
+    Object.entries(PROPERTY_LEGAL_TOTALS_BY_ID).map(([id, sf]) => [Number(id), { name: '', requiredSF: sf }])
+  );
 
 /** Live display name, falling back to the id so a message is never blank. */
 function propertyLabel(property: any, propertyId: number): string {

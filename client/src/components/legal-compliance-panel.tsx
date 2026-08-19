@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle, RefreshCw, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { computeAreaSummary } from "@shared/area-utils";
+import { computeAreaSummary, PROPERTY_LEGAL_TOTALS_BY_ID } from "@shared/area-utils";
 
 interface LegalComplianceResult {
   propertyId: number;
@@ -35,12 +35,9 @@ interface ComplianceResponse {
  *
  * Comments are for orientation only and are NOT rendered.
  */
-const LEGAL_REQUIREMENTS = {
-  1: { requiredSF: 409189 }, // formerly Bridge Point Gratigny
-  2: { requiredSF: 290307 }, // formerly Bridge 595
-  3: { requiredSF: 794334 }, // formerly MG Westside
-  4: { requiredSF: 171983 }, // formerly Bridge Point Port Everglades
-};
+// Single source: shared/area-utils. This file previously carried its own copy of
+// the four figures - one of FIVE across the codebase.
+const LEGAL_REQUIREMENTS = PROPERTY_LEGAL_TOTALS_BY_ID;
 
 export function LegalCompliancePanel() {
   const { toast } = useToast();
@@ -102,7 +99,7 @@ export function LegalCompliancePanel() {
     // surveyed fact; a property name is editable data and must not be duplicated.
     const displayName = propertyDisplayName(property);
 
-    if (published) return { name: displayName, requiredSF: published.requiredSF, published: true };
+    if (published) return { name: displayName, requiredSF: published, published: true };
 
     // There is NO recorded rentable total on the properties table - only
     // mechanical_room_square_footage and the bay array. So for a property with no

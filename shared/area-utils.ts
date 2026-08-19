@@ -172,23 +172,29 @@ export function computeAreaSummary(
  * name — so those three could never match and silently fell through to the raw
  * bay sum. Kept here so there is one table and one key convention.
  */
+/**
+ * DEPRECATED — name-keyed lookup, DERIVED from the map above so it cannot drift.
+ *
+ * These are PRE-RENAME names and match nothing in production; a lookup through
+ * this map falls through silently. Retained only for callers with no property id
+ * to hand. Use PROPERTY_LEGAL_TOTALS_BY_ID.
+ */
 export const PROPERTY_LEGAL_TOTALS: Record<string, number> = {
-  'Bridge Point Gratigny': 409189,
-  'Bridge 595': 290307,
-  'MG Westside': 794334,
-  'Bridge Point Port Everglades': 171983,
+  'Bridge Point Gratigny': PROPERTY_LEGAL_TOTALS_BY_ID[1],
+  'Bridge 595': PROPERTY_LEGAL_TOTALS_BY_ID[2],
+  'MG Westside': PROPERTY_LEGAL_TOTALS_BY_ID[3],
+  'Bridge Point Port Everglades': PROPERTY_LEGAL_TOTALS_BY_ID[4],
 };
 
 /**
- * The same published totals keyed by property ID.
+ * THE SINGLE SOURCE for published leasable totals, keyed by property ID.
  *
- * The name-keyed map above cannot survive a rename, and the portfolio HAS been
- * renamed - "MG Westside" is now "Kurv Commerce Center (West)". Every name-keyed
- * lookup therefore stopped matching and silently fell through to the raw bay sum,
- * with no error and a plausible number.
+ * There were FIVE copies of these four figures across four files, already
+ * diverging - legal-rounding-system.ts held only two of the four. Every other
+ * location now derives from this one.
  *
- * IDs do not change. Prefer this map; the name-keyed one is kept only for callers
- * that have no id to hand.
+ * IDs are used because names change: the portfolio was renamed to Kurv and every
+ * name-keyed lookup silently stopped matching.
  */
 export const PROPERTY_LEGAL_TOTALS_BY_ID: Record<number, number> = {
   1: 409189, // formerly Bridge Point Gratigny

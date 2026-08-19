@@ -1,3 +1,4 @@
+import { PROPERTY_LEGAL_TOTALS_BY_ID } from "@shared/area-utils";
 /**
  * Legal Compliance Rounding System
  * 
@@ -148,7 +149,14 @@ export function validateLegalCompliance(
  * Property-specific legal totals
  * These are the maximum allowable totals for each property to avoid legal issues
  */
+/**
+ * DEPRECATED — derived from shared/area-utils so it cannot drift.
+ *
+ * This copy held only TWO of the four published totals, under a third naming
+ * convention. It had ALREADY diverged from the other copies, which is precisely
+ * the failure a single source prevents.
+ */
 export const LEGAL_TOTALS = {
-  BRIDGE_POINT_GRATIGNY: 409189, // Property ID 1
-  BRIDGE_595_BUILDING_2: 290307,  // Property ID 2 (if needed)
+  BRIDGE_POINT_GRATIGNY: PROPERTY_LEGAL_TOTALS_BY_ID[1],
+  BRIDGE_595_BUILDING_2: PROPERTY_LEGAL_TOTALS_BY_ID[2],
 } as const;

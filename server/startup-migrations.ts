@@ -95,6 +95,13 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Operational settings (2026-08-17). Key/value so a new switch needs no migration.
+  `CREATE TABLE IF NOT EXISTS app_settings (
+    key text PRIMARY KEY,
+    value text NOT NULL,
+    updated_at timestamp NOT NULL DEFAULT now(),
+    updated_by text
+  )`,
   // Project team (2026-08-05): who is working on an RFP, in what role. Roles are
   // per-assignment rather than taken from contacts.type, because the same person
   // can be architect on one deal and consultant on another, and a project needs

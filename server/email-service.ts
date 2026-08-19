@@ -5,6 +5,9 @@ import { RfpRequest, Contact } from '@shared/schema';
 import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
+import { db } from "./db";
+import { appSettings, SETTING_NOTIFICATIONS_MUTED } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 async function getCredentials() {
   // First, check for environment variables (highest priority - user-provided secrets)
@@ -77,6 +80,28 @@ export async function getUncachableSendGridClient() {
  * deactivated in the app - which looks exactly like the app being ignored.
  * Rows predating the column read null and are treated as active.
  */
+/**
+ * Is outbound notification muted?
+ *
+ * Checked INSIDE each send function rather than at the call sites. There are six
+ * places that trigger an email; gating them individually guarantees one gets
+ * missed, and the one that gets missed is the one that emails the team during a
+ * test. Fails OPEN — if the settings read errors, mail still sends, because
+ * silently swallowing every notification is the worse failure.
+ */
+export async function areNotificationsMuted(): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, SETTING_NOTIFICATIONS_MUTED));
+    return row?.value === 'true';
+  } catch (error) {
+    console.warn('[email] could not read mute setting, assuming NOT muted:', (error as Error).message);
+    return false;
+  }
+}
+
 export async function getOwnerContacts(): Promise<Contact[]> {
   const owners = await storage.getContactsByType('owner');
   return owners.filter((c) => c.isActive !== false);
@@ -503,6 +528,11 @@ async function getAttachmentsForRfp(rfp: RfpRequest, completionType: 'rfp-entry'
 
 export async function sendStatusReportEmail(): Promise<{ success: boolean; error?: string }> {
   try {
+    if (await areNotificationsMuted()) {
+      console.log('[email] 🔇 notifications muted — status report suppressed');
+      return { success: true, muted: true } as any;
+    }
+
     const { client, fromEmail } = await getUncachableSendGridClient();
     const owners = await getOwnerContacts();
     
@@ -588,6 +618,11 @@ export async function sendWorkflowCompletionEmail(
   completionType: 'rfp-entry' | 'publish'
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (await areNotificationsMuted()) {
+      console.log('[email] 🔇 notifications muted — workflow notification suppressed');
+      return { success: true, muted: true } as any;
+    }
+
     const { client, fromEmail } = await getUncachableSendGridClient();
     const owners = await getOwnerContacts();
     

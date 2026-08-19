@@ -37,7 +37,7 @@ export type RecipientType = typeof ALLOWED_RECIPIENT_TYPES[number];
 import { generateRfpPdf } from "./pdf-generator";
 import { enforceAllPropertiesLegalCompliance } from "./property-legal-compliance";
 import Templates from "./lib/rfp-templates";
-import { sendWorkflowCompletionEmail, sendTestStatusReportEmail } from "./email-service";
+import { sendWorkflowCompletionEmail, sendTestStatusReportEmail, areNotificationsMuted } from "./email-service";
 import { sendStatusReportNow } from "./email-scheduler";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnownRomCategory } from "./rom-pricing-utils";
@@ -76,6 +76,7 @@ import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
+import { appSettings, SETTING_NOTIFICATIONS_MUTED } from "@shared/schema";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -2161,6 +2162,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * fail quietly: no owner contacts, owners with no email, no API key, or an
    * unverified from-address. Reports all four rather than leaving it to guesswork.
    */
+  // Read/write the notification mute. Admin-only.
+  app.post("/api/admin/notifications/mute", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const muted = req.body?.muted === true;
+      const user = (req as any).user;
+      await db.insert(appSettings)
+        .values({
+          key: SETTING_NOTIFICATIONS_MUTED,
+          value: muted ? 'true' : 'false',
+          updatedBy: user?.email || user?.username || null,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: appSettings.key,
+          set: { value: muted ? 'true' : 'false', updatedBy: user?.email || user?.username || null, updatedAt: new Date() },
+        });
+      console.log(`[email] notifications ${muted ? 'MUTED' : 'unmuted'} by ${user?.email || 'unknown'}`);
+      res.json({ muted });
+    } catch (error) {
+      console.error('[notifications/mute] failed:', error);
+      res.status(500).json({ message: 'Failed to update setting' });
+    }
+  });
+
   app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       // Same source and same filter the sender uses, so the diagnostic cannot
@@ -2172,7 +2197,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'rfps@rfptracker.app';
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
 
+      const muted = await areNotificationsMuted();
       const blockers: string[] = [];
+      if (muted) blockers.push('Notifications are MUTED. Nothing will be sent until this is turned off.');
       if (!hasKey) blockers.push('SENDGRID_API_KEY is not set — no email can be sent.');
       if (owners.length === 0) blockers.push('No contacts have type "owner", so the alert has no recipients.');
       else if (withEmail.length === 0) blockers.push(`${owners.length} owner contact(s) exist but none has an email address.`);
@@ -2181,6 +2208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
+        muted,
         willSend: blockers.length === 0,
         blockers,
         firesOn: ['Step 1 (RFP entry) completion', 'Publish'],

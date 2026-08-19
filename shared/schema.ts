@@ -330,6 +330,33 @@ export const insertProjectTeamMemberSchema = createInsertSchema(projectTeamMembe
 export type ProjectTeamMember = typeof projectTeamMembers.$inferSelect;
 export type InsertProjectTeamMember = z.infer<typeof insertProjectTeamMemberSchema>;
 
+/**
+ * App settings — small key/value store.
+ *
+ * Deliberately generic rather than a column per setting: these are operational
+ * switches, not domain data, and each new one should not require a migration.
+ */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: text("updated_by"),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+
+/**
+ * Master mute for outbound notifications.
+ *
+ * Adolfo tests against the live database, and a test RFP should not email the
+ * team. Suppresses the new-RFP alert, the publish alert, and the Mon/Wed/Fri
+ * status report while set.
+ *
+ * Stored, not an env var: it has to be flippable from the UI seconds before a
+ * test, without a republish.
+ */
+export const SETTING_NOTIFICATIONS_MUTED = 'notifications_muted';
+
 // Contacts table for architects and contractors
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),

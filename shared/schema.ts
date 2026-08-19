@@ -415,6 +415,15 @@ export const SETTING_NOTIFICATIONS_MUTED = 'notifications_muted';
  *   days: comma-separated day numbers, 0=Sun ... 6=Sat. Empty string = off.
  *   hour: 0-23, server local time.
  */
+/**
+ * Address BCC'd on every automated email, regardless of the recipient list.
+ *
+ * Adolfo wants sight of everything the system sends without being an Owner on
+ * every notification - and without depending on remembering to stay on that
+ * list. Empty means off.
+ */
+export const SETTING_ALWAYS_COPY_EMAIL = 'always_copy_email';
+
 export const SETTING_REPORT_DAYS = 'status_report_days';
 export const SETTING_REPORT_HOUR = 'status_report_hour';
 

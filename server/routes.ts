@@ -2208,6 +2208,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Always-copy address.
+  app.post("/api/admin/notifications/always-copy", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const email = String(req.body?.email ?? '').trim();
+      if (email && !email.includes('@')) {
+        return res.status(400).json({ message: 'Enter a valid email address, or clear the field to turn this off.' });
+      }
+      const user = (req as any).user;
+      await db.insert(appSettings)
+        .values({ key: SETTING_ALWAYS_COPY_EMAIL, value: email, updatedBy: user?.email || null, updatedAt: new Date() })
+        .onConflictDoUpdate({ target: appSettings.key, set: { value: email, updatedBy: user?.email || null, updatedAt: new Date() } });
+      res.json({ email });
+    } catch (error) {
+      console.error('[notifications/always-copy] failed:', error);
+      res.status(500).json({ message: 'Failed to update setting' });
+    }
+  });
+
   // Status report cadence.
   app.post("/api/admin/notifications/cadence", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
@@ -2259,6 +2277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         muted,
         reportDays: cadenceMap.get(SETTING_REPORT_DAYS) ?? '1,3,5',
         reportHour: parseInt(cadenceMap.get(SETTING_REPORT_HOUR) ?? '8'),
+        alwaysCopyEmail: cadenceMap.get(SETTING_ALWAYS_COPY_EMAIL) ?? '',
         willSend: blockers.length === 0,
         blockers,
         firesOn: ['Step 1 (RFP entry) completion', 'Publish'],

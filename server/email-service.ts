@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { db } from "./db";
-import { appSettings, SETTING_NOTIFICATIONS_MUTED } from "@shared/schema";
+import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_ALWAYS_COPY_EMAIL } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 async function getCredentials() {
@@ -89,6 +89,25 @@ export async function getUncachableSendGridClient() {
  * test. Fails OPEN — if the settings read errors, mail still sends, because
  * silently swallowing every notification is the worse failure.
  */
+/**
+ * Address to BCC on every automated send, or null.
+ *
+ * BCC rather than a second `to`: the recipients should not see an internal
+ * oversight copy on the address line, and a reply-all should not reach it.
+ */
+export async function getAlwaysCopyAddress(): Promise<string | null> {
+  try {
+    const [row] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, SETTING_ALWAYS_COPY_EMAIL));
+    const v = (row?.value || '').trim();
+    return v.includes('@') ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function areNotificationsMuted(): Promise<boolean> {
   try {
     const [row] = await db
@@ -343,12 +362,13 @@ export function generateWorkflowCompletionHtml(
             <tr>
               <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${isNewProject ? 'Sent By' : 'Published By'}</td>
               <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${
-                /* No escapeHtml in this module — the surrounding template does
-                   not escape any other field either, so adding a call to a
-                   function that does not exist here would have thrown. */
+                /* Publish email shows ONLY who published. It used to fall back to
+                   rfp.sentBy - the broker who sent the RFP in - which is what put
+                   "Andrew Hurwitz" on a publish notification he had nothing to do
+                   with. A blank is honest; a confidently wrong name is not. */
                 isNewProject
                   ? rfp.sentBy
-                  : ((rfp as any).publishedBy || rfp.sentBy)
+                  : ((rfp as any).publishedBy || '—')
               }</td>
             </tr>
             ${rfp.estimatedValue ? `
@@ -605,8 +625,10 @@ export async function sendStatusReportEmail(): Promise<{ success: boolean; error
       day: 'numeric' 
     });
 
-    const msg = {
+    const alwaysCopyStatus = await getAlwaysCopyAddress();
+    const msg: any = {
       to: recipientEmails,
+      ...(alwaysCopyStatus && !recipientEmails.includes(alwaysCopyStatus) ? { bcc: alwaysCopyStatus } : {}),
       from: fromEmail,
       subject: `RFP Status Report - ${today}`,
       html: html
@@ -693,8 +715,10 @@ export async function sendWorkflowCompletionEmail(
     }
 
     const subjectPrefix = completionType === 'rfp-entry' ? '📋 New RFP' : '✅ Project Published';
+    const alwaysCopy = await getAlwaysCopyAddress();
     const msg: any = {
       to: recipientEmails,
+      ...(alwaysCopy && !recipientEmails.includes(alwaysCopy) ? { bcc: alwaysCopy } : {}),
       from: fromEmail,
       subject: `${subjectPrefix}: ${rfp.projectName} (${rfp.rfpNumber})`,
       html: html

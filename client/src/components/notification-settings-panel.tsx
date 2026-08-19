@@ -3,6 +3,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -22,12 +24,14 @@ interface NotificationStatus {
   allOwners: { id: number; name: string; email: string; receivesNotifications: boolean }[];
   reportDays: string;
   reportHour: number;
+  alwaysCopyEmail: string;
   ownerContactsWithoutEmail: number;
   deactivatedOwnersExcluded: number;
 }
 
 export function NotificationSettingsPanel() {
   const { toast } = useToast();
+  const [copyEmail, setCopyEmail] = useState("");
 
   const { data, refetch } = useQuery<NotificationStatus>({
     queryKey: ["/api/admin/notification-status"],
@@ -55,6 +59,27 @@ export function NotificationSettingsPanel() {
     onSuccess: () => refetch(),
     onError: (e: Error) =>
       toast({ title: "Could not update recipient", description: e.message, variant: "destructive" }),
+  });
+
+  // Seed the input once data arrives, without clobbering what is being typed.
+  useEffect(() => {
+    if (data?.alwaysCopyEmail !== undefined) setCopyEmail(data.alwaysCopyEmail);
+  }, [data?.alwaysCopyEmail]);
+
+  const alwaysCopyMutation = useMutation({
+    mutationFn: async (email: string) =>
+      apiRequest("/api/admin/notifications/always-copy", "POST", { email }),
+    onSuccess: (_r, email) => {
+      refetch();
+      toast({
+        title: email ? "Copy address saved" : "Copy address cleared",
+        description: email
+          ? `${email} will be BCC'd on every automated email.`
+          : "No one is being copied on automated emails.",
+      });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
 
   const cadenceMutation = useMutation({
@@ -163,6 +188,32 @@ export function NotificationSettingsPanel() {
               <span>{data.deactivatedOwnersExcluded}</span>
             </div>
           )}
+        </div>
+
+        <div className="rounded-lg border p-3 space-y-2">
+          <Label className="text-xs font-medium">Always copy</Label>
+          <p className="text-[11px] text-muted-foreground">
+            BCC'd on every automated email — new RFP, publish, and the status report — whether or
+            not this address is an Owner. Leave blank to turn off.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="email"
+              className="h-8 flex-1 text-xs"
+              placeholder="you@kurvindustrial.com"
+              value={copyEmail}
+              onChange={(e) => setCopyEmail(e.target.value)}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              disabled={alwaysCopyMutation.isPending || copyEmail === (data?.alwaysCopyEmail ?? "")}
+              onClick={() => alwaysCopyMutation.mutate(copyEmail.trim())}
+            >
+              Save
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-lg border p-3 space-y-2">

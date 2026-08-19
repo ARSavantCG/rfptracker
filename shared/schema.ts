@@ -195,7 +195,8 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
 }).extend({
   property: z.string(), // Explicitly define as string to match database text type
   propertyId: z.number().optional(), // Explicitly define as number
-  requestTypes: z.array(z.string()).min(1, "At least one request type is required"),
+  requestTypes: z.array(z.string()),
+  trackType: z.enum(["development", "rom_pilot", "allowance"]).default("development"),
   status: z.enum(["received", "in-progress", "completed", "on-hold", "archived", "cancelled"]).default("received"),
   workflowPhase: z.enum(["rfp-entry", "rfp-validation", "invitation-to-bid", "bid-collection", "evaluation", "publish"]).default("rfp-entry"),
   // Multi-building support validation
@@ -230,6 +231,21 @@ export const insertRfpRequestSchema = createInsertSchema(rfpRequests).omit({
     squareFootage: z.string(),
     notes: z.string().optional()
   })).optional().default([]),
+}).superRefine((data, ctx) => {
+  // Request types are required for DEVELOPMENT requests only.
+  //
+  // This was an unconditional .min(1). The client was made conditional for the
+  // allowance route, but the SERVER still rejected the payload - a 400 with an
+  // error against a field the user could not see, because it is hidden on that
+  // route. Client-side relaxation alone is never enough; the server is the one
+  // that refuses.
+  if (data.trackType !== "allowance" && (!data.requestTypes || data.requestTypes.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["requestTypes"],
+      message: "At least one request type is required",
+    });
+  }
 });
 
 export const updateRfpRequestSchema = insertRfpRequestSchema.partial().extend({

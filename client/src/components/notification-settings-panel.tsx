@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { BellOff, Bell, AlertTriangle, Mail } from "lucide-react";
+import { BellOff, Bell, AlertTriangle, Mail, CalendarClock } from "lucide-react";
+import { REPORT_CADENCE_PRESETS } from "@shared/schema";
 
 interface NotificationStatus {
   muted: boolean;
@@ -19,6 +20,8 @@ interface NotificationStatus {
   sendgridKeyConfigured: boolean;
   ownerContacts: { id: number; name: string; email: string }[];
   allOwners: { id: number; name: string; email: string; receivesNotifications: boolean }[];
+  reportDays: string;
+  reportHour: number;
   ownerContactsWithoutEmail: number;
   deactivatedOwnersExcluded: number;
 }
@@ -52,6 +55,17 @@ export function NotificationSettingsPanel() {
     onSuccess: () => refetch(),
     onError: (e: Error) =>
       toast({ title: "Could not update recipient", description: e.message, variant: "destructive" }),
+  });
+
+  const cadenceMutation = useMutation({
+    mutationFn: async ({ days, hour }: { days: string; hour: number }) =>
+      apiRequest("/api/admin/notifications/cadence", "POST", { days, hour }),
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Report schedule updated" });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Could not update schedule", description: e.message, variant: "destructive" }),
   });
 
   const setAll = (receives: boolean) => {
@@ -149,6 +163,45 @@ export function NotificationSettingsPanel() {
               <span>{data.deactivatedOwnersExcluded}</span>
             </div>
           )}
+        </div>
+
+        <div className="rounded-lg border p-3 space-y-2">
+          <Label className="text-xs font-medium flex items-center gap-1.5">
+            <CalendarClock className="h-3.5 w-3.5" />
+            Status report schedule
+          </Label>
+          <p className="text-[11px] text-muted-foreground">
+            A digest of active RFPs, sent to the same recipients. Separate from the per-RFP alerts,
+            which always fire immediately.
+          </p>
+          <div className="flex gap-2">
+            <select
+              className="flex h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs"
+              value={data?.reportDays ?? "1,3,5"}
+              onChange={(e) =>
+                cadenceMutation.mutate({ days: e.target.value, hour: data?.reportHour ?? 8 })}
+            >
+              {REPORT_CADENCE_PRESETS.map((p) => (
+                <option key={p.label} value={p.days}>{p.label}</option>
+              ))}
+            </select>
+            <select
+              className="flex h-8 w-28 rounded-md border border-input bg-background px-2 text-xs"
+              value={String(data?.reportHour ?? 8)}
+              disabled={(data?.reportDays ?? "1,3,5") === ""}
+              onChange={(e) =>
+                cadenceMutation.mutate({ days: data?.reportDays ?? "1,3,5", hour: parseInt(e.target.value) })}
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>
+                  {h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Server time. Takes effect immediately — no republish.
+          </p>
         </div>
 
         {data?.allOwners && data.allOwners.length > 0 && (

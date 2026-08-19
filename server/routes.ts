@@ -76,7 +76,7 @@ import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
-import { appSettings, SETTING_NOTIFICATIONS_MUTED } from "@shared/schema";
+import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR } from "@shared/schema";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -2202,6 +2202,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Status report cadence.
+  app.post("/api/admin/notifications/cadence", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const days = String(req.body?.days ?? '');
+      const hour = String(Math.min(23, Math.max(0, parseInt(req.body?.hour) || 8)));
+      const user = (req as any).user;
+      for (const [key, value] of [[SETTING_REPORT_DAYS, days], [SETTING_REPORT_HOUR, hour]] as [string, string][]) {
+        await db.insert(appSettings)
+          .values({ key, value, updatedBy: user?.email || null, updatedAt: new Date() })
+          .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedBy: user?.email || null, updatedAt: new Date() } });
+      }
+      console.log(`[email] status report cadence set to days=[${days}] hour=${hour} by ${user?.email || 'unknown'}`);
+      res.json({ days, hour: parseInt(hour) });
+    } catch (error) {
+      console.error('[notifications/cadence] failed:', error);
+      res.status(500).json({ message: 'Failed to update cadence' });
+    }
+  });
+
   app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
       // Same source and same filter the sender uses, so the diagnostic cannot
@@ -2217,6 +2236,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
 
       const muted = await areNotificationsMuted();
+      const cadenceRows = await db.select({ key: appSettings.key, value: appSettings.value })
+        .from(appSettings)
+        .where(inArray(appSettings.key, [SETTING_REPORT_DAYS, SETTING_REPORT_HOUR]));
+      const cadenceMap = new Map(cadenceRows.map((r) => [r.key, r.value]));
       const blockers: string[] = [];
       if (muted) blockers.push('Notifications are MUTED. Nothing will be sent until this is turned off.');
       if (!hasKey) blockers.push('SENDGRID_API_KEY is not set — no email can be sent.');
@@ -2228,6 +2251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         muted,
+        reportDays: cadenceMap.get(SETTING_REPORT_DAYS) ?? '1,3,5',
+        reportHour: parseInt(cadenceMap.get(SETTING_REPORT_HOUR) ?? '8'),
         willSend: blockers.length === 0,
         blockers,
         firesOn: ['Step 1 (RFP entry) completion', 'Publish'],

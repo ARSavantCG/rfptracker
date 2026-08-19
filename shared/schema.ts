@@ -357,6 +357,22 @@ export type AppSetting = typeof appSettings.$inferSelect;
  */
 export const SETTING_NOTIFICATIONS_MUTED = 'notifications_muted';
 
+/**
+ * Status report cadence. Stored so it changes without a republish.
+ *   days: comma-separated day numbers, 0=Sun ... 6=Sat. Empty string = off.
+ *   hour: 0-23, server local time.
+ */
+export const SETTING_REPORT_DAYS = 'status_report_days';
+export const SETTING_REPORT_HOUR = 'status_report_hour';
+
+export const REPORT_CADENCE_PRESETS: { label: string; days: string }[] = [
+  { label: 'Off',                    days: '' },
+  { label: 'Weekly (Monday)',        days: '1' },
+  { label: 'Twice weekly (Mon, Thu)', days: '1,4' },
+  { label: 'Mon / Wed / Fri',        days: '1,3,5' },
+  { label: 'Every weekday',          days: '1,2,3,4,5' },
+];
+
 // Contacts table for architects and contractors
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),

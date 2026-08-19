@@ -83,6 +83,8 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'rfp_requests', column: 'published_by', type: 'text' },
   // Route: development | rom_pilot | allowance (2026-08-19).
   { table: 'rfp_requests', column: 'track_type', type: "text DEFAULT 'development'" },
+  // Custom assemblies on the evaluation budget (2026-08-19).
+  { table: 'evaluation_budgets', column: 'custom_assemblies', type: "json DEFAULT '[]'::json" },
   // Team can attach to an executed lease rather than an RFP (2026-08-10).
   { table: 'project_team_members', column: 'lease_id', type: 'integer REFERENCES executed_leases(id) ON DELETE CASCADE' },
   // Tenant performs its own construction: no landlord design team required.

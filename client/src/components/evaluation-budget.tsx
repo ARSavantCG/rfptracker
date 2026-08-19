@@ -4647,6 +4647,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         notes: budgetData.notes,
         lineItemRollups: budgetData.lineItemRollups,
         assemblies: budgetData.assemblies,
+        // customAssemblies WAS NOT BEING SAVED.
+        //
+        // Both save payloads sent `assemblies` (a legacy shape) and omitted
+        // customAssemblies entirely. The assembly HEAD is an ordinary line item
+        // so it persisted, but the record describing the assembly - its name,
+        // category and membership - was discarded on every save.
+        //
+        // Result: after a save or reload the head row was still there, its
+        // children were still tagged with its assemblyId and therefore still
+        // struck through, and the Assembly Group dropdown had nothing to list.
+        // The assembly could not be rejoined because, as far as the app was
+        // concerned, it no longer existed.
+        customAssemblies: budgetData.customAssemblies,
         metadata: { 
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,
@@ -4732,6 +4745,19 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         notes: budgetData.notes,
         lineItemRollups: budgetData.lineItemRollups,
         assemblies: budgetData.assemblies,
+        // customAssemblies WAS NOT BEING SAVED.
+        //
+        // Both save payloads sent `assemblies` (a legacy shape) and omitted
+        // customAssemblies entirely. The assembly HEAD is an ordinary line item
+        // so it persisted, but the record describing the assembly - its name,
+        // category and membership - was discarded on every save.
+        //
+        // Result: after a save or reload the head row was still there, its
+        // children were still tagged with its assemblyId and therefore still
+        // struck through, and the Assembly Group dropdown had nothing to list.
+        // The assembly could not be rejoined because, as far as the app was
+        // concerned, it no longer existed.
+        customAssemblies: budgetData.customAssemblies,
         metadata: { 
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,

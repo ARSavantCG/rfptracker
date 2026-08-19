@@ -1244,6 +1244,26 @@ export const evaluationBudgets = pgTable("evaluation_budgets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lineItemRollups: json("line_item_rollups").$type<Record<string, 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements' | 'tiAndDesign'>>().default({}),
   assemblies: json("assemblies").$type<Record<string, { total: number; components: string[] }>>().default({}),
+  /**
+   * Custom assemblies: name, category and membership per assembly.
+   *
+   * There was no column for this, so the client's customAssemblies array was
+   * dropped on every save while the load path read it back as []. The assembly
+   * HEAD survived (it is an ordinary line item) and its children stayed tagged
+   * with its id, so they remained struck through with no assembly to rejoin.
+   *
+   * `assemblies` above is a different, older shape and is left untouched.
+   */
+  customAssemblies: json("custom_assemblies").$type<Array<{
+    id: string;
+    name: string;
+    category: string;
+    items: string[];
+    primaryItemId?: string;
+    headQuantity?: number;
+    headUnit?: string;
+    collapsed?: boolean;
+  }>>().default([]),
   metadata: json("metadata").$type<{ oversizedDoors?: number; regularDoors?: number; [key: string]: any }>().default({}),
 });
 

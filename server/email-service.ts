@@ -335,8 +335,15 @@ export function generateWorkflowCompletionHtml(
               <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${formatDate(rfp.internalDueDate)}</td>
             </tr>
             <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Sent By</td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${rfp.sentBy}</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${isNewProject ? 'Sent By' : 'Published By'}</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${
+                /* No escapeHtml in this module — the surrounding template does
+                   not escape any other field either, so adding a call to a
+                   function that does not exist here would have thrown. */
+                isNewProject
+                  ? rfp.sentBy
+                  : ((rfp as any).publishedBy || rfp.sentBy)
+              }</td>
             </tr>
             ${rfp.estimatedValue ? `
             <tr>

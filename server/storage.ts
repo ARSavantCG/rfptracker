@@ -863,7 +863,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Workflow phase management
-  async advanceWorkflowPhase(rfpId: number, newPhase: string): Promise<RfpRequest | undefined> {
+  async advanceWorkflowPhase(rfpId: number, newPhase: string, publishedBy?: string): Promise<RfpRequest | undefined> {
     // Determine the appropriate status based on the workflow phase
     let newStatus = "in-progress"; // Default status for most phases
     
@@ -893,7 +893,9 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         workflowPhase: newPhase, 
         status: newStatus,
-        ...(shouldStampPublished ? { publishedDate: new Date() } : {}),
+        ...(shouldStampPublished
+          ? { publishedDate: new Date(), ...(publishedBy ? { publishedBy } : {}) }
+          : {}),
         updatedAt: new Date() 
       })
       .where(eq(rfpRequests.id, rfpId))

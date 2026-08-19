@@ -1263,7 +1263,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "New phase is required" });
       }
 
-      const updatedRequest = await storage.advanceWorkflowPhase(id, newPhase);
+      // Who is publishing, from the session - not rfp.sentBy, which is the
+      // broker who sent the RFP in.
+      const actor = (req as any).user;
+      const actorName = actor?.name || actor?.username || actor?.email || undefined;
+      const updatedRequest = await storage.advanceWorkflowPhase(id, newPhase, actorName);
       
       if (!updatedRequest) {
         return res.status(404).json({ message: "RFP request not found" });
@@ -2528,7 +2532,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const updated = await storage.advanceWorkflowPhase(id, phase);
+      const actor2 = (req as any).user;
+      const updated = await storage.advanceWorkflowPhase(
+        id, phase, actor2?.name || actor2?.username || actor2?.email || undefined
+      );
       if (!updated) {
         return res.status(404).json({ message: "RFP request not found" });
       }

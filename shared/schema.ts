@@ -115,6 +115,10 @@ export const rfpRequests = pgTable("rfp_requests", {
   // Completion tracking
   completedDate: timestamp("completed_date"),
   publishedDate: timestamp("published_date"),
+  // WHO published, stamped alongside publishedDate. Distinct from sentBy, which
+  // is the broker who sent the RFP IN - correct data, but wrong on a "Project
+  // Published" email, where the reader expects the person who published it.
+  publishedBy: text("published_by"),
 
   // Lease status
   isLeased: boolean("is_leased").notNull().default(false),

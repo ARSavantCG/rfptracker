@@ -441,7 +441,60 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   };
 
   const createAssembly = () => {
-    if (!newAssemblyName.trim() || selectedItems.size === 0 || !newAssemblyCategory || !primaryItemId) return;
+    if (!newAssemblyName.trim() || !newAssemblyCategory) return;
+
+    // HEAD-FIRST PATH: no items selected, so create an empty assembly head and
+    // let components be added underneath afterwards.
+    //
+    // Everything below this point derives from primaryItem - quantity, unit,
+    // total - so it cannot run without children. Rather than thread empty cases
+    // through that logic, an empty assembly takes its own short path and the
+    // existing behaviour is untouched when items ARE selected.
+    if (selectedItems.size === 0) {
+      // The head is an ORDINARY line item. There is no isAssemblyHead flag - a
+      // head is identified by children carrying its id in assemblyId, which is
+      // how the existing path works too. My first draft invented isAssemblyHead
+      // and customAssemblyId; neither exists, and both would have been dropped
+      // silently.
+      const headId = `assembly_${Date.now()}`;
+      const assemblyId = headId;
+      const headItem: EvaluationLineItem = {
+        id: headId,
+        description: newAssemblyName.trim(),
+        quantity: 1,
+        unit: 'LS',
+        unitPrice: '0.00',
+        totalPrice: '0.00',
+        tenantShare: 100,
+        isRolledUp: false,
+        assemblyId: undefined,
+      };
+
+      setBudgetData(prev => ({
+        ...prev,
+        [newAssemblyCategory]: [...(prev as any)[newAssemblyCategory], headItem],
+        customAssemblies: [
+          ...prev.customAssemblies,
+          {
+            id: assemblyId,
+            name: newAssemblyName.trim(),
+            category: newAssemblyCategory as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements',
+            items: [],
+            collapsed: false,
+          },
+        ],
+      }));
+
+      setNewAssemblyName("");
+      setShowAssemblyCreator(false);
+      toast({
+        title: `"${newAssemblyName.trim()}" created`,
+        description: 'Now add line items and use "Add to assembly" to roll them into this head.',
+      });
+      return;
+    }
+
+    if (!primaryItemId) return;
 
     const selectedItemsArray = Array.from(selectedItems);
     const categoryItems = budgetData[newAssemblyCategory];
@@ -6589,7 +6642,11 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             </Button>
             <Button
               onClick={createAssembly}
-              disabled={!newAssemblyName.trim() || selectedItems.size === 0}
+              /* Name only. selectedItems.size === 0 was still gating HERE after
+                 the toolbar button and createAssembly() were ungated - so the
+                 dialog opened, accepted a name, and then refused to save. A
+                 head-first assembly starts empty by definition. */
+              disabled={!newAssemblyName.trim()}
             >
               Create Assembly
             </Button>

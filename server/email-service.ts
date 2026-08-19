@@ -108,6 +108,36 @@ export async function getOwnerContacts(): Promise<Contact[]> {
   return owners.filter((c) => c.isActive !== false && (c as any).receivesNotifications !== false);
 }
 
+/**
+ * Resolve rfp.property (the property ID stored as TEXT) to a readable name.
+ *
+ * The emails printed the raw value, so the Property column read "3" instead of
+ * "Kurv Commerce Center (West) - Bldg. B". Matched in JS on String(id) because
+ * rfp_requests.property is text while properties.id is serial - Postgres rejects
+ * that comparison in SQL, which is what 500'd the Project Team report.
+ */
+async function buildPropertyNameMap(): Promise<Map<string, string>> {
+  try {
+    const props = await storage.getAllProperties();
+    return new Map(
+      props.map((p: any) => [
+        String(p.id),
+        p.building ? `${p.propertyName} - Bldg. ${p.building}` : p.propertyName,
+      ])
+    );
+  } catch (error) {
+    console.warn('[email] could not load properties for name lookup:', (error as Error).message);
+    return new Map();
+  }
+}
+
+/** Falls back to the raw value, so an unmatched id still shows something. */
+function propertyLabel(rfp: RfpRequest, names: Map<string, string>): string {
+  const raw = String((rfp as any).property ?? '').trim();
+  if (!raw) return 'N/A';
+  return names.get(raw) || raw;
+}
+
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return 'N/A';
   const d = new Date(date);
@@ -153,7 +183,7 @@ function getPhaseColor(phase: string): string {
   return colors[phase] || '#6b7280';
 }
 
-export function generateStatusReportHtml(rfps: RfpRequest[]): string {
+export function generateStatusReportHtml(rfps: RfpRequest[], propertyNames: Map<string, string> = new Map()): string {
   const incompleteRfps = rfps.filter(rfp => rfp.workflowPhase !== 'publish');
   
   const byPhase = incompleteRfps.reduce((acc, rfp) => {
@@ -193,7 +223,7 @@ export function generateStatusReportHtml(rfps: RfpRequest[]): string {
                 <td style="padding: 10px; font-weight: 600;">${rfp.rfpNumber}</td>
                 <td style="padding: 10px;">${rfp.projectName}</td>
                 <td style="padding: 10px;">${rfp.tenantName}</td>
-                <td style="padding: 10px;">${rfp.property}</td>
+                <td style="padding: 10px;">${propertyLabel(rfp, propertyNames)}</td>
                 <td style="padding: 10px;">${formatDate(rfp.internalDueDate)}</td>
                 <td style="padding: 10px;">
                   <span style="background-color: ${getStatusColor(rfp.status)}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
@@ -251,7 +281,8 @@ export function generateStatusReportHtml(rfps: RfpRequest[]): string {
 
 export function generateWorkflowCompletionHtml(
   rfp: RfpRequest, 
-  completionType: 'rfp-entry' | 'publish'
+  completionType: 'rfp-entry' | 'publish',
+  propertyNames: Map<string, string> = new Map()
 ): string {
   const isNewProject = completionType === 'rfp-entry';
   const title = isNewProject ? 'New RFP Initiated' : 'Project Published';
@@ -297,7 +328,7 @@ export function generateWorkflowCompletionHtml(
             </tr>
             <tr>
               <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Property</td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${rfp.property}</td>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${propertyLabel(rfp, propertyNames)}</td>
             </tr>
             <tr>
               <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Internal Due Date</td>
@@ -390,7 +421,7 @@ function generateRfpSummaryHtml(rfp: RfpRequest): string {
         <div class="field"><span class="label">RFP Number:</span><span class="value">${rfp.rfpNumber}</span></div>
         <div class="field"><span class="label">Project Name:</span><span class="value">${rfp.projectName}</span></div>
         <div class="field"><span class="label">Tenant Name:</span><span class="value">${rfp.tenantName}</span></div>
-        <div class="field"><span class="label">Property:</span><span class="value">${rfp.property}</span></div>
+        <div class="field"><span class="label">Property:</span><span class="value">${propertyLabel(rfp, propertyNames)}</span></div>
         <div class="field"><span class="label">Request Types:</span><span class="value">${requestTypesDisplay}</span></div>
         <div class="field"><span class="label">Confidential:</span><span class="value">${rfp.confidential ? 'Yes' : 'No'}</span></div>
       </div>
@@ -543,7 +574,8 @@ export async function sendStatusReportEmail(): Promise<{ success: boolean; error
     }
 
     const rfps = await storage.getAllRfpRequests();
-    const html = generateStatusReportHtml(rfps);
+    const propertyNames = await buildPropertyNameMap();
+    const html = generateStatusReportHtml(rfps, propertyNames);
     
     const recipientEmails = owners
       .filter(owner => owner.email)
@@ -580,7 +612,8 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
     const rfps = await storage.getAllRfpRequests();
-    const html = generateStatusReportHtml(rfps);
+    const propertyNames = await buildPropertyNameMap();
+    const html = generateStatusReportHtml(rfps, propertyNames);
     
     const msg = {
       to: testEmail,
@@ -632,7 +665,8 @@ export async function sendWorkflowCompletionEmail(
       return { success: true };
     }
 
-    const html = generateWorkflowCompletionHtml(rfp, completionType);
+    const propertyNames = await buildPropertyNameMap();
+    const html = generateWorkflowCompletionHtml(rfp, completionType, propertyNames);
     const attachments = await getAttachmentsForRfp(rfp, completionType);
     
     const recipientEmails = owners

@@ -5799,13 +5799,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {budgetData.customAssemblies.map((assembly) => {
               const head = getAssemblyHead(assembly);
               const items = getAssemblyItems(assembly.id);
               return (
-                <div key={assembly.id} className="border rounded-lg overflow-hidden">
-                  <div className="bg-slate-50 px-3 py-2">
+                /* Each assembly is its own bordered block with a SOLID header
+                   bar. With one assembly a light strip reads fine; with several,
+                   nothing marked where one ended and the next began. The name is
+                   now the strongest element on the row, in white on the brand
+                   colour, so the eye can find the boundaries when scanning. */
+                <div key={assembly.id} className="border-2 rounded-lg overflow-hidden">
+                  <div className="bg-[#003282] text-white px-3 py-2">
                     <div className="flex items-start justify-between gap-2">
                       <button
                         type="button"
@@ -5816,16 +5821,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         {assembly.collapsed
                           ? <ChevronRight className="h-4 w-4 shrink-0" />
                           : <ChevronDown className="h-4 w-4 shrink-0" />}
-                        <span className="font-medium text-sm">{assembly.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          ({head.componentCount})
+                        <span className="font-semibold text-base">{assembly.name}</span>
+                        <span className="text-xs opacity-80 shrink-0">
+                          {head.componentCount} item{head.componentCount === 1 ? '' : 's'}
                         </span>
                       </button>
                       <div className="text-right shrink-0">
                         <div className="font-semibold tabular-nums">
                           ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">sum of components</div>
+                        <div className="text-[10px] opacity-80">sum of components</div>
                       </div>
                     </div>
 
@@ -5833,7 +5838,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         always the children's sum. These only change how that same
                         total is expressed: 1 LS @ $150,000/LS, or 100 LF @
                         $1,500/LF. */}
-                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-50 border-b text-xs">
                       <span className="text-muted-foreground">Show as</span>
                       <Input
                         type="number"
@@ -5859,9 +5865,18 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                         </strong>/{head.unit}
                       </span>
                     </div>
-                  </div>
                   {!assembly.collapsed && (
                   <table className="w-full text-xs">
+                    {/* Labelled columns. The component rows previously had none,
+                        so the two right-hand numbers were unidentified - fine
+                        with one assembly on screen, not when scanning several. */}
+                    <thead>
+                      <tr className="text-muted-foreground border-b bg-white">
+                        <th className="text-left font-normal px-3 py-1">Component</th>
+                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Qty</th>
+                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Cost</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {items.map((item) => (
                         <tr key={item.id} className="border-t">

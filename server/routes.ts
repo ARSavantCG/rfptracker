@@ -71,6 +71,7 @@ import { registerProjectTeamRoutes } from './project-team-routes';
 import { registerTurnaroundReport } from './turnaround-report';
 import { registerOpenItemsReport } from './open-items-report';
 import { registerPublishedFilesRoutes } from './published-files-routes';
+import { registerFileStepMigration } from './file-step-migration';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
@@ -103,6 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTurnaroundReport(app);
   registerOpenItemsReport(app);
   registerPublishedFilesRoutes(app);
+  registerFileStepMigration(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);

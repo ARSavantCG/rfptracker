@@ -645,8 +645,14 @@ export async function sendStatusReportEmail(): Promise<{ success: boolean; error
 }
 
 export async function sendTestStatusReportEmail(testEmail: string): Promise<{ success: boolean; error?: string }> {
+  let outerFromEmail = process.env.SENDGRID_FROM_EMAIL || 'notifications@rfptracker.app';
   try {
+    // Declared OUTSIDE the try below via the outer scope binding, because the
+    // catch block interpolates fromEmail into its "sender not verified" message.
+    // If getUncachableSendGridClient itself throws, fromEmail would be undefined
+    // there and the error handler would fail while reporting the error.
     const { client, fromEmail } = await getUncachableSendGridClient();
+    outerFromEmail = fromEmail;
     const rfps = await storage.getAllRfpRequests();
     const propertyNames = await buildPropertyNameMap();
     const html = generateStatusReportHtml(rfps, propertyNames);
@@ -674,7 +680,7 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
           return { success: false, error: 'SendGrid email quota exceeded. Please upgrade your SendGrid plan or wait for your monthly limit to reset.' };
         }
         if (firstError.message?.includes('Sender not verified')) {
-          return { success: false, error: `Sender address ${fromEmail} is not verified in SendGrid. Verify the rfptracker.app domain under Settings → Sender Authentication → Domain Authentication.` };
+          return { success: false, error: `Sender address ${outerFromEmail} is not verified in SendGrid. Verify the rfptracker.app domain under Settings → Sender Authentication → Domain Authentication.` };
         }
         return { success: false, error: `SendGrid error: ${firstError.message}` };
       }

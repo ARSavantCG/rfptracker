@@ -70,6 +70,7 @@ import { registerFileIntegrityAudit } from './file-integrity-audit';
 import { registerProjectTeamRoutes } from './project-team-routes';
 import { registerTurnaroundReport } from './turnaround-report';
 import { registerOpenItemsReport } from './open-items-report';
+import { registerPublishedFilesRoutes } from './published-files-routes';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
@@ -101,6 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerProjectTeamRoutes(app);
   registerTurnaroundReport(app);
   registerOpenItemsReport(app);
+  registerPublishedFilesRoutes(app);
   registerActualsRoutes(app);
   registerPropertyRoutes(app);
   registerCostsInPlaceReportRoutes(app);
@@ -6603,7 +6605,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download a project file
-  app.get("/api/project-files/:fileId/download", requireAuth, async (req, res) => {
+  // requireAuthFlexible, not requireAuth: the Published Files page is opened via
+  // a ?token= URL, and its download links have to work from that same context.
+  // With Bearer-only, every link on that page 401s and the page is useless.
+  app.get("/api/project-files/:fileId/download", requireAuthFlexible, async (req, res) => {
     try {
       const fileId = parseInt(req.params.fileId);
       if (isNaN(fileId)) {

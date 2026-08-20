@@ -991,6 +991,29 @@ export function RfpDetailModal({ isOpen, onClose, rfp, onRfpUpdated }: RfpDetail
                         Update Status
                       </button>
                     )}
+                    {/* Published files only. "Download All Files" pulls every
+                        step including intake and working files; this is the
+                        shareable subset - evaluation and publish. Opens with a
+                        token so the page and its download links work from a
+                        pasted URL. */}
+                    <button
+                      onClick={() => {
+                        // AUTH_TOKEN_KEY, not a literal. The key is 'auth-token'
+                        // with a HYPHEN; I first wrote 'auth_token' with an
+                        // underscore, which reads as correct and silently yields
+                        // null - the page would have 401'd with no clue why.
+                        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+                        window.open(
+                          `/api/rfp-requests/${rfp.id}/published-files?token=${encodeURIComponent(token || '')}`,
+                          '_blank'
+                        );
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 flex items-center gap-2"
+                      title="Internal link listing only the published deliverable files"
+                    >
+                      <i className="fas fa-link"></i>
+                      Published Files
+                    </button>
                     <button
                       onClick={() => handleDownloadAllFiles(rfp.id, rfp.rfpNumber)}
                       className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 flex items-center gap-2"

@@ -40,11 +40,32 @@ function fmtSize(bytes: number | null | undefined): string {
  * sent. Both are included, labelled by origin so the reader can tell them apart.
  * Steps 1-4 are intake and working files and are excluded.
  */
-const PUBLISHED_STEPS = [5, 6];
+/**
+ * Which steps hold the deliverable.
+ *
+ * THE FILE NUMBERING IS NOT THE WORKFLOW NUMBERING. The workflow has six phases,
+ * but WORKFLOW_STEP_MAPPING in file-organization.ts folds bid-collection into
+ * Step_3 and therefore numbers the FOLDERS 1-5:
+ *
+ *   rfp-entry          -> Step_1_Entry
+ *   rfp-validation     -> Step_2_Validation
+ *   invitation-to-bid  -> Step_3_Bidding
+ *   bid-collection     -> Step_3_Bidding      (same folder)
+ *   evaluation         -> Step_4_Evaluation
+ *   publish            -> Step_5_Publishing
+ *
+ * I first filtered on [5, 6] reading "step 6 = publish" from the workflow, which
+ * captured publishing and MISSED evaluation entirely - and step 6 does not exist
+ * on a file at all. The page rendered "no files" on an RFP that had them.
+ *
+ * The uploader also posts a literal '4' for evaluation, which the upload route
+ * normalises, so both spellings land on the same number.
+ */
+const PUBLISHED_STEPS = [4, 5];
 
 const STEP_LABELS: Record<number, string> = {
-  5: 'Evaluation',
-  6: 'Published',
+  4: 'Evaluation',
+  5: 'Published',
 };
 
 export function registerPublishedFilesRoutes(app: Express) {
@@ -155,8 +176,16 @@ export function registerPublishedFilesRoutes(app: Express) {
 
   ${files.length === 0
     ? `<div class="empty">
-         No files are attached to the evaluation or publish steps of this RFP. Intake and
-         working files from earlier steps are deliberately not listed here.
+         <strong>No deliverable files on this RFP.</strong>
+         Intake and working files from earlier steps are deliberately not listed here.
+         ${allFiles.length > 0
+           ? `<div style="margin-top:8px;font-size:11px;color:#92400e;">
+                This RFP has ${allFiles.length} file${allFiles.length === 1 ? '' : 's'} in total, at
+                step${new Set(allFiles.map(f => stepNumber(f.workflowStep))).size === 1 ? '' : 's'}
+                ${Array.from(new Set(allFiles.map(f => stepNumber(f.workflowStep)))).sort().join(', ')}.
+                Only steps ${PUBLISHED_STEPS.join(' and ')} are shown here.
+              </div>`
+           : ''}
        </div>`
     : `<table>
          <thead><tr><th>File</th><th>From</th><th>Size</th><th>Uploaded</th></tr></thead>

@@ -19,7 +19,25 @@ import { backupToObjectStorage } from './storage-backup';
 const checkPermission = (permission: string) => {
   return async (req: any, res: any, next: any) => {
     const user = req.user;
-    if (!user || !user.permissions?.includes(permission)) {
+    if (!user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // ROLE ADMIN BYPASSES PERMISSION CHECKS.
+    //
+    // requireAdmin (below) already grants access on role === 'admin' OR the
+    // admin.access permission. checkPermission had no such bypass, so an admin
+    // whose permissions array does not literally contain the key was refused -
+    // 403 on 47 endpoints including the notification panel and its save.
+    //
+    // The symptom was misleading: the panel rendered its undefined-data
+    // fallbacks as "SendGrid key missing / 0 recipients", so a permissions
+    // refusal looked like four separate configuration failures.
+    if (user.role === 'admin') {
+      return next();
+    }
+
+    if (!user.permissions?.includes(permission)) {
       return res.status(403).json({ message: `Access denied. ${permission} permission required.` });
     }
     next();

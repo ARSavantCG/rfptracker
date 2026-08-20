@@ -1270,3 +1270,120 @@ new classification there rather than a 26th inline copy.
 
 **Practical mitigation meanwhile:** name CM rows "Construction Management", not
 "CM Fee", and both paths agree.
+
+---
+
+## 2026-08-19/20 — Notifications, allowance route, assemblies, and a lot of silent failures
+
+### THE LESSON: a green build proves almost nothing
+
+Five distinct failures today were invisible to `npm run build`, because **esbuild bundles
+without evaluating**:
+
+| Failure | Why the build passed |
+|---|---|
+| `superRefine` broke `.partial()` — **server would not start** | Module-load error; bundling never evaluates |
+| `SETTING_ALWAYS_COPY_EMAIL` never imported — **500 on two endpoints** | Identifier resolved at call time |
+| `Trash2`, `ChevronRight`, `ListChecks` used without import | Vite does not fail on undefined JSX identifiers |
+| `getFileBuffer` not imported in `routes.ts` | Same |
+| TDZ in `area-utils` — derived map declared before its source | Only surfaces on import |
+
+**Standing habit now:** after every build, `node -e "import('./dist/index.js')"` with a
+placeholder `DATABASE_URL`. Catches the whole class in two seconds. It should have been
+running from the first one.
+
+**Second habit:** every find-and-replace asserts its match count. The
+`SETTING_ALWAYS_COPY_EMAIL` bug was a replace that matched nothing, exited zero, and got
+believed. Most edits today asserted; that one didn't, and that was the entire difference.
+
+### SINGLE SOURCE OF TRUTH — workflow steps
+
+`WORKFLOW_PHASES` in `shared/schema.ts` is now the only definition. Six steps:
+
+```
+1 RFP Entry          Step_1_Entry
+2 RFP Validation     Step_2_Validation
+3 Invitation to Bid  Step_3_Invitation
+4 Bid Collection     Step_4_Bid_Collection
+5 Evaluation         Step_5_Evaluation
+6 Publish            Step_6_Publish
+```
+
+There were **five independent definitions** and they had drifted:
+
+- `email-service` `phaseOrder` had only **five** phases — `publish` missing — so **any RFP
+  in the publish phase was silently dropped from the status report**. That was the
+  five-step remnant Adolfo remembered.
+- `file-organization` folded steps 3 and 4 into one folder, numbering evaluation as 4 and
+  publish as 5. Every filter written against the workflow numbering picked the wrong files.
+
+**Files uploaded before 2026-08-20 still carry old step numbers.** A preview-first migration
+exists at `POST /api/admin/migrate-file-steps` (needs `?apply=1` to write; takes a `cutoff`
+timestamp, because old-4 and new-4 are indistinguishable by value alone). **Step 3 cannot be
+split** — the old scheme wrote both invitation and bid responses as 3.
+
+### Email notifications — live
+
+Domain authenticated (`rfptracker.app`, SendGrid, 3 CNAMEs + existing DMARC), sending as
+`notifications@rfptracker.app`. Alerts fire on Step 1 completion and on publish; status
+report runs on a configurable cadence.
+
+Admin → Email Testing controls: **mute switch**, **per-owner checkboxes**, **always-copy BCC**,
+**report cadence**, and a read-only display of the render timezone.
+
+- Recipients derive live from contacts typed `owner`, filtered by `isActive` and
+  `receivesNotifications`.
+- `publishedDate` and `publishedBy` now stamp automatically on first publish.
+- **Timezone**: server runs UTC; 35 render sites pinned to `America/New_York` via
+  `BUSINESS_TIMEZONE`. A 10pm publish was reporting as 2am the next day — wrong *date*, which
+  matters on due-date reports.
+
+### Allowance route
+
+Third route alongside development and ROM Pilot. **Own number sequence** — `ALW-2026-0XX` —
+so allowance volume cannot inflate the RFP count, which is the figure used to describe the
+team's workload. `RFP-` covers development *and* ROM Pilot, since both draw on the pricing
+database.
+
+Allowance deals: pick bays, save, closed immediately. No pricing steps, no notification.
+Request Type and Development Notes hidden. `trackType` on `rfp_requests`.
+
+### Assemblies — reworked
+
+**Children are the source of truth.** The head is a rollup: its total is the sum of its
+children, derived not stored. The head's own quantity/unit only change how that total is
+*expressed* — $150,000 as 1 LS or as 100 LF at $1,500/LF.
+
+- Create the head first, then add components (was: build components, then declare)
+- Assembly Group is a **dropdown on each line item row**, not static text
+- Expand/collapse, not strike-through — components stay real, editable lines
+- **`customAssemblies` was never being saved.** No column, neither save payload sent it, and
+  the load path read it anyway. Heads persisted (ordinary line items), assemblies didn't.
+
+### Other fixes worth knowing
+
+- **Due today counted as overdue** — dashboard compared against `now` (a timestamp) rather
+  than start of day, so an RFP went overdue at 00:00 on its own due date
+- **Unit price displayed higher than entered** — the table recomputes `total ÷ quantity`,
+  which diverges from the entered rate whenever a **minimum cost** applies
+- **Legal Compliance Monitor** reported every property at risk — read
+  `property.warehouseTotal`, a field that exists nowhere; then reported shortfalls equal to
+  each property's mechanical room, because it compared bays against a *rentable* requirement
+- **Six undeletable number fields** — `parseInt(v) || 0` refills a cleared box instantly.
+  New `parseCountInput` / `parseAreaInput` in `shared/area-utils`
+- **`checkPermission` had no admin bypass** while `requireAdmin` did — 403 on 47 endpoints
+- **Five download routes checked local disk only.** Replit wipes disk on publish, so
+  anything older than the last deploy 404'd. All now use `getFileBuffer` (disk → Object
+  Storage), the same resolution the file audit uses
+
+### Still open
+
+1. **AI bid extraction — never run against a live model call.** Every layer built. Biggest
+   untested item in the app.
+2. **Sending RFPs to contractors/architects from step 3** — a real feature, not yet started.
+   Wants a fresh session; it touches outbound comms to people outside the company.
+3. **File step migration** — preview endpoint exists, not yet run.
+4. **15 files permanently lost** (pre-Object-Storage uploads). CSV export in the audit panel.
+5. **Fee classification divergence** — `evaluation-budget` classifies inline in ~25 places
+   and misses the `cm fee` shorthand the shared `classifyFeeRow` accepts. Mitigation: name
+   CM rows "Construction Management".

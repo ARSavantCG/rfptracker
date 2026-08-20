@@ -78,7 +78,7 @@ import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
-import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
+import { streamFromObjectStorage, listObjectStorageFiles, getFileBuffer } from './storage-backup';
 import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, SETTING_ALWAYS_COPY_EMAIL, RFP_TERMINAL_STATUSES } from "@shared/schema";
 import { BUSINESS_TIMEZONE, formatBusinessDateTime } from "@shared/date-utils";
 
@@ -6620,17 +6620,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
 
-      const fullPath = resolveSecureFilePath(file.filePath, process.cwd());
-      if (!fullPath || !fs.existsSync(fullPath)) {
-        return res.status(404).json({ message: "File not found on disk" });
+      // getFileBuffer, NOT res.sendFile on a disk path.
+      //
+      // This checked local disk only and 404'd when the file was not there. But
+      // Replit wipes local disk on every publish, so any file uploaded before
+      // the last deploy exists ONLY in Object Storage - and this route could not
+      // see it. Same defect fixed for property attachments in 060a9ec6; the
+      // project-file route was missed.
+      //
+      // getFileBuffer resolves disk first, then Object Storage, which is exactly
+      // how the file integrity audit decides whether a file is retrievable.
+      const buffer = await getFileBuffer(file.filePath, file.originalName);
+      if (!buffer) {
+        return res.status(404).json({
+          message: `"${file.originalName}" is no longer stored. The record exists but the file itself was lost before Object Storage backup was in place. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
       }
 
       res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
       res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
-      res.sendFile(fullPath);
+      res.send(buffer);
     } catch (error) {
       console.error("Error downloading project file:", error);
-      res.status(500).json({ message: "Failed to download file" });
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ message: `Failed to download file: ${message}` });
     }
   });
 

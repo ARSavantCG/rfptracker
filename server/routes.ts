@@ -1847,11 +1847,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file path" });
       }
 
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "File not found on disk" });
+      // getFileBuffer: disk first, then Object Storage. Replit wipes local disk
+      // on every publish, so a disk-only check 404s on every file uploaded
+      // before the last deploy. Same resolution the file integrity audit uses,
+      // so the audit and the download can never disagree.
+      const buf1 = await getFileBuffer(file.path || file.name, file.name);
+      if (!buf1) {
+        return res.status(404).json({
+          message: `"${file.name}" is no longer stored. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
       }
-
-      res.download(filePath, file.name);
+      res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+      res.send(buf1);
     } catch (error) {
       res.status(500).json({ message: "Failed to download file" });
     }
@@ -4317,12 +4325,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attachment not found" });
       }
 
-      const filePath = path.join(uploadsDir, attachment.filename);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "File not found on disk" });
+      // getFileBuffer: disk first, then Object Storage. Replit wipes local disk
+      // on every publish, so a disk-only check 404s on every file uploaded
+      // before the last deploy. Same resolution the file integrity audit uses,
+      // so the audit and the download can never disagree.
+      const buf2 = await getFileBuffer(attachment.filename, attachment.originalName);
+      if (!buf2) {
+        return res.status(404).json({
+          message: `"${attachment.originalName}" is no longer stored. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
       }
-
-      res.download(filePath, attachment.originalName);
+      res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalName}"`);
+      res.send(buf2);
     } catch (error) {
       console.error('Evaluation budget attachment download error:', error);
       res.status(500).json({ message: "Failed to download attachment" });
@@ -5251,13 +5266,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filePath = path.join(uploadsDir, file.path || file.name);
       console.log(`🔍 DOWNLOAD DEBUG - Checking file path: ${filePath}`);
       
-      if (!fs.existsSync(filePath)) {
-        console.log(`❌ DOWNLOAD DEBUG - File not found on disk: ${filePath}`);
-        return res.status(404).json({ message: "File not found on disk" });
+      // getFileBuffer: disk first, then Object Storage. Replit wipes local disk
+      // on every publish, so a disk-only check 404s on every file uploaded
+      // before the last deploy. Same resolution the file integrity audit uses,
+      // so the audit and the download can never disagree.
+      const buf3 = await getFileBuffer(file.path || file.name, file.name);
+      if (!buf3) {
+        return res.status(404).json({
+          message: `"${file.name}" is no longer stored. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
       }
-
-      console.log(`✅ DOWNLOAD DEBUG - File exists, starting download`);
-      res.download(filePath, file.name);
+      res.setHeader('Content-Disposition', `attachment; filename="${file.name}"`);
+      res.send(buf3);
     } catch (error) {
       console.error("Download error:", error);
       res.status(500).json({ message: "Failed to download file" });

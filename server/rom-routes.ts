@@ -21,6 +21,7 @@ import { classifyFeeRow, resolveFeeBase, feePassIndex, FEE_PASSES, type FeeBaseT
 import { categorizeRomLineItem } from './rom-pricing-utils';
 import { eq, desc, and } from 'drizzle-orm';
 import { selectVariant, resolveDefaultQuantity, hasMatchTags, matchTagsSatisfied } from './spec-tag-resolver';
+import { getFileBuffer } from './storage-backup';
 
 
 // Helper function to generate ROM report HTML
@@ -924,25 +925,19 @@ export function registerRomRoutes(app: Express): void {
       
       console.log("Looking for file at:", fullPath);
       
-      // Check if file exists
-      if (!fs.existsSync(fullPath)) {
-        console.log("File not found at:", fullPath);
-        return res.status(404).json({ message: "File not found" });
+      // getFileBuffer: disk first, then Object Storage. A disk-only check 404s
+      // on every file uploaded before the last publish, since Replit wipes local
+      // disk on deploy.
+      const buf = await getFileBuffer(filePath as string, decodeURIComponent(fileName));
+      if (!buf) {
+        return res.status(404).json({
+          message: `"${decodeURIComponent(fileName)}" is no longer stored. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
       }
-
-      // Set appropriate headers for download
       res.setHeader('Content-Disposition', `attachment; filename="${decodeURIComponent(fileName)}"`);
       res.setHeader('Content-Type', 'application/octet-stream');
-      
-      // Stream the file
-      const fileStream = fs.createReadStream(fullPath);
-      fileStream.on('error', (error) => {
-        console.error("File stream error:", error);
-        if (!res.headersSent) {
-          res.status(500).json({ message: "Error streaming file" });
-        }
-      });
-      fileStream.pipe(res);
+      res.send(buf);
       
     } catch (error) {
       console.error("ROM scope items file download error:", error);
@@ -991,19 +986,18 @@ export function registerRomRoutes(app: Express): void {
       
       const contentType = mimeTypes[ext] || 'application/octet-stream';
       
-      // Set headers for inline viewing (not download)
+      // getFileBuffer: disk first, then Object Storage — see the download route
+      // above. Inline viewing had the same disk-only assumption.
+      const viewBuf = await getFileBuffer(filePath as string, decodeURIComponent(fileName));
+      if (!viewBuf) {
+        return res.status(404).json({
+          message: `"${decodeURIComponent(fileName)}" is no longer stored. See Admin > Storage > File Integrity Audit.`,
+          reason: 'bytes_missing',
+        });
+      }
       res.setHeader('Content-Disposition', `inline; filename="${decodeURIComponent(fileName)}"`);
       res.setHeader('Content-Type', contentType);
-      
-      // Stream the file
-      const fileStream = fs.createReadStream(fullPath);
-      fileStream.on('error', (error) => {
-        console.error("File stream error:", error);
-        if (!res.headersSent) {
-          res.status(500).json({ message: "Error streaming file" });
-        }
-      });
-      fileStream.pipe(res);
+      res.send(viewBuf);
       
     } catch (error) {
       console.error("ROM scope items file view error:", error);

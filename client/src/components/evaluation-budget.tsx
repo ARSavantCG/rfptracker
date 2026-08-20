@@ -4232,8 +4232,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       return hasAssemblies;
     })() ? `
     <div class="rollup-summary-section">
-        <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Assembly Summary</h3>
-        <p class="rollup-summary-description">The following line items are grouped into assemblies:</p>
+        <h3 style="color: #333; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">Assembly Breakdown</h3>
+        <p class="rollup-summary-description">What each assembly line is made up of:</p>
         <div class="rollup-summary-content">
             ${(() => {
               // Group items by their assembly
@@ -5783,129 +5783,6 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         calculateCategoryTotal(budgetData.designSoftCosts)
       )}
 
-      {/* Assembly Breakdown — INTERNAL.
-          Assemblies roll up to a single line everywhere a client or broker sees
-          them (the Excel export already filters children out). This is the view
-          for the conversation Adolfo described: a $375,000 electrical line gets
-          questioned, and he needs to show what is inside it without exposing the
-          breakdown on the document itself. */}
-      {budgetData.customAssemblies.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center justify-between">
-              <span>Assembly Breakdown</span>
-              <span className="text-xs font-normal text-muted-foreground">
-                Internal only — not included in exports or client documents
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {budgetData.customAssemblies.map((assembly) => {
-              const head = getAssemblyHead(assembly);
-              const items = getAssemblyItems(assembly.id);
-              return (
-                /* Each assembly is its own bordered block with a SOLID header
-                   bar. With one assembly a light strip reads fine; with several,
-                   nothing marked where one ended and the next began. The name is
-                   now the strongest element on the row, in white on the brand
-                   colour, so the eye can find the boundaries when scanning. */
-                <div key={assembly.id} className="border-2 rounded-lg overflow-hidden">
-                  <div className="bg-[#003282] text-white px-3 py-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleAssemblyCollapsed(assembly.id)}
-                        className="flex items-center gap-1.5 text-left min-w-0"
-                        title={assembly.collapsed ? 'Show components' : 'Hide components'}
-                      >
-                        {assembly.collapsed
-                          ? <ChevronRight className="h-4 w-4 shrink-0" />
-                          : <ChevronDown className="h-4 w-4 shrink-0" />}
-                        <span className="font-semibold text-base">{assembly.name}</span>
-                        <span className="text-xs opacity-80 shrink-0">
-                          {head.componentCount} item{head.componentCount === 1 ? '' : 's'}
-                        </span>
-                      </button>
-                      <div className="text-right shrink-0">
-                        <div className="font-semibold tabular-nums">
-                          ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-[10px] opacity-80">sum of components</div>
-                      </div>
-                    </div>
-
-                    {/* Head quantity and unit. The PRICE is never typed - it is
-                        always the children's sum. These only change how that same
-                        total is expressed: 1 LS @ $150,000/LS, or 100 LF @
-                        $1,500/LF. */}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-50 border-b text-xs">
-                      <span className="text-muted-foreground">Show as</span>
-                      <Input
-                        type="number"
-                        className="h-7 w-24 text-xs"
-                        value={assembly.headQuantity ?? head.quantity}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value.replace(/[^0-9.\-]/g, ''));
-                          updateAssemblyHead(assembly.id, {
-                            headQuantity: Number.isFinite(v) ? v : undefined,
-                          });
-                        }}
-                      />
-                      <Input
-                        className="h-7 w-20 text-xs"
-                        placeholder="LS"
-                        value={assembly.headUnit ?? head.unit}
-                        onChange={(e) =>
-                          updateAssemblyHead(assembly.id, { headUnit: e.target.value || undefined })}
-                      />
-                      <span className="text-muted-foreground">
-                        = <strong className="text-foreground tabular-nums">
-                          ${head.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </strong>/{head.unit}
-                      </span>
-                    </div>
-                  {!assembly.collapsed && (
-                  <table className="w-full text-xs">
-                    {/* Labelled columns. The component rows previously had none,
-                        so the two right-hand numbers were unidentified - fine
-                        with one assembly on screen, not when scanning several. */}
-                    <thead>
-                      <tr className="text-muted-foreground border-b bg-white">
-                        <th className="text-left font-normal px-3 py-1">Component</th>
-                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Qty</th>
-                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item) => (
-                        <tr key={item.id} className="border-t">
-                          <td className="px-3 py-1.5">{item.description}</td>
-                          <td className="px-3 py-1.5 text-right whitespace-nowrap text-muted-foreground">
-                            {item.quantity?.toLocaleString()} {item.unit}
-                          </td>
-                          <td className="px-3 py-1.5 text-right tabular-nums whitespace-nowrap">
-                            ${(parseFloat(item.totalPrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                      {items.length === 0 && (
-                        <tr className="border-t">
-                          <td colSpan={3} className="px-3 py-2 text-muted-foreground italic">
-                            No components yet. Tick line items in the category above and use
-                            “Add to assembly”, and their costs will roll up into this head.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                  )}
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Existing Improvements */}
       <Card>
@@ -6088,78 +5965,138 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         </Card>
       )}
 
-      {/* Assembly Summary */}
-      {(() => {
-        const allItems = [
-          ...budgetData.tenantImprovements,
-          ...budgetData.designSoftCosts,
-          ...budgetData.existingImprovements
-        ];
-        const assembledItems = allItems.filter(item => item.assemblyId);
-        
-        if (assembledItems.length === 0) return null;
-        
-        const assembliesByName: Record<string, any[]> = {};
-        
-        assembledItems.forEach(item => {
-          const assemblyId = item.assemblyId;
-          if (assemblyId) {
-            if (!assembliesByName[assemblyId]) {
-              assembliesByName[assemblyId] = [];
-            }
-            assembliesByName[assemblyId].push(item);
-          }
-        });
-        
-        const getAssemblyDisplayName = (assemblyId: string): string => {
-          if (!assemblyId) return 'Unknown Assembly';
-          
-          // Look for the assembly line item in all categories - the assembly line item has the assembly name as its description
-          const allCategoryItems = [
-            ...budgetData.tenantImprovements,
-            ...budgetData.designSoftCosts,
-            ...budgetData.existingImprovements
-          ];
-          
-          // Find the assembly line item (the one with id matching assemblyId)
-          const assemblyLineItem = allCategoryItems.find(item => item.id === assemblyId);
-          if (assemblyLineItem && assemblyLineItem.description) {
-            return assemblyLineItem.description;
-          }
-          
-          // Fallback: create a readable name from timestamp
-          const timestamp = assemblyId.replace('assembly_', '');
-          return `Custom Assembly ${timestamp.slice(-4)}`;
-        };
-        
-        return (
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader>
-              <CardTitle className="text-lg text-green-800">Assembly Summary</CardTitle>
-              <p className="text-sm text-green-600">
-                The following items are grouped into custom assemblies:
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Object.entries(assembliesByName).map(([assemblyId, items]) => {
-                  const assemblyDisplayName = getAssemblyDisplayName(assemblyId);
-                  return items.map((item: any) => (
-                    <div key={item.id} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700">
-                        <strong>{item.description}</strong> ({formatCurrency(parseFloat(item.totalPrice) || 0)})
-                      </span>
-                      <span className="text-green-600">
-                        → Grouped in {assemblyDisplayName}
+      {/* Assembly Breakdown.
+          Replaced the Assembly Summary that sat here, which rendered the same
+          assembled line items in a second, differently-shaped view. Two
+          renderings of one dataset drift, and this is the section where a
+          $375k line gets explained - so it has to be the one that is right.
+
+          The Summary listed assembled items flat, grouped only by tenant
+          share. The Breakdown keeps everything it had and adds what it
+          lacked: the assembly name as a header, the head total, the unit
+          expression, and per-assembly collapse.
+
+          Assemblies roll up to a single line everywhere a client or broker
+          sees them (the Excel export already filters children out). This is
+          the internal view: a $375,000 electrical line gets questioned and
+          needs explaining without exposing the breakdown on the document. */}
+      {budgetData.customAssemblies.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>Assembly Breakdown</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                Internal only — not included in exports or client documents
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {budgetData.customAssemblies.map((assembly) => {
+              const head = getAssemblyHead(assembly);
+              const items = getAssemblyItems(assembly.id);
+              return (
+                /* Each assembly is its own bordered block with a SOLID header
+                   bar. With one assembly a light strip reads fine; with several,
+                   nothing marked where one ended and the next began. The name is
+                   now the strongest element on the row, in white on the brand
+                   colour, so the eye can find the boundaries when scanning. */
+                <div key={assembly.id} className="border-2 rounded-lg overflow-hidden">
+                  <div className="bg-[#003282] text-white px-3 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleAssemblyCollapsed(assembly.id)}
+                        className="flex items-center gap-1.5 text-left min-w-0"
+                        title={assembly.collapsed ? 'Show components' : 'Hide components'}
+                      >
+                        {assembly.collapsed
+                          ? <ChevronRight className="h-4 w-4 shrink-0" />
+                          : <ChevronDown className="h-4 w-4 shrink-0" />}
+                        <span className="font-semibold text-base">{assembly.name}</span>
+                        <span className="text-xs opacity-80 shrink-0">
+                          {head.componentCount} item{head.componentCount === 1 ? '' : 's'}
+                        </span>
+                      </button>
+                      <div className="text-right shrink-0">
+                        <div className="font-semibold tabular-nums">
+                          ${head.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[10px] opacity-80">sum of components</div>
+                      </div>
+                    </div>
+
+                    {/* Head quantity and unit. The PRICE is never typed - it is
+                        always the children's sum. These only change how that same
+                        total is expressed: 1 LS @ $150,000/LS, or 100 LF @
+                        $1,500/LF. */}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-50 border-b text-xs">
+                      <span className="text-muted-foreground">Show as</span>
+                      <Input
+                        type="number"
+                        className="h-7 w-24 text-xs"
+                        value={assembly.headQuantity ?? head.quantity}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value.replace(/[^0-9.\-]/g, ''));
+                          updateAssemblyHead(assembly.id, {
+                            headQuantity: Number.isFinite(v) ? v : undefined,
+                          });
+                        }}
+                      />
+                      <Input
+                        className="h-7 w-20 text-xs"
+                        placeholder="LS"
+                        value={assembly.headUnit ?? head.unit}
+                        onChange={(e) =>
+                          updateAssemblyHead(assembly.id, { headUnit: e.target.value || undefined })}
+                      />
+                      <span className="text-muted-foreground">
+                        = <strong className="text-foreground tabular-nums">
+                          ${head.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>/{head.unit}
                       </span>
                     </div>
-                  ));
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
+                  {!assembly.collapsed && (
+                  <table className="w-full text-xs">
+                    {/* Labelled columns. The component rows previously had none,
+                        so the two right-hand numbers were unidentified - fine
+                        with one assembly on screen, not when scanning several. */}
+                    <thead>
+                      <tr className="text-muted-foreground border-b bg-white">
+                        <th className="text-left font-normal px-3 py-1">Component</th>
+                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Qty</th>
+                        <th className="text-right font-normal px-3 py-1 whitespace-nowrap">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.id} className="border-t">
+                          <td className="px-3 py-1.5">{item.description}</td>
+                          <td className="px-3 py-1.5 text-right whitespace-nowrap text-muted-foreground">
+                            {item.quantity?.toLocaleString()} {item.unit}
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums whitespace-nowrap">
+                            ${(parseFloat(item.totalPrice) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                      {items.length === 0 && (
+                        <tr className="border-t">
+                          <td colSpan={3} className="px-3 py-2 text-muted-foreground italic">
+                            No components yet. Tick line items in the category above and use
+                            “Add to assembly”, and their costs will roll up into this head.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tenant Share Summary */}
       {(() => {

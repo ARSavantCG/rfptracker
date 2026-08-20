@@ -2174,6 +2174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Read/write the notification mute. Admin-only.
   app.post("/api/admin/notifications/mute", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettings();
       await ensureAppSettingsTable();
       const muted = req.body?.muted === true;
       const user = (req as any).user;
@@ -2237,9 +2238,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     `);
   }
 
+  /**
+   * Create app_settings on demand if it is missing.
+   *
+   * The table is created by startup-migrations, but if that DDL failed the
+   * failure is silent until a read 500s - which is where this has been stuck.
+   * These handlers now ensure the table before touching it, so a missing table
+   * repairs itself on first use instead of requiring a boot log to diagnose.
+   *
+   * CREATE TABLE IF NOT EXISTS is idempotent, so this costs one cheap statement
+   * and can never damage an existing table.
+   */
+  const ensureAppSettings = async () => {
+    await db.execute(drizzleSql`CREATE TABLE IF NOT EXISTS app_settings (
+      "key" text PRIMARY KEY,
+      "value" text NOT NULL,
+      updated_at timestamp NOT NULL DEFAULT now(),
+      updated_by text
+    )`);
+  };
+
   // Always-copy address.
   app.post("/api/admin/notifications/always-copy", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettings();
       await ensureAppSettingsTable();
       const email = String(req.body?.email ?? '').trim();
       if (email && !email.includes('@')) {
@@ -2259,6 +2281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Status report cadence.
   app.post("/api/admin/notifications/cadence", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettings();
       await ensureAppSettingsTable();
       const days = String(req.body?.days ?? '');
       const hour = String(Math.min(23, Math.max(0, parseInt(req.body?.hour) || 8)));
@@ -2278,6 +2301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/notification-status", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettings();
       // Same source and same filter the sender uses, so the diagnostic cannot
       // report a recipient list the alert would not actually use.
       const allOwners = await storage.getContactsByType('owner');

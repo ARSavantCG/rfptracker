@@ -1,24 +1,49 @@
 import fs from "fs";
 import path from "path";
 
+/**
+ * Folder per workflow step, numbered TO MATCH THE WORKFLOW.
+ *
+ *   1 RFP Entry · 2 RFP Validation · 3 Invitation to Bid
+ *   4 Bid Collection · 5 Evaluation · 6 Publish
+ *
+ * This previously folded invitation-to-bid AND bid-collection into a single
+ * "Step_3_Bidding" folder, which shifted everything after it down by one:
+ * evaluation filed as Step_4 and publish as Step_5. So a file's step number did
+ * not match the step the user was on, and bid responses were stored alongside
+ * the invitation that requested them.
+ *
+ * Steps 3 and 4 are now separate, and the numbers agree with the UI.
+ */
 export const WORKFLOW_STEP_MAPPING: Record<string, string> = {
   "rfp-entry": "Step_1_Entry",
   "rfp-validation": "Step_2_Validation",
-  "invitation-to-bid": "Step_3_Bidding",
-  "bid-collection": "Step_3_Bidding",
-  "evaluation": "Step_4_Evaluation",
-  "publish": "Step_5_Publishing",
+  "invitation-to-bid": "Step_3_Invitation",
+  "bid-collection": "Step_4_Bid_Collection",
+  "evaluation": "Step_5_Evaluation",
+  "publish": "Step_6_Publish",
+};
+
+/**
+ * Folder names used before the renumbering, kept so existing files still
+ * resolve. Nothing writes these any more; they exist so a file uploaded under
+ * the old scheme is not orphaned.
+ */
+export const LEGACY_STEP_FOLDERS: Record<string, string> = {
+  "Step_3_Bidding": "Step_3_Invitation",
+  "Step_4_Evaluation": "Step_5_Evaluation",
+  "Step_5_Publishing": "Step_6_Publish",
 };
 
 export const WORKFLOW_STEP_FOLDERS = [
   "Step_1_Entry",
   "Step_2_Validation",
-  "Step_3_Bidding",
-  "Step_4_Evaluation",
-  "Step_4_Evaluation/Architect_Docs",
-  "Step_4_Evaluation/GC_Docs",
-  "Step_5_Publishing",
-  "Step_6_Final",
+  "Step_3_Invitation",
+  "Step_4_Bid_Collection",
+  "Step_5_Evaluation",
+  "Step_5_Evaluation/Architect_Docs",
+  "Step_5_Evaluation/GC_Docs",
+  "Step_6_Publish",
 ];
 
 export function sanitizeProjectName(projectName: string, rfpNumber?: string): string {

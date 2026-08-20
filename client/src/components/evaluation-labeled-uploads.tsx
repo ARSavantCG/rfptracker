@@ -55,7 +55,11 @@ export function EvaluationLabeledUploads({ rfpId, projectFolder }: EvaluationLab
 
       const formData = new FormData();
       formData.append('rfpId', rfpId.toString());
-      formData.append('workflowStep', '4');
+      // Evaluation is step 5. This posted '4' because the folder mapping used
+      // to number evaluation as Step_4 (it folded invitation-to-bid and
+      // bid-collection into one folder). The mapping now matches the workflow,
+      // so evaluation uploads must say 5.
+      formData.append('workflowStep', '5');
       formData.append('subfolder', subfolder);
       files.forEach((file) => {
         formData.append('files', file);

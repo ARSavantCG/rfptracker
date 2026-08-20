@@ -43,29 +43,18 @@ function fmtSize(bytes: number | null | undefined): string {
 /**
  * Which steps hold the deliverable.
  *
- * THE FILE NUMBERING IS NOT THE WORKFLOW NUMBERING. The workflow has six phases,
- * but WORKFLOW_STEP_MAPPING in file-organization.ts folds bid-collection into
- * Step_3 and therefore numbers the FOLDERS 1-5:
+ *   1 RFP Entry · 2 RFP Validation · 3 Invitation to Bid
+ *   4 Bid Collection · 5 Evaluation · 6 Publish
  *
- *   rfp-entry          -> Step_1_Entry
- *   rfp-validation     -> Step_2_Validation
- *   invitation-to-bid  -> Step_3_Bidding
- *   bid-collection     -> Step_3_Bidding      (same folder)
- *   evaluation         -> Step_4_Evaluation
- *   publish            -> Step_5_Publishing
- *
- * I first filtered on [5, 6] reading "step 6 = publish" from the workflow, which
- * captured publishing and MISSED evaluation entirely - and step 6 does not exist
- * on a file at all. The page rendered "no files" on an RFP that had them.
- *
- * The uploader also posts a literal '4' for evaluation, which the upload route
- * normalises, so both spellings land on the same number.
+ * Evaluation and Publish. The publish step is rarely the whole deliverable - the
+ * priced evaluation is usually part of what gets sent - so both are listed and
+ * labelled by origin. Steps 1-4 are intake, invitation and raw bid responses.
  */
-const PUBLISHED_STEPS = [4, 5];
+const PUBLISHED_STEPS = [5, 6];
 
 const STEP_LABELS: Record<number, string> = {
-  4: 'Evaluation',
-  5: 'Published',
+  5: 'Evaluation',
+  6: 'Published',
 };
 
 export function registerPublishedFilesRoutes(app: Express) {

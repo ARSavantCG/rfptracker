@@ -51,7 +51,7 @@ function categoryLabel(category: string): string {
 }
 
 function fmtCurrency(dollars: number): string {
-  return '$' + dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return '$' + dollars.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtSf(sf: number): string {
@@ -276,7 +276,7 @@ function renderReportHtml(title: string, subtitle: string, sections: string[], p
   <div class="header">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
       <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">${escapeHtml(title)}</div>
     <div class="report-subtitle">${escapeHtml(subtitle)}</div>

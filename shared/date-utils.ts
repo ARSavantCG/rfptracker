@@ -173,3 +173,40 @@ export function getTimezoneInfo(): {
     ]
   };
 }
+/**
+ * The business timezone for everything this app displays.
+ *
+ * The server runs in UTC. Any `toLocaleString()` without an explicit zone
+ * therefore renders UTC, so an RFP published at 10pm Eastern was reported as
+ * 2am the next day - a four hour error that also moved it to the wrong DATE,
+ * which matters on a due-date report.
+ *
+ * Fixed to Eastern rather than read from the server: the portfolio is in South
+ * Florida, and a timestamp on a document should mean the same thing to everyone
+ * reading it regardless of where the process happens to run. Handles DST
+ * automatically via the IANA zone.
+ */
+export const BUSINESS_TIMEZONE = 'America/New_York';
+
+/** Date and time, e.g. "Aug 19, 2026, 10:04 PM". */
+export function formatBusinessDateTime(d: Date | string | null | undefined): string {
+  if (!d) return '—';
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleString('en-US', {
+    timeZone: BUSINESS_TIMEZONE,
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
+}
+
+/** Date only, e.g. "August 19, 2026". */
+export function formatBusinessDate(d: Date | string | null | undefined): string {
+  if (!d) return '—';
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-US', {
+    timeZone: BUSINESS_TIMEZONE,
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}

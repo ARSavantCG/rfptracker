@@ -160,7 +160,7 @@ function propertyLabel(rfp: RfpRequest, names: Map<string, string>): string {
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return 'N/A';
   const d = new Date(date);
-  return d.toLocaleDateString('en-US', { 
+  return d.toLocaleDateString('en-US', { timeZone: 'America/New_York', 
     year: 'numeric', 
     month: 'short', 
     day: 'numeric' 
@@ -257,7 +257,7 @@ export function generateStatusReportHtml(rfps: RfpRequest[], propertyNames: Map<
     `;
   }
 
-  const today = new Date().toLocaleDateString('en-US', { 
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
@@ -313,7 +313,7 @@ export function generateWorkflowCompletionHtml(
   const headerColor = BRAND_COLOR_PRIMARY;
   const icon = isNewProject ? '📋' : '✅';
   
-  const today = new Date().toLocaleDateString('en-US', { 
+  const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
@@ -413,6 +413,7 @@ export function generateWorkflowCompletionHtml(
 function generateRfpSummaryHtml(rfp: RfpRequest): string {
   const rfpData = rfp as any;
   const today = new Date().toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -619,7 +620,7 @@ export async function sendStatusReportEmail(): Promise<{ success: boolean; error
       return { success: true };
     }
 
-    const today = new Date().toLocaleDateString('en-US', { 
+    const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', 
       weekday: 'long', 
       month: 'short', 
       day: 'numeric' 
@@ -653,7 +654,7 @@ export async function sendTestStatusReportEmail(testEmail: string): Promise<{ su
     const msg = {
       to: testEmail,
       from: fromEmail,
-      subject: `[TEST] RFP Status Report - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`,
+      subject: `[TEST] RFP Status Report - ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'short', day: 'numeric' })}`,
       html: html
     };
 

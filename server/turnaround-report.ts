@@ -28,7 +28,7 @@ function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return '—';
   const date = d instanceof Date ? d : new Date(d);
   if (isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /** Whole days between two dates, ignoring time of day. */
@@ -218,7 +218,7 @@ export function registerTurnaroundReport(app: Express) {
   <div class="header">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
       <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">RFP Turnaround Report</div>
     <div class="report-subtitle">Internal Due Date vs. Actual Publish Date</div>

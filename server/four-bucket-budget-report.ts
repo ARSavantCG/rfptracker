@@ -137,7 +137,7 @@ export function registerFourBucketBudgetReportRoutes(app: Express): void {
   <div class="header">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
       <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">Budget by Contract Counterparty</div>
   </div>

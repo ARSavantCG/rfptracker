@@ -60,7 +60,7 @@ function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return '';
   const date = d instanceof Date ? d : new Date(d);
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: '2-digit', day: '2-digit', year: 'numeric' });
 }
 
 // Lease term as a single cell. Blank when neither date is recorded — many leases
@@ -267,7 +267,7 @@ export function renderReportHtml(rows: PropertyOccupancyRow[]): string {
   <div class="header">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
       <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">Occupancy Report</div>
     <div class="report-subtitle">Portfolio — Leased vs. Rentable Area</div>

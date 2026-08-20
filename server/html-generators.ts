@@ -207,7 +207,7 @@ export function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItem
               })()}
             </div>
             <div class="info-item">
-              <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -248,7 +248,7 @@ export function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItem
                     }
                   }
                   const numValue = parseFloat(value);
-                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 })()}</td>
                 <td class="currency">${(() => {
                   if (!item.totalPrice) return '';
@@ -267,13 +267,13 @@ export function generateBidCollectionHtml(bidCollection: any, rfp: any, lineItem
                     }
                   }
                   const numValue = parseFloat(value);
-                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  return isNaN(numValue) ? '' : '$' + numValue.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 })()}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
               <td colspan="4" style="text-align: right;"><strong>Total Bid Amount:</strong></td>
-              <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+              <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
             </tr>
           </tbody>
         </table>
@@ -415,12 +415,12 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
             </div>
             ${contractorSummary.length > 0 ? `
             <div class="info-item">
-              <span class="info-label">Lowest Contractor Bid:</span> $${contractorSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+              <span class="info-label">Lowest Contractor Bid:</span> $${contractorSummary[0]?.totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 }) || 'N/A'}
             </div>
             ` : ''}
             ${architectSummary.length > 0 ? `
             <div class="info-item">
-              <span class="info-label">Lowest Architect Bid:</span> $${architectSummary[0]?.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) || 'N/A'}
+              <span class="info-label">Lowest Architect Bid:</span> $${architectSummary[0]?.totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 }) || 'N/A'}
             </div>
             ` : ''}
           </div>
@@ -445,7 +445,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
                 <td><strong>${bid.company}</strong></td>
-                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 })}</strong></td>
                 <td>${(() => {
                   if (!bid.submissionDate) return 'N/A';
                   try {
@@ -490,7 +490,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               <tr class="${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : ''}">
                 <td style="text-align: center; font-weight: 600;">${index + 1}</td>
                 <td><strong>${bid.company}</strong></td>
-                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></td>
+                <td class="currency"><strong>$${bid.totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 })}</strong></td>
                 <td>${(() => {
                   if (!bid.submissionDate) return 'N/A';
                   try {
@@ -526,7 +526,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
           <div class="bid-section">
             <div class="bid-header">
               <h3 style="margin: 0; color: #1f2937;">Contractor Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
-              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 })}</div>
             </div>
 
             <div class="subsection-title">Company Information</div>
@@ -558,7 +558,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               </div>
               <div>
                 <div class="info-item">
-                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -580,13 +580,13 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                     <td>${item.description || ''}</td>
                     <td class="currency">${item.quantity ? parseFloat(item.quantity).toLocaleString('en-US') : ''}</td>
                     <td>${item.unit || ''}</td>
-                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
-                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
                   </tr>
                 `).join('')}
                 <tr class="total-row">
                   <td colspan="4" style="text-align: right;"><strong>Bid Total:</strong></td>
-                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -621,7 +621,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
           <div class="bid-section">
             <div class="bid-header">
               <h3 style="margin: 0; color: #1f2937;">Architect Bid #${index + 1} - ${bid.contractorCompany} (Rank #${rank})</h3>
-              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">Total: $${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2 })}</div>
             </div>
 
             <div class="subsection-title">Company Information</div>
@@ -653,7 +653,7 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
               </div>
               <div>
                 <div class="info-item">
-                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span class="info-label">Total Amount:</span> $${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -675,13 +675,13 @@ export function generateAllBidCollectionsHtml(rfp: any, allBidsData: any[]) {
                     <td>${item.description}</td>
                     <td style="text-align: center;">${item.quantity || ''}</td>
                     <td>${item.unit || ''}</td>
-                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
-                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.unitPrice ? '$' + parseFloat(item.unitPrice).toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                    <td class="currency">${item.totalPrice ? '$' + parseFloat(item.totalPrice).toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
                   </tr>
                 `).join('')}
                 <tr class="total-row">
                   <td colspan="4" style="text-align: right;"><strong>Bid Total:</strong></td>
-                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                  <td class="currency"><strong>$${totalAmount.toLocaleString('en-US', { timeZone: 'America/New_York', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 </tr>
               </tbody>
             </table>

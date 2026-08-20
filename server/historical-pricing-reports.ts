@@ -65,6 +65,7 @@ function formatNumberWithCommas(num: number): string {
 function formatDate(date: string | Date): string {
   const d = new Date(date);
   return d.toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
     year: 'numeric',
     month: 'short',
     day: 'numeric'

@@ -35,7 +35,7 @@ export function NotificationSettingsPanel() {
   const { toast } = useToast();
   const [copyEmail, setCopyEmail] = useState("");
 
-  const { data, refetch } = useQuery<NotificationStatus>({
+  const { data, refetch, isError, error, isLoading } = useQuery<NotificationStatus>({
     queryKey: ["/api/admin/notification-status"],
   });
 
@@ -118,6 +118,23 @@ export function NotificationSettingsPanel() {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* A FAILED REQUEST IS NOT A CONFIGURATION.
+            Every figure below comes from one response. When it fails, `data` is
+            undefined and the fallbacks rendered as though they were answers -
+            "SendGrid key: missing", "Recipients: 0", em dashes for the sender and
+            timezone. Four alarming and entirely false statements from one failed
+            fetch. Say so instead. */}
+        {isError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Could not load notification status.</strong> The figures below are not
+              being reported — this is a failed request, not a configuration problem.
+              {error instanceof Error && <div className="text-xs mt-1 font-mono">{error.message}</div>}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className={`flex items-start gap-3 rounded-lg border p-3 ${data?.muted ? "bg-amber-50 border-amber-300" : ""}`}>
           <Switch
             id="mute-notifications"
@@ -161,6 +178,11 @@ export function NotificationSettingsPanel() {
           </Alert>
         )}
 
+        {!data && !isError && isLoading && (
+          <p className="text-xs text-muted-foreground">Loading status…</p>
+        )}
+
+        {data && (
         <div className="text-xs space-y-1">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Dates rendered in</span>
@@ -197,6 +219,7 @@ export function NotificationSettingsPanel() {
             </div>
           )}
         </div>
+        )}
 
         <div className="rounded-lg border p-3 space-y-2">
           <Label className="text-xs font-medium">Always copy</Label>

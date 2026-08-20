@@ -1387,3 +1387,79 @@ children, derived not stored. The head's own quantity/unit only change how that 
 5. **Fee classification divergence** — `evaluation-budget` classifies inline in ~25 places
    and misses the `cm fee` shorthand the shared `classifyFeeRow` accepts. Mitigation: name
    CM rows "Construction Management".
+
+---
+
+## PROPOSED — Migrating off Replit
+
+Adolfo asked for an alternative after repeated Replit problems: a hung agent, "Bundle"
+failures unrelated to the code, workspace divergence from GitHub requiring hard resets, and
+a mobile app that gets stuck on "starting".
+
+**The app is well positioned for this.** Standard Node/Express + Vite, Postgres over a
+connection string, no framework lock-in. Verified surface:
+
+```
+DATABASE_URL              Neon — moves as-is, just an env var
+ANTHROPIC_API_KEY         portable
+SENDGRID_API_KEY          portable
+SENDGRID_FROM_EMAIL       portable
+ENFORCE_OWNERSHIP         portable
+NODE_ENV / PORT           portable
+
+PRIVATE_OBJECT_DIR        Replit Object Storage        <- real work
+REPLIT_CONNECTORS_HOSTNAME  \
+REPL_IDENTITY                > SendGrid connector fallback  <- delete
+WEB_REPL_RENEWAL            /
+```
+
+### Recommended host: Railway
+
+Deploys from GitHub on push, keeps Neon, custom domain, ~$5–20/month at this usage.
+**Render** is equivalent and slightly more mature operationally. **Fly.io** is cheaper and
+more capable but expects real infrastructure comfort.
+
+### The only two pieces of actual work
+
+**1. Object Storage — the bulk of the job.** `server/storage-backup.ts` is the entire
+surface, five exported functions:
+
+```
+backupToObjectStorage    listObjectStorageFiles    streamFromObjectStorage
+downloadFromObjectStorage    getFileBuffer
+```
+
+Every download route now goes through `getFileBuffer`, so the swap is contained to this one
+module — that consolidation (2026-08-20) is what makes this tractable. Target S3 or
+Cloudflare R2.
+
+**Do not forget to copy the existing files across.** Use `listObjectStorageFiles` to
+enumerate, then verify with the File Integrity Audit *before and after* — it reports exactly
+how many are retrievable, which is the only honest proof the copy worked.
+
+**2. SendGrid connector fallback.** `email-service.ts:34-50` falls back to Replit's
+connector service when `SENDGRID_API_KEY` is absent. Off Replit that path is dead code and
+should be deleted, not left to fail confusingly.
+
+### What changes about the workflow
+
+Railway deploys automatically on push to main. Faster, but it **removes the deliberate
+Sync-then-Republish checkpoint** — worth deciding whether that is wanted, since it has
+repeatedly been the moment problems were caught. Railway supports manual-approval deploys
+if the checkpoint is worth keeping.
+
+**Lost:** the in-browser workspace and the Replit Agent. Given the agent has caused
+workspace divergence and required `git reset --hard origin/main` on multiple occasions,
+this is arguably a gain.
+
+### Sequencing
+
+1. Railway project pointed at the repo, env vars copied, **deploy to a temporary URL**
+2. Swap Object Storage for R2/S3; copy files; run the audit and compare counts
+3. Delete the Replit connector fallback
+4. Exercise it on the temp URL: upload, download, publish, an email, a report
+5. Only then move the `rfptracker.app` DNS
+6. Leave the Replit deploy running until the new one has been live a week
+
+**Half a day of focused work, most of it step 2.** Not to be done at the end of a long
+session — a half-migrated Object Storage means files in two places and neither reliable.

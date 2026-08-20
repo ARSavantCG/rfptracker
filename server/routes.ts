@@ -78,7 +78,7 @@ import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
-import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, RFP_TERMINAL_STATUSES } from "@shared/schema";
+import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, SETTING_ALWAYS_COPY_EMAIL, RFP_TERMINAL_STATUSES } from "@shared/schema";
 import { BUSINESS_TIMEZONE, formatBusinessDateTime } from "@shared/date-utils";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.

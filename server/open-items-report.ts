@@ -11,7 +11,7 @@
  */
 import type { Express } from 'express';
 import { db } from './db';
-import { rfpRequests, properties } from '@shared/schema';
+import { rfpRequests, properties, WORKFLOW_PHASE_LABELS } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
@@ -34,14 +34,9 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((d2.getTime() - d1.getTime()) / 86400000);
 }
 
-const PHASE_LABELS: Record<string, string> = {
-  'rfp-entry': 'Step 1 — Entry',
-  'rfp-validation': 'Step 2 — Validation',
-  'invitation-to-bid': 'Step 3 — Invitation to Bid',
-  'bid-collection': 'Step 4 — Bid Collection',
-  'evaluation': 'Step 5 — Evaluation',
-  'publish': 'Step 6 — Publish',
-};
+// Derived from WORKFLOW_PHASES so the numbers here can never disagree with the
+// numbers on the workflow itself.
+const PHASE_LABELS = WORKFLOW_PHASE_LABELS;
 
 export function registerOpenItemsReport(app: Express) {
   app.get('/api/reports/open-items', requireAuthFlexible, async (req, res) => {

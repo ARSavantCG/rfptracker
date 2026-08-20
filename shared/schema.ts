@@ -338,6 +338,45 @@ export function isTerminalRfpStatus(status: string | null | undefined): boolean 
   return RFP_TERMINAL_STATUSES.includes(String(status ?? '') as any);
 }
 
+/**
+ * THE WORKFLOW. Six steps, defined once.
+ *
+ *   1 RFP Entry · 2 RFP Validation · 3 Invitation to Bid
+ *   4 Bid Collection · 5 Evaluation · 6 Publish
+ *
+ * There were at least five independent definitions of this list across the
+ * codebase, and they had already drifted: email-service's phaseOrder had only
+ * FIVE entries (publish missing), so any RFP in the publish phase was silently
+ * omitted from the status report. The file-organization mapping folded steps 3
+ * and 4 into one folder and numbered everything after it one too low.
+ *
+ * Every list, label, number and folder now derives from this array. Adding or
+ * reordering a step is one edit here.
+ */
+export const WORKFLOW_PHASES = [
+  { key: 'rfp-entry',         step: 1, label: 'RFP Entry',         folder: 'Step_1_Entry' },
+  { key: 'rfp-validation',    step: 2, label: 'RFP Validation',    folder: 'Step_2_Validation' },
+  { key: 'invitation-to-bid', step: 3, label: 'Invitation to Bid', folder: 'Step_3_Invitation' },
+  { key: 'bid-collection',    step: 4, label: 'Bid Collection',    folder: 'Step_4_Bid_Collection' },
+  { key: 'evaluation',        step: 5, label: 'Evaluation',        folder: 'Step_5_Evaluation' },
+  { key: 'publish',           step: 6, label: 'Publish',           folder: 'Step_6_Publish' },
+] as const;
+
+export type WorkflowPhaseKey = typeof WORKFLOW_PHASES[number]['key'];
+
+/** Phase keys in order. Use this instead of writing the list out again. */
+export const WORKFLOW_PHASE_KEYS = WORKFLOW_PHASES.map(p => p.key) as WorkflowPhaseKey[];
+
+/** "Step 5 — Evaluation", for reports and emails. */
+export const WORKFLOW_PHASE_LABELS: Record<string, string> = Object.fromEntries(
+  WORKFLOW_PHASES.map(p => [p.key, `Step ${p.step} — ${p.label}`])
+);
+
+/** Step NUMBER for a phase key, or NaN if unknown. */
+export function workflowStepNumber(key: string | null | undefined): number {
+  return WORKFLOW_PHASES.find(p => p.key === key)?.step ?? NaN;
+}
+
 export const PROJECT_TEAM_ROLES = [
   // CORE — always rendered on the directory report even when unassigned, so the
   // report doubles as a coverage checklist. Every project has a design team.

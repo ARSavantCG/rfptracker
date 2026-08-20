@@ -1,7 +1,7 @@
 import { COMPANY_NAME, BRAND_COLOR_PRIMARY } from './lib/branding';
 import sgMail from '@sendgrid/mail';
 import { storage } from './storage';
-import { RfpRequest, Contact } from '@shared/schema';
+import { RfpRequest, Contact , WORKFLOW_PHASE_KEYS } from '@shared/schema';
 import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
@@ -212,7 +212,11 @@ export function generateStatusReportHtml(rfps: RfpRequest[], propertyNames: Map<
     return acc;
   }, {} as Record<string, RfpRequest[]>);
 
-  const phaseOrder = ['rfp-entry', 'rfp-validation', 'invitation-to-bid', 'bid-collection', 'evaluation'];
+  // WORKFLOW_PHASE_KEYS, not a local list. This was hardcoded with only FIVE
+  // phases - 'publish' was missing - so any RFP in the publish phase was
+  // silently dropped from the status report. It grouped RFPs by phase and then
+  // iterated a list that could not contain them all.
+  const phaseOrder = WORKFLOW_PHASE_KEYS;
   
   let phaseSections = '';
   for (const phase of phaseOrder) {

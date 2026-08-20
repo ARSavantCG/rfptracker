@@ -2174,6 +2174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Read/write the notification mute. Admin-only.
   app.post("/api/admin/notifications/mute", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettingsTable();
       const muted = req.body?.muted === true;
       const user = (req as any).user;
       await db.insert(appSettings)
@@ -2211,9 +2212,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /**
+   * Ensure app_settings exists before touching it.
+   *
+   * The startup migration creates this table, but the settings endpoints have
+   * been 500ing, which means it is not there on the deployed database - and a
+   * failed CREATE at boot is invisible to anyone using the app. Rather than keep
+   * diagnosing why the boot-time DDL did not take, each settings route ensures
+   * the table itself.
+   *
+   * CREATE TABLE IF NOT EXISTS is idempotent and costs one trivial statement, so
+   * this is safe to call on every request. It does NOT paper over a real
+   * problem: if the DDL itself is wrong, this throws with the database's message
+   * instead of failing silently at boot.
+   */
+  async function ensureAppSettingsTable() {
+    await db.execute(drizzleSql`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        "key" text PRIMARY KEY,
+        "value" text NOT NULL,
+        updated_at timestamp NOT NULL DEFAULT now(),
+        updated_by text
+      )
+    `);
+  }
+
   // Always-copy address.
   app.post("/api/admin/notifications/always-copy", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettingsTable();
       const email = String(req.body?.email ?? '').trim();
       if (email && !email.includes('@')) {
         return res.status(400).json({ message: 'Enter a valid email address, or clear the field to turn this off.' });
@@ -2232,6 +2259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Status report cadence.
   app.post("/api/admin/notifications/cadence", requireAuth, checkPermission('admin.access'), async (req, res) => {
     try {
+      await ensureAppSettingsTable();
       const days = String(req.body?.days ?? '');
       const hour = String(Math.min(23, Math.max(0, parseInt(req.body?.hour) || 8)));
       const user = (req as any).user;
@@ -2263,6 +2291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasKey = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY.trim());
 
       const muted = await areNotificationsMuted();
+      await ensureAppSettingsTable();
       const cadenceRows = await db.select({ key: appSettings.key, value: appSettings.value })
         .from(appSettings)
         .where(inArray(appSettings.key, [SETTING_REPORT_DAYS, SETTING_REPORT_HOUR]));

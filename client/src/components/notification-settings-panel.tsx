@@ -227,11 +227,24 @@ export function NotificationSettingsPanel() {
             BCC'd on every automated email — new RFP, publish, and the status report — whether or
             not this address is an Owner. Leave blank to turn off.
           </p>
+          {/* State the CURRENT setting explicitly.
+              The input shows placeholder text when empty, so a saved address and
+              no address at all looked identical - there was no way to tell
+              whether anyone was actually being copied. */}
+          {data && (
+            data.alwaysCopyEmail
+              ? <p className="text-[11px]">
+                  Currently copying <strong>{data.alwaysCopyEmail}</strong> on every automated email.
+                </p>
+              : <p className="text-[11px] text-muted-foreground">
+                  Nobody is being copied. Enter an address and press Save to turn this on.
+                </p>
+          )}
           <div className="flex gap-2">
             <Input
               type="email"
               className="h-8 flex-1 text-xs"
-              placeholder="you@kurvindustrial.com"
+              placeholder="name@kurvindustrial.com"
               value={copyEmail}
               onChange={(e) => setCopyEmail(e.target.value)}
             />
@@ -245,6 +258,11 @@ export function NotificationSettingsPanel() {
               Save
             </Button>
           </div>
+          {data && copyEmail.trim() !== (data.alwaysCopyEmail ?? '') && (
+            <p className="text-[11px] text-amber-700">
+              Unsaved — press Save to apply.
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border p-3 space-y-2">

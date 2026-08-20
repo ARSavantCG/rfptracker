@@ -105,9 +105,12 @@ const SAFE_ALTERS: string[] = [
 
 const ADDITIVE_TABLES: string[] = [
   // Operational settings (2026-08-17). Key/value so a new switch needs no migration.
+  // Column names quoted defensively. NOTE: key and value are NON-reserved in
+  // Postgres, so the unquoted form parses fine - I initially blamed this and was
+  // wrong. Quoting costs nothing and removes the question permanently.
   `CREATE TABLE IF NOT EXISTS app_settings (
-    key text PRIMARY KEY,
-    value text NOT NULL,
+    "key" text PRIMARY KEY,
+    "value" text NOT NULL,
     updated_at timestamp NOT NULL DEFAULT now(),
     updated_by text
   )`,
@@ -176,7 +179,15 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
     try {
       await dbi.execute(sql.raw(ddl));
     } catch (error) {
-      console.warn(`⚠️  Startup table migration skipped:`, (error as Error).message);
+      // LOUD. These are CREATE TABLE IF NOT EXISTS statements: they are
+      // idempotent and should never fail. A failure means the DDL itself is
+      // wrong, and the table simply will not exist - every read of it then 500s
+      // at runtime, far from the cause. A quiet console.warn hid exactly that
+      // for app_settings (unquoted reserved words) until the endpoint failed.
+      const first = ddl.trim().split('\n')[0];
+      console.error(`❌ STARTUP TABLE MIGRATION FAILED — the table does not exist.`);
+      console.error(`   ${first}`);
+      console.error(`   ${(error as Error).message}`);
     }
   }
   for (const ddl of SAFE_ALTERS) {

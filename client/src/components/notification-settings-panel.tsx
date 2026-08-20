@@ -25,6 +25,8 @@ interface NotificationStatus {
   reportDays: string;
   reportHour: number;
   alwaysCopyEmail: string;
+  businessTimezone: string;
+  timezoneSample: string;
   ownerContactsWithoutEmail: number;
   deactivatedOwnersExcluded: number;
 }
@@ -160,6 +162,12 @@ export function NotificationSettingsPanel() {
         )}
 
         <div className="text-xs space-y-1">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Dates rendered in</span>
+            <span title="Set in shared/date-utils.ts — applies to every server-generated email and report">
+              {data?.businessTimezone ?? '—'}{data?.timezoneSample ? ` · now ${data.timezoneSample}` : ''}
+            </span>
+          </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Sending as</span>
             <span className="font-mono">{data?.fromEmail ?? "—"}</span>

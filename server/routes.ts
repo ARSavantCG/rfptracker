@@ -79,6 +79,7 @@ import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
 import { streamFromObjectStorage, listObjectStorageFiles } from './storage-backup';
 import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, RFP_TERMINAL_STATUSES } from "@shared/schema";
+import { BUSINESS_TIMEZONE, formatBusinessDateTime } from "@shared/date-utils";
 
 // Helper function to clean invalid values like "$NaN", "NaN", etc.
 function cleanInvalidValue(value: any): string {
@@ -2280,6 +2281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reportDays: cadenceMap.get(SETTING_REPORT_DAYS) ?? '1,3,5',
         reportHour: parseInt(cadenceMap.get(SETTING_REPORT_HOUR) ?? '8'),
         alwaysCopyEmail: cadenceMap.get(SETTING_ALWAYS_COPY_EMAIL) ?? '',
+        // Timezone every server-rendered date uses. Reported so it can be
+        // VERIFIED, with a live sample - the four-hour UTC error that put a 10pm
+        // publish on the following day was invisible until someone compared a
+        // notification against the clock.
+        businessTimezone: BUSINESS_TIMEZONE,
+        timezoneSample: formatBusinessDateTime(new Date()),
         willSend: blockers.length === 0,
         blockers,
         firesOn: ['Step 1 (RFP entry) completion', 'Publish'],

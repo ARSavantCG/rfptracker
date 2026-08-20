@@ -190,6 +190,20 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
       console.error(`   ${(error as Error).message}`);
     }
   }
+  // Verify the tables the loop was supposed to create actually exist. A
+  // CREATE TABLE IF NOT EXISTS that fails leaves NO trace at runtime except a
+  // 500 from whatever reads it later, so this states the outcome directly at
+  // boot rather than leaving it to be discovered from a stack frame.
+  for (const name of ['app_settings', 'project_team_members']) {
+    try {
+      await dbi.execute(sql.raw(`SELECT 1 FROM ${name} LIMIT 1`));
+      console.log(`✅ table ${name} present`);
+    } catch (error) {
+      console.error(`❌ TABLE ${name} IS MISSING — every read of it will 500.`);
+      console.error(`   ${(error as Error).message}`);
+    }
+  }
+
   for (const ddl of SAFE_ALTERS) {
     try {
       await dbi.execute(sql.raw(ddl));

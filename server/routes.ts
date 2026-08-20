@@ -2330,8 +2330,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deactivatedOwnersExcluded: deactivated,
       });
     } catch (error) {
+      // Return the ACTUAL message. "Failed to read notification status" told the
+      // user nothing and told me nothing - diagnosing it meant reading stack
+      // frames out of a deploy log on a phone. This endpoint is admin-only and
+      // read-only, so the database's own error is safe to surface and is the one
+      // piece of information that identifies the cause.
+      const message = error instanceof Error ? error.message : String(error);
       console.error('[notification-status] failed:', error);
-      res.status(500).json({ message: 'Failed to read notification status' });
+      res.status(500).json({
+        message: `Failed to read notification status: ${message}`,
+        hint: message.includes('app_settings')
+          ? 'The app_settings table is missing. Check the deploy log for a STARTUP TABLE MIGRATION FAILED line.'
+          : undefined,
+      });
     }
   });
 

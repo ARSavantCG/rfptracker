@@ -79,7 +79,7 @@ import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
 import { registerDashboardRoutes } from './dashboard-routes';
-import { streamFromObjectStorage, listObjectStorageFiles, getFileBuffer } from './storage-backup';
+import { streamFromObjectStorage, listObjectStorageFiles, getFileBuffer, backupToObjectStorage } from './storage-backup';
 import { appSettings, SETTING_NOTIFICATIONS_MUTED, SETTING_REPORT_DAYS, SETTING_REPORT_HOUR, SETTING_ALWAYS_COPY_EMAIL, RFP_TERMINAL_STATUSES } from "@shared/schema";
 import { BUSINESS_TIMEZONE, formatBusinessDateTime } from "@shared/date-utils";
 
@@ -6591,6 +6591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const uploadedFiles = [];
+      const backupFailures: string[] = [];
       for (const file of files) {
         const sanitizedName = sanitizeFilename(file.originalname);
         const targetPath = path.join(targetDir, sanitizedName);
@@ -6613,17 +6614,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subfolder: subfolder || null,
         });
         
+        // BACK UP TO OBJECT STORAGE. This route wrote to local disk and created
+        // the database row, and stopped there - so every project file uploaded
+        // was destroyed by the next publish, when Replit wipes the disk. The
+        // record survived and pointed at nothing, which is precisely how the 15
+        // permanently lost files were created.
+        //
+        // Awaited, not fire-and-forget: a backup that silently fails leaves the
+        // same dangling record. backupToObjectStorage already retries three
+        // times and reads the object back to confirm it landed.
+        try {
+          await backupToObjectStorage(file.path, sanitizedName);
+        } catch (backupError) {
+          console.error(
+            `[upload] OBJECT STORAGE BACKUP FAILED for ${file.originalname} — this file will be lost on the next publish:`,
+            backupError instanceof Error ? backupError.message : backupError
+          );
+          backupFailures.push(file.originalname);
+        }
+
         uploadedFiles.push(projectFile);
       }
 
+      // Report backup failures rather than claiming an unqualified success. A
+      // file that uploaded but was not backed up is a file that disappears
+      // later, and the user should hear it now rather than discover it then.
       res.json({
         success: true,
-        message: `Uploaded ${uploadedFiles.length} file(s)`,
-        files: uploadedFiles
+        message: backupFailures.length > 0
+          ? `Uploaded ${uploadedFiles.length} file(s), but ${backupFailures.length} could not be backed up and may be lost on the next publish: ${backupFailures.join(', ')}`
+          : `Uploaded ${uploadedFiles.length} file(s)`,
+        files: uploadedFiles,
+        backupFailures,
       });
     } catch (error) {
       console.error("Error uploading project files:", error);
-      res.status(500).json({ message: "Failed to upload files" });
+      const message = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ message: `Failed to upload files: ${message}` });
     }
   });
 

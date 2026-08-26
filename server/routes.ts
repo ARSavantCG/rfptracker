@@ -129,15 +129,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.sendFile(filePath);
       }
     }
-    // Not on local disk — try Object Storage using key: .private/uploads/<filename>
-    // filename is path.basename(req.path) — just the bare filename, no directory prefix
+    // Not on local disk — fall back to Object Storage.
     try {
       const served = await streamFromObjectStorage(filename, res);
       if (served) return;
     } catch (err) {
       console.error('[OS Backup] Error fetching from object storage:', err);
     }
-    res.status(404).json({ message: 'File not found' });
+
+    // Last resort: getFileBuffer, which is what every download route and the
+    // File Integrity Audit use. streamFromObjectStorage looks under one key
+    // shape; getFileBuffer tries the full stored path as well, so a file saved
+    // under a project-folder path is still found here.
+    try {
+      const buf = await getFileBuffer(req.path.replace(/^\//, ''), filename);
+      if (buf) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        return res.send(buf);
+      }
+    } catch (err) {
+      console.error('[uploads] getFileBuffer failed:', err);
+    }
+
+    // Name the file and point somewhere useful. A bare "File not found" in raw
+    // JSON tells the reader nothing about whether this is a bug or a file that
+    // was genuinely lost before Object Storage backup existed.
+    console.warn(`[uploads] NOT FOUND anywhere: ${req.path}`);
+    res.status(404).json({
+      message: `"${filename}" could not be found on disk or in Object Storage. If it was uploaded before file backup was in place it may be permanently lost — see Admin > Storage > File Integrity Audit.`,
+      reason: 'bytes_missing',
+      path: req.path,
+    });
   });
 
   // Auto-enforce legal compliance on startup for ALL properties

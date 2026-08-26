@@ -1563,12 +1563,21 @@ export default function Admin() {
               <span className="hidden sm:inline">System Maintenance</span>
               <span className="sm:hidden">Maintenance</span>
             </TabsTrigger>
-            <Link href="/admin/audit-log" className="flex items-center gap-2 flex-shrink-0 px-3 py-1.5 text-sm rounded-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors whitespace-nowrap">
+            {/* Audit Log and Scope Review are separate PAGES, not tab panels -
+                they were built standalone and are linked from the tab bar. That is
+                why they carry their own header and their own "back to admin panel"
+                button while every other tab stays in place.
+
+                Styling now matches TabsTrigger exactly (inline-flex,
+                justify-center, muted foreground) so they at least read as part of
+                the same row. Making them true tabs means moving both pages into
+                TabsContent, which is a real refactor and not a styling fix. */}
+            <Link href="/admin/audit-log" className="inline-flex items-center justify-center gap-2 flex-shrink-0 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all hover:bg-background hover:text-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Audit Log</span>
               <span className="sm:hidden">Audit</span>
             </Link>
-            <Link href="/admin/scope-item-review" className="flex items-center gap-2 flex-shrink-0 px-3 py-1.5 text-sm rounded-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors whitespace-nowrap">
+            <Link href="/admin/scope-item-review" className="inline-flex items-center justify-center gap-2 flex-shrink-0 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all hover:bg-background hover:text-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Scope Review</span>
               <span className="sm:hidden">Scope</span>

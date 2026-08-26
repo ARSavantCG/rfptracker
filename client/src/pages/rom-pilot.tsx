@@ -287,7 +287,12 @@ export default function RomPilotPage() {
               </Button>
             </div>
           ) : (
-            <table className="w-full divide-y divide-gray-200">
+            // min-w forces the table WIDER than the viewport so the wrapping
+            // overflow-x-auto actually has something to scroll. With w-full alone
+            // the table shrank to fit and the right-hand columns were squeezed to
+            // unreadable rather than scrollable — the container could scroll, but
+            // there was never any overflow to scroll to.
+            <table className="w-full min-w-[900px] divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{width: '120px'}}>ROM #</th>

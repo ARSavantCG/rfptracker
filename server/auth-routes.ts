@@ -48,7 +48,15 @@ export function registerAuthRoutes(app: Express): void {
 
       // Unknown address, or a deactivated account: say nothing different.
       if (!user || user.isActive === false) {
-        console.log(`[password-reset] request for unregistered or inactive address`);
+        // The RESPONSE stays generic - that is the anti-enumeration property and
+        // it must not change. But the LOG can say which case it was, because the
+        // log is not visible to the caller. Without this, "no user matched" and
+        // "the send failed" are indistinguishable to the operator too, which is
+        // exactly the dead end this hit on first use.
+        console.warn(
+          `[password-reset] NO EMAIL SENT — ${!user ? 'no user record matches this address' : 'the account is deactivated'}. ` +
+          `Check that the address on the user record matches what was entered.`
+        );
         return genericOk();
       }
 
@@ -81,13 +89,24 @@ export function registerAuthRoutes(app: Express): void {
 
       const base = process.env.APP_BASE_URL || 'https://rfptracker.app';
       const link = `${base}/reset-password?token=${token}`;
-      await sendPasswordResetEmail(user.email as string, link);
+
+      try {
+        await sendPasswordResetEmail(user.email as string, link);
+        console.log(`[password-reset] email sent for user ${user.id}`);
+      } catch (sendError) {
+        // Loud, and specific. A swallowed send failure looks identical to
+        // success from outside, so the log is the only place it can surface.
+        console.error(
+          `[password-reset] SEND FAILED for user ${user.id}:`,
+          sendError instanceof Error ? sendError.message : sendError
+        );
+      }
 
       return genericOk();
     } catch (error) {
       // Even a failure returns the generic message: a 500 on some addresses and
       // success on others is itself an enumeration signal.
-      console.error('[password-reset] request failed:', error);
+      console.error('[password-reset] REQUEST FAILED before any email could be sent:', error);
       return genericOk();
     }
   });

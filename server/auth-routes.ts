@@ -42,9 +42,35 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(400).json({ message: 'Enter a valid email address.' });
       }
 
-      const [user] = await db.select({ id: users.id, email: users.email, isActive: users.isActive })
+      // BOTH TABLES. Login authenticates contacts (by email, when
+      // hasSystemAccess is set) as well as admin users - see the login handler
+      // below. Querying only `users` meant a contact who can sign in every day
+      // could not reset their own password, and the anti-enumeration response
+      // reported that as success.
+      //
+      // Contacts checked first, matching the login order.
+      const [contact] = await db.select({
+        id: contacts.id, email: contacts.email,
+        isActive: contacts.isActive, hasSystemAccess: contacts.hasSystemAccess,
+      })
+        .from(contacts)
+        .where(sql`lower(${contacts.email}) = ${email}`);
+
+      const [adminUser] = contact ? [] : await db.select({
+        id: users.id, email: users.email, isActive: users.isActive,
+      })
         .from(users)
         .where(sql`lower(${users.email}) = ${email}`);
+
+      const user = contact
+        ? {
+            id: `contact:${contact.id}`,
+            email: contact.email,
+            // A contact without system access cannot sign in, so a reset link
+            // would be useless — treat it the same as an inactive account.
+            isActive: contact.isActive !== false && contact.hasSystemAccess === true,
+          }
+        : adminUser;
 
       // Unknown address, or a deactivated account: say nothing different.
       if (!user || user.isActive === false) {
@@ -138,8 +164,15 @@ export function registerAuthRoutes(app: Express): void {
       if (row.usedAt) return invalid();
       if (row.expiresAt.getTime() < Date.now()) return invalid();
 
+      // userId is prefixed "contact:<id>" for contacts, so the redemption
+      // updates the same table the request found the account in.
       const passwordHash = await bcrypt.hash(newPassword, 12);
-      await db.update(users).set({ passwordHash }).where(eq(users.id, row.userId));
+      if (row.userId.startsWith('contact:')) {
+        const contactId = parseInt(row.userId.split(':')[1], 10);
+        await db.update(contacts).set({ passwordHash }).where(eq(contacts.id, contactId));
+      } else {
+        await db.update(users).set({ passwordHash }).where(eq(users.id, row.userId));
+      }
 
       // Mark used BEFORE responding, so a duplicate submit cannot redeem twice.
       await db.update(passwordResetTokens)

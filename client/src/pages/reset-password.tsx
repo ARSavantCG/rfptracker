@@ -87,7 +87,19 @@ export default function ResetPassword() {
         description: "Your password has been reset. You can now log in.",
         duration: 4000,
       });
-      setLocation('/');
+
+      // window.location, NOT setLocation.
+      //
+      // App.tsx routes an unauthenticated user to ResetPassword when EITHER the
+      // path is /reset-password OR the query string contains "token=". wouter's
+      // setLocation('/') changes the path but LEAVES THE QUERY STRING, so the
+      // token= check still matched and the reset form re-rendered - the reset
+      // had succeeded and the page looked like it had done nothing.
+      //
+      // A full navigation to a bare '/' drops the token from the URL and reloads
+      // cleanly, which also means the spent token is not left sitting in the
+      // address bar or the browser history.
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({

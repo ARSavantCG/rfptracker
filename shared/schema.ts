@@ -463,6 +463,36 @@ export type InsertProjectTeamMember = z.infer<typeof insertProjectTeamMemberSche
  * Deliberately generic rather than a column per setting: these are operational
  * switches, not domain data, and each new one should not require a migration.
  */
+/**
+ * Password reset tokens.
+ *
+ * Design notes, because this is the one table where getting it wrong hands
+ * someone an account:
+ *
+ *  - Stores a HASH of the token, never the token itself. A leaked database dump
+ *    then yields nothing usable, exactly as with passwords.
+ *  - SINGLE USE: usedAt is stamped on redemption and a used token is refused.
+ *    Reset links sit in mailboxes for years.
+ *  - SHORT EXPIRY (60 minutes). Long enough to walk away from the screen, short
+ *    enough that a stale link in an inbox is not a standing key.
+ *  - Tied to a userId, not an email, so changing the account email cannot
+ *    redirect a live token.
+ */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  requestedIp: text("requested_ip"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+/** How long a reset link stays valid. */
+export const PASSWORD_RESET_TTL_MINUTES = 60;
+
 export const appSettings = pgTable("app_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

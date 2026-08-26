@@ -104,6 +104,16 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Password reset tokens (2026-08-20). Hash stored, never the token.
+  `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id serial PRIMARY KEY,
+    user_id varchar NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp NOT NULL,
+    used_at timestamp,
+    requested_ip text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
   // Operational settings (2026-08-17). Key/value so a new switch needs no migration.
   // Column names quoted defensively. NOTE: key and value are NON-reserved in
   // Postgres, so the unquoted form parses fine - I initially blamed this and was

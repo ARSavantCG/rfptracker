@@ -1,7 +1,7 @@
 import { COMPANY_NAME, BRAND_COLOR_PRIMARY } from './lib/branding';
 import sgMail from '@sendgrid/mail';
 import { storage } from './storage';
-import { RfpRequest, Contact , WORKFLOW_PHASE_KEYS } from '@shared/schema';
+import { RfpRequest, Contact , WORKFLOW_PHASE_KEYS, PASSWORD_RESET_TTL_MINUTES } from '@shared/schema';
 import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
@@ -746,4 +746,55 @@ export async function sendWorkflowCompletionEmail(
     console.error('Failed to send workflow completion email:', error);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Password reset link.
+ *
+ * Deliberately NOT gated by areNotificationsMuted(): the mute switch exists so
+ * test RFPs do not spam the team, and silently swallowing a reset link would
+ * lock someone out with no indication why. Muting notifications should never
+ * break authentication.
+ */
+export async function sendPasswordResetEmail(to: string, link: string): Promise<void> {
+  const { client, fromEmail } = await getUncachableSendGridClient();
+
+  const html = `
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"></head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px;">Reset your password</h1>
+          <div style="margin-top: 6px; font-size: 12px; opacity: 0.85;">${COMPANY_NAME}</div>
+        </div>
+        <div style="padding: 24px; color: #222; font-size: 14px; line-height: 1.6;">
+          <p>Someone asked to reset the password for this account. Click below to choose a new one.</p>
+          <p style="text-align: center; margin: 28px 0;">
+            <a href="${link}" style="background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+              Choose a new password
+            </a>
+          </p>
+          <p style="font-size: 12px; color: #666;">
+            This link expires in ${PASSWORD_RESET_TTL_MINUTES} minutes and can only be used once.
+          </p>
+          <p style="font-size: 12px; color: #666;">
+            <strong>If you did not request this, you can ignore it.</strong> Your password has not
+            changed, and the link stops working on its own.
+          </p>
+          <p style="font-size: 11px; color: #999; margin-top: 20px; word-break: break-all;">
+            If the button does not work, paste this into your browser:<br>${link}
+          </p>
+        </div>
+      </div>
+    </body></html>`;
+
+  await client.send({
+    to,
+    from: fromEmail,
+    subject: `Reset your ${COMPANY_NAME} RFP Tracker password`,
+    html,
+  });
+
+  console.log('[password-reset] reset email sent');
 }

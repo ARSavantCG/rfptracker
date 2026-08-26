@@ -7,13 +7,144 @@ import { tokenStore } from './token-auth';
 import { storage } from './storage';
 import { AuthService } from './auth';
 import { db } from './db';
-import { contacts, users } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { contacts, users, passwordResetTokens, PASSWORD_RESET_TTL_MINUTES } from '@shared/schema';
+import { eq, sql, and, isNull, gt, desc } from 'drizzle-orm';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { requireAuth, upload } from './middleware';
 import { logEvent } from './audit-log';
+import { sendPasswordResetEmail } from './email-service';
 
 export function registerAuthRoutes(app: Express): void {
+
+  /**
+   * Request a reset link.
+   *
+   * ALWAYS RETURNS SUCCESS, whether or not the address is registered. Telling a
+   * caller "no such user" turns this endpoint into a way to discover who has an
+   * account, which is a real disclosure on a system whose users are named
+   * individuals at one company.
+   *
+   * Rate limited per address: one live token at a time. Requesting again inside
+   * the window returns success and sends nothing, so the endpoint cannot be used
+   * to flood someone's inbox.
+   */
+  app.post('/api/auth/reset-password-request', async (req, res) => {
+    // Identical response on every path. Composed once so no branch can differ.
+    const genericOk = () => res.json({
+      success: true,
+      message: 'If that email is registered, a reset link is on its way.',
+    });
+
+    try {
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ message: 'Enter a valid email address.' });
+      }
+
+      const [user] = await db.select({ id: users.id, email: users.email, isActive: users.isActive })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email}`);
+
+      // Unknown address, or a deactivated account: say nothing different.
+      if (!user || user.isActive === false) {
+        console.log(`[password-reset] request for unregistered or inactive address`);
+        return genericOk();
+      }
+
+      // One live token at a time.
+      const [existing] = await db.select({ id: passwordResetTokens.id })
+        .from(passwordResetTokens)
+        .where(and(
+          eq(passwordResetTokens.userId, user.id),
+          isNull(passwordResetTokens.usedAt),
+          gt(passwordResetTokens.expiresAt, new Date()),
+        ))
+        .orderBy(desc(passwordResetTokens.createdAt));
+
+      if (existing) {
+        console.log(`[password-reset] live token already exists for user ${user.id}; not sending another`);
+        return genericOk();
+      }
+
+      // 32 random bytes. The TOKEN goes in the email; only its HASH is stored.
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
+
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+        requestedIp: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || null,
+      });
+
+      const base = process.env.APP_BASE_URL || 'https://rfptracker.app';
+      const link = `${base}/reset-password?token=${token}`;
+      await sendPasswordResetEmail(user.email as string, link);
+
+      return genericOk();
+    } catch (error) {
+      // Even a failure returns the generic message: a 500 on some addresses and
+      // success on others is itself an enumeration signal.
+      console.error('[password-reset] request failed:', error);
+      return genericOk();
+    }
+  });
+
+  /** Redeem a token and set a new password. */
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const token = String(req.body?.token || '').trim();
+      const newPassword = String(req.body?.newPassword || '');
+
+      if (!token) return res.status(400).json({ message: 'Reset token is missing.' });
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+      }
+
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+      const [row] = await db.select()
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.tokenHash, tokenHash));
+
+      // One message for missing, expired and already-used. Distinguishing them
+      // tells someone holding a stale link which kind of stale it is.
+      const invalid = () => res.status(400).json({
+        message: 'This reset link is invalid or has expired. Request a new one.',
+      });
+
+      if (!row) return invalid();
+      if (row.usedAt) return invalid();
+      if (row.expiresAt.getTime() < Date.now()) return invalid();
+
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, row.userId));
+
+      // Mark used BEFORE responding, so a duplicate submit cannot redeem twice.
+      await db.update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, row.id));
+
+      // Every other live token for this user dies too: if the account was being
+      // taken over, an attacker's outstanding link stops working the moment the
+      // real owner completes a reset.
+      await db.update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(and(
+          eq(passwordResetTokens.userId, row.userId),
+          isNull(passwordResetTokens.usedAt),
+        ));
+
+      console.log(`[password-reset] password changed for user ${row.userId}`);
+      res.json({ success: true, message: 'Password updated. You can sign in now.' });
+    } catch (error) {
+      console.error('[password-reset] redeem failed:', error);
+      res.status(500).json({ message: 'Could not reset the password. Please try again.' });
+    }
+  });
+
   // Authentication routes - supports both admin users and contact emails
   app.post('/api/auth/login', async (req, res) => {
     try {

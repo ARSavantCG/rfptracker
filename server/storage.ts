@@ -134,7 +134,7 @@ import { db } from "./db";
 import { eq, desc, sql, like, or, and, asc, gte, lte, ne } from "drizzle-orm";
 import { formatDateForDisplay, parseInputDate } from "@shared/date-utils";
 import { LEGAL_PROPERTY_TOTALS } from './property-legal-compliance';
-import { dedupeBays } from "@shared/area-utils";
+import { dedupeBays, sumBayArea } from "@shared/area-utils";
 
 export interface IStorage {
   getRfpRequest(id: number): Promise<RfpRequest | undefined>;
@@ -551,10 +551,23 @@ export class DatabaseStorage implements IStorage {
           warehouseAreaOverride = match[1].replace(/,/g, '');
         }
       } else if (request.selectedBayConfigurations && Array.isArray(request.selectedBayConfigurations)) {
-        // Calculate warehouse area using legally compliant totals
-        const rawTotalRentableArea = request.selectedBayConfigurations.reduce((sum: number, bay: any) => {
-          return sum + (bay.rentableSquareFootage || 0);
-        }, 0);
+        // sumBayArea, NOT a raw reduce on rentableSquareFootage.
+        //
+        // This was the last inline bay sum in the codebase and it carried both
+        // defects the shared helper exists to prevent:
+        //
+        //   - no dedupe, so a parent bay stored alongside its own split halves
+        //     counted twice. Selecting half the remaining vacancy produced the
+        //     WHOLE vacancy.
+        //   - rentableSquareFootage, which on a split half already includes that
+        //     half's mechanical allocation, so mechanical was folded into the
+        //     warehouse figure.
+        //
+        // This value is written once at creation and then read by every broker
+        // RFP document, so a wrong number here goes out to the GC and the
+        // architect. Reported 2026-10-05: a Hapcor RFP for half the remaining
+        // vacancy went out showing 397,164 SF — the entire vacancy.
+        const rawTotalRentableArea = sumBayArea(request.selectedBayConfigurations as any);
         
         if (rawTotalRentableArea > 0) {
           // Apply legal compliance for full property selections

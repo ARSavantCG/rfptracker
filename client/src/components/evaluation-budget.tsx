@@ -2067,9 +2067,27 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           // Include the wall if either side is in our selection.
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
-            const hasLeftBay = demisingData.leftBayId && normalizedSelectedBayIds.includes(String(demisingData.leftBayId));
-            const hasRightBay = demisingData.rightBayId && normalizedSelectedBayIds.includes(String(demisingData.rightBayId));
-            if (hasLeftBay || hasRightBay) return true;
+            // NORMALISE BOTH SIDES.
+            //
+            // normalizedSelectedBayIds has _north/_south STRIPPED, but the wall's
+            // boundary ids were compared RAW - so "1754328341143_south" was looked
+            // up in a list containing "1754328341143" and never matched. One side
+            // of the comparison was normalised and the other was not.
+            //
+            // The two ids also differ in shape: a wall can carry a suffixed id on
+            // one side ("..._south") and a bare one on the other, because a
+            // boundary runs between a split half and a whole bay. Both are checked
+            // raw AND stripped, against both the raw and normalised selections.
+            const matchesBay = (bayId: any) => {
+              if (!bayId) return false;
+              const raw = String(bayId);
+              const stripped = raw.replace(/_north$|_south$/i, '');
+              return selectedBayIds.map(String).includes(raw)
+                || selectedBayIds.map(String).includes(stripped)
+                || normalizedSelectedBayIds.includes(raw)
+                || normalizedSelectedBayIds.includes(stripped);
+            };
+            if (matchesBay(demisingData.leftBayId) || matchesBay(demisingData.rightBayId)) return true;
           }
 
           // FALL BACK TO applicableBays.

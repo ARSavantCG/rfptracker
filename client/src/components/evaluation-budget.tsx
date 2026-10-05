@@ -2064,13 +2064,41 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
         
         if (improvement.allocationType === 'demising-wall') {
-          // Include demising wall if either the left or right bay is in our selection
+          // Include the wall if either side is in our selection.
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
             const hasLeftBay = demisingData.leftBayId && normalizedSelectedBayIds.includes(String(demisingData.leftBayId));
             const hasRightBay = demisingData.rightBayId && normalizedSelectedBayIds.includes(String(demisingData.rightBayId));
-            return hasLeftBay || hasRightBay;
+            if (hasLeftBay || hasRightBay) return true;
           }
+
+          // FALL BACK TO applicableBays.
+          //
+          // This returned false outright when demisingWallData was absent, so a
+          // demising wall recorded without that structure was silently dropped
+          // from the evaluation - present in Manage Improvements, invisible in
+          // Existing Improvements, with nothing explaining the difference.
+          // Reported 2026-10-05 on Kurv Commerce Center (West): two walls at
+          // $178,001 each, neither appearing.
+          //
+          // Every other allocation type matches on applicableBays; only this one
+          // required a second, separate structure and gave up without it.
+          if (Array.isArray(improvement.applicableBays) && improvement.applicableBays.length > 0) {
+            return improvement.applicableBays.some((bayId: any) => {
+              const raw = String(bayId);
+              const stripped = raw.replace(/_north$|_south$/i, '');
+              return selectedBayIds.map(String).includes(raw) ||
+                selectedBayIds.map(String).includes(stripped) ||
+                normalizedSelectedBayIds.includes(raw) ||
+                normalizedSelectedBayIds.includes(stripped);
+            });
+          }
+
+          console.warn(
+            `[existing-improvements] demising wall "${improvement.description}" has neither ` +
+            `demisingWallData nor applicableBays — it cannot be matched to a bay selection ` +
+            `and will not appear in the evaluation.`
+          );
           return false;
         }
         

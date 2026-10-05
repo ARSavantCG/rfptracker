@@ -1992,6 +1992,29 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       ? rfp!.selectedBayConfigurations!.map(bay => bay.id)
       : rfp?.selectedBayIds) || [];
     const normalizedSelectedBayIds = selectedBayIds.map((id: any) => String(id).replace(/_north$|_south$/i, ''));
+
+    /**
+     * Does this bay id refer to a bay in the RFP's selection?
+     *
+     * ONE definition, used by both the filter and the cost allocation below.
+     * Those were separate copies of the same comparison, and when the filter was
+     * fixed the cost block was missed - so the walls appeared in the list at
+     * $0.00, which is arguably worse than being absent: a wall shown at zero
+     * reads as "no cost" rather than "not calculated".
+     *
+     * Checks raw AND suffix-stripped against both id lists, because a demising
+     * boundary runs between a split half ("..._south") and a whole bay (bare id),
+     * so the two sides legitimately differ in shape.
+     */
+    const bayIsSelected = (bayId: any): boolean => {
+      if (!bayId) return false;
+      const raw = String(bayId);
+      const stripped = raw.replace(/_north$|_south$/i, '');
+      return selectedBayIds.map(String).includes(raw)
+        || selectedBayIds.map(String).includes(stripped)
+        || normalizedSelectedBayIds.includes(raw)
+        || normalizedSelectedBayIds.includes(stripped);
+    };
     
     // Calculate tenant area using legally compliant totals
     // ALWAYS calculate from LIVE bay configurations (Properties is single source of truth)
@@ -2078,16 +2101,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             // one side ("..._south") and a bare one on the other, because a
             // boundary runs between a split half and a whole bay. Both are checked
             // raw AND stripped, against both the raw and normalised selections.
-            const matchesBay = (bayId: any) => {
-              if (!bayId) return false;
-              const raw = String(bayId);
-              const stripped = raw.replace(/_north$|_south$/i, '');
-              return selectedBayIds.map(String).includes(raw)
-                || selectedBayIds.map(String).includes(stripped)
-                || normalizedSelectedBayIds.includes(raw)
-                || normalizedSelectedBayIds.includes(stripped);
-            };
-            if (matchesBay(demisingData.leftBayId) || matchesBay(demisingData.rightBayId)) return true;
+            if (bayIsSelected(demisingData.leftBayId) || bayIsSelected(demisingData.rightBayId)) return true;
           }
 
           // FALL BACK TO applicableBays.
@@ -2170,9 +2184,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           // For demising walls, calculate cost based on which bay(s) are selected
           const demisingData = improvement.demisingWallData;
           if (demisingData) {
-            const hasLeftBay = demisingData.leftBayId && normalizedSelectedBayIds.includes(String(demisingData.leftBayId));
-            const hasRightBay = demisingData.rightBayId && normalizedSelectedBayIds.includes(String(demisingData.rightBayId));
-            
+            // bayIsSelected, the SAME matcher the filter uses. This block had
+            // its own copy comparing raw ids against the normalised list, so it
+            // scored 0% for both sides and the wall rendered at $0.00 even once
+            // the filter let it through.
+            const hasLeftBay = bayIsSelected(demisingData.leftBayId);
+            const hasRightBay = bayIsSelected(demisingData.rightBayId);
+
             // Calculate percentage of cost to include based on selected bays
             let percentageToInclude = 0;
             if (hasLeftBay) {

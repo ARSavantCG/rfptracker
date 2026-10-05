@@ -5878,6 +5878,44 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               "Check this box if there are costs associated with existing improvements that need to be factored into the budget."
             )}
           </p>
+
+          {/* WHY an improvement is not listed.
+              The count said 3 and the list showed 1, with nothing accounting for
+              the other two. Two $178k demising walls were excluded silently and
+              the only explanation was a console warning — unreadable on a phone.
+              The reason belongs on screen, next to the gap it explains. */}
+          {(() => {
+            const shown = new Set((budgetData.existingImprovements || []).map((i: any) => String(i.description)));
+            const missing = (propertyImprovements || []).filter(
+              (pi: any) => pi.isActive !== false && !shown.has(String(pi.description))
+            );
+            if (missing.length === 0) return null;
+            const selectedIds = (rfp?.selectedBayConfigurations ?? []).map((b: any) => String(b.id));
+            return (
+              <div className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs">
+                <div className="font-medium text-amber-900">
+                  {missing.length} improvement{missing.length === 1 ? '' : 's'} on this property not listed below:
+                </div>
+                <ul className="mt-1 space-y-1 text-amber-800">
+                  {missing.map((pi: any) => {
+                    const d: any = pi.demisingWallData;
+                    const bays = Array.isArray(pi.applicableBays) ? pi.applicableBays : [];
+                    const reason = (d?.leftBayId || d?.rightBayId)
+                      ? `boundary bays ${d.leftBayId ?? '—'} / ${d.rightBayId ?? '—'} not in this RFP's selection`
+                      : bays.length > 0
+                        ? `applies to bays ${bays.join(', ')} — none in this RFP's selection`
+                        : `no bays recorded on the improvement (allocation: ${pi.allocationType})`;
+                    return (
+                      <li key={pi.id}><span className="font-medium">{pi.description}</span> — {reason}</li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-1 text-[11px] text-amber-700">
+                  This RFP's selected bays: {selectedIds.join(', ') || 'none'}
+                </div>
+              </div>
+            );
+          })()}
         </CardHeader>
         {budgetData.hasExistingImprovements && (
           <CardContent>

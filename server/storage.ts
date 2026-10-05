@@ -930,8 +930,16 @@ export class DatabaseStorage implements IStorage {
     //
     // Only set when currently null: re-entering the phase must not overwrite the
     // original publish date with today's.
-    const existing = await this.getRfpRequest(rfpId);
-    const shouldStampPublished = newPhase === 'publish' && !existing?.publishedDate;
+    // Only read the existing record when advancing to PUBLISH. This lookup was
+    // unconditional, so every phase advance paid an extra Neon round trip it did
+    // not need - and getRfpRequest also runs dedupeBays over the bay selection,
+    // so it is not a cheap read. On a serverless Postgres connection that extra
+    // query is one more thing that can fail transiently, which is consistent
+    // with "Advance to Evaluation" erroring and then working on the third click.
+    //
+    // Nothing but the publish stamp needs it.
+    const shouldStampPublished = newPhase === 'publish'
+      && !(await this.getRfpRequest(rfpId))?.publishedDate;
 
     const [updated] = await db
       .update(rfpRequests)

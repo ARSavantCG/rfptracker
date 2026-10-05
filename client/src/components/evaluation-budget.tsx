@@ -2009,11 +2009,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     const bayIsSelected = (bayId: any): boolean => {
       if (!bayId) return false;
       const raw = String(bayId);
-      const stripped = raw.replace(/_north$|_south$/i, '');
-      return selectedBayIds.map(String).includes(raw)
-        || selectedBayIds.map(String).includes(stripped)
-        || normalizedSelectedBayIds.includes(raw)
-        || normalizedSelectedBayIds.includes(stripped);
+      const side = raw.match(/_(north|south)$/i)?.[1]?.toLowerCase() ?? null;
+      const base = raw.replace(/_north$|_south$/i, '');
+
+      return selectedBayIds.map(String).some((sel) => {
+        const selSide = sel.match(/_(north|south)$/i)?.[1]?.toLowerCase() ?? null;
+        const selBase = sel.replace(/_north$|_south$/i, '');
+        if (selBase !== base) return false;
+
+        // SIDE MATTERS when both are halves.
+        //
+        // The south half of a bay does not touch the demising wall on its north
+        // boundary. Stripping the suffix on both sides made _north and _south
+        // indistinguishable, so a tenant taking the south halves picked up BOTH
+        // walls - the one along their own boundary and the one they never touch.
+        //
+        // Suffixes are only ignored when one side is a WHOLE bay, because a whole
+        // bay genuinely contains both halves and therefore both boundaries.
+        if (side && selSide) return side === selSide;
+        return true;
+      });
     };
     
     // Calculate tenant area using legally compliant totals

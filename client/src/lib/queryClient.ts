@@ -2,6 +2,31 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 async function throwIfResNotOk(res: Response) {
+  // A 401 means the SESSION is gone, not that this particular request was bad.
+  //
+  // It surfaced as a red "Update failed 401: Invalid or expired token" toast
+  // while the user kept clicking buttons that could never succeed - every
+  // subsequent action fails identically, and nothing on screen says the fix is
+  // to sign in again.
+  //
+  // Handled HERE rather than in apiRequest because there are two call sites
+  // (apiRequest and the query function) and putting it in one would leave the
+  // other behaving the old way. Same reason the demising-wall matcher is now a
+  // single shared function.
+  if (res.status === 401) {
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch {
+      // Storage can throw in private modes; the redirect still matters.
+    }
+    const here = window.location.pathname + window.location.search;
+    // Don't bounce the login page or an in-flight password reset.
+    if (!here.includes('token=') && window.location.pathname !== '/') {
+      window.location.href = '/?sessionExpired=1';
+    }
+    throw new Error('Your session expired. Please sign in again.');
+  }
+
   if (!res.ok) {
     let message: string;
     try {

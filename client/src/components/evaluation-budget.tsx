@@ -2083,15 +2083,20 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         }
         
         if (improvement.allocationType === 'bay-specific') {
-          // Include if any applicable bays are in our selection (normalize IDs to strip _north/_south suffixes)
-          const matchFound = improvement.applicableBays?.some((bayId: any) => {
-            const rawId = String(bayId);
-            const strippedId = rawId.replace(/_north$/i, '').replace(/_south$/i, '');
-            return selectedBayIds.map(String).includes(rawId) ||
-              selectedBayIds.map(String).includes(strippedId) ||
-              normalizedSelectedBayIds.includes(rawId) ||
-              normalizedSelectedBayIds.includes(strippedId);
-          });
+          // bayIsSelected — the SAME side-aware matcher the demising branch uses.
+          //
+          // This stripped _north/_south from BOTH sides, so a bay-specific
+          // improvement on the north half matched a tenant who took the south
+          // half. Reported 2026-10-13: a tenant moved from the north side (which
+          // has a spec office) to the south side (which does not) and the
+          // $1.2M Speculative Office followed them.
+          //
+          // Exactly the fault fixed in the demising branch on 2026-10-05. That
+          // fix hoisted bayIsSelected for sharing and this branch was left on its
+          // own copy — so the identical bug survived one table over.
+          const matchFound = improvement.applicableBays?.some((bayId: any) =>
+            bayIsSelected(bayId)
+          );
           if (matchFound && seenIds.has(improvement.id)) return false;
           if (matchFound) seenIds.add(improvement.id);
           return matchFound;
@@ -2131,14 +2136,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           // Every other allocation type matches on applicableBays; only this one
           // required a second, separate structure and gave up without it.
           if (Array.isArray(improvement.applicableBays) && improvement.applicableBays.length > 0) {
-            return improvement.applicableBays.some((bayId: any) => {
-              const raw = String(bayId);
-              const stripped = raw.replace(/_north$|_south$/i, '');
-              return selectedBayIds.map(String).includes(raw) ||
-                selectedBayIds.map(String).includes(stripped) ||
-                normalizedSelectedBayIds.includes(raw) ||
-                normalizedSelectedBayIds.includes(stripped);
-            });
+            // bayIsSelected, not a third copy of the comparison — this one was
+            // also side-blind and would have pulled a north-side wall onto a
+            // south-side tenant through the fallback path.
+            return improvement.applicableBays.some((bayId: any) => bayIsSelected(bayId));
           }
 
           console.warn(

@@ -146,12 +146,76 @@ export interface AreaSummary {
  * the formula returns the whole mechanical room on its own. Every count-based
  * shortcut written for that case has been a bug.
  */
+/**
+ * Correct split-half areas against the property's bay configurations.
+ *
+ * Stored half entries can carry the WHOLE bay's squareFootage. Confirmed on
+ * Kurv Commerce Center (West) Bldg B, 2026-10-13 — every selected half reported
+ * sf identical to its parent:
+ *
+ *   007840_south  sf=35191  parent=35191
+ *   015062_south  sf=22800  parent=22800
+ *   119678_south  sf=30780  parent=30780
+ *
+ * Thirteen halves therefore summed to the entire 397,168 SF vacancy instead of
+ * about half of it, and the figure went to a GC and an architect.
+ *
+ * The property record knows the real half areas in splitNorthSquareFootage /
+ * splitSouthSquareFootage (strings, hand-entered), so the selection does not
+ * have to be re-saved to be read correctly. Same approach the dock-door counts
+ * already use: when an id is suffixed, read the split-specific field off the
+ * parent rather than trusting what was copied onto the entry.
+ *
+ * ONLY overrides when the stored area is at least the parent's — i.e. clearly
+ * the whole bay. An entry already holding a sensible half is left alone.
+ */
+export function resolveSplitBayAreas(
+  selected: readonly BayLike[] | null | undefined,
+  allPropertyBays: readonly BayLike[] | null | undefined,
+): BayLike[] {
+  if (!Array.isArray(selected)) return [];
+  if (!Array.isArray(allPropertyBays) || allPropertyBays.length === 0) return [...selected];
+
+  const byId = new Map<string, any>();
+  for (const b of allPropertyBays as any[]) {
+    if (b?.id != null) byId.set(String(b.id), b);
+  }
+
+  return (selected as any[]).map((bay) => {
+    const id = bay?.id != null ? String(bay.id) : '';
+    const m = id.match(/_(north|south)$/i);
+    if (!m) return bay;
+
+    const parent = byId.get(id.replace(/_(north|south)$/i, ''));
+    if (!parent) return bay;
+
+    const parentSf = Number(parent.squareFootage) || 0;
+    const storedSf = Number(bay?.squareFootage) || 0;
+    if (parentSf <= 0 || storedSf < parentSf) return bay; // already a plausible half
+
+    const side = m[1].toLowerCase();
+    const rawSplit = side === 'north'
+      ? parent.splitNorthSquareFootage
+      : parent.splitSouthSquareFootage;
+
+    // Hand-entered and may be a formula or blank; fall back to an even split,
+    // matching what the bay grid does when the field is unusable.
+    const parsedSplit = Number(String(rawSplit ?? '').replace(/[^0-9.]/g, ''));
+    const half = Number.isFinite(parsedSplit) && parsedSplit > 0 && parsedSplit < parentSf
+      ? parsedSplit
+      : (side === 'north' ? Math.floor(parentSf / 2) : Math.ceil(parentSf / 2));
+
+    return { ...bay, squareFootage: half, rentableSquareFootage: null };
+  });
+}
+
 export function computeAreaSummary(
   selectedBays: readonly BayLike[] | null | undefined,
   allPropertyBays: readonly BayLike[] | null | undefined,
   mechanicalRoomSf: number | null | undefined,
 ): AreaSummary {
-  const warehouseSf = sumBayArea(selectedBays);
+  // Correct any half that was stored with its parent's full area before summing.
+  const warehouseSf = sumBayArea(resolveSplitBayAreas(selectedBays, allPropertyBays));
   const buildingSf = sumBayArea(allPropertyBays);
   const mechRoom = mechanicalRoomSf || 0;
 

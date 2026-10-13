@@ -362,11 +362,40 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                       const halves = (rfp.selectedBayConfigurations as any[]).filter(
                         (b: any) => /_(north|south)$/i.test(String(b?.id ?? ''))
                       ).length;
+                      // Local lookup: `property` in this file is declared inside the
+                      // two area IIFEs above, not in this scope.
+                      const property = properties?.find((p: any) => p.id.toString() === rfp.property);
                       return (
-                        <div className="text-xs text-gray-500 border-t pt-2">
-                          From {kept} bay{kept === 1 ? '' : 's'}
-                          {halves > 0 ? ` (${halves} split half${halves === 1 ? '' : 'ves'})` : ''}
-                          {raw !== kept ? ` — ${raw - kept} duplicate parent bay${raw - kept === 1 ? '' : 's'} ignored` : ''}
+                        <div className="text-xs text-gray-500 border-t pt-2 space-y-0.5">
+                          <div>
+                            From {kept} bay{kept === 1 ? '' : 's'}
+                            {halves > 0 ? ` (${halves} split half${halves === 1 ? '' : 'ves'})` : ''}
+                            {raw !== kept ? ` — ${raw - kept} duplicate parent bay${raw - kept === 1 ? '' : 's'} ignored` : ''}
+                          </div>
+                          {/* PER-ENTRY AREAS.
+                              The counts alone said 13 halves with no duplicates,
+                              yet the total was the whole vacancy - which means each
+                              entry is carrying the wrong AREA, not that the wrong
+                              entries are present. A count cannot show that; the
+                              individual numbers can. */}
+                          <div className="font-mono text-[11px] text-gray-400">
+                            {dedupeBays(rfp.selectedBayConfigurations as any).slice(0, 4).map((b: any) => {
+                              const id = String(b?.id ?? '');
+                              const parent = (property?.bayConfigurations as any[] | undefined)?.find(
+                                (pb: any) => String(pb.id) === id.replace(/_(north|south)$/i, '')
+                              );
+                              const parentSf = parent ? Number(parent.squareFootage) || 0 : null;
+                              return (
+                                <div key={id}>
+                                  {id.slice(-12)} · sf={Number(b?.squareFootage) || 0}
+                                  {b?.rentableSquareFootage ? ` · rent=${Number(b.rentableSquareFootage)}` : ''}
+                                  {parentSf ? ` · parent=${parentSf}` : ''}
+                                  {b?.splitSide ? ` · ${b.splitSide}` : ''}
+                                </div>
+                              );
+                            })}
+                            {kept > 4 ? <div>…and {kept - 4} more</div> : null}
+                          </div>
                         </div>
                       );
                     })()}

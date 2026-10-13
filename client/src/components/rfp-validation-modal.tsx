@@ -24,7 +24,7 @@ import { X, Save, Zap } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { RfpRequest, Contact } from "@shared/schema";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
-import { computeAreaSummary, sumBayArea , parseAreaInput } from "@shared/area-utils";
+import { computeAreaSummary, sumBayArea, dedupeBays, parseAreaInput } from "@shared/area-utils";
 
 
 // Voltage options for electrical allocation
@@ -350,6 +350,26 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
                         </div>
                       </>
                     )}
+                    {/* Show WHAT the area was computed from.
+                        A single total with no breakdown made a doubled figure
+                        indistinguishable from a correct one - half a vacancy and
+                        the whole vacancy both just look like a number. Showing the
+                        entry count and the deduped count makes a stale parent-plus-
+                        halves selection obvious on sight. */}
+                    {rfp.selectedBayConfigurations && rfp.selectedBayConfigurations.length > 0 && (() => {
+                      const raw = rfp.selectedBayConfigurations.length;
+                      const kept = dedupeBays(rfp.selectedBayConfigurations as any).length;
+                      const halves = (rfp.selectedBayConfigurations as any[]).filter(
+                        (b: any) => /_(north|south)$/i.test(String(b?.id ?? ''))
+                      ).length;
+                      return (
+                        <div className="text-xs text-gray-500 border-t pt-2">
+                          From {kept} bay{kept === 1 ? '' : 's'}
+                          {halves > 0 ? ` (${halves} split half${halves === 1 ? '' : 'ves'})` : ''}
+                          {raw !== kept ? ` — ${raw - kept} duplicate parent bay${raw - kept === 1 ? '' : 's'} ignored` : ''}
+                        </div>
+                      );
+                    })()}
                     <div className="border-t pt-2 flex justify-between font-semibold text-gray-900">
                       <span>Remaining Rentable Area:</span>
                       <span>

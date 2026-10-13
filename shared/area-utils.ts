@@ -72,7 +72,27 @@ export function dedupeBays(bays: readonly BayLike[] | null | undefined): BayLike
 
   const parentIdsCoveredByHalves = new Set<string>();
   for (const bay of byId.values()) {
-    if (bay?.parentBayId) parentIdsCoveredByHalves.add(String(bay.parentBayId));
+    if (bay?.parentBayId) {
+      parentIdsCoveredByHalves.add(String(bay.parentBayId));
+      continue;
+    }
+
+    // DERIVE THE PARENT FROM THE ID when parentBayId is absent.
+    //
+    // Dedupe relied entirely on a stored parentBayId. Selections saved before
+    // provenance was carried through the bay grid have halves with no parent
+    // reference at all, so no parent was ever dropped and the area came back
+    // DOUBLE - the selected halves plus the whole bays they came from.
+    //
+    // Reported 2026-10-13: half of a 397,168 SF vacancy showed as 397,168, which
+    // is exactly 198,584 x 2.
+    //
+    // The parentage is in the id itself - "1754328341143_south" belongs to bay
+    // "1754328341143" - so it does not need to have been stored. A bare id with
+    // no suffix is a whole bay and covers nothing.
+    const id = bay?.id != null ? String(bay.id) : '';
+    const derivedParent = id.replace(/_(north|south)$/i, '');
+    if (derivedParent !== id) parentIdsCoveredByHalves.add(derivedParent);
   }
 
   return Array.from(byId.entries())

@@ -75,6 +75,7 @@ import { registerFileStepMigration } from './file-step-migration';
 import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
+import { registerPortfolioReportRoutes } from './portfolio-report';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -110,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCostsInPlaceReportRoutes(app);
   registerFourBucketBudgetReportRoutes(app);
   registerOccupancyReportRoutes(app);
+  registerPortfolioReportRoutes(app);
   registerAiRoutes(app);
   registerIntakeParserRoutes(app);
   registerProposalsRoutes(app);

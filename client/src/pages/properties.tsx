@@ -16,12 +16,14 @@ import { ElectricalManagementModal } from "@/components/electrical-management-mo
 import { BuildingSpecificationsModal } from "@/components/building-specifications-modal";
 import type { Property, BayConfiguration } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Properties() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProperty, setExpandedProperty] = useState<string | null>(null);
   const [expandedPropertyInfo, setExpandedPropertyInfo] = useState<number | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<Record<string, string>>({});
+  const { toast } = useToast();
   const { user } = useAuth();
   const canCreateProperties = user?.permissions?.includes('properties.create') || false;
   const canEditProperties = user?.permissions?.includes('properties.edit') || false;
@@ -67,6 +69,47 @@ export default function Properties() {
       return buildingA.localeCompare(buildingB);
     });
   });
+
+  /**
+   * Open a printable report in a new tab.
+   *
+   * The reports sit behind requireAuthFlexible, so they cannot simply be linked
+   * — the bearer token has to go on the request, which means fetching the HTML
+   * and opening it as a blob. One helper rather than a copy of this block per
+   * button; the per-card print handler used to carry its own, and failed
+   * silently into the console when it broke.
+   */
+  const openReport = async (url: string) => {
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) {
+        let detail = `Report failed (${response.status})`;
+        try {
+          const body = await response.json();
+          if (body?.message) detail = body.message;
+        } catch { /* HTML or empty body — keep the status message */ }
+        throw new Error(detail);
+      }
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const opened = window.open(objectUrl, '_blank');
+      if (!opened) {
+        toast({
+          title: 'Pop-up blocked',
+          description: 'Allow pop-ups for this site to open the report.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Report error:', error);
+      toast({
+        title: 'Could not open report',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const formatAddress = (property: Property) => {
     const parts = [
@@ -166,7 +209,22 @@ export default function Properties() {
               Manage your property portfolio and building information
             </p>
           </div>
-          {canCreateProperties && <PropertyFormModal />}
+          <div className="flex items-center gap-2">
+            {/* Portfolio report — every building on one sheet. The per-card
+                print button renders a single building, and "All" on a
+                multi-building property only un-stacks the cards, so there was
+                no way to get portfolio parking totals without adding them up
+                by hand. */}
+            <Button
+              variant="outline"
+              onClick={() => openReport('/api/reports/portfolio')}
+              title="Print area and parking totals for every building"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Portfolio Report
+            </Button>
+            {canCreateProperties && <PropertyFormModal />}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -324,32 +382,27 @@ export default function Properties() {
                                 propertyId={property.id}
                                 propertyName={property.propertyName || 'Property'}
                               />
-                              <button 
-                                onClick={async () => {
-                                  try {
-                                    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                                    const response = await fetch(`/api/properties/${property.id}/print`, {
-                                      headers: {
-                                        'Authorization': `Bearer ${token}`
-                                      }
-                                    });
-                                    
-                                    if (!response.ok) {
-                                      throw new Error('Print failed');
-                                    }
-                                    
-                                    const blob = await response.blob();
-                                    const url = window.URL.createObjectURL(blob);
-                                    window.open(url, '_blank');
-                                  } catch (error) {
-                                    console.error('Print error:', error);
-                                  }
-                                }}
-                                title="Print property report"
+                              <button
+                                onClick={() => openReport(`/api/properties/${property.id}/print`)}
+                                title="Print this building's report"
                                 className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                               >
                                 <Printer className="h-4 w-4" />
                               </button>
+                              {/* Multi-building properties get a second button:
+                                  every building of THIS property on one sheet.
+                                  Only on the first card, so it appears once. */}
+                              {isMultiBuilding && index === 0 && (
+                                <button
+                                  onClick={() => openReport(
+                                    `/api/reports/portfolio?property=${encodeURIComponent(property.propertyName || '')}`
+                                  )}
+                                  title={`Print all ${buildings.length} buildings together`}
+                                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                                >
+                                  <Layers className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
 
                           </div>

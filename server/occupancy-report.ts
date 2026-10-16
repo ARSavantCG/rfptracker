@@ -16,7 +16,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 
-function derivePropertyRentableSf(property: Property): number {
+export function derivePropertyRentableSf(property: Property): number {
   const bays = (property.bayConfigurations || []) as BayConfiguration[];
   return bays.reduce((sum, bay) => sum + (bay.rentableSquareFootage || bay.squareFootage || 0), 0);
 }
@@ -39,7 +39,7 @@ function deriveLeaseOccupiedSf(lease: ExecutedLease, bays: BayConfiguration[]): 
   }, 0);
 }
 
-function deriveOccupiedSf(leases: ExecutedLease[], bays: BayConfiguration[]): number {
+export function deriveOccupiedSf(leases: ExecutedLease[], bays: BayConfiguration[]): number {
   return leases.reduce((sum, lease) => sum + deriveLeaseOccupiedSf(lease, bays), 0);
 }
 

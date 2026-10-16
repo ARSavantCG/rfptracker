@@ -76,6 +76,7 @@ import { registerCostsInPlaceReportRoutes } from './costs-in-place-report';
 import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-report';
 import { registerOccupancyReportRoutes } from './occupancy-report';
 import { registerPortfolioReportRoutes } from './portfolio-report';
+import { registerReportPinRoutes } from './report-pins-routes';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -112,6 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFourBucketBudgetReportRoutes(app);
   registerOccupancyReportRoutes(app);
   registerPortfolioReportRoutes(app);
+  registerReportPinRoutes(app);
   registerAiRoutes(app);
   registerIntakeParserRoutes(app);
   registerProposalsRoutes(app);

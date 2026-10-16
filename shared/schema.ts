@@ -2114,3 +2114,33 @@ export const insertMasterItemReviewQueueSchema = createInsertSchema(masterItemRe
 export type MasterItemReviewQueueEntry = typeof masterItemReviewQueue.$inferSelect;
 export type InsertMasterItemReviewQueueEntry = z.infer<typeof insertMasterItemReviewQueueSchema>;
 
+
+/**
+ * A report a person has pinned to the top of their Reports page.
+ *
+ * userId is TEXT, not an integer FK. Contacts sign in too — Gian and the broker
+ * team are contacts, not system users — and their id arrives as "contact_12".
+ * An integer column would have silently excluded every contact, which is most
+ * of the people this feature is meant to encourage.
+ *
+ * params stores the report's SCOPE, not a built URL: {"property":"Kurv Doral II"}
+ * rather than "/api/reports/portfolio?property=...". A stored URL goes wrong
+ * the moment a report's parameters change shape, with nothing to detect it.
+ * Keeping the parts means shared/report-catalog can rebuild the URL, drop
+ * parameters a report no longer declares, and flag a pin whose property has
+ * been deleted instead of opening a broken page.
+ */
+export const userReportPins = pgTable("user_report_pins", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  /** ReportDefinition.key from shared/report-catalog. */
+  reportKey: text("report_key").notNull(),
+  params: json("params").$type<Record<string, string>>().default({}),
+  /** Display order within one person's pins. Lower first. */
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("user_report_pins_user_idx").on(table.userId),
+]);
+
+export type UserReportPin = typeof userReportPins.$inferSelect;

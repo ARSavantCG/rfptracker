@@ -9,6 +9,7 @@ import { Download, FileText, Calendar, TrendingUp, Clock, ListChecks, CheckCircl
 import { Link } from "wouter";
 import Navigation from "@/components/navigation";
 import { CustomReportModal } from "@/components/custom-report-modal";
+import { PinnedReports } from "@/components/pinned-reports";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
@@ -242,6 +243,11 @@ export default function Reports() {
             </p>
           </div>
         </div>
+
+        {/* Pinned reports and the full catalog.
+            Mounted ABOVE everything else and self-contained — the cards below
+            are untouched, so a fault here cannot take the page down with it. */}
+        <PinnedReports />
 
         {/* Filters Card */}
         <Card>

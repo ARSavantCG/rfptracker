@@ -277,6 +277,18 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     icon: 'DollarSign',
   },
   {
+    key: 'budget-reconciliation',
+    label: 'Budget Reconciliation',
+    answers: 'Does every saved grand total match the line items beneath it?',
+    kind: 'api',
+    path: '/api/reports/budget-reconciliation',
+    params: [],
+    note: 'Reads only. Flags any published total that does not equal the sum of its own lines.',
+    permission: 'admin.access',
+    category: 'Cost',
+    icon: 'DollarSign',
+  },
+  {
     key: 'category-cost-breakdown',
     label: 'Category Cost Breakdown',
     answers: 'Where is the money going, by cost category?',

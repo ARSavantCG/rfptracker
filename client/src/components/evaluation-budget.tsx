@@ -25,6 +25,12 @@ import { formatDate } from "@/lib/utils";
 import { nanoid } from "nanoid";
 import * as XLSX from "xlsx";
 import type { RfpRequest, BidCollection, BidLineItem } from "@shared/schema";
+import {
+  sumBudgetLines,
+  headIds,
+  effectiveLineAmountWithHeads,
+  orphanedAssemblyLines,
+} from '@shared/budget-totals';
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
 import { computeLineTotal, applyFeeMinimum } from "@shared/line-total";
@@ -2503,31 +2509,54 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     }).format(isNaN(num) ? 0 : num);
   };
 
-  const calculateCategoryTotal = (items: EvaluationLineItem[]) => {
-    return items.reduce((total, item) => {
-      // Exclude items that are part of an assembly (they have assemblyId)
-      if (item.assemblyId) {
-        return total;
-      }
-      const price = parseFloat(item.totalPrice) || 0;
-      const tenantShare = (item.tenantShare || 100) / 100;
-      return total + (price * tenantShare);
-    }, 0);
-  };
+  /**
+   * Every line in the budget, across all categories.
+   * A head and its children can sit in different ones, so assembly maths needs
+   * the whole set, not one category.
+   */
+  const allBudgetLines = (): EvaluationLineItem[] => [
+    ...budgetData.tenantImprovements,
+    ...budgetData.designSoftCosts,
+    ...budgetData.existingImprovements,
+  ];
+
+  /**
+   * Category total, assembly-aware.
+   *
+   * THIS USED TO DROP MONEY. It skipped every item carrying an assemblyId, on
+   * the assumption the assembly head counted them instead — but a head is
+   * created with totalPrice '0.00' and its real value is only DERIVED for
+   * display, so the head added nothing and the children were gone. Under the
+   * older scheme there was no head at all. Either way the published total was
+   * short by the whole assembly, which is how RFP-2026-031 went out at
+   * $735,340 against line items totalling $792,540.
+   *
+   * sumBudgetLines applies one rule: a head is worth its children, a child of
+   * a real head is already counted, and a child with no head counts itself.
+   */
+  const calculateCategoryTotal = (items: EvaluationLineItem[]) =>
+    sumBudgetLines(items as any, allBudgetLines() as any, budgetData.customAssemblies as any);
 
   // Calculate total including rolled-up items from other categories
   const calculateCategoryTotalWithRollups = (
     category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements'
   ) => {
     let total = 0;
-    
-    // Add items from this category that are not rolled up elsewhere and not part of an assembly
+
+    // Items in this category that are not rolled up elsewhere.
+    //
+    // Assembly membership is handled by effectiveLineAmountWithHeads rather
+    // than by skipping anything with an assemblyId: a head contributes its
+    // children, a child of a real head contributes nothing (its head counted
+    // it), and a child whose head does not exist contributes itself instead of
+    // vanishing. The old `&& !item.assemblyId` guard is what lost $57,200 on
+    // RFP-2026-031.
+    const everyLine = allBudgetLines();
+    const heads = headIds(everyLine as any, budgetData.customAssemblies as any);
     const categoryItems = budgetData[category];
     categoryItems.forEach(item => {
-      if (!budgetData.lineItemRollups[item.id] && !item.assemblyId) {
-        const price = parseFloat(item.totalPrice) || 0;
-        const tenantShare = (item.tenantShare || 100) / 100;
-        total += price * tenantShare;
+      if (!budgetData.lineItemRollups[item.id]) {
+        total += effectiveLineAmountWithHeads(item as any, everyLine as any, heads);
       }
     });
     
@@ -2542,9 +2571,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         ];
         const item = allItems.find(i => i.id === itemId);
         if (item) {
-          const baseAmount = parseFloat(item.totalPrice) || 0;
-          const tenantShare = (item.tenantShare || 100) / 100;
-          let amountToAdd = baseAmount * tenantShare;
+          // Same rule as above: a rolled-up assembly head is worth its
+          // children, not its placeholder price.
+          let amountToAdd = effectiveLineAmountWithHeads(
+            item as any, allItems as any, headIds(allItems as any, budgetData.customAssemblies as any));
           
           // If rolling to both TI & Design, distribute proportionally based on category sizes
           if (targetCategory === 'tiAndDesign') {
@@ -6007,6 +6037,51 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             <span>Grand Total:</span>
             <span className="text-green-600">{formatCurrency(calculateGrandTotal())}</span>
           </div>
+
+          {/* RECONCILIATION.
+              The grand total used to be able to differ from the sum of the
+              lines above it with nothing on screen saying so — RFP-2026-031
+              published $735,340 against $792,540 of line items. This states
+              the arithmetic every time, so a gap cannot reach a tenant
+              unnoticed again. */}
+          {(() => {
+            const lines = allBudgetLines();
+            const counted = [
+              ...budgetData.tenantImprovements,
+              ...budgetData.designSoftCosts,
+              ...(budgetData.hasExistingImprovements && budgetData.includeExistingInTotal
+                ? budgetData.existingImprovements : []),
+            ];
+            const rawSum = counted.reduce(
+              (t, i) => t + (parseFloat(i.totalPrice) || 0) * ((i.tenantShare || 100) / 100), 0);
+            const grand = calculateGrandTotal();
+            const orphans = orphanedAssemblyLines(lines as any, budgetData.customAssemblies as any);
+            // Rollups legitimately move money between categories without
+            // changing the whole, so only an unexplained gap is a problem.
+            const gap = grand - rawSum;
+            const hasRollups = Object.keys(budgetData.lineItemRollups || {}).length > 0;
+            const unexplained = Math.abs(gap) >= 1 && !hasRollups;
+            return (
+              <div className="mt-3 text-xs">
+                <div className={unexplained ? 'text-red-700 font-medium' : 'text-gray-500'}>
+                  {counted.length} line item{counted.length === 1 ? '' : 's'} totalling{' '}
+                  {formatCurrency(rawSum)}
+                  {Math.abs(gap) < 1
+                    ? ' — matches the grand total.'
+                    : hasRollups
+                      ? ' — differs from the grand total because line items are rolled up between categories.'
+                      : ` — DOES NOT MATCH the grand total above (off by ${formatCurrency(Math.abs(gap))}). Do not publish until this is understood.`}
+                </div>
+                {orphans.total > 0 && (
+                  <div className="text-amber-700 mt-1">
+                    {orphans.items.length} item{orphans.items.length === 1 ? '' : 's'} worth{' '}
+                    {formatCurrency(orphans.total)} are tagged to an assembly with no header line
+                    ({orphans.assemblyNames.join(', ')}). They are counted in the total above.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <Separator className="my-4" />
           <div>
             <Label htmlFor="notes">Budget Notes</Label>

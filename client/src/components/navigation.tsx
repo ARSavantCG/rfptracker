@@ -99,7 +99,10 @@ export default function Navigation() {
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/contacts", label: "Contacts", icon: Users },
     { path: "/properties", label: "Properties", icon: Building },
-    { path: "/reports", label: "Reports", icon: BarChart3, hasSubmenu: true },
+    // No submenu. Every report now lives in the catalog on /reports, so a
+    // dropdown here was a second, shorter list of the same thing — and the one
+    // place a report could go missing from. Clicking Reports opens the page.
+    { path: "/reports", label: "Reports", icon: BarChart3 },
     { path: "/proposals-library", label: "Proposals", icon: FileText },
     { path: "/rom-pilot", label: "ROM Pilot", icon: Calculator },
   ];
@@ -147,63 +150,7 @@ export default function Navigation() {
           <div className="hidden lg:flex items-center space-x-1 ml-8">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.path || (item.hasSubmenu && reportsSubmenu.some(sub => location === sub.path));
-              
-              // Handle Reports dropdown
-              if (item.hasSubmenu) {
-                return (
-                  <div key={item.path} className="relative" ref={reportsRef}>
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      className={cn(
-                        "flex items-center space-x-2",
-                        isActive && "bg-blue-600 text-white hover:bg-blue-700"
-                      )}
-                      onClick={() => setIsReportsOpen(!isReportsOpen)}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                      <ChevronDown className={cn("h-3 w-3 transition-transform", isReportsOpen && "rotate-180")} />
-                    </Button>
-                    
-                    {isReportsOpen && (
-                      <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                        <div className="py-1">
-                          {reportsSubmenu.map((subItem) => {
-                            const SubIcon = subItem.icon;
-                            const isSubActive = location === subItem.path;
-                            return (
-                              <button
-                                key={subItem.path}
-                                onClick={() => {
-                                  if (subItem.openInNewTab) {
-                                    window.open(subItem.path, '_blank');
-                                  } else {
-                                    setLocation(subItem.path);
-                                  }
-                                  setIsReportsOpen(false);
-                                }}
-                                className={cn(
-                                  "flex items-center w-full px-4 py-2 text-sm text-left transition-colors",
-                                  isSubActive 
-                                    ? "bg-blue-50 text-blue-700" 
-                                    : "text-gray-700 hover:bg-gray-100"
-                                )}
-                              >
-                                <SubIcon className={cn("h-4 w-4 mr-3", isSubActive ? "text-blue-600" : "text-gray-500")} />
-                                {subItem.label}
-                                {subItem.openInNewTab && (
-                                  <span className="ml-auto text-xs text-gray-400">↗</span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
+              const isActive = location === item.path;
               
               if (item.openInNewTab) {
                 return (
@@ -326,41 +273,8 @@ export default function Navigation() {
             <div className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location === item.path || (item.hasSubmenu && reportsSubmenu.some(sub => location === sub.path));
-                
-                // Handle Reports section with submenu
-                if (item.hasSubmenu) {
-                  return (
-                    <div key={item.path}>
-                      <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
-                        Reports
-                      </div>
-                      {reportsSubmenu.map((subItem) => {
-                        const SubIcon = subItem.icon;
-                        const isSubActive = location === subItem.path;
-                        return (
-                          <button
-                            key={subItem.path}
-                            onClick={() => handleNavClick(subItem)}
-                            className={cn(
-                              "flex items-center w-full px-4 py-3 text-left transition-colors",
-                              isSubActive 
-                                ? "bg-blue-50 text-blue-700 border-l-4 border-blue-600" 
-                                : "text-gray-700 hover:bg-gray-100 border-l-4 border-transparent"
-                            )}
-                          >
-                            <SubIcon className={cn("h-5 w-5 mr-3", isSubActive ? "text-blue-600" : "text-gray-500")} />
-                            <span className="font-medium">{subItem.label}</span>
-                            {subItem.openInNewTab && (
-                              <span className="ml-auto text-xs text-gray-400">↗</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-                
+                const isActive = location === item.path;
+
                 return (
                   <button
                     key={item.path}

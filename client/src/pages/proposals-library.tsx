@@ -226,7 +226,11 @@ export default function ProposalsLibrary() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          /* A LIST, not a grid of boxes.
+             Three big cards per row meant scrolling to compare proposals that
+             differ by one number. Rows put contractor, project, date, amount
+             and attachments on one line, so a column can be read down. */
+          <div className="divide-y rounded-md border bg-white">
             {filtered.map(proposal => {
               const initials = getInitials(proposal.contractorCompany);
               const colorClass = companyColor(proposal.contractorCompany);
@@ -236,82 +240,77 @@ export default function ProposalsLibrary() {
               const allAttachments = proposal.attachments ?? [];
 
               return (
-                <Card key={proposal.bidCollectionId} className="border shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    {/* Contractor header */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className={`${colorClass} text-white rounded-full h-11 w-11 flex items-center justify-center text-sm font-bold flex-shrink-0`}
-                      >
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">{proposal.contractorCompany}</p>
-                        <p className="text-xs text-gray-500 truncate">{proposal.contractorName}</p>
-                      </div>
+                <div
+                  key={proposal.bidCollectionId}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5 hover:bg-gray-50"
+                >
+                  {/* Contractor */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1 basis-56">
+                    <div className={`${colorClass} text-white rounded-full h-8 w-8 flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+                      {initials}
                     </div>
-
-                    {/* Project info */}
-                    <div className="space-y-1.5 mb-3 text-sm">
-                      <div className="flex items-start gap-2">
-                        <Building className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <span className="font-medium text-gray-800 truncate block">{proposal.projectName}</span>
-                          <span className="text-gray-500 text-xs">{proposal.rfpNumber}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                        <span className="text-xs">{formatDate(proposal.submissionDate)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <DollarSign className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                        <span className="text-sm font-medium">{formatAmount(proposal.totalAmount)}</span>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{proposal.contractorCompany}</p>
+                      <p className="text-xs text-gray-500 truncate">{proposal.contractorName}</p>
                     </div>
+                  </div>
 
-                    {/* Attachments count */}
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <Paperclip className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-xs text-gray-500">
-                        {allAttachments.length} attachment{allAttachments.length !== 1 ? "s" : ""}
-                        {pdfAttachments.length > 0 && (
-                          <span className="text-blue-600 ml-1">({pdfAttachments.length} PDF)</span>
-                        )}
-                      </span>
-                    </div>
+                  {/* Project */}
+                  <div className="min-w-0 flex-1 basis-52">
+                    <p className="text-sm text-gray-800 truncate">{proposal.projectName}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {proposal.rfpNumber} · {proposal.tenantName}
+                    </p>
+                  </div>
 
-                    {/* Tenant */}
-                    <div className="mb-3">
-                      <Badge variant="outline" className="text-xs font-normal text-gray-600">
-                        {proposal.tenantName}
-                      </Badge>
-                    </div>
+                  {/* Date */}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 w-28 flex-shrink-0">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    {formatDate(proposal.submissionDate)}
+                  </div>
 
-                    {/* Action buttons */}
-                    <div className="flex gap-2">
-                      {pdfAttachments.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs flex items-center gap-1.5"
-                          onClick={() => openPdf(pdfAttachments[0])}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          View PDF
-                        </Button>
-                      )}
+                  {/* Amount — right-aligned so a column of figures lines up. */}
+                  <div className="w-28 flex-shrink-0 text-right text-sm font-semibold text-gray-900 tabular-nums">
+                    {formatAmount(proposal.totalAmount)}
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="flex items-center gap-1 w-24 flex-shrink-0 text-xs text-gray-500">
+                    <Paperclip className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    {allAttachments.length}
+                    {pdfAttachments.length > 0 && (
+                      <span className="text-blue-600">({pdfAttachments.length} PDF)</span>
+                    )}
+                  </div>
+
+                  {/* Actions.
+                      FIXED WIDTH, right-aligned. Without it a row lacking a PDF
+                      button gave its spare space back to the flexible columns,
+                      so project, date and amount shifted left on that row only
+                      — and a column you cannot read straight down is the thing
+                      a list was supposed to fix. */}
+                  <div className="flex w-44 flex-shrink-0 items-center justify-end gap-1.5">
+                    {pdfAttachments.length > 0 && (
                       <Button
+                        variant="outline"
                         size="sm"
-                        className="flex-1 text-xs flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700"
-                        onClick={() => setTaggingTarget(proposal)}
+                        className="h-8 text-xs flex items-center gap-1.5"
+                        onClick={() => openPdf(pdfAttachments[0])}
                       >
-                        <Tag className="h-3.5 w-3.5" />
-                        Tag Prices
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        PDF
                       </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    )}
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setTaggingTarget(proposal)}
+                    >
+                      <Tag className="h-3.5 w-3.5" />
+                      Tag Prices
+                    </Button>
+                  </div>
+                </div>
               );
             })}
           </div>

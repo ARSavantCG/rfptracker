@@ -216,7 +216,12 @@ export function registerProjectTeamRoutes(app: Express) {
           id: executedLeases.id,
           propertyId: executedLeases.propertyId,
           tenantName: executedLeases.tenantName,
-          suiteNumber: executedLeases.suiteNumber,
+          // NO suiteNumber HERE. executed_leases has no such column — it has
+          // bay_numbers. Selecting it passed `undefined` to drizzle, which threw
+          // on every request, so this report returned 500 from the day the line
+          // was added (2026-08-11) until it was first clicked. It was not on the
+          // Reports page until the catalog put it there, which is why two months
+          // passed before anyone saw the failure.
           bayNumbers: executedLeases.bayNumbers,
           leaseStartDate: executedLeases.leaseStartDate,
           leaseEndDate: executedLeases.leaseEndDate,
@@ -287,7 +292,6 @@ export function registerProjectTeamRoutes(app: Express) {
         const members = membersByLease.get(lease.id) || [];
         const label = [
           lease.tenantName,
-          lease.suiteNumber ? `Suite ${lease.suiteNumber}` : null,
           lease.bayNumbers || null,
         ].filter(Boolean).join(' · ');
 

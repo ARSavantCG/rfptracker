@@ -24,7 +24,7 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { AUTH_TOKEN_KEY } from '@/lib/auth-constants';
-import { groupPropertiesByName, describePropertyScope } from '@shared/property-scope';
+import { HierarchicalPropertySelector } from '@/components/hierarchical-property-selector';
 import {
   REPORT_CATEGORIES,
   type ReportDefinition,
@@ -98,10 +98,6 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
   // null = not chosen yet, so the default below applies.
   const [browseOpen, setBrowseOpen] = useState<boolean | null>(null);
   const [search, setSearch] = useState('');
-  // Which property pickers are expanded. Collapsed by default: eight reports
-  // each showing a full building checklist turned the catalog into a wall of
-  // checkboxes and doubled the page height.
-  const [openPickers, setOpenPickers] = useState<Record<string, boolean>>({});
   // Parameter values chosen in the catalog, keyed "<reportKey>.<paramName>".
   const [draftParams, setDraftParams] = useState<Record<string, string>>({});
 
@@ -465,90 +461,27 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                                       );
                                     }
                                     // Several properties at once — a whole
-                                    // park, or any mix of buildings. Stored as
-                                    // "1,9,10", which is also the wire format,
-                                    // so nothing has to translate between them.
+                                    // park, or any mix of buildings. Uses the
+                                    // SAME dropdown as the RFP form rather than
+                                    // a second bespoke control, so the two
+                                    // places you pick a property look and
+                                    // behave alike.
+                                    //
+                                    // Stored as "1,9,10", which is also the
+                                    // wire format, so nothing translates
+                                    // between them.
                                     if (param.type === 'properties') {
-                                      const selected = new Set(
-                                        (value || '').split(',').map((v) => v.trim()).filter(Boolean));
-                                      const groups = groupPropertiesByName(properties as any);
-                                      const commit = (next: Set<string>) =>
-                                        setParam(def, param, Array.from(next).join(','));
-                                      const toggle = (ids: string[], on: boolean) => {
-                                        const next = new Set(selected);
-                                        ids.forEach((id) => (on ? next.add(id) : next.delete(id)));
-                                        commit(next);
-                                      };
-                                      const pickerKey = `${def.key}.${param.name}`;
-                                      const pickerOpen = !!openPickers[pickerKey];
-                                      const summary = selected.size === 0
-                                        ? 'Every property'
-                                        : describePropertyScope(Array.from(selected), properties as any);
+                                      const ids = (value || '').split(',').map((v) => v.trim()).filter(Boolean);
                                       return (
-                                        <div key={param.name} className="w-full mt-1">
-                                          <div className="flex items-center gap-2">
-                                            <button
-                                              onClick={() => setOpenPickers((prev) => ({ ...prev, [pickerKey]: !pickerOpen }))}
-                                              className={`flex items-center gap-1 h-8 rounded-md border px-2 text-xs ${
-                                                selected.size > 0
-                                                  ? 'border-blue-300 bg-blue-50 text-blue-900'
-                                                  : 'border-input bg-background text-gray-700'
-                                              }`}
-                                            >
-                                              {pickerOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                              {summary}
-                                            </button>
-                                            {selected.size > 0 && (
-                                              <button
-                                                className="text-xs text-blue-600 hover:underline"
-                                                onClick={() => commit(new Set())}
-                                              >
-                                                Clear
-                                              </button>
-                                            )}
-                                          </div>
-                                          {pickerOpen && (
-                                          <div className="mt-1.5 rounded-md border bg-gray-50 p-2 space-y-1.5 max-h-44 overflow-y-auto">
-                                            {groups.map((group) => {
-                                              const ids = group.buildings.map((b: any) => String(b.id));
-                                              const all = ids.every((id) => selected.has(id));
-                                              const some = !all && ids.some((id) => selected.has(id));
-                                              return (
-                                                <div key={group.name}>
-                                                  {/* The whole park in one click. */}
-                                                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={all}
-                                                      ref={(el) => { if (el) el.indeterminate = some; }}
-                                                      onChange={(e) => toggle(ids, e.target.checked)}
-                                                    />
-                                                    {group.name}
-                                                    {group.buildings.length > 1 && (
-                                                      <span className="text-gray-500 font-normal">
-                                                        (all {group.buildings.length} buildings)
-                                                      </span>
-                                                    )}
-                                                  </label>
-                                                  {group.buildings.length > 1 && (
-                                                    <div className="ml-5 mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5">
-                                                      {group.buildings.map((b: any) => (
-                                                        <label key={b.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-                                                          <input
-                                                            type="checkbox"
-                                                            checked={selected.has(String(b.id))}
-                                                            onChange={(e) => toggle([String(b.id)], e.target.checked)}
-                                                          />
-                                                          Bldg. {b.building || b.id}
-                                                        </label>
-                                                      ))}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                          )}
+                                        <div key={param.name} className="w-full sm:w-80 mt-1">
+                                          <HierarchicalPropertySelector
+                                            multiple
+                                            values={ids}
+                                            onChangeMultiple={(next) => setParam(def, param, next.join(','))}
+                                            placeholder={param.blankMeans || 'All properties'}
+                                            value=""
+                                            onChange={() => {}}
+                                          />
                                         </div>
                                       );
                                     }

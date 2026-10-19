@@ -12,6 +12,7 @@ import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
 import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
+import { formatLeaseSuite } from '@shared/lease-utils';
 import type { Property, ExecutedLease, BayConfiguration } from '@shared/schema';
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -104,6 +105,18 @@ function bayLabel(lease: ExecutedLease): string {
   return assigned.length ? assigned.join(', ') : '—';
 }
 
+/**
+ * Unit identifier plus bays, for the tenant row.
+ * The unit comes from the lease override or the bays it holds; parks that
+ * number units by street address show the address as entered.
+ */
+function unitAndBays(lease: ExecutedLease, bays: BayConfiguration[]): string {
+  const unit = formatLeaseSuite(lease as any, bays as any);
+  const baysLabel = bayLabel(lease);
+  if (!unit) return baysLabel;
+  return baysLabel && baysLabel !== '—' ? `${unit} · ${baysLabel}` : unit;
+}
+
 interface LeaseDetailRow {
   tenantName: string;
   bays: string;
@@ -149,7 +162,7 @@ export function computeRow(property: Property, leases: ExecutedLease[]): Propert
       const leasedSf = deriveLeaseOccupiedSf(lease, bays);
       return {
         tenantName: lease.tenantName,
-        bays: bayLabel(lease),
+        bays: unitAndBays(lease, bays),
         leasedSf,
         pctOfBuilding: rentableSf > 0 ? (leasedSf / rentableSf) * 100 : 0,
         term: fmtTerm(lease),

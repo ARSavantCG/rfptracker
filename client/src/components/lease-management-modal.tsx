@@ -28,10 +28,12 @@ import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { BaySelectionGrid } from "@/components/bay-selection-grid";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
 import { ProjectTeamSection } from "@/components/project-team-section";
+import { resolveLeaseSuite } from "@shared/lease-utils";
 
 const leaseFormSchema = z.object({
   tenantName: z.string().min(1, "Tenant name is required"),
   assignedBays: z.array(z.string()).min(1, "At least one bay must be assigned"),
+  suiteNumber: z.string().optional(),
   rentableAreaOverride: z.number().min(0).optional(),
   standardParking: z.number().min(0).default(0),
   accessibleParking: z.number().min(0).default(0),
@@ -63,12 +65,14 @@ function blankLeaseForm(): LeaseFormData {
   return {
     tenantName: "",
     assignedBays: [],
+    suiteNumber: "",
     rentableAreaOverride: undefined,
     standardParking: 0,
     accessibleParking: 0,
     evParking: 0,
     trailerParking: 0,
     leaseType: 'executed' as const,
+    constructionByTenant: false,
     electricalAllocation: undefined,
     notes: "",
   };
@@ -141,10 +145,17 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
   });
 
   const onSubmit = (data: LeaseFormData) => {
+    const payload = {
+      ...data,
+      // A blank suite means "use the bays", so store null rather than "".
+      // An empty string would read as an override that happens to be empty,
+      // and clearing the field would then stop falling back to the bays.
+      suiteNumber: data.suiteNumber?.trim() ? data.suiteNumber.trim() : null,
+    };
     if (editingLease) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(payload as any);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload as any);
     }
   };
 
@@ -175,6 +186,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
     form.reset({
       tenantName: lease.tenantName,
       assignedBays: lease.assignedBays || [],
+      suiteNumber: lease.suiteNumber || "",
       rentableAreaOverride: lease.rentableAreaOverride || undefined,
       standardParking: lease.standardParking || 0,
       accessibleParking: lease.accessibleParking || 0,
@@ -311,6 +323,51 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+
+                    {/* Suite number.
+                        Derived from the bays by default — the placeholder shows
+                        what will be used, so the common case needs no typing
+                        and cannot drift from the property record. Type here
+                        only when the demise carries its own number. */}
+                    <FormField
+                      control={form.control}
+                      name="suiteNumber"
+                      render={({ field }) => {
+                        const derived = resolveLeaseSuite(
+                          { assignedBays: form.watch("assignedBays"), suiteNumber: null },
+                          availableBays,
+                        );
+                        return (
+                          <FormItem>
+                            <FormLabel>Unit / Suite</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                placeholder={
+                                  derived
+                                    ? `${derived} (from the selected bays)`
+                                    : "e.g. 100, 101A, or a street address"
+                                }
+                              />
+                            </FormControl>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {derived ? (
+                                <>Leave blank to use <strong>{derived}</strong> from the bays. Enter a
+                                value only if this demise has its own identifier — bays leased together
+                                as one suite, for instance.</>
+                              ) : (
+                                <>Normally comes from Bay Configuration. Enter one here if this demise
+                                has an identifier the bays do not carry. Parks that number units by
+                                street address rather than suite can be entered that way — the address
+                                is shown as typed, not prefixed with &ldquo;Suite&rdquo;.</>
+                              )}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
 
                     {/* Executed Lease Area Override */}

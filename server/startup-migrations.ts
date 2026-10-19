@@ -89,6 +89,11 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'project_team_members', column: 'lease_id', type: 'integer REFERENCES executed_leases(id) ON DELETE CASCADE' },
   // Tenant performs its own construction: no landlord design team required.
   { table: 'executed_leases', column: 'construction_by_tenant', type: 'boolean DEFAULT false' },
+  // Suite number for the demised premises (2026-10-19). An OVERRIDE: suites
+  // normally come from the bays the lease holds. The Project Team Directory
+  // selected executed_leases.suite_number for two months before the column
+  // existed, and threw on every request as a result.
+  { table: 'executed_leases', column: 'suite_number', type: 'text' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

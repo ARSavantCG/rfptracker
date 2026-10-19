@@ -14,6 +14,7 @@ import {
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireAuthFlexible, checkPermission } from './middleware';
 import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
+import { formatLeaseSuite } from '@shared/lease-utils';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 
 function escapeHtml(s: any): string {
@@ -211,17 +212,22 @@ export function registerProjectTeamRoutes(app: Express) {
       const scopeIds = parsePropertyScope(req.query || {}, propRows as any);
       const scopedProps = filterPropertiesByScope(propRows as any, scopeIds) as typeof propRows;
 
+      // Bay configurations per property, for resolving a lease's unit from the
+      // bays it holds. Loaded once rather than per lease.
+      const propBays = new Map<number, any[]>();
+      for (const row of await db.select({ id: properties.id, bays: properties.bayConfigurations }).from(properties)) {
+        propBays.set(row.id, (row.bays as any[]) || []);
+      }
+
       const leaseRows = await db
         .select({
           id: executedLeases.id,
           propertyId: executedLeases.propertyId,
           tenantName: executedLeases.tenantName,
-          // NO suiteNumber HERE. executed_leases has no such column — it has
-          // bay_numbers. Selecting it passed `undefined` to drizzle, which threw
-          // on every request, so this report returned 500 from the day the line
-          // was added (2026-08-11) until it was first clicked. It was not on the
-          // Reports page until the catalog put it there, which is why two months
-          // passed before anyone saw the failure.
+          // The column exists now (added 2026-10-19). It is an OVERRIDE: the
+          // unit identifier normally comes from the bays, so resolveLeaseSuite
+          // decides which wins rather than this report guessing.
+          suiteNumber: executedLeases.suiteNumber,
           bayNumbers: executedLeases.bayNumbers,
           leaseStartDate: executedLeases.leaseStartDate,
           leaseEndDate: executedLeases.leaseEndDate,
@@ -290,8 +296,13 @@ export function registerProjectTeamRoutes(app: Express) {
 
       const renderLease = (lease: typeof leaseRows[number]) => {
         const members = membersByLease.get(lease.id) || [];
+        // Bay suite numbers come from the property this lease sits on, so the
+        // unit identifier can fall back to them when the lease has none.
+        const leaseBays = (propBays.get(lease.propertyId) || []) as any[];
+        const unit = formatLeaseSuite(lease as any, leaseBays);
         const label = [
           lease.tenantName,
+          unit || null,
           lease.bayNumbers || null,
         ].filter(Boolean).join(' · ');
 

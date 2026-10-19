@@ -1442,6 +1442,21 @@ export const executedLeases = pgTable("executed_leases", {
   // backfill, which is the historically correct interpretation.
   leaseType: text("lease_type").default('executed'),
   
+  /**
+   * Suite number for the demised premises.
+   *
+   * AN OVERRIDE, not the primary record. Suite numbers already live on each
+   * bay (BayConfiguration.suiteNumber, entered in Bay Configuration), and a
+   * lease covers bays — so a lease's suite is normally DERIVED from the bays
+   * it holds and never typed twice. Same pattern as rentableAreaOverride
+   * below.
+   *
+   * Set this only when the demise carries its own number that the bays do not
+   * say: bays 3-5 leased as one "Suite 300". resolveLeaseSuite in
+   * shared/lease-utils applies the precedence.
+   */
+  suiteNumber: text("suite_number"),
+
   // Override and parking allocation
   rentableAreaOverride: integer("rentable_area_override"), // Override calculated area with actual lease terms
   standardParking: integer("standard_parking").default(0),

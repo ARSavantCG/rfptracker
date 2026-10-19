@@ -16,6 +16,7 @@ import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/brandi
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuth } from './middleware';
+import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
 import { EXISTING_IMPROVEMENT_CATEGORIES, resolveDenominatorBasis, DENOMINATOR_BASES } from '@shared/schema';
 import type { Property, PropertyExistingImprovement, BayConfiguration, DenominatorBasis } from '@shared/schema';
 import { readFileSync } from 'fs';
@@ -293,11 +294,16 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
   // GET /api/reports/costs-in-place                → portfolio roll-up
   app.get('/api/reports/costs-in-place', requireAuth, async (req, res) => {
     try {
-      const propertyIdRaw = req.query.propertyId as string | undefined;
+      const allProperties = await storage.getAllProperties();
+      // Understands ?propertyIds=1,9,10 as well as this report's original
+      // ?propertyId=4, so saved pins and pasted links keep working.
+      const scopeIds = parsePropertyScope(req.query || {}, allProperties as any);
 
-      if (propertyIdRaw) {
-        // ---- Single-property mode ----
-        const propertyId = parseInt(propertyIdRaw);
+      // One property keeps the original single-property layout exactly. Two or
+      // more fall through to the roll-up, which is what a multi-building scope
+      // should look like anyway.
+      if (scopeIds !== null && scopeIds.length === 1) {
+        const propertyId = parseInt(scopeIds[0]);
         if (isNaN(propertyId)) {
           return res.status(400).json({ message: 'Invalid property ID' });
         }
@@ -316,8 +322,8 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
         return res.send(html);
       }
 
-      // ---- Portfolio roll-up mode ----
-      const properties = await storage.getAllProperties();
+      // ---- Roll-up mode: the whole portfolio, or a chosen set of buildings ----
+      const properties = filterPropertiesByScope(allProperties as any, scopeIds) as typeof allProperties;
       const sorted = [...properties].sort((a, b) =>
         (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999) ||
         (a.displayName || a.propertyName).localeCompare(b.displayName || b.propertyName)
@@ -357,8 +363,8 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
         </div>`;
 
       const html = renderReportHtml(
-        'Costs-in-Place Report — Portfolio',
-        'All Properties',
+        scopeIds === null ? 'Costs-in-Place Report — Portfolio' : 'Costs-in-Place Report',
+        describePropertyScope(scopeIds, allProperties as any),
         sections,
         portfolioSummary,
       );

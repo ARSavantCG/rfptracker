@@ -23,6 +23,7 @@ import { CustomReportModal } from "@/components/custom-report-modal";
 import { PinnedReports } from "@/components/pinned-reports";
 import { parseISO, isAfter, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
+import { isRfpOverdue, daysUntilRfpDue } from "@shared/schema";
 
 interface ReportFilters {
   status?: string;
@@ -53,23 +54,42 @@ export default function Reports() {
     return true;
   });
 
-  const daysUntilDue = (rfp: RfpRequest) => {
-    const due = parseISO(rfp.internalDueDate.toString());
-    return Math.ceil((due.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  // These counts used to be scattered across three report cards. Gathered into
-  // one row so removing the cards did not remove the numbers with them.
+  /**
+   * Counts, in two groups that each mean something.
+   *
+   * BY STATUS sums exactly to the total: every RFP is in one bucket and only
+   * one. Cancelled is shown rather than hidden, so the parts reconcile to the
+   * whole instead of leaving a silent gap.
+   *
+   * NEEDS ATTENTION is a subset and overlaps the first group on purpose — an
+   * overdue RFP is also an in-progress one. Labelled as a subset so nobody
+   * adds the two rows together.
+   *
+   * Overdue comes from isRfpOverdue, which excludes EVERY terminal status.
+   * This page previously excluded only 'completed', so cancelled, archived and
+   * on-hold RFPs all counted as overdue — while the dashboard, which checked
+   * the terminal list, disagreed about the very same records.
+   */
+  const byStatus = (status: string) => filteredRfps.filter((r) => r.status === status).length;
   const metrics = {
     total: filteredRfps.length,
-    inProgress: filteredRfps.filter((r) => r.status === "in-progress").length,
-    completed: filteredRfps.filter((r) => r.status === "completed").length,
+    received: byStatus("received"),
+    inProgress: byStatus("in-progress"),
+    completed: byStatus("completed"),
+    onHold: byStatus("on-hold"),
+    cancelled: byStatus("cancelled") + byStatus("archived"),
+    overdue: filteredRfps.filter((r) => isRfpOverdue(r)).length,
     dueSoon: filteredRfps.filter((r) => {
-      const d = daysUntilDue(r);
-      return d >= 0 && d <= 3 && r.status !== "completed";
+      if (isRfpOverdue(r)) return false;
+      const d = daysUntilRfpDue(r);
+      return d !== null && d >= 0 && d <= 3
+        && !["completed", "cancelled", "archived", "on-hold"].includes(String(r.status));
     }).length,
-    overdue: filteredRfps.filter((r) => daysUntilDue(r) < 0 && r.status !== "completed").length,
   };
+  // If this is ever false the tiles are lying; surfaced rather than left to drift.
+  const statusTilesReconcile =
+    metrics.received + metrics.inProgress + metrics.completed + metrics.onHold + metrics.cancelled ===
+    metrics.total;
 
   const clearFilters = () => setFilters({});
   const hasFilters = Boolean(filters.status || filters.property || filters.dueInDays);
@@ -118,14 +138,36 @@ export default function Reports() {
             <CardTitle className="text-base">
               Pipeline{hasFilters ? " (filtered)" : ""}
             </CardTitle>
+            <p className="text-xs text-gray-600">
+              By status — these add up to {metrics.total}.
+            </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {tile("Total", metrics.total)}
-              {tile("Active", metrics.inProgress, "text-yellow-900")}
+              {tile("Received", metrics.received)}
+              {tile("In Progress", metrics.inProgress, "text-yellow-900")}
               {tile("Complete", metrics.completed, "text-green-900")}
-              {tile("Due in 3 days", metrics.dueSoon, "text-orange-900")}
-              {tile("Overdue", metrics.overdue, metrics.overdue ? "text-red-900" : "text-gray-900")}
+              {tile("On Hold", metrics.onHold, "text-gray-700")}
+              {tile("Cancelled", metrics.cancelled, "text-gray-500")}
+            </div>
+
+            {!statusTilesReconcile && (
+              <p className="text-xs text-amber-700">
+                These do not sum to {metrics.total} — some RFPs carry a status not shown here.
+              </p>
+            )}
+
+            <div>
+              <p className="text-xs text-gray-600 mb-2">
+                Needs attention — a subset of the above, not extra.
+              </p>
+              <div className="grid grid-cols-2 gap-3 md:w-2/5">
+                {tile("Due in 3 days", metrics.dueSoon, "text-orange-900")}
+                {tile("Overdue", metrics.overdue, metrics.overdue ? "text-red-900" : "text-gray-900")}
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Cancelled, completed, archived and on-hold RFPs are never counted as overdue.
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -339,6 +339,51 @@ export function isTerminalRfpStatus(status: string | null | undefined): boolean 
 }
 
 /**
+ * Is this RFP overdue? The single definition.
+ *
+ * A cancelled RFP is NOT overdue. Neither is a completed, archived or on-hold
+ * one: work has stopped, so a date it will never meet is not a miss. Only live
+ * deals can be late.
+ *
+ * Reported 2026-10-19: three cancelled RFPs were counting as overdue on the
+ * Reports page, which excluded only 'completed' and let the other three
+ * terminal statuses through. The dashboard already got this right by checking
+ * the terminal list, so the two disagreed about the same RFPs — the familiar
+ * shape of a rule written twice.
+ *
+ * Compares CALENDAR DAYS, not instants: an RFP due at 5pm today is not overdue
+ * at 6pm today.
+ */
+export function isRfpOverdue(
+  rfp: { status?: string | null; internalDueDate?: Date | string | null } | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!rfp || isTerminalRfpStatus(rfp.status)) return false;
+  if (!rfp.internalDueDate) return false;
+  const due = rfp.internalDueDate instanceof Date ? rfp.internalDueDate : new Date(rfp.internalDueDate);
+  if (isNaN(due.getTime())) return false;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return dueDay < startOfToday;
+}
+
+/**
+ * Days until due, negative when past. Null when there is no usable date.
+ * Calendar days, for the same reason as above.
+ */
+export function daysUntilRfpDue(
+  rfp: { internalDueDate?: Date | string | null } | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!rfp?.internalDueDate) return null;
+  const due = rfp.internalDueDate instanceof Date ? rfp.internalDueDate : new Date(rfp.internalDueDate);
+  if (isNaN(due.getTime())) return null;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return Math.round((dueDay.getTime() - startOfToday.getTime()) / 86400000);
+}
+
+/**
  * THE WORKFLOW. Six steps, defined once.
  *
  *   1 RFP Entry · 2 RFP Validation · 3 Invitation to Bid

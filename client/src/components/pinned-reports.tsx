@@ -24,12 +24,14 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { AUTH_TOKEN_KEY } from '@/lib/auth-constants';
+import { groupPropertiesByName, describePropertyScope } from '@shared/property-scope';
 import {
   REPORT_CATEGORIES,
   type ReportDefinition,
   type ReportParam,
   buildReportUrl,
   missingRequiredParams,
+  migrateLegacyParams,
 } from '@shared/report-catalog';
 
 // The catalog stores an icon NAME, not a component — it is shared code and
@@ -96,6 +98,10 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
   // null = not chosen yet, so the default below applies.
   const [browseOpen, setBrowseOpen] = useState<boolean | null>(null);
   const [search, setSearch] = useState('');
+  // Which property pickers are expanded. Collapsed by default: eight reports
+  // each showing a full building checklist turned the catalog into a wall of
+  // checkboxes and doubled the page height.
+  const [openPickers, setOpenPickers] = useState<Record<string, boolean>>({});
   // Parameter values chosen in the catalog, keyed "<reportKey>.<paramName>".
   const [draftParams, setDraftParams] = useState<Record<string, string>>({});
 
@@ -264,13 +270,21 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
     if (!key) return null;
     const def = reports.find((r) => r.key === key);
     if (!def) return null;
+    // Read every query value, not only the declared ones, so a link shared
+    // before a parameter was renamed can still be translated below.
+    const raw: Record<string, string> = {};
+    search.forEach((v, k) => { if (k !== 'open' && v) raw[k] = v; });
+    const migrated = migrateLegacyParams(def, raw, (name) =>
+      (properties as any[])
+        .filter((p) => String(p.propertyName ?? '').trim().toLowerCase() === name.toLowerCase())
+        .map((p) => String(p.id)));
     const params: Record<string, string> = {};
     for (const param of def.params) {
-      const value = search.get(param.name);
-      if (value) params[param.name] = value;
+      const value = migrated[param.name];
+      if (value) params[param.name] = String(value);
     }
     return { def, params };
-  }, [reports]);
+  }, [reports, properties]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -435,7 +449,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                               )}
 
                               {def.params.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2">
+                                <div className="flex flex-wrap items-start gap-2 mt-2">
                                   {def.params.map((param) => {
                                     const value = draftParams[`${def.key}.${param.name}`] || '';
                                     if (param.type === 'boolean') {
@@ -448,6 +462,94 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                                           />
                                           {param.label}
                                         </label>
+                                      );
+                                    }
+                                    // Several properties at once — a whole
+                                    // park, or any mix of buildings. Stored as
+                                    // "1,9,10", which is also the wire format,
+                                    // so nothing has to translate between them.
+                                    if (param.type === 'properties') {
+                                      const selected = new Set(
+                                        (value || '').split(',').map((v) => v.trim()).filter(Boolean));
+                                      const groups = groupPropertiesByName(properties as any);
+                                      const commit = (next: Set<string>) =>
+                                        setParam(def, param, Array.from(next).join(','));
+                                      const toggle = (ids: string[], on: boolean) => {
+                                        const next = new Set(selected);
+                                        ids.forEach((id) => (on ? next.add(id) : next.delete(id)));
+                                        commit(next);
+                                      };
+                                      const pickerKey = `${def.key}.${param.name}`;
+                                      const pickerOpen = !!openPickers[pickerKey];
+                                      const summary = selected.size === 0
+                                        ? 'Every property'
+                                        : describePropertyScope(Array.from(selected), properties as any);
+                                      return (
+                                        <div key={param.name} className="w-full mt-1">
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => setOpenPickers((prev) => ({ ...prev, [pickerKey]: !pickerOpen }))}
+                                              className={`flex items-center gap-1 h-8 rounded-md border px-2 text-xs ${
+                                                selected.size > 0
+                                                  ? 'border-blue-300 bg-blue-50 text-blue-900'
+                                                  : 'border-input bg-background text-gray-700'
+                                              }`}
+                                            >
+                                              {pickerOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                              {summary}
+                                            </button>
+                                            {selected.size > 0 && (
+                                              <button
+                                                className="text-xs text-blue-600 hover:underline"
+                                                onClick={() => commit(new Set())}
+                                              >
+                                                Clear
+                                              </button>
+                                            )}
+                                          </div>
+                                          {pickerOpen && (
+                                          <div className="mt-1.5 rounded-md border bg-gray-50 p-2 space-y-1.5 max-h-44 overflow-y-auto">
+                                            {groups.map((group) => {
+                                              const ids = group.buildings.map((b: any) => String(b.id));
+                                              const all = ids.every((id) => selected.has(id));
+                                              const some = !all && ids.some((id) => selected.has(id));
+                                              return (
+                                                <div key={group.name}>
+                                                  {/* The whole park in one click. */}
+                                                  <label className="flex items-center gap-1.5 text-xs font-medium text-gray-800">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={all}
+                                                      ref={(el) => { if (el) el.indeterminate = some; }}
+                                                      onChange={(e) => toggle(ids, e.target.checked)}
+                                                    />
+                                                    {group.name}
+                                                    {group.buildings.length > 1 && (
+                                                      <span className="text-gray-500 font-normal">
+                                                        (all {group.buildings.length} buildings)
+                                                      </span>
+                                                    )}
+                                                  </label>
+                                                  {group.buildings.length > 1 && (
+                                                    <div className="ml-5 mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5">
+                                                      {group.buildings.map((b: any) => (
+                                                        <label key={b.id} className="flex items-center gap-1.5 text-xs text-gray-600">
+                                                          <input
+                                                            type="checkbox"
+                                                            checked={selected.has(String(b.id))}
+                                                            onChange={(e) => toggle([String(b.id)], e.target.checked)}
+                                                          />
+                                                          Bldg. {b.building || b.id}
+                                                        </label>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                          )}
+                                        </div>
                                       );
                                     }
                                     const options =

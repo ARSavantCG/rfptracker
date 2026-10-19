@@ -11,6 +11,7 @@ import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/brandi
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
+import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
 import type { Property, ExecutedLease, BayConfiguration } from '@shared/schema';
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -177,7 +178,7 @@ function occupancyColor(pct: number): string {
   return '#991b1b'; // red
 }
 
-export function renderReportHtml(rows: PropertyOccupancyRow[]): string {
+export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = ''): string {
   const totalRentable = rows.reduce((s, r) => s + r.rentableSf, 0);
   const totalOccupied = rows.reduce((s, r) => s + r.occupiedSf, 0);
   const totalVacant = Math.max(totalRentable - totalOccupied, 0);
@@ -270,6 +271,7 @@ export function renderReportHtml(rows: PropertyOccupancyRow[]): string {
       <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="document-title">Occupancy Report</div>
+    ${scopeLabel ? `<div style="text-align:center;color:#666;font-size:12px;margin-top:4px;">${escapeHtml(scopeLabel)}</div>` : ''}
     <div class="report-subtitle">Portfolio — Leased vs. Rentable Area</div>
   </div>
 
@@ -361,9 +363,13 @@ export function registerOccupancyReportRoutes(app: Express): void {
   });
 
   // Printable portfolio report.
-  app.get('/api/reports/occupancy', requireAuthFlexible, async (_req, res) => {
+  app.get('/api/reports/occupancy', requireAuthFlexible, async (req, res) => {
     try {
-      const properties = await storage.getAllProperties();
+      const allProperties = await storage.getAllProperties();
+      // Null scope means every property, NOT none — an empty array here would
+      // silently produce a blank report instead of the portfolio.
+      const scopeIds = parsePropertyScope(req.query || {}, allProperties as any);
+      const properties = filterPropertiesByScope(allProperties as any, scopeIds) as typeof allProperties;
       const allLeases = await storage.getAllExecutedLeases();
       const byProperty: Record<number, ExecutedLease[]> = {};
       for (const lease of allLeases) {
@@ -375,7 +381,7 @@ export function registerOccupancyReportRoutes(app: Express): void {
       );
       const rows = sorted.map((p) => computeRow(p, byProperty[p.id] || []));
       res.setHeader('Content-Type', 'text/html');
-      res.send(renderReportHtml(rows));
+      res.send(renderReportHtml(rows, scopeIds === null ? '' : describePropertyScope(scopeIds, allProperties as any)));
     } catch (error) {
       console.error('Occupancy report error:', error);
       res.status(500).json({ message: 'Failed to generate occupancy report' });

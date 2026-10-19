@@ -25,8 +25,10 @@ import {
   canViewReport,
   unknownParamKeys,
   missingRequiredParams,
+  migrateLegacyParams,
   type ReportParam,
 } from '@shared/report-catalog';
+import { describePropertyScope } from '@shared/property-scope';
 
 /** The maximum number of pins one person can hold. A guard, not a product limit. */
 const MAX_PINS = 24;
@@ -116,6 +118,16 @@ export function registerReportPinRoutes(app: Express): void {
           if (!r) return null;
           return [r.rfpNumber, r.projectName].filter(Boolean).join(' — ') || String(value);
         }
+        if (param.type === 'properties') {
+          // A list of ids. Collapses a complete park back to its name, so a pin
+          // covering both Doral buildings reads "Kurv Doral II (all 2
+          // buildings)" rather than two building names or a row of ids.
+          const ids = String(value).split(',').map((v) => v.trim()).filter(Boolean);
+          const live = ids.filter((id) => propById.has(id));
+          // Every property gone means the pin points at nothing that exists.
+          if (live.length === 0) return null;
+          return describePropertyScope(live, propRows as any);
+        }
         if (param.type === 'choice') {
           // Show the human label ("In Progress"), not the stored value.
           return param.choices?.find((c) => c.value === value)?.label ?? value;
@@ -156,7 +168,16 @@ export function registerReportPinRoutes(app: Express): void {
           };
         }
 
-        const params = (row.params || {}) as Record<string, string>;
+        // Translate the spellings this report used to accept, so a pin saved
+        // before the multi-property scope still opens the same thing instead
+        // of silently widening to the whole portfolio.
+        const params = migrateLegacyParams(
+          def,
+          (row.params || {}) as Record<string, string>,
+          (name) => propRows
+            .filter((pr) => String(pr.propertyName ?? '').trim().toLowerCase() === name.toLowerCase())
+            .map((pr) => String(pr.id)),
+        ) as Record<string, string>;
         const described = describeReportPin(def, params, resolve);
         const dropped = unknownParamKeys(def, params);
         // A pin saved before a parameter became required, or saved against a

@@ -77,6 +77,8 @@ import { registerFourBucketBudgetReportRoutes } from './four-bucket-budget-repor
 import { registerOccupancyReportRoutes } from './occupancy-report';
 import { registerPortfolioReportRoutes } from './portfolio-report';
 import { registerReportPinRoutes } from './report-pins-routes';
+import { resolveScope } from './property-scope-middleware';
+import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -4486,8 +4488,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (filters.status && filters.status !== "all") {
         rfpData = rfpData.filter(rfp => rfp.status === filters.status);
       }
-      if (filters.property && filters.property !== "all") {
-        rfpData = rfpData.filter(rfp => rfp.property === filters.property);
+      // PROPERTY SCOPE — broken from the day it shipped.
+      //
+      // rfp_requests.property holds the property ID as text, and the page sent
+      // a property NAME, so `"9" === "Kurv Doral II"` was never true: filtering
+      // by property returned an empty report every single time.
+      //
+      // resolveScope speaks ids, still understands a legacy name by expanding
+      // it to every id under that name (which is also how a whole park is
+      // selected), and accepts ?propertyIds=1,9,10 for several buildings.
+      {
+        const scope = await resolveScope({
+          query: { ...req.query, ...(filters.property ? { property: filters.property } : {}) },
+        });
+        if (scope.ids !== null) {
+          rfpData = rfpData.filter(rfp => scope.includes(rfp.property));
+        }
       }
       if (filters.dueInDays && filters.dueInDays !== "all") {
         const targetDate = new Date();
@@ -4773,8 +4789,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (filters.status && filters.status !== "all") {
         rfpData = rfpData.filter(rfp => rfp.status === filters.status);
       }
-      if (filters.property && filters.property !== "all") {
-        rfpData = rfpData.filter(rfp => rfp.property === filters.property);
+      // PROPERTY SCOPE — broken from the day it shipped.
+      //
+      // rfp_requests.property holds the property ID as text, and the page sent
+      // a property NAME, so `"9" === "Kurv Doral II"` was never true: filtering
+      // by property returned an empty report every single time.
+      //
+      // resolveScope speaks ids, still understands a legacy name by expanding
+      // it to every id under that name (which is also how a whole park is
+      // selected), and accepts ?propertyIds=1,9,10 for several buildings.
+      {
+        const scope = await resolveScope({
+          query: { ...req.query, ...(filters.property ? { property: filters.property } : {}) },
+        });
+        if (scope.ids !== null) {
+          rfpData = rfpData.filter(rfp => scope.includes(rfp.property));
+        }
       }
       if (filters.dueInDays && filters.dueInDays !== "all") {
         const targetDate = new Date();
@@ -5892,6 +5922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (endDate) options.endDate = new Date(endDate as string);
       if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
       if (incompleteOnly) options.incompleteOnly = incompleteOnly === 'true';
+      options.propertyIds = parsePropertyScope(req.query || {}, await storage.getAllProperties() as any);
       
       const { generateVendorWorkloadData, generateVendorWorkloadHtml } = await import('./vendor-workload-report');
       
@@ -6506,8 +6537,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (filters?.status) {
         rfps = rfps.filter((rfp: any) => rfp.status === filters.status);
       }
-      if (filters?.property) {
-        rfps = rfps.filter((rfp: any) => rfp.property === filters.property);
+      // Same id-vs-name fault as the executive summary; same fix.
+      {
+        const scope = await resolveScope({
+          query: { ...req.query, ...(filters?.property ? { property: filters.property } : {}) },
+        });
+        if (scope.ids !== null) {
+          rfps = rfps.filter((rfp: any) => scope.includes(rfp.property));
+        }
       }
       if (filters?.dueInDays) {
         const targetDate = new Date();

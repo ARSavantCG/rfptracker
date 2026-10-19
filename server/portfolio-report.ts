@@ -25,6 +25,11 @@ import { requireAuthFlexible } from './middleware';
 import type { Property, ExecutedLease, BayConfiguration } from '@shared/schema';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 import { derivePropertyRentableSf, deriveOccupiedSf } from './occupancy-report';
+import {
+  parsePropertyScope,
+  filterPropertiesByScope,
+  describePropertyScope,
+} from '@shared/property-scope';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -352,21 +357,14 @@ export function registerPortfolioReportRoutes(app: Express): void {
         (leasesByProperty[lease.propertyId] ||= []).push(lease);
       }
 
-      // ?building=<id> narrows to one building; ?property=<name> to one property.
-      const buildingId = req.query.building ? parseInt(String(req.query.building), 10) : NaN;
-      const propertyName = req.query.property ? String(req.query.property).trim().toLowerCase() : '';
-
-      let scoped = properties;
-      let scopeNote = 'All Buildings — Area, Parking and Availability';
-      if (!isNaN(buildingId)) {
-        scoped = properties.filter((p) => p.id === buildingId);
-        scopeNote = scoped.length
-          ? `${scoped[0].propertyName}${scoped[0].building ? ` — Bldg. ${scoped[0].building}` : ''}`
-          : 'Building not found';
-      } else if (propertyName) {
-        scoped = properties.filter((p) => (p.propertyName || '').trim().toLowerCase() === propertyName);
-        scopeNote = scoped.length ? `${scoped[0].propertyName} — All Buildings` : 'Property not found';
-      }
+      // Scope comes from the shared parser, which understands ?propertyIds=1,9,10
+      // as well as this report's original ?building=<id> and ?property=<name>,
+      // so links and pins made before multi-select keep working unchanged.
+      const scopeIds = parsePropertyScope(req.query || {}, properties as any);
+      const scoped = filterPropertiesByScope(properties as any, scopeIds) as typeof properties;
+      const scopeNote = scopeIds === null
+        ? 'All Buildings — Area, Parking and Availability'
+        : describePropertyScope(scopeIds, properties as any);
 
       const rows = scoped.map((p) => buildRow(p, leasesByProperty[p.id] || []));
 

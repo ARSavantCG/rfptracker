@@ -15,6 +15,7 @@ import { rfpRequests, properties, WORKFLOW_PHASE_LABELS } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -72,7 +73,11 @@ export function registerOpenItemsReport(app: Express) {
       // Open = not finished and not abandoned. 'completed' is excluded, which is
       // also what closes an allowance deal on creation.
       const CLOSED = ['completed', 'cancelled', 'archived'];
-      const open = rows.filter((r) => !CLOSED.includes(String(r.status || '')));
+      const scopeIds = parsePropertyScope(req.query || {}, propRows as any);
+      const open = rows
+        .filter((r) => !CLOSED.includes(String(r.status || '')))
+        // Null scope means every property, never none.
+        .filter((r) => scopeIds === null || (r.propertyRef != null && scopeIds.includes(String(r.propertyRef))));
 
       const now = new Date();
       const withAge = open.map((r) => {
@@ -194,6 +199,7 @@ export function registerOpenItemsReport(app: Express) {
     </div>
     <div class="document-title">Open Items</div>
     <div class="report-subtitle">Everything still in flight, by route</div>
+    ${scopeIds === null ? '' : `<div class="report-subtitle">${escapeHtml(describePropertyScope(scopeIds, propRows as any))}</div>`}
   </div>
 
   <div class="cards">

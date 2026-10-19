@@ -20,6 +20,7 @@ export type ReportParamType =
   | 'property'      // a property id, matched against properties.id
   | 'propertyName'  // a property NAME, which groups every building under it
   | 'rfp'           // an RFP id
+  | 'properties'    // SEVERAL property ids — a whole park, or any mix of buildings
   | 'choice'        // one of a fixed list
   | 'boolean';      // present/absent flag
 
@@ -80,6 +81,25 @@ export interface ReportDefinition {
   icon: string;
 }
 
+/**
+ * The property scope parameter, shared by every report that can be narrowed.
+ *
+ * Defined once rather than repeated per report: nine entries using it means
+ * nine chances for the name, type or blank behaviour to drift apart, which is
+ * how portfolio, costs-in-place and executive ended up with three different
+ * spellings of the same idea in the first place.
+ *
+ * Multi-select. A park is just every building sharing a property name, so the
+ * picker offers that as one click and sends the ids it expands to.
+ */
+const PROPERTY_SCOPE: ReportParam = {
+  name: 'propertyIds',
+  label: 'Properties',
+  type: 'properties',
+  optional: true,
+  blankMeans: 'Every property',
+};
+
 export const REPORT_CATALOG: ReportDefinition[] = [
   // ---- Portfolio ---------------------------------------------------------
   {
@@ -88,15 +108,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'How much area and parking does each building have, and what is still available?',
     kind: 'api',
     path: '/api/reports/portfolio',
-    params: [
-      {
-        name: 'property',
-        label: 'Property',
-        type: 'propertyName',
-        optional: true,
-        blankMeans: 'Every building in the portfolio',
-      },
-    ],
+    params: [PROPERTY_SCOPE],
     permission: null,
     category: 'Portfolio',
     icon: 'Building2',
@@ -107,7 +119,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'How much of each building is leased, and who is in it?',
     kind: 'api',
     path: '/api/reports/occupancy',
-    params: [],
+    params: [PROPERTY_SCOPE],
     permission: null,
     category: 'Portfolio',
     icon: 'Building2',
@@ -142,7 +154,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'What is still in flight, and what is already overdue?',
     kind: 'api',
     path: '/api/reports/open-items',
-    params: [],
+    params: [PROPERTY_SCOPE],
     permission: null,
     category: 'Pipeline',
     icon: 'ListChecks',
@@ -153,7 +165,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'Did we hit our internal due dates, and by how much?',
     kind: 'api',
     path: '/api/reports/turnaround',
-    params: [],
+    params: [PROPERTY_SCOPE],
     note: 'Publish dates began recording automatically on 19 Aug 2026. Earlier RFPs are listed as not measurable rather than counted as misses.',
     permission: 'admin.access',
     category: 'Pipeline',
@@ -180,10 +192,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
           { value: 'on-hold', label: 'On Hold' },
         ],
       },
-      {
-        name: 'property', label: 'Property', type: 'propertyName', optional: true,
-        style: 'filters', blankMeans: 'Every property',
-      },
+      PROPERTY_SCOPE,
       {
         name: 'dueInDays', label: 'Due within', type: 'choice', optional: true, style: 'filters',
         blankMeans: 'Any time',
@@ -245,15 +254,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'What has already been built into each building, and what did it cost?',
     kind: 'api',
     path: '/api/reports/costs-in-place',
-    params: [
-      {
-        name: 'propertyId',
-        label: 'Property',
-        type: 'property',
-        optional: true,
-        blankMeans: 'Every property',
-      },
-    ],
+    params: [PROPERTY_SCOPE],
     permission: null,
     category: 'Cost',
     icon: 'DollarSign',
@@ -295,6 +296,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     kind: 'api',
     path: '/api/reports/vendor-workload/html',
     params: [
+      PROPERTY_SCOPE,
       {
         name: 'incompleteOnly',
         label: 'Open work only',
@@ -313,7 +315,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'Who is assigned to what?',
     kind: 'api',
     path: '/api/reports/project-team',
-    params: [],
+    params: [PROPERTY_SCOPE],
     note: 'Assign people on each RFP under Project Team. Projects with nobody assigned will not appear.',
     permission: null,
     category: 'People',
@@ -399,6 +401,67 @@ export function isReportReady(
   params: Record<string, any> | null | undefined,
 ): boolean {
   return missingRequiredParams(def, params).length === 0;
+}
+
+/**
+ * Rewrite a saved pin's parameters into the shapes the report declares TODAY.
+ *
+ * Reports change. When portfolio's `property` (a name) and costs-in-place's
+ * `propertyId` were replaced by one multi-select `propertyIds`, every pin and
+ * every pasted link still carried the old spelling — and buildReportUrl drops
+ * parameters a report no longer declares, which would have quietly widened
+ * "Costs in Place — Kurv Port Everglades" into the whole portfolio. A pin that
+ * silently changes what it shows is worse than one that visibly breaks.
+ *
+ * So old spellings are translated rather than dropped. `resolveNameToIds` turns
+ * a property NAME into the ids beneath it — which is also how a whole park is
+ * selected — and is supplied by the caller, since this module has no access to
+ * the property list.
+ */
+export function migrateLegacyParams(
+  def: ReportDefinition,
+  params: Record<string, any> | null | undefined,
+  resolveNameToIds: (name: string) => string[],
+): Record<string, any> {
+  if (!params) return {};
+  const out: Record<string, any> = { ...params };
+
+  const takesPropertyIds = def.params.some((p) => p.name === 'propertyIds');
+  if (takesPropertyIds) {
+    const ids = new Set<string>();
+    for (const id of String(out.propertyIds ?? '').split(',')) {
+      const t = id.trim();
+      if (t) ids.add(t);
+    }
+    // costs-in-place: ?propertyId=4   portfolio: ?building=9
+    for (const key of ['propertyId', 'building']) {
+      const raw = out[key];
+      if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+        ids.add(String(raw).trim());
+      }
+      delete out[key];
+    }
+    // portfolio and executive: a property NAME, covering every building under it.
+    const name = out.property;
+    if (name !== undefined && name !== null && String(name).trim() !== '') {
+      const resolved = resolveNameToIds(String(name).trim());
+      if (resolved.length > 0) {
+        resolved.forEach((id) => ids.add(id));
+        delete out.property;
+      }
+      // A name that resolves to NOTHING is left in place on purpose. Deleting
+      // it would turn a pin scoped to a deleted property into one that opens
+      // the entire portfolio with no sign anything changed. Left behind, it is
+      // reported as an undeclared parameter and the pin is visibly flagged.
+    } else {
+      delete out.property;
+    }
+
+    if (ids.size > 0) out.propertyIds = Array.from(ids).join(',');
+    else delete out.propertyIds;
+  }
+
+  return out;
 }
 
 /** Parameters the definition does not declare, so a caller can report them. */

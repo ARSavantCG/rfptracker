@@ -18,6 +18,7 @@ import { rfpRequests, properties } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -79,8 +80,11 @@ export function registerTurnaroundReport(app: Express) {
         state: 'on-time' | 'late' | 'open-late' | 'open' | 'unmeasurable';
       };
 
+      const scopeIds = parsePropertyScope(req.query || {}, propRows as any);
+
       const scored: Scored[] = rows
         .filter((r) => !HIDDEN.includes(String(r.status || '')))
+        .filter((r) => scopeIds === null || (r.propertyRef != null && scopeIds.includes(String(r.propertyRef))))
         .map((r) => {
           const due = r.internalDueDate ? new Date(r.internalDueDate) : null;
           const pub = r.publishedDate ? new Date(r.publishedDate) : null;
@@ -222,6 +226,7 @@ export function registerTurnaroundReport(app: Express) {
     </div>
     <div class="document-title">RFP Turnaround Report</div>
     <div class="report-subtitle">Internal Due Date vs. Actual Publish Date</div>
+    ${scopeIds === null ? '' : `<div class="report-subtitle">${escapeHtml(describePropertyScope(scopeIds, propRows as any))}</div>`}
   </div>
 
   <div class="cards">

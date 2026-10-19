@@ -118,6 +118,8 @@ export async function generateVendorWorkloadData(options: {
   endDate?: Date;
   vendors?: string[];
   incompleteOnly?: boolean;
+  /** Property ids to restrict to. null or undefined means every property. */
+  propertyIds?: string[] | null;
 } = {}): Promise<WorkloadReportData> {
   
   // Fetch all RFPs from database
@@ -125,6 +127,18 @@ export async function generateVendorWorkloadData(options: {
   
   // Filter RFPs based on date range if provided
   let filteredRfps = allRfps;
+
+  // Property scope. rfp.property holds the property id as TEXT, so compare as
+  // strings — the same id-vs-name trap that silently emptied the executive
+  // summary for its entire life.
+  // null means every property; an EMPTY array means nothing matched the
+  // request (an unknown property name), which must narrow to nothing rather
+  // than silently widening back to the whole portfolio. Every other scoped
+  // report behaves this way and this one must not be the exception.
+  if (options.propertyIds !== null && options.propertyIds !== undefined) {
+    const wanted = new Set(options.propertyIds.map(String));
+    filteredRfps = filteredRfps.filter((rfp) => wanted.has(String(rfp.property)));
+  }
   if (options.startDate || options.endDate) {
     filteredRfps = allRfps.filter(rfp => {
       const rfpDate = new Date(rfp.receivedOn);

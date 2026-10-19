@@ -13,6 +13,7 @@ import {
 } from '@shared/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { requireAuth, requireAuthFlexible, checkPermission } from './middleware';
+import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 
 function escapeHtml(s: any): string {
@@ -205,6 +206,11 @@ export function registerProjectTeamRoutes(app: Express) {
         })
         .from(properties);
 
+      // Scope by property. The spine is properties, so narrowing the property
+      // list narrows everything downstream of it.
+      const scopeIds = parsePropertyScope(req.query || {}, propRows as any);
+      const scopedProps = filterPropertiesByScope(propRows as any, scopeIds) as typeof propRows;
+
       const leaseRows = await db
         .select({
           id: executedLeases.id,
@@ -251,7 +257,7 @@ export function registerProjectTeamRoutes(app: Express) {
       // Every building is listed, including those with no leases — an empty
       // building is real information on a portfolio report.
       const parks = new Map<string, typeof propRows>();
-      for (const prop of propRows) {
+      for (const prop of scopedProps) {
         const park = prop.propertyName || 'Unnamed property';
         if (!parks.has(park)) parks.set(park, [] as any);
         parks.get(park)!.push(prop);
@@ -268,7 +274,7 @@ export function registerProjectTeamRoutes(app: Express) {
       if (req.query.format === 'json') {
         return res.json({
           summary: { leases: allLeases, staffed: staffedLeases, tenantBuilt: naLeases, unstaffed: gapLeases },
-          properties: propRows.map((p) => ({
+          properties: scopedProps.map((p) => ({
             ...p,
             leases: (leasesByProperty.get(p.id) || []).map((l) => ({ ...l, members: membersByLease.get(l.id) || [] })),
           })),
@@ -391,13 +397,13 @@ export function registerProjectTeamRoutes(app: Express) {
     <div class="report-subtitle">Who is working on each executed lease</div>
   </div>
   <div class="summary">
-    <strong>${propRows.length}</strong> building${propRows.length === 1 ? '' : 's'} ·
+    <strong>${scopedProps.length}</strong> building${scopedProps.length === 1 ? '' : 's'} ·
     <strong>${allLeases}</strong> executed lease${allLeases === 1 ? '' : 's'} ·
     <strong>${staffedLeases}</strong> with a team ·
     <strong>${gapLeases}</strong> needing one ·
     <strong>${naLeases}</strong> built by tenant (N/A)
   </div>
-  ${propRows.length === 0
+  ${scopedProps.length === 0
     ? `<div class="empty">No properties on record.</div>`
     : sections}
 </body></html>`;

@@ -29,6 +29,7 @@ import {
   type ReportDefinition,
   type ReportParam,
   buildReportUrl,
+  missingRequiredParams,
 } from '@shared/report-catalog';
 
 // The catalog stores an icon NAME, not a component — it is shared code and
@@ -79,11 +80,21 @@ interface PinnedReport {
   droppedParams?: string[];
 }
 
-export function PinnedReports() {
+interface PinnedReportsProps {
+  /**
+   * Opens the custom-report builder. That report is a dialog owned by the
+   * Reports page, not a document with a URL, so the catalog can list it but
+   * cannot open it alone.
+   */
+  onOpenCustomReport?: () => void;
+}
+
+export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [browseOpen, setBrowseOpen] = useState(false);
+  // null = not chosen yet, so the default below applies.
+  const [browseOpen, setBrowseOpen] = useState<boolean | null>(null);
   const [search, setSearch] = useState('');
   // Parameter values chosen in the catalog, keyed "<reportKey>.<paramName>".
   const [draftParams, setDraftParams] = useState<Record<string, string>>({});
@@ -97,9 +108,18 @@ export function PinnedReports() {
   const { data: properties = [] } = useQuery<any[]>({
     queryKey: ['/api/properties'],
   });
+  const { data: rfpRequests = [] } = useQuery<any[]>({
+    queryKey: ['/api/rfp-requests'],
+  });
 
   const reports = catalogData?.reports || [];
   const pins = pinData?.pins || [];
+
+  // Open by default until there is something pinned. The report cards that used
+  // to fill this page are gone, so a collapsed catalog would leave a new
+  // person — the people this is for — looking at an empty page. Once they have
+  // pins, their own list leads and the catalog folds away.
+  const catalogOpen = browseOpen ?? pins.length === 0;
 
   // Property NAMES are distinct from property rows: a name covers every
   // building under it, which is what the portfolio report scopes by.
@@ -131,9 +151,19 @@ export function PinnedReports() {
 
   /**
    * Open a report. An 'api' report is HTML behind an auth token, so it has to
-   * be fetched and opened as a blob; a 'page' is an in-app route.
+   * be fetched and opened as a blob; a 'page' is an in-app route; a 'modal' is
+   * a dialog the Reports page owns.
    */
-  const open = async (kind: 'api' | 'page' | null, url: string | null, label: string) => {
+  const open = async (
+    kind: 'api' | 'page' | 'modal' | null,
+    url: string | null,
+    label: string,
+  ) => {
+    if (kind === 'modal') {
+      if (onOpenCustomReport) onOpenCustomReport();
+      else toast({ title: `${label} is not available here`, variant: 'destructive' });
+      return;
+    }
     if (!url) return;
     if (kind === 'page') {
       navigate(url);
@@ -292,8 +322,8 @@ export function PinnedReports() {
               <Star className="h-4 w-4 text-amber-500" />
               <span>Your Reports</span>
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setBrowseOpen((v) => !v)}>
-              {browseOpen ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+            <Button variant="outline" size="sm" onClick={() => setBrowseOpen(!catalogOpen)}>
+              {catalogOpen ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
               Browse all reports
             </Button>
           </div>
@@ -360,7 +390,7 @@ export function PinnedReports() {
       </Card>
 
       {/* ---- Browse everything -------------------------------------------- */}
-      {browseOpen && (
+      {catalogOpen && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">All Reports</CardTitle>
@@ -389,6 +419,10 @@ export function PinnedReports() {
                       const params = paramsFor(def);
                       const pinned = isPinned(def, params);
                       const url = buildReportUrl(def, params);
+                      // A required parameter left blank would leave a literal
+                      // ":rfpId" in the URL and 404 with nothing to explain it.
+                      const missing = missingRequiredParams(def, params);
+                      const ready = missing.length === 0;
                       return (
                         <div key={def.key} className="rounded-md border p-3 hover:border-blue-300">
                           <div className="flex items-start gap-3">
@@ -396,6 +430,9 @@ export function PinnedReports() {
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-sm">{def.label}</div>
                               <div className="text-xs text-gray-600">{def.answers}</div>
+                              {def.note && (
+                                <div className="text-xs text-amber-700 mt-1">{def.note}</div>
+                              )}
 
                               {def.params.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2">
@@ -413,8 +450,23 @@ export function PinnedReports() {
                                         </label>
                                       );
                                     }
-                                    const options = param.type === 'propertyName'
-                                      ? propertyNames.map((n: string) => ({ value: n, label: n }))
+                                    const options =
+                                      param.type === 'choice'
+                                        ? (param.choices || [])
+                                      : param.type === 'propertyName'
+                                        ? propertyNames.map((n: string) => ({ value: n, label: n }))
+                                      : param.type === 'rfp'
+                                        // Only RFPs far enough along to have budget
+                                        // data. Offering the rest produces an empty
+                                        // report and a support question.
+                                        ? rfpRequests
+                                            .filter((r: any) =>
+                                              ['evaluation', 'publish'].includes(r.workflowPhase) ||
+                                              r.status === 'completed')
+                                            .map((r: any) => ({
+                                              value: String(r.id),
+                                              label: `${r.rfpNumber} — ${r.projectName}${r.pricingPath === 'rom_pilot' ? ' (ROM)' : ''}`,
+                                            }))
                                       : properties.map((p: any) => ({
                                           value: String(p.id),
                                           label: p.building ? `${p.propertyName} — Bldg. ${p.building}` : p.propertyName,
@@ -424,9 +476,15 @@ export function PinnedReports() {
                                         key={param.name}
                                         value={value}
                                         onChange={(e) => setParam(def, param, e.target.value)}
-                                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                        className={`h-8 rounded-md border bg-background px-2 text-xs max-w-full ${
+                                          !param.optional && !value ? 'border-amber-400' : 'border-input'
+                                        }`}
                                       >
-                                        <option value="">{param.blankMeans || `All ${param.label.toLowerCase()}`}</option>
+                                        <option value="">
+                                          {param.optional
+                                            ? (param.blankMeans || `All ${param.label.toLowerCase()}`)
+                                            : `Choose ${param.label}…`}
+                                        </option>
                                         {options.map((o) => (
                                           <option key={o.value} value={o.value}>{o.label}</option>
                                         ))}
@@ -439,23 +497,43 @@ export function PinnedReports() {
 
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <button
-                                title={pinned ? 'Already pinned' : 'Pin to the top of this page'}
-                                disabled={pinned || pinMutation.isPending}
+                                title={
+                                  !ready ? `Choose ${missing.join(' and ')} first`
+                                  : pinned ? 'Already pinned'
+                                  : 'Pin to the top of this page'
+                                }
+                                disabled={pinned || !ready || pinMutation.isPending}
                                 onClick={() => pinMutation.mutate({ reportKey: def.key, params })}
                                 className={`p-1.5 rounded-md ${
-                                  pinned ? 'text-amber-500' : 'text-gray-400 hover:text-amber-500'
+                                  pinned ? 'text-amber-500'
+                                  : ready ? 'text-gray-400 hover:text-amber-500'
+                                  : 'text-gray-200 cursor-not-allowed'
                                 }`}
                               >
                                 <Star className="h-4 w-4" fill={pinned ? 'currentColor' : 'none'} />
                               </button>
-                              <button
-                                title="Copy a link to this report"
-                                onClick={() => copyLink(def.key, params, def.label)}
-                                className="p-1.5 rounded-md text-gray-400 hover:text-blue-600"
+                              {/* The custom report is a dialog, so there is no
+                                  link to copy — the builder's choices are not
+                                  in a URL. */}
+                              {def.kind !== 'modal' && (
+                                <button
+                                  title={!ready ? `Choose ${missing.join(' and ')} first` : 'Copy a link to this report'}
+                                  disabled={!ready}
+                                  onClick={() => copyLink(def.key, params, def.label)}
+                                  className={`p-1.5 rounded-md ${
+                                    ready ? 'text-gray-400 hover:text-blue-600' : 'text-gray-200 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <Link2 className="h-4 w-4" />
+                                </button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!ready}
+                                title={!ready ? `Choose ${missing.join(' and ')} first` : undefined}
+                                onClick={() => open(def.kind, url, def.label)}
                               >
-                                <Link2 className="h-4 w-4" />
-                              </button>
-                              <Button size="sm" variant="outline" onClick={() => open(def.kind, url, def.label)}>
                                 Open
                               </Button>
                             </div>

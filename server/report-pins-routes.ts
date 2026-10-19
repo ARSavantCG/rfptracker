@@ -14,7 +14,7 @@
  */
 import type { Express } from 'express';
 import { db } from './db';
-import { userReportPins, properties } from '@shared/schema';
+import { userReportPins, properties, rfpRequests } from '@shared/schema';
 import { and, asc, eq } from 'drizzle-orm';
 import { requireAuth } from './middleware';
 import {
@@ -24,6 +24,7 @@ import {
   describeReportPin,
   canViewReport,
   unknownParamKeys,
+  missingRequiredParams,
   type ReportParam,
 } from '@shared/report-catalog';
 
@@ -86,6 +87,20 @@ export function registerReportPinRoutes(app: Express): void {
       const propById = new Map(propRows.map((p) => [String(p.id), p]));
       const propNames = new Set(propRows.map((p) => String(p.propertyName).trim().toLowerCase()));
 
+      // RFPs are loaded only when a pin actually references one — most people
+      // pin portfolio-level reports and should not pay for this query.
+      const needsRfps = rows.some((row) => {
+        const def = REPORTS_BY_KEY[row.reportKey];
+        return def?.params.some((p) => p.type === 'rfp' && (row.params as any)?.[p.name]);
+      });
+      const rfpById = new Map<string, { rfpNumber: string | null; projectName: string | null }>();
+      if (needsRfps) {
+        const rfpRows = await db
+          .select({ id: rfpRequests.id, rfpNumber: rfpRequests.rfpNumber, projectName: rfpRequests.projectName })
+          .from(rfpRequests);
+        for (const r of rfpRows) rfpById.set(String(r.id), r);
+      }
+
       const resolve = (param: ReportParam, value: string): string | null => {
         if (param.type === 'property') {
           const p = propById.get(String(value));
@@ -94,6 +109,16 @@ export function registerReportPinRoutes(app: Express): void {
         }
         if (param.type === 'propertyName') {
           return propNames.has(value.trim().toLowerCase()) ? value : null;
+        }
+        if (param.type === 'rfp') {
+          // A pin to a deleted RFP must read as unavailable, not as a bare id.
+          const r = rfpById.get(String(value));
+          if (!r) return null;
+          return [r.rfpNumber, r.projectName].filter(Boolean).join(' — ') || String(value);
+        }
+        if (param.type === 'choice') {
+          // Show the human label ("In Progress"), not the stored value.
+          return param.choices?.find((c) => c.value === value)?.label ?? value;
         }
         return value;
       };
@@ -134,6 +159,23 @@ export function registerReportPinRoutes(app: Express): void {
         const params = (row.params || {}) as Record<string, string>;
         const described = describeReportPin(def, params, resolve);
         const dropped = unknownParamKeys(def, params);
+        // A pin saved before a parameter became required, or saved against a
+        // report whose shape has since changed, can be missing something the
+        // URL needs. Opening it would 404 on a literal ":rfpId".
+        const missing = missingRequiredParams(def, params);
+
+        if (missing.length > 0) {
+          return {
+            id: row.id,
+            reportKey: row.reportKey,
+            label: described.label,
+            url: null,
+            kind: def.kind,
+            icon: def.icon,
+            available: false,
+            reason: `This pin is missing ${missing.join(' and ')}. Re-pin it from the catalog.`,
+          };
+        }
 
         return {
           id: row.id,

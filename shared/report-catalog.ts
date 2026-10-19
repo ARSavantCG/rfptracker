@@ -19,16 +19,35 @@
 export type ReportParamType =
   | 'property'      // a property id, matched against properties.id
   | 'propertyName'  // a property NAME, which groups every building under it
+  | 'rfp'           // an RFP id
+  | 'choice'        // one of a fixed list
   | 'boolean';      // present/absent flag
+
+/**
+ * HOW a parameter reaches the server. The reports were built at different times
+ * and do not agree, so the difference is declared here rather than re-derived by
+ * every caller:
+ *
+ *   'query'   — ?name=value. The majority.
+ *   'path'    — substituted into a ':name' segment. budget-buckets takes its RFP
+ *               in the path, so a query parameter would 404.
+ *   'filters' — packed into a single ?filters={...} JSON object. The executive
+ *               summary reads one JSON blob rather than separate parameters.
+ */
+export type ReportParamStyle = 'query' | 'path' | 'filters';
 
 export interface ReportParam {
   name: string;
   label: string;
   type: ReportParamType;
-  /** Blank means "everything", not an error. Every parameter here is optional today. */
+  /** false means the report cannot be opened until this is chosen. */
   optional: boolean;
-  /** Shown under the picker when blank behaves differently from a chosen value. */
+  /** Shown as the blank option when blank behaves differently from a value. */
   blankMeans?: string;
+  /** Defaults to 'query'. */
+  style?: ReportParamStyle;
+  /** For type 'choice'. */
+  choices?: Array<{ value: string; label: string }>;
 }
 
 export interface ReportDefinition {
@@ -38,13 +57,22 @@ export interface ReportDefinition {
   /** The question this report answers, in the reader's words. */
   answers: string;
   /**
-   * 'api'  — an endpoint returning HTML; fetched with the auth token and opened
-   *          in a new tab as a blob.
-   * 'page' — an in-app route; navigated to normally.
+   * 'api'   — an endpoint returning HTML; fetched with the auth token and opened
+   *           in a new tab as a blob.
+   * 'page'  — an in-app route; navigated to normally.
+   * 'modal' — opens a dialog on the Reports page rather than a document. The
+   *           custom report builder has no URL of its own; without this kind it
+   *           would have had to stay outside the catalog as a special case.
    */
-  kind: 'api' | 'page';
+  kind: 'api' | 'page' | 'modal';
   path: string;
   params: ReportParam[];
+  /**
+   * A caveat the reader needs BEFORE opening it — a gap in the data, or a
+   * prerequisite. Carried here so it shows wherever the report is offered,
+   * rather than living in one page's markup as it did before.
+   */
+  note?: string;
   /** Permission the viewer needs, or null for anyone signed in. */
   permission: string | null;
   category: 'Portfolio' | 'Pipeline' | 'Cost' | 'People';
@@ -126,6 +154,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     kind: 'api',
     path: '/api/reports/turnaround',
     params: [],
+    note: 'Publish dates began recording automatically on 19 Aug 2026. Earlier RFPs are listed as not measurable rather than counted as misses.',
     permission: 'admin.access',
     category: 'Pipeline',
     icon: 'Clock',
@@ -136,21 +165,66 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'Where does every RFP stand right now?',
     kind: 'api',
     path: '/api/reports/executive',
-    params: [],
+    // These three used to come from the page-level Filters card, which sent them
+    // to this report and nothing else. Declared here instead, so the scope is
+    // visible on the report that uses it — and can be pinned, which a page-level
+    // filter never could.
+    params: [
+      {
+        name: 'status', label: 'Status', type: 'choice', optional: true, style: 'filters',
+        blankMeans: 'Every status',
+        choices: [
+          { value: 'received', label: 'Received' },
+          { value: 'in-progress', label: 'In Progress' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'on-hold', label: 'On Hold' },
+        ],
+      },
+      {
+        name: 'property', label: 'Property', type: 'propertyName', optional: true,
+        style: 'filters', blankMeans: 'Every property',
+      },
+      {
+        name: 'dueInDays', label: 'Due within', type: 'choice', optional: true, style: 'filters',
+        blankMeans: 'Any time',
+        choices: [
+          { value: '1', label: 'Due within 1 day' },
+          { value: '3', label: 'Due within 3 days' },
+          { value: '7', label: 'Due within 1 week' },
+          { value: '30', label: 'Due within 1 month' },
+        ],
+      },
+    ],
     permission: null,
     category: 'Pipeline',
     icon: 'FileText',
   },
   {
     key: 'historical',
-    label: 'Historical Report',
-    answers: 'What has the pipeline done over time?',
+    label: 'Historical Pricing',
+    answers: 'What did completed projects actually cost?',
     kind: 'api',
     path: '/api/reports/historical',
+    // Deliberately no parameters. The old card sent it the page filters and the
+    // handler never read them, so the filters appeared to apply and did not.
+    // Declaring none is the honest description of what this report does.
     params: [],
+    note: 'Covers completed projects only, and always the whole set — it cannot be filtered.',
     permission: null,
     category: 'Pipeline',
     icon: 'TrendingUp',
+  },
+  {
+    key: 'custom',
+    label: 'Custom Report',
+    answers: 'What if I want to choose the columns myself?',
+    kind: 'modal',
+    path: '',
+    params: [],
+    note: 'Opens a builder: pick the fields, the order, and the export format.',
+    permission: null,
+    category: 'Pipeline',
+    icon: 'BarChart3',
   },
   {
     key: 'project-report-generator',
@@ -180,6 +254,23 @@ export const REPORT_CATALOG: ReportDefinition[] = [
         blankMeans: 'Every property',
       },
     ],
+    permission: null,
+    category: 'Cost',
+    icon: 'DollarSign',
+  },
+  {
+    key: 'budget-buckets',
+    label: 'Budget by Contract',
+    answers: 'How does one project split across contractor, design, CM fees and balance?',
+    kind: 'api',
+    // The RFP id goes in the PATH, not the query — a ?rfpId= would 404 here.
+    path: '/api/reports/budget-buckets/:rfpId',
+    params: [
+      {
+        name: 'rfpId', label: 'RFP', type: 'rfp', optional: false, style: 'path',
+      },
+    ],
+    note: 'One project at a time. Only RFPs that have reached evaluation have budget data.',
     permission: null,
     category: 'Cost',
     icon: 'DollarSign',
@@ -223,6 +314,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     kind: 'api',
     path: '/api/reports/project-team',
     params: [],
+    note: 'Assign people on each RFP under Project Team. Projects with nobody assigned will not appear.',
     permission: null,
     category: 'People',
     icon: 'Users',
@@ -250,13 +342,63 @@ export function buildReportUrl(
   params: Record<string, any> | null | undefined,
 ): string {
   const search = new URLSearchParams();
+  // Packed into one ?filters={...} blob at the end, if any are set.
+  const filterBlob: Record<string, string> = {};
+  let path = def.path;
+
   for (const param of def.params) {
     const raw = params?.[param.name];
     if (raw === undefined || raw === null || raw === '' || raw === false) continue;
-    search.set(param.name, param.type === 'boolean' ? 'true' : String(raw));
+    const value = param.type === 'boolean' ? 'true' : String(raw);
+
+    switch (param.style) {
+      case 'path':
+        // encodeURIComponent, not raw interpolation: a value with a slash in it
+        // would otherwise invent a path segment.
+        path = path.replace(`:${param.name}`, encodeURIComponent(value));
+        break;
+      case 'filters':
+        filterBlob[param.name] = value;
+        break;
+      default:
+        search.set(param.name, value);
+    }
   }
+
+  if (Object.keys(filterBlob).length > 0) {
+    search.set('filters', JSON.stringify(filterBlob));
+  }
+
   const qs = search.toString();
-  return qs ? `${def.path}?${qs}` : def.path;
+  return qs ? `${path}?${qs}` : path;
+}
+
+/**
+ * Required parameters that have no value, by label.
+ *
+ * A path parameter left unfilled leaves a literal ":rfpId" in the URL, which
+ * 404s with nothing to explain why. Callers check this before offering to open
+ * or pin a report, so the gap is caught at the button rather than at the server.
+ */
+export function missingRequiredParams(
+  def: ReportDefinition,
+  params: Record<string, any> | null | undefined,
+): string[] {
+  return def.params
+    .filter((p) => !p.optional)
+    .filter((p) => {
+      const raw = params?.[p.name];
+      return raw === undefined || raw === null || raw === '' || raw === false;
+    })
+    .map((p) => p.label);
+}
+
+/** True when this report can be opened with the parameters supplied. */
+export function isReportReady(
+  def: ReportDefinition,
+  params: Record<string, any> | null | undefined,
+): boolean {
+  return missingRequiredParams(def, params).length === 0;
 }
 
 /** Parameters the definition does not declare, so a caller can report them. */

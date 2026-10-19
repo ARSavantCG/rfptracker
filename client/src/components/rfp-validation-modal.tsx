@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -172,9 +172,38 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
     };
   };
 
-  // Load existing validation data when RFP changes
+  /**
+   * Load the RFP's saved values into the form.
+   *
+   * ONLY when the modal opens, or when it is showing a DIFFERENT RFP.
+   *
+   * This used to depend on [rfp, isOpen, form, contacts], and `contacts`
+   * comes from `useQuery(...)` destructured as `contacts = []` — a brand new
+   * array on every render until the query settles, and a new one again on
+   * every refetch. So form.reset() ran repeatedly WHILE THE USER WAS TYPING
+   * and replaced their entry with whatever the server last had.
+   *
+   * Reported 2026-10-19: an electrical allocation changed from 400 to 800 in
+   * this step kept coming back as 400 further along the workflow. The write
+   * never happened — the value was reset out of the form before it could be
+   * saved. Any field on this step could be lost the same way; electrical was
+   * simply the one that got noticed.
+   *
+   * Keyed on the RFP id rather than the object, because react-query hands back
+   * a new object identity on every fetch of the same record.
+   */
+  const loadedRfpRef = useRef<number | null>(null);
   useEffect(() => {
-    if (rfp && isOpen) {
+    if (!isOpen) {
+      // Closing clears the marker so reopening reloads from the server.
+      loadedRfpRef.current = null;
+      return;
+    }
+    if (!rfp) return;
+    if (loadedRfpRef.current === rfp.id) return; // already loaded; do not clobber edits
+    loadedRfpRef.current = rfp.id;
+
+    {
       const contactDetails = getDevelopmentContactDetails(rfp.developmentContact || "");
       
       form.reset({
@@ -202,7 +231,9 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
         tenantProgramSummary: (rfp as any).tenantProgramSummary ?? "",
       });
     }
-  }, [rfp, isOpen, form, contacts]);
+    // contacts is deliberately NOT a dependency: it only seeds a default
+    // contact name, and including it re-ran this reset on every refetch.
+  }, [rfp?.id, isOpen]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: ValidationFormData) => {

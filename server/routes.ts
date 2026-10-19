@@ -78,6 +78,7 @@ import { registerOccupancyReportRoutes } from './occupancy-report';
 import { registerPortfolioReportRoutes } from './portfolio-report';
 import { registerReportPinRoutes } from './report-pins-routes';
 import { registerBudgetReconciliationReport } from './budget-reconciliation-report';
+import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
 import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
 import { registerAiRoutes } from './ai-routes';
@@ -2657,6 +2658,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Cannot advance: ${validationResult.errors.join(", ")}`,
           errors: validationResult.errors,
         });
+      }
+
+      /**
+       * HARD STOP: a budget that does not reconcile cannot be published.
+       *
+       * RFP-2026-031 went to a tenant with a base of $735,340 against line
+       * items totalling $792,540. Publishing is the moment the number leaves
+       * the building, so it is the moment to refuse.
+       *
+       * ENFORCED HERE, ON THE SERVER, deliberately. A check in the browser is
+       * a suggestion: it can be bypassed by a stale tab, a direct request, or
+       * a second route to the same action. This one cannot.
+       *
+       * There is no override. Adolfo chose that explicitly on 2026-10-19 —
+       * nothing unbalanced leaves the building.
+       *
+       * Gaps with a legitimate cause (Existing Improvements excluded from the
+       * total, a line rolled into an excluded category) are accounted for by
+       * reconcileBudget and do NOT block, so a valid setup is never trapped.
+       */
+      if (phase === 'publish') {
+        const budget = await storage.getEvaluationBudget(id);
+        if (budget) {
+          const verdict = reconcileBudget(budget as any);
+          if (!verdict.balanced) {
+            console.warn(`[workflow] publish BLOCKED for RFP ${id}: ${verdict.message}`);
+            return res.status(400).json({
+              message:
+                `Cannot publish: the evaluation budget does not reconcile. ${verdict.message}` +
+                (verdict.orphanedTotal > 0
+                  ? ` ${verdict.orphanedTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })} is tagged to an assembly with no header line (${verdict.orphanedNames.join(', ')}).`
+                  : '') +
+                ' Open the evaluation and resolve the difference before publishing.',
+              errors: [verdict.message],
+              reconciliation: verdict,
+            });
+          }
+        }
       }
 
       // Step 2: phase-specific gate (fields with actual UI; legacy no-UI fields removed)

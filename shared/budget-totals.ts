@@ -170,3 +170,128 @@ export function reconcileTotal(
     understated: gap <= -1,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Reconciliation: does a budget's grand total equal what its lines add up to?
+// ---------------------------------------------------------------------------
+
+export interface BudgetShape {
+  tenantImprovements?: readonly BudgetLine[] | null;
+  designSoftCosts?: readonly BudgetLine[] | null;
+  existingImprovements?: readonly BudgetLine[] | null;
+  hasExistingImprovements?: boolean | null;
+  includeExistingInTotal?: boolean | null;
+  lineItemRollups?: Record<string, string> | null;
+  customAssemblies?: readonly AssemblyDef[] | null;
+  grandTotal?: string | number | null;
+}
+
+export interface ReconcileVerdict {
+  /** Sum of the categories that count toward the grand total. */
+  computedTotal: number;
+  /** Every line in the budget, with nothing excluded, for comparison. */
+  rawLineTotal: number;
+  /** The total as currently stored. */
+  storedTotal: number;
+  /** computedTotal − rawLineTotal. */
+  gap: number;
+  /** True when the gap is within a dollar, or fully accounted for. */
+  balanced: boolean;
+  /** Reasons a gap is legitimate, in plain words. Empty when there are none. */
+  explanations: string[];
+  /** A gap with NO legitimate explanation. This is the one that matters. */
+  unexplainedGap: number;
+  /** Money tagged to an assembly that has no header line. */
+  orphanedTotal: number;
+  orphanedNames: string[];
+  /** One line, ready to show the user. */
+  message: string;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Reconcile a budget.
+ *
+ * A gap between the grand total and the raw sum of every line is NOT always a
+ * fault. Two configurations move money legitimately:
+ *
+ *   - Existing Improvements are excluded from the grand total unless
+ *     "Include in Grand Total" is ticked, so their lines sit outside it by
+ *     design.
+ *   - A line rolled up into an excluded category leaves the total the same way.
+ *
+ * Both are accounted for before anything is called unbalanced, because a check
+ * that cries wolf on a valid setup gets ignored — and then misses the real one.
+ */
+export function reconcileBudget(budget: BudgetShape): ReconcileVerdict {
+  const ti = (budget.tenantImprovements || []) as BudgetLine[];
+  const dsc = (budget.designSoftCosts || []) as BudgetLine[];
+  const ei = (budget.existingImprovements || []) as BudgetLine[];
+  const assemblies = budget.customAssemblies || [];
+  const rollups = budget.lineItemRollups || {};
+  const allLines = [...ti, ...dsc, ...ei];
+
+  const includeExisting = !!budget.hasExistingImprovements && !!budget.includeExistingInTotal;
+  const countedCategories = [...ti, ...dsc, ...(includeExisting ? ei : [])];
+
+  const computedTotal = round2(sumBudgetLines(countedCategories, allLines, assemblies));
+  const rawLineTotal = round2(sumBudgetLines(allLines, allLines, assemblies));
+  const storedTotal = round2(
+    typeof budget.grandTotal === 'number'
+      ? budget.grandTotal
+      : parseFloat(String(budget.grandTotal ?? '')) || 0);
+
+  const gap = round2(computedTotal - rawLineTotal);
+
+  const explanations: string[] = [];
+  let accountedFor = 0;
+
+  // Existing Improvements deliberately left out of the total.
+  if (!includeExisting && ei.length > 0) {
+    const eiTotal = round2(sumBudgetLines(ei, allLines, assemblies));
+    if (eiTotal > 0) {
+      accountedFor += eiTotal;
+      explanations.push(
+        `Existing Improvements (${eiTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}) are excluded from the Grand Total by the "Include in Grand Total" setting.`);
+    }
+  }
+
+  // A line rolled into a category that is itself excluded.
+  if (!includeExisting) {
+    const rolledOut = allLines.filter(
+      (i) => i?.id && rollups[String(i.id)] === 'existingImprovements');
+    const rolledOutTotal = round2(rolledOut.reduce((s, i) => s + lineAmount(i), 0));
+    if (rolledOutTotal > 0) {
+      accountedFor += rolledOutTotal;
+      explanations.push(
+        `${rolledOut.length} line item${rolledOut.length === 1 ? '' : 's'} rolled into Existing Improvements, which is excluded from the Grand Total.`);
+    }
+  }
+
+  const orphans = orphanedAssemblyLines(allLines, assemblies);
+
+  // The gap is negative when the total is below the raw sum.
+  const unexplainedGap = round2(Math.abs(gap) - accountedFor);
+  const balanced = unexplainedGap < 1;
+
+  const asMoney = (n: number) =>
+    n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+  const message = balanced
+    ? `Grand Total ${asMoney(computedTotal)} reconciles with ${countedCategories.length} line item${countedCategories.length === 1 ? '' : 's'}.`
+    : `Grand Total ${asMoney(computedTotal)} does not match the ${allLines.length} line items beneath it, which add up to ${asMoney(rawLineTotal)} — a difference of ${asMoney(Math.abs(unexplainedGap))} that nothing explains.`;
+
+  return {
+    computedTotal,
+    rawLineTotal,
+    storedTotal,
+    gap,
+    balanced,
+    explanations,
+    unexplainedGap: balanced ? 0 : unexplainedGap,
+    orphanedTotal: round2(orphans.total),
+    orphanedNames: orphans.assemblyNames,
+    message,
+  };
+}

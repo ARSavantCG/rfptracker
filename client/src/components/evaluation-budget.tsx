@@ -30,6 +30,7 @@ import {
   headIds,
   effectiveLineAmountWithHeads,
   orphanedAssemblyLines,
+  reconcileBudget,
 } from '@shared/budget-totals';
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 import { defaultElectricalAllocation } from "@shared/electrical-utils";
@@ -4738,6 +4739,54 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
   });
 
   // Save progress without advancing workflow
+  /**
+   * Live reconciliation of what is on screen right now.
+   *
+   * The same reconcileBudget the server uses to decide whether this may be
+   * published, so the ribbon here and the refusal there can never disagree.
+   */
+  const reconciliation = reconcileBudget({
+    tenantImprovements: budgetData.tenantImprovements as any,
+    designSoftCosts: budgetData.designSoftCosts as any,
+    existingImprovements: budgetData.existingImprovements as any,
+    hasExistingImprovements: budgetData.hasExistingImprovements,
+    includeExistingInTotal: budgetData.includeExistingInTotal,
+    lineItemRollups: budgetData.lineItemRollups as any,
+    customAssemblies: budgetData.customAssemblies as any,
+    grandTotal: String(calculateGrandTotal()),
+  });
+
+  // Set when an unbalanced save has been acknowledged. Saving is never blocked
+  // — losing an hour of evaluation work to a check would be its own kind of
+  // damage — but it cannot happen by accident either.
+  const [acknowledgedImbalance, setAcknowledgedImbalance] = useState(false);
+
+  /**
+   * Save, with a stop if the numbers do not add up.
+   *
+   * Returns true when the save should proceed. On the first unbalanced attempt
+   * it returns false and raises the ribbon; the second, explicit attempt goes
+   * through and is recorded as having been saved out of balance.
+   */
+  const guardSave = (): boolean => {
+    if (reconciliation.balanced) return true;
+    if (acknowledgedImbalance) return true;
+    setAcknowledgedImbalance(true);
+    toast({
+      title: "Budget does not reconcile",
+      description: reconciliation.message,
+      variant: "destructive",
+      duration: 12000,
+    });
+    return false;
+  };
+
+  // Any edit re-arms the gate: an acknowledgement applies to the numbers that
+  // were on screen when it was given, not to whatever they become later.
+  useEffect(() => {
+    setAcknowledgedImbalance(false);
+  }, [reconciliation.unexplainedGap]);
+
   const saveProgressMutation = useMutation({
     mutationFn: async () => {
       if (!rfp) throw new Error("No RFP selected");
@@ -4771,6 +4820,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         // concerned, it no longer existed.
         customAssemblies: budgetData.customAssemblies,
         metadata: { 
+          // Recorded with the save so the reconciliation report can show that
+          // this budget was knowingly saved out of balance, and when.
+          reconciliation: {
+            balanced: reconciliation.balanced,
+            unexplainedGap: reconciliation.unexplainedGap,
+            savedAt: new Date().toISOString(),
+          },
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
@@ -4869,6 +4925,13 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         // concerned, it no longer existed.
         customAssemblies: budgetData.customAssemblies,
         metadata: { 
+          // Recorded with the save so the reconciliation report can show that
+          // this budget was knowingly saved out of balance, and when.
+          reconciliation: {
+            balanced: reconciliation.balanced,
+            unexplainedGap: reconciliation.unexplainedGap,
+            savedAt: new Date().toISOString(),
+          },
           oversizedDoors: budgetData.oversizedDoors, 
           regularDoors: budgetData.regularDoors,
           vehicularParking: budgetData.vehicularParking,
@@ -6835,14 +6898,48 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           </p>
         </CardHeader>
         <CardContent>
+          {/* THE RED RIBBON.
+              RFP-2026-031 published a base $57,200 below its own line items
+              with nothing on screen saying so. This says so. */}
+          {!reconciliation.balanced && (
+            <div className="mb-4 rounded-md border-2 border-red-600 bg-red-50 p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <div className="font-bold text-red-800">This budget does not add up</div>
+                  <div className="text-red-700 mt-1">{reconciliation.message}</div>
+                  {reconciliation.orphanedTotal > 0 && (
+                    <div className="text-red-700 mt-1">
+                      {formatCurrency(reconciliation.orphanedTotal)} is tagged to an assembly with
+                      no header line ({reconciliation.orphanedNames.join(', ')}). Use
+                      <strong> Fix Assembly Items</strong> to release it.
+                    </div>
+                  )}
+                  <div className="text-red-800 mt-2 font-medium">
+                    This cannot be published until it reconciles. You can still save your work.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {reconciliation.balanced && reconciliation.explanations.length > 0 && (
+            <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              <div className="font-medium text-gray-700">Grand Total reconciles.</div>
+              {reconciliation.explanations.map((e, i) => <div key={i} className="mt-0.5">{e}</div>)}
+            </div>
+          )}
           <div className="flex justify-center space-x-4">
             <Button
-              onClick={() => saveProgressMutation.mutate()}
+              onClick={() => { if (guardSave()) saveProgressMutation.mutate(); }}
               disabled={saveProgressMutation.isPending}
-              variant="outline"
+              variant={reconciliation.balanced ? "outline" : "destructive"}
               className="px-6"
             >
-              {saveProgressMutation.isPending ? "Saving..." : "Save Progress"}
+              {saveProgressMutation.isPending
+                ? "Saving..."
+                : !reconciliation.balanced && acknowledgedImbalance
+                  ? "Save anyway"
+                  : "Save Progress"}
             </Button>
             <Button
               onClick={() => cleanupAssemblyMutation.mutate()}
@@ -6853,9 +6950,16 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
             >
               {cleanupAssemblyMutation.isPending ? "Cleaning..." : "🔧 Fix Assembly Items"}
             </Button>
+            {/* Advancing to publish is a HARD STOP when the budget does not
+                reconcile — this is the moment the number leaves the building.
+                The server refuses it as well, so a stale tab cannot get past
+                this button. */}
             <Button
               onClick={saveAndAdvance}
-              disabled={saveAndAdvanceMutation.isPending}
+              disabled={saveAndAdvanceMutation.isPending || !reconciliation.balanced}
+              title={reconciliation.balanced
+                ? undefined
+                : 'Cannot publish while the budget does not reconcile'}
               className="px-6 bg-green-600 hover:bg-green-700"
             >
               {saveAndAdvanceMutation.isPending ? "Saving & Advancing..." : "Save & Advance to Publish"}

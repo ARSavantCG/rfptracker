@@ -179,6 +179,31 @@ const ADDITIVE_TABLES: string[] = [
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now()
   )`,
+  // Per-user pinned reports (2026-10-16).
+  //
+  // user_id is TEXT and has NO foreign key, deliberately. Contacts sign in
+  // alongside system users and arrive as "contact_12", which is not a row in
+  // users — an integer column or an FK to users would have silently excluded
+  // every contact, who are most of the people this is meant to reach.
+  //
+  // params holds the report's SCOPE ({"property":"Kurv Doral II"}), never a
+  // built URL, so shared/report-catalog can rebuild the link, drop parameters a
+  // report no longer declares, and flag a pin whose property was deleted.
+  `CREATE TABLE IF NOT EXISTS user_report_pins (
+    id serial PRIMARY KEY,
+    user_id text NOT NULL,
+    report_key text NOT NULL,
+    params json DEFAULT '{}'::json,
+    position integer NOT NULL DEFAULT 0,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+];
+
+// Indexes for the tables above. Separate from ADDITIVE_TABLES because CREATE
+// TABLE IF NOT EXISTS skips its whole body on a table that already exists, so an
+// index added to an existing table's definition would never be created.
+const ADDITIVE_INDEXES: string[] = [
+  `CREATE INDEX IF NOT EXISTS user_report_pins_user_idx ON user_report_pins (user_id)`,
 ];
 
 // dbi is injectable for tests (a drizzle handle over any pg driver); production
@@ -200,11 +225,22 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
       console.error(`   ${(error as Error).message}`);
     }
   }
+  // Indexes come after the tables, since an index needs its table to exist.
+  // Failures are warnings, not errors: a missing index costs speed on a table
+  // holding a handful of rows per person, where a missing TABLE costs a 500.
+  for (const ddl of ADDITIVE_INDEXES) {
+    try {
+      await dbi.execute(sql.raw(ddl));
+    } catch (error) {
+      console.warn(`⚠️  Startup index skipped:`, (error as Error).message);
+    }
+  }
+
   // Verify the tables the loop was supposed to create actually exist. A
   // CREATE TABLE IF NOT EXISTS that fails leaves NO trace at runtime except a
   // 500 from whatever reads it later, so this states the outcome directly at
   // boot rather than leaving it to be discovered from a stack frame.
-  for (const name of ['app_settings', 'project_team_members']) {
+  for (const name of ['app_settings', 'project_team_members', 'user_report_pins']) {
     try {
       await dbi.execute(sql.raw(`SELECT 1 FROM ${name} LIMIT 1`));
       console.log(`✅ table ${name} present`);

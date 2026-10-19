@@ -25,6 +25,7 @@ import { evaluationBudgets, rfpRequests, properties } from '@shared/schema';
 import { eq, asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { parseIncludeArchived, applyArchiveFilter } from '@shared/rfp-archive';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -165,7 +166,16 @@ export function registerBudgetReconciliationReport(app: Express): void {
           return p.building ? `${p.propertyName} - Bldg. ${p.building}` : p.propertyName;
         };
 
-        const audits = budgets.map((b) => auditBudget(b, rfpById.get(b.rfpId)));
+        // ARCHIVED RFPs DROP OUT unless asked for. A settled project from the
+        // app's first weeks would otherwise sit in these results forever with
+        // nothing anyone intends to do about it, and a report full of rows
+        // nobody will action is a report nobody reads.
+        const includeArchived = parseIncludeArchived(req.query);
+        const archiveFilter = applyArchiveFilter(
+          budgets.map((b) => ({ ...b, status: rfpById.get(b.rfpId)?.status ?? null })),
+          includeArchived,
+        );
+        const audits = archiveFilter.rows.map((b) => auditBudget(b, rfpById.get(b.rfpId)));
         const problems = audits.filter((a) => a.verdict === 'understated' || a.verdict === 'overstated');
         const understated = problems.filter((a) => a.verdict === 'understated');
         const totalUnderstated = understated.reduce((s, a) => s + Math.abs(a.gap), 0);
@@ -175,6 +185,7 @@ export function registerBudgetReconciliationReport(app: Express): void {
           return res.json({
             summary: {
               budgets: audits.length,
+              archivedExcluded: archiveFilter.excludedCount,
               reconciled: audits.filter((a) => a.verdict === 'reconciled').length,
               understated: understated.length,
               overstated: problems.length - understated.length,
@@ -233,6 +244,10 @@ export function registerBudgetReconciliationReport(app: Express): void {
   </div>
   <div class="document-title">Budget Reconciliation</div>
   <div class="report-subtitle">Saved grand total vs. the sum of its own line items</div>
+  ${archiveFilter.note
+    ? `<div class="report-subtitle">${escapeHtml(archiveFilter.note)}${
+        archiveFilter.included ? '' : ' Add ?includeArchived=true to see them.'}</div>`
+    : ''}
 
   <div class="cards">
     <div class="card"><div class="label">Budgets checked</div><div class="value">${audits.length}</div></div>

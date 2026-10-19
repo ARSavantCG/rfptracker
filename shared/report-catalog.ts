@@ -92,6 +92,20 @@ export interface ReportDefinition {
  * Multi-select. A park is just every building sharing a property name, so the
  * picker offers that as one click and sends the ids it expands to.
  */
+/**
+ * The include-archived toggle, shared by every report that reads RFPs.
+ *
+ * Archived records are OUT by default — archiving means stop showing me this.
+ * The toggle exists so the history is one click away rather than gone.
+ */
+const INCLUDE_ARCHIVED: ReportParam = {
+  name: 'includeArchived',
+  label: 'Include archived',
+  type: 'boolean',
+  optional: true,
+  blankMeans: 'Archived RFPs excluded',
+};
+
 const PROPERTY_SCOPE: ReportParam = {
   name: 'propertyIds',
   label: 'Properties',
@@ -154,7 +168,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'What is still in flight, and what is already overdue?',
     kind: 'api',
     path: '/api/reports/open-items',
-    params: [PROPERTY_SCOPE],
+    params: [PROPERTY_SCOPE, INCLUDE_ARCHIVED],
     permission: null,
     category: 'Pipeline',
     icon: 'ListChecks',
@@ -165,7 +179,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'Did we hit our internal due dates, and by how much?',
     kind: 'api',
     path: '/api/reports/turnaround',
-    params: [PROPERTY_SCOPE],
+    params: [PROPERTY_SCOPE, INCLUDE_ARCHIVED],
     note: 'Publish dates began recording automatically on 19 Aug 2026. Earlier RFPs are listed as not measurable rather than counted as misses.',
     permission: 'admin.access',
     category: 'Pipeline',
@@ -182,6 +196,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     // visible on the report that uses it — and can be pinned, which a page-level
     // filter never could.
     params: [
+      INCLUDE_ARCHIVED,
       {
         name: 'status', label: 'Status', type: 'choice', optional: true, style: 'filters',
         blankMeans: 'Every status',
@@ -229,7 +244,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'What if I want to choose the columns myself?',
     kind: 'modal',
     path: '',
-    params: [],
+    params: [INCLUDE_ARCHIVED],
     note: 'Opens a builder: pick the fields, the order, and the export format.',
     permission: null,
     category: 'Pipeline',
@@ -282,7 +297,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     answers: 'Does every saved grand total match the line items beneath it?',
     kind: 'api',
     path: '/api/reports/budget-reconciliation',
-    params: [],
+    params: [INCLUDE_ARCHIVED],
     note: 'Reads only. Flags any published total that does not equal the sum of its own lines.',
     permission: 'admin.access',
     category: 'Cost',
@@ -308,6 +323,7 @@ export const REPORT_CATALOG: ReportDefinition[] = [
     kind: 'api',
     path: '/api/reports/vendor-workload/html',
     params: [
+      INCLUDE_ARCHIVED,
       PROPERTY_SCOPE,
       {
         name: 'incompleteOnly',

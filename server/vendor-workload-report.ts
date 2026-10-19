@@ -8,6 +8,7 @@
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
 import puppeteer from "puppeteer";
 import { storage } from "./storage";
+import { isArchivedRfp } from '@shared/rfp-archive';
 import { readFileSync } from "fs";
 import { format } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
@@ -120,6 +121,8 @@ export async function generateVendorWorkloadData(options: {
   incompleteOnly?: boolean;
   /** Property ids to restrict to. null or undefined means every property. */
   propertyIds?: string[] | null;
+  /** Archived RFPs are excluded unless this is true. */
+  includeArchived?: boolean;
 } = {}): Promise<WorkloadReportData> {
   
   // Fetch all RFPs from database
@@ -127,6 +130,11 @@ export async function generateVendorWorkloadData(options: {
   
   // Filter RFPs based on date range if provided
   let filteredRfps = allRfps;
+
+  // Archiving means stop showing me this, on every report.
+  if (!options.includeArchived) {
+    filteredRfps = filteredRfps.filter((rfp) => !isArchivedRfp(rfp));
+  }
 
   // Property scope. rfp.property holds the property id as TEXT, so compare as
   // strings — the same id-vs-name trap that silently emptied the executive

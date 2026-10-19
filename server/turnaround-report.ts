@@ -19,6 +19,7 @@ import { asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
+import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -71,7 +72,11 @@ export function registerTurnaroundReport(app: Express) {
       };
 
       const now = new Date();
-      const HIDDEN = ['cancelled', 'archived'];
+      // Cancelled is hidden here because a deal that stopped cannot be late.
+      // Archived is handled separately by the shared rule, so "I am done with
+      // this" means the same thing on every report.
+      const HIDDEN = ['cancelled'];
+      const includeArchived = parseIncludeArchived(req.query);
 
       type Scored = {
         row: typeof rows[number];
@@ -85,6 +90,7 @@ export function registerTurnaroundReport(app: Express) {
       const scored: Scored[] = rows
         .filter((r) => !HIDDEN.includes(String(r.status || '')))
         .filter((r) => scopeIds === null || (r.propertyRef != null && scopeIds.includes(String(r.propertyRef))))
+        .filter((r) => includeArchived || !isArchivedRfp(r))
         .map((r) => {
           const due = r.internalDueDate ? new Date(r.internalDueDate) : null;
           const pub = r.publishedDate ? new Date(r.publishedDate) : null;

@@ -81,6 +81,7 @@ import { registerBudgetReconciliationReport } from './budget-reconciliation-repo
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
 import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
+import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -4545,6 +4546,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (scope.ids !== null) {
           rfpData = rfpData.filter(rfp => scope.includes(rfp.property));
         }
+        // Archived RFPs drop out unless asked for: archiving means stop
+        // showing me this, and it has to mean that everywhere.
+        if (!parseIncludeArchived(req.query)) {
+          rfpData = rfpData.filter(rfp => !isArchivedRfp(rfp));
+        }
       }
       if (filters.dueInDays && filters.dueInDays !== "all") {
         const targetDate = new Date();
@@ -4845,6 +4851,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         if (scope.ids !== null) {
           rfpData = rfpData.filter(rfp => scope.includes(rfp.property));
+        }
+        // Archived RFPs drop out unless asked for: archiving means stop
+        // showing me this, and it has to mean that everywhere.
+        if (!parseIncludeArchived(req.query)) {
+          rfpData = rfpData.filter(rfp => !isArchivedRfp(rfp));
         }
       }
       if (filters.dueInDays && filters.dueInDays !== "all") {
@@ -5964,6 +5975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (vendors) options.vendors = (vendors as string).split(',').map(v => v.trim());
       if (incompleteOnly) options.incompleteOnly = incompleteOnly === 'true';
       options.propertyIds = parsePropertyScope(req.query || {}, await storage.getAllProperties() as any);
+      options.includeArchived = parseIncludeArchived(req.query);
       
       const { generateVendorWorkloadData, generateVendorWorkloadHtml } = await import('./vendor-workload-report');
       
@@ -6585,6 +6597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         if (scope.ids !== null) {
           rfps = rfps.filter((rfp: any) => scope.includes(rfp.property));
+        }
+        if (!parseIncludeArchived(req.query)) {
+          rfps = rfps.filter((rfp: any) => !isArchivedRfp(rfp));
         }
       }
       if (filters?.dueInDays) {

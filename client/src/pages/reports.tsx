@@ -24,6 +24,7 @@ import { PinnedReports } from "@/components/pinned-reports";
 import { parseISO, isAfter, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 import { isRfpOverdue, daysUntilRfpDue } from "@shared/schema";
+import { applyArchiveFilter } from "@shared/rfp-archive";
 
 interface ReportFilters {
   status?: string;
@@ -43,7 +44,14 @@ export default function Reports() {
     queryKey: ["/api/properties"],
   });
 
-  const filteredRfps = rfpRequests.filter((rfp) => {
+  // Archived RFPs are out of the working set unless asked for. Archiving means
+  // stop showing me this, so the counts below reflect live work rather than
+  // everything that has ever existed.
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const archiveFilter = applyArchiveFilter(rfpRequests as any, includeArchived);
+  const visibleRfps = archiveFilter.rows as unknown as RfpRequest[];
+
+  const filteredRfps = visibleRfps.filter((rfp) => {
     if (filters.status && filters.status !== "all" && rfp.status !== filters.status) return false;
     if (filters.property && filters.property !== "all" && rfp.property !== filters.property) return false;
     if (filters.dueInDays && filters.dueInDays.toString() !== "all") {
@@ -77,7 +85,11 @@ export default function Reports() {
     inProgress: byStatus("in-progress"),
     completed: byStatus("completed"),
     onHold: byStatus("on-hold"),
-    cancelled: byStatus("cancelled") + byStatus("archived"),
+    // Cancelled and archived are NOT merged. A cancelled deal is an outcome
+    // worth counting; an archived one is a filing decision that says nothing
+    // about the deal. Archived only appears here when it is being included.
+    cancelled: byStatus("cancelled"),
+    archived: byStatus("archived"),
     overdue: filteredRfps.filter((r) => isRfpOverdue(r)).length,
     dueSoon: filteredRfps.filter((r) => {
       if (isRfpOverdue(r)) return false;
@@ -88,8 +100,8 @@ export default function Reports() {
   };
   // If this is ever false the tiles are lying; surfaced rather than left to drift.
   const statusTilesReconcile =
-    metrics.received + metrics.inProgress + metrics.completed + metrics.onHold + metrics.cancelled ===
-    metrics.total;
+    metrics.received + metrics.inProgress + metrics.completed + metrics.onHold +
+    metrics.cancelled + metrics.archived === metrics.total;
 
   const clearFilters = () => setFilters({});
   const hasFilters = Boolean(filters.status || filters.property || filters.dueInDays);
@@ -149,7 +161,25 @@ export default function Reports() {
               {tile("Complete", metrics.completed, "text-green-900")}
               {tile("On Hold", metrics.onHold, "text-gray-700")}
               {tile("Cancelled", metrics.cancelled, "text-gray-500")}
+              {includeArchived && tile("Archived", metrics.archived, "text-gray-400")}
             </div>
+
+            {(archiveFilter.excludedCount > 0 || includeArchived) && (
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(e) => setIncludeArchived(e.target.checked)}
+                />
+                Include archived
+                {!includeArchived && archiveFilter.excludedCount > 0 && (
+                  <span className="text-gray-500">
+                    — {archiveFilter.excludedCount} archived RFP
+                    {archiveFilter.excludedCount === 1 ? '' : 's'} not counted above
+                  </span>
+                )}
+              </label>
+            )}
 
             {!statusTilesReconcile && (
               <p className="text-xs text-amber-700">

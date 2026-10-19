@@ -16,6 +16,7 @@ import { asc } from 'drizzle-orm';
 import { requireAuthFlexible } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
+import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -72,12 +73,16 @@ export function registerOpenItemsReport(app: Express) {
 
       // Open = not finished and not abandoned. 'completed' is excluded, which is
       // also what closes an allowance deal on creation.
-      const CLOSED = ['completed', 'cancelled', 'archived'];
+      // Archived is handled by the shared rule rather than being folded in
+      // here, so one definition governs every report.
+      const CLOSED = ['completed', 'cancelled'];
+      const includeArchived = parseIncludeArchived(req.query);
       const scopeIds = parsePropertyScope(req.query || {}, propRows as any);
       const open = rows
         .filter((r) => !CLOSED.includes(String(r.status || '')))
         // Null scope means every property, never none.
-        .filter((r) => scopeIds === null || (r.propertyRef != null && scopeIds.includes(String(r.propertyRef))));
+        .filter((r) => scopeIds === null || (r.propertyRef != null && scopeIds.includes(String(r.propertyRef))))
+        .filter((r) => includeArchived || !isArchivedRfp(r));
 
       const now = new Date();
       const withAge = open.map((r) => {

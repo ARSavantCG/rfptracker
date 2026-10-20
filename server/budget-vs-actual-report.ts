@@ -23,6 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
+import { waiverLog, type WaiverLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -384,6 +385,48 @@ export function renderCmInvoiceHtml(input: {
   </body></html>`;
 }
 
+/** Every conditional waiver, and whether its unconditional has come in with the next pay app. */
+export function renderWaiverLogHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  rows: WaiverLogRow[];
+  contractName: (id: number) => string;
+  generatedBy?: string | null;
+}): string {
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  const out = input.rows.filter((r) => r.status === "unconditional outstanding" || r.status === "conditional outstanding");
+  const notes = out.length ? [`${out.length} waiver${out.length === 1 ? "" : "s"} outstanding, shaded.`] : [];
+  const nn = (n: number) => String(n).padStart(2, "0");
+  const STATUS: Record<string, string> = {
+    complete: "Complete", "unconditional outstanding": "Unconditional outstanding", "conditional outstanding": "Conditional outstanding",
+    "not needed": "Not needed", "awaiting next pay app": "Unconditional due with next pay app",
+  };
+  const byContract = new Map<number, WaiverLogRow[]>();
+  for (const r of input.rows) byContract.set(r.contractId, [...(byContract.get(r.contractId) ?? []), r]);
+  const body = Array.from(byContract).map(([cid, rows]) => `
+    <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
+    ${rows.map((r) => `<tr${r.status.includes("outstanding") ? ' style="background:#fef2f2"' : ""}>
+      <td>Pay App ${nn(r.appNumber)}</td><td>${escapeHtml(r.vendor)}</td>${cell(r.conditionalAmount)}
+      <td>${r.conditionalReceived ? "Received" : "—"}</td>
+      <td>${r.unconditionalDueWith == null ? "—" : `${r.unconditionalReceived ? "Received" : "Due"} with Pay App ${nn(r.unconditionalDueWith)}${r.unconditionalAmount != null && Math.abs(r.unconditionalAmount - r.conditionalAmount) >= 0.005 ? ` (${money2(r.unconditionalAmount)})` : ""}${r.edited ? " — edited" : ""}`}</td>
+      <td>${STATUS[r.status]}</td></tr>`).join("")}`).join("");
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Lien Waiver Log", eyebrow: "Cost Report", info, notes })}
+  <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Vendor</th><th>Conditional</th><th class="l">Conditional</th><th class="l">Unconditional</th><th class="l">Status</th></tr></thead><tbody>
+    ${body || `<tr><td colspan="6" class="muted">No waivers recorded yet.</td></tr>`}
+  </tbody></table>
+  <h3 class="sec">Notes</h3>
+  <ol class="notes">
+    <li>Each pay app's conditional waivers are answered by unconditional waivers delivered with the following pay app, for the same vendor and amount.</li>
+    <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
+  </ol>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
 async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
   const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
@@ -447,6 +490,26 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Job cost ledger report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  app.get("/api/reports/lien-waivers/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const apps = b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number }));
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderWaiverLogHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        rows: waiverLog(apps, b.waivers),
+        contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Lien waiver log error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

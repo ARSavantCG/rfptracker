@@ -2362,6 +2362,8 @@ export const costDocuments = pgTable("cost_documents", {
   contractId: integer("contract_id"),
   changeOrderId: integer("change_order_id"),
   directCostId: integer("direct_cost_id"),
+  // What it is in a pay app package: g702 | conditional | unconditional | invoice | other.
+  docType: text("doc_type"),
   originalName: text("original_name").notNull(),
   mimeType: text("mime_type"),
   sizeBytes: integer("size_bytes"),
@@ -2409,6 +2411,28 @@ export const costDirectCosts = pgTable("cost_direct_costs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_direct_costs_project_idx").on(t.projectId)]);
 
+/**
+ * A lien waiver that came in with a pay app. Conditional: for this pay app.
+ * Unconditional: for the previous one, answering one of its conditionals.
+ */
+export const costWaivers = pgTable("cost_waivers", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  contractId: integer("contract_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  kind: text("kind").notNull(),               // conditional | unconditional
+  vendor: text("vendor").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
+  fromWaiverId: integer("from_waiver_id"),
+  received: boolean("received").notNull().default(false),
+  notNeeded: boolean("not_needed").notNull().default(false),
+  documentId: integer("document_id"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_waivers_application_idx").on(t.applicationId)]);
+
+export type CostWaiver = typeof costWaivers.$inferSelect;
 export type CostDirectCost = typeof costDirectCosts.$inferSelect;
 export type CostPayment = typeof costPayments.$inferSelect;
 export type CostProject = typeof costProjects.$inferSelect;

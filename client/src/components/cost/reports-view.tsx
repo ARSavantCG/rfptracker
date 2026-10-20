@@ -74,6 +74,16 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         </Card>
       </div>
 
+      <Card title="Lien Waiver Log" what="Every conditional waiver by contract and pay app, and whether its unconditional has come in with the next one. Outstanding ones shaded."
+            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/lien-waivers/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+        <p className="text-sm text-gray-700">
+          {(() => {
+            const cond = b.waivers.filter((w) => w.kind === 'conditional').length;
+            return cond ? `${cond} conditional waiver${cond === 1 ? '' : 's'} recorded. Open a pay app's Package to add or check off waivers.` : 'No waivers recorded yet — add them from each pay app\'s Package (Contracts or Pay Apps tab).';
+          })()}
+        </p>
+      </Card>
+
       <Card title="CM Fee Invoice" what={`For accounting to send the tenant: ${d.pct.toFixed(2)}% on billable work completed to date, less what's been invoiced, with the budget lines and pay apps behind it.`}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <Fig label="Billable work to date" value={money(d.base)} />

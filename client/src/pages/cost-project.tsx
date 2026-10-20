@@ -21,6 +21,7 @@ import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
 import { ReportsView } from '@/components/cost/reports-view';
+import { PackageDialog } from '@/components/cost/package-dialog';
 import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
 import { PercentInput } from '@/components/cost/inputs';
 import { ProjectNotes } from '@/components/cost/project-notes';
@@ -45,6 +46,7 @@ export default function CostProject() {
   const [pasteTarget, setPasteTarget] = useState<{ contractId: number; changeOrderId: number | null; label: string } | null>(null);
   const [appState, setAppState] = useState<{ contract: ContractRow; app: ApplicationRow | null; kind: 'pay_app' | 'invoice' } | null>(null);
   const [payTarget, setPayTarget] = useState<{ app: ApplicationRow; contract: ContractRow } | null>(null);
+  const [pkgTarget, setPkgTarget] = useState<{ app: ApplicationRow; contract: ContractRow } | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const [newContract, setNewContract] = useState<{ counterparty: string; bucket: string; retainagePct: string; contractNumber: string } | null>(null);
@@ -175,6 +177,7 @@ export default function CostProject() {
                 onOpenApplication={(contract, app, kind) => setAppState({ contract, app, kind })}
                 payments={b.payments}
                 onPay={(contract, app) => setPayTarget({ contract, app })}
+                onPackage={(contract, app) => setPkgTarget({ contract, app })}
               />
             ))}
             {newContract ? (
@@ -211,7 +214,7 @@ export default function CostProject() {
           </TabsContent>
 
           <TabsContent value="payapps" className="mt-4">
-            <PositionView bundle={b} projectId={id} onPay={setPayTarget} />
+            <PositionView bundle={b} projectId={id} onPay={setPayTarget} onPackage={setPkgTarget} />
           </TabsContent>
 
           <TabsContent value="ledger" className="mt-4">
@@ -221,7 +224,7 @@ export default function CostProject() {
           <TabsContent value="budget" className="mt-4 space-y-4">
             <BudgetPanel bundle={b} projectId={id} />
             <BudgetChangeOrders bundle={b} projectId={id} />
-            <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} />
+            <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} source={b.cmSettings.source} />
             <TeamRollUp baseline={p.baseline} />
           </TabsContent>
 
@@ -298,6 +301,7 @@ export default function CostProject() {
 
       <AllocationDialog line={editing} baseline={p.baseline} projectId={id} onClose={() => setEditing(null)} />
       <PasteLinesDialog target={pasteTarget} projectId={id} onClose={() => setPasteTarget(null)} />
+      <PackageDialog target={pkgTarget} bundle={b} projectId={id} onClose={() => setPkgTarget(null)} />
       <PaymentDialog target={payTarget} payments={b.payments} projectId={id} onClose={() => setPayTarget(null)} />
         <Dialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
           <DialogContent className="pm-scope sm:max-w-md">

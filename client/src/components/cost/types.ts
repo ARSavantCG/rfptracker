@@ -68,6 +68,7 @@ export interface DocumentRow {
   contractId: number | null;
   changeOrderId: number | null;
   directCostId: number | null;
+  docType: string | null;
   originalName: string;
   sizeBytes: number | null;
   storage: 'object' | 'local';
@@ -92,10 +93,11 @@ export interface ProjectBundle {
     directCosts: { date: string; amount: number }[];
   };
   cmFee: CmFee | null;
-  cmSettings: { pct: number; key: string | null };
+  cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none' };
   cmInvoices: CmInvoiceRow[];
   cmInvoiceDraft: { base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
+  waivers: Array<import('@shared/cost-waivers').Waiver & { notes: string | null }>;
   ledger: { entries: LedgerEntry[]; total: number; unreconciled: number; unreconciledCount: number };
 }
 

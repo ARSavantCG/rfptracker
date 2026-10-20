@@ -13,7 +13,7 @@ import { apiRequest } from '@/lib/queryClient';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type CmFee } from './types';
 
-export function CmFeeSettings({ projectId, baseline, cmFee }: { projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null }) {
+export function CmFeeSettings({ projectId, baseline, cmFee, source }: { projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null; source?: 'project' | 'line' | 'none' }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pct, setPct] = useState(cmFee ? cmFee.pct.toFixed(2) : '');
@@ -32,7 +32,10 @@ export function CmFeeSettings({ projectId, baseline, cmFee }: { projectId: numbe
   return (
     <div className="bg-white border rounded-lg px-4 py-3 flex flex-wrap items-end gap-3">
       <div className="mr-auto min-w-[16rem] flex-1">
-        <div className="font-semibold text-gray-900 text-sm">CM fee</div>
+        <div className="font-semibold text-gray-900 text-sm">CM fee
+          {source === 'project' && <span className="ml-2 text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Edited — set for this project</span>}
+          {source === 'line' && <span className="ml-2 text-[10px] font-medium text-gray-600 bg-gray-100 rounded px-1">From the CM line's name</span>}
+        </div>
         <div className="text-xs text-gray-600">
           Earned as the work is billed: the rate × spent to date on every other budget line.
           {cmFee && <> Earned so far <span className="font-medium tabular-nums">{money(cmFee.earned)}</span> of {money(cmFee.budget)}.</>}

@@ -19,7 +19,7 @@ import { storage } from './storage';
 import { requireAuth, requireAdmin } from './middleware';
 import {
   costProjects, costContracts, costChangeOrders, costSovLines,
-  costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts,
+  costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts, costWaivers,
 } from '@shared/schema';
 import {
   normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
@@ -33,7 +33,9 @@ import {
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
 import { resolveContractBucket } from './budget-by-contract';
-import { backupToObjectStorage, streamFromObjectStorage } from './storage-backup';
+import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage } from './storage-backup';
+import archiver from 'archiver';
+import { waiverChecklist, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
 
@@ -195,6 +197,7 @@ export async function loadProjectBundle(projectId: number) {
   const appIds = apps.map((a) => a.id);
   const appLines = appIds.length === 0 ? [] : await db.select().from(costApplicationLines)
     .where(inArray(costApplicationLines.applicationId, appIds));
+  const waiverRows = await db.select().from(costWaivers).where(eq(costWaivers.projectId, projectId)).orderBy(costWaivers.id);
   const documents = await db.select().from(costDocuments)
     .where(eq(costDocuments.projectId, projectId)).orderBy(desc(costDocuments.createdAt));
   const payRows = none ? [] : await db.select().from(costPayments)
@@ -350,6 +353,11 @@ export async function loadProjectBundle(projectId: number) {
     positionInput,
     cmFee,
     directCosts,
+    waivers: waiverRows.map((w) => ({
+      id: w.id, contractId: w.contractId, applicationId: w.applicationId, kind: w.kind as Waiver['kind'],
+      vendor: w.vendor, amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null,
+      received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null, notes: w.notes,
+    })),
     ledger: buildLedger({
       payments: payRows.map((p) => ({
         id: p.id, contractId: p.contractId, applicationId: p.applicationId, amount: dollars(p.amountCents),
@@ -391,6 +399,8 @@ export function cmSettingsFor(project: { settings?: any }, baseline: readonly Ba
   return {
     pct: settings.cmFeePct != null && Number.isFinite(Number(settings.cmFeePct)) ? Number(settings.cmFeePct) : (detected?.pct ?? 0),
     key: settings.cmFeeKey !== undefined ? (settings.cmFeeKey || null) : (detected?.key ?? null) as string | null,
+    /** Where the rate came from: typed for this project, or read off the CM line's name. */
+    source: (settings.cmFeePct != null ? 'project' : detected ? 'line' : 'none') as 'project' | 'line' | 'none',
   };
 }
 
@@ -842,6 +852,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           await tx.delete(costContracts).where(inArray(costContracts.id, contractIds));
         }
         await tx.delete(costDirectCosts).where(eq(costDirectCosts.projectId, id));
+        await tx.delete(costWaivers).where(eq(costWaivers.projectId, id));
         await tx.delete(costDocuments).where(eq(costDocuments.projectId, id));
         await tx.delete(costProjects).where(eq(costProjects.id, id));
       });
@@ -1041,6 +1052,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           await tx.delete(costDocuments).where(inArray(costDocuments.applicationId, appIds));
         }
         await tx.delete(costPayments).where(eq(costPayments.contractId, id));
+        await tx.delete(costWaivers).where(eq(costWaivers.contractId, id));
         await tx.delete(costApplications).where(eq(costApplications.contractId, id));
         await tx.delete(costSovLines).where(eq(costSovLines.contractId, id));
         await tx.delete(costChangeOrders).where(eq(costChangeOrders.contractId, id));
@@ -1224,9 +1236,180 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       await db.delete(costApplicationLines).where(eq(costApplicationLines.applicationId, id));
       await db.delete(costPayments).where(eq(costPayments.applicationId, id));
+      await db.delete(costWaivers).where(eq(costWaivers.applicationId, id));
       await db.delete(costApplications).where(eq(costApplications.id, id));
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'delete the application'); }
+  });
+
+  // ---- lien waivers
+  const waiverValues = (b: any, partial: boolean) => {
+    const out: any = {};
+    if (!partial || b.vendor !== undefined) {
+      const v = String(b.vendor ?? '').trim();
+      if (!v) throw new UserError('Enter the vendor.');
+      out.vendor = v.slice(0, 200);
+    }
+    if (b.amount !== undefined) out.amountCents = toCents(b.amount);
+    if (b.received !== undefined) out.received = !!b.received;
+    if (b.notNeeded !== undefined) out.notNeeded = !!b.notNeeded;
+    if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;
+    if (b.documentId !== undefined) out.documentId = b.documentId == null ? null : Number(b.documentId);
+    return out;
+  };
+
+  app.post('/api/cost-applications/:id/waivers', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [a] = await db.select().from(costApplications).where(eq(costApplications.id, id));
+      if (!a) return res.status(404).json({ message: 'Pay app not found' });
+      const [c] = await db.select().from(costContracts).where(eq(costContracts.id, a.contractId));
+      const b = req.body || {};
+      const kind = b.kind === 'unconditional' ? 'unconditional' : 'conditional';
+      const [row] = await db.insert(costWaivers).values({
+        projectId: c.projectId, contractId: a.contractId, applicationId: id, kind,
+        fromWaiverId: kind === 'unconditional' && b.fromWaiverId ? Number(b.fromWaiverId) : null,
+        received: b.received === undefined ? kind === 'conditional' : !!b.received,
+        ...waiverValues(b, false), createdBy: who(req),
+      }).returning();
+      res.json(row);
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'add the waiver');
+    }
+  });
+
+  app.patch('/api/cost-waivers/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const patch = waiverValues(req.body || {}, true);
+      if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      const [row] = await db.update(costWaivers).set(patch).where(eq(costWaivers.id, id)).returning();
+      if (!row) return res.status(404).json({ message: 'Waiver not found' });
+      res.json(row);
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'update the waiver');
+    }
+  });
+
+  app.delete('/api/cost-waivers/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      await db.delete(costWaivers).where(eq(costWaivers.id, id));
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'remove the waiver'); }
+  });
+
+  /** Retag a file: what kind of document it is, and which pay app it belongs to. */
+  app.patch('/api/cost-documents/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const b = req.body || {};
+      const patch: any = {};
+      if (b.docType !== undefined) patch.docType = DOC_TYPES.some(([k]) => k === b.docType) ? String(b.docType) : null;
+      if (b.applicationId !== undefined) patch.applicationId = b.applicationId == null ? null : Number(b.applicationId);
+      if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      const [row] = await db.update(costDocuments).set(patch).where(eq(costDocuments.id, id)).returning();
+      if (!row) return res.status(404).json({ message: 'File not found' });
+      res.json(row);
+    } catch (e) { fail(res, e, 'update the file'); }
+  });
+
+  /**
+   * One pay app's package as a zip, named so it can be followed without
+   * opening it:  Tenant - Property - Contractor - Pay App 02.zip
+   *   1 G702-G703/
+   *   2 Conditional Waivers (Pay App 02)/  ABC Plumbing - Conditional - Pay App 02 - $40,000.00.pdf
+   *   3 Unconditional Waivers (Pay App 01)/
+   *   4 Invoices & Backup/
+   *   5 Other/
+   *   00 Contents.txt   — what's in it, and any waiver still outstanding
+   */
+  app.get('/api/cost-applications/:id/package', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [a] = await db.select().from(costApplications).where(eq(costApplications.id, id));
+      if (!a) return res.status(404).json({ message: 'Pay app not found' });
+      const [c] = await db.select().from(costContracts).where(eq(costContracts.id, a.contractId));
+      const [project] = await db.select().from(costProjects).where(eq(costProjects.id, c.projectId));
+      const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
+      const allApps = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number })
+        .from(costApplications).where(eq(costApplications.contractId, a.contractId));
+      const waivers = (await db.select().from(costWaivers).where(eq(costWaivers.contractId, a.contractId))).map((w) => ({
+        id: w.id, contractId: w.contractId, applicationId: w.applicationId, kind: w.kind as Waiver['kind'], vendor: w.vendor,
+        amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null, received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null,
+      }));
+      const prev = previousApp({ id: a.id, contractId: a.contractId, number: a.number }, allApps);
+      const ck = waiverChecklist(a.id, allApps, waivers);
+      const docs = await db.select().from(costDocuments).where(eq(costDocuments.applicationId, a.id));
+      const waiverDocIds = new Set(waivers.filter((w) => w.applicationId === a.id && w.documentId).map((w) => w.documentId!));
+      const extra = waiverDocIds.size
+        ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(waiverDocIds)))).filter((d) => !docs.some((x) => x.id === d.id))
+        : [];
+      const all = [...docs, ...extra];
+      if (!all.length) return res.status(404).json({ message: 'No files on this pay app yet.' });
+
+      const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
+      const nn = (n: number) => String(n).padStart(2, '0');
+      const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
+      const zipName = safe([project.tenantName, property?.name, c.counterparty, `${label} ${nn(a.number)}`].filter(Boolean).join(' - ')) + '.zip';
+      const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
+      const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+      const folder: Record<string, string> = {
+        g702: '1 G702-G703',
+        conditional: `2 Conditional Waivers (${label} ${nn(a.number)})`,
+        unconditional: `3 Unconditional Waivers (${prev ? `Pay App ${nn(prev.number)}` : 'prior'})`,
+        invoice: '4 Invoices & Backup',
+        other: '5 Other',
+      };
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipName.replace(/"/g, '')}"`);
+      const zip = archiver('zip', { zlib: { level: 6 } });
+      zip.on('error', (err) => { console.error('[cost] package zip error', err); try { res.end(); } catch {} });
+      zip.pipe(res);
+      const used = new Set<string>();
+      const unique = (p: string) => {
+        let out = p; let i = 2;
+        while (used.has(out.toLowerCase())) { out = p.replace(/(\.[^.]*)?$/, ` (${i++})$1`); }
+        used.add(out.toLowerCase());
+        return out;
+      };
+      const contents: string[] = [zipName.replace(/\.zip$/, ''), ''];
+      const missing: string[] = [];
+      for (const d of all) {
+        const w = waivers.find((x) => x.documentId === d.id && x.applicationId === a.id);
+        const type = w ? w.kind : (d.docType || 'g702');
+        let name: string;
+        if (w) {
+          const covers = w.kind === 'conditional' ? `${label} ${nn(a.number)}` : prev ? `Pay App ${nn(prev.number)}` : 'prior';
+          name = `${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
+        } else if (type === 'g702') {
+          name = `${safe(c.counterparty)} - ${label} ${nn(a.number)} - G702-G703${ext(d.originalName)}`;
+        } else {
+          name = `${label} ${nn(a.number)} - ${safe(d.originalName)}`;
+        }
+        const zipPath = unique(`${folder[type] ?? folder.other}/${name}`);
+        let buf: Buffer | null = null;
+        if (d.storage === 'object') buf = await downloadFromObjectStorage(d.storageKey);
+        else buf = await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+        if (!buf) { missing.push(d.originalName); continue; }
+        zip.append(buf, { name: zipPath });
+        contents.push(zipPath);
+      }
+      contents.push('', 'Lien waivers');
+      for (const w of ck.conditionals) contents.push(`  Conditional   ${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
+      for (const u of ck.unconditionals) contents.push(`  Unconditional ${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : 'OUTSTANDING'}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
+      if (missing.length) contents.push('', 'Could not be included (file not found in storage):', ...missing.map((m) => `  ${m}`));
+      zip.append(contents.join('\r\n'), { name: '00 Contents.txt' });
+      await zip.finalize();
+    } catch (e) { if (!res.headersSent) fail(res, e, 'build the package'); }
   });
 
   // ---- documents
@@ -1269,6 +1452,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         contractId: num(req.body?.contractId),
         changeOrderId: num(req.body?.changeOrderId),
         directCostId: num(req.body?.directCostId),
+        docType: DOC_TYPES.some(([k]) => k === req.body?.docType) ? String(req.body.docType) : null,
         originalName: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: file.size,
@@ -1276,6 +1460,9 @@ export function registerCostTrackingRoutes(app: Express): void {
         storage: where,
         uploadedBy: who(req),
       }).returning();
+      // A file dropped on a waiver is that waiver: attach it and mark it received.
+      const waiverId = num(req.body?.waiverId);
+      if (waiverId) await db.update(costWaivers).set({ documentId: row.id, received: true }).where(eq(costWaivers.id, waiverId));
       res.json(row);
     } catch (e) {
       fail(res, e, 'save the file');

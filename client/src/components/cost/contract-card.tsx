@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2 } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen } from 'lucide-react';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
@@ -19,7 +19,7 @@ import {
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication, payments = [], onPay,
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage,
 }: {
   contract: ContractRow;
   changeOrders: ChangeOrderRow[];
@@ -34,6 +34,7 @@ export function ContractCard({
   onOpenApplication: (contract: ContractRow, app: ApplicationRow | null, kind: 'pay_app' | 'invoice') => void;
   payments?: PaymentRow[];
   onPay?: (contract: ContractRow, app: ApplicationRow) => void;
+  onPackage?: (contract: ContractRow, app: ApplicationRow) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -319,7 +320,10 @@ export function ContractCard({
                       </>);
                     })()}
                     <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
-                      {docsFor(a.id).map((d) => (
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => onPackage?.(contract, a)}>
+                        <FolderOpen className="h-3.5 w-3.5 mr-1" /> Package{docsFor(a.id).length ? ` (${docsFor(a.id).length})` : ''}
+                      </Button>
+                      {docsFor(a.id).slice(0, 1).map((d) => (
                         <a key={d.id} href={`/api/cost-documents/${d.id}/download`} target="_blank" rel="noreferrer"
                            onClick={(e) => { e.preventDefault(); openDocument(d.id); }}
                            className="inline-flex items-center gap-1 text-xs text-blue-700 hover:underline mr-2">

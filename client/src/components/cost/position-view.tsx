@@ -10,10 +10,11 @@ import { Printer } from 'lucide-react';
 import { positionAsOf } from '@shared/cost-position';
 import { money, signedMoney, shortDate, todayIso, openReport, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
 
-export function PositionView({ bundle, projectId, onPay }: {
+export function PositionView({ bundle, projectId, onPay, onPackage }: {
   bundle: ProjectBundle;
   projectId: number;
   onPay: (t: { app: ApplicationRow; contract: ContractRow }) => void;
+  onPackage?: (t: { app: ApplicationRow; contract: ContractRow }) => void;
 }) {
   const { toast } = useToast();
   const [asOf, setAsOf] = useState(todayIso());
@@ -103,7 +104,7 @@ export function PositionView({ bundle, projectId, onPay }: {
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
-              <H left>Contract</H><H left>No.</H><H left>Dated</H><H>Payment due</H><H>Paid</H><H>Open</H><th className="w-24" />
+              <H left>Contract</H><H left>No.</H><H left>Dated</H><H>Payment due</H><H>Paid</H><H>Open</H><th className="w-44" />
             </tr>
           </thead>
           <tbody>
@@ -120,7 +121,8 @@ export function PositionView({ bundle, projectId, onPay }: {
                   <td className="px-3 py-1.5 text-gray-600">{app?.periodEnd ? shortDate(a.date) : <span className="text-amber-700" title="No period end entered — dated the day it was entered">{shortDate(a.date)}*</span>}</td>
                   <D v={a.due} /><D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
                   <td className="px-2 text-right">
-                    {app && contract && <Button variant="outline" size="sm" className="h-7" onClick={() => onPay({ app, contract })}>Payments</Button>}
+                    {app && contract && <Button variant="outline" size="sm" className="h-7 mr-1" onClick={() => onPay({ app, contract })}>Payments</Button>}
+                    {app && contract && onPackage && <Button variant="outline" size="sm" className="h-7" onClick={() => onPackage({ app, contract })}>Package</Button>}
                   </td>
                 </tr>
               );

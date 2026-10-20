@@ -26,7 +26,6 @@ export function renderBudgetVsActualHtml(input: {
 }): string {
   const { summary: s, project } = input;
   const info = [
-    { label: "Project", value: `${project.name} (${project.projectNumber})` },
     { label: "Tenant", value: project.tenantName || "" },
     { label: "Property", value: input.propertyLabel || "" },
     { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },

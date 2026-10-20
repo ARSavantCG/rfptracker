@@ -138,6 +138,7 @@ export function renderBudgetVsActualHtml(input: {
   approval?: ApprovalView | null;
   cmFee?: CmFeeView | null;
   budgetCos?: BudgetCoView[];
+  transfers?: Array<{ date: string; amount: number; from: string; to: string; note: string }>;
   generatedBy?: string | null;
 }): string {
   const { summary: s, project, approval } = input;
@@ -200,6 +201,7 @@ export function renderBudgetVsActualHtml(input: {
       "Committed = contracts plus approved change orders. Variance = Budget less Committed; in parentheses when over budget.",
       `Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.`,
       ...(input.cmFee ? [`CM fee at ${fmtPct(input.cmFee.pct)} of work billed on every other budget line.`] : []),
+      ...(input.transfers || []).map((t) => `Transfer ${longDate(t.date)}: ${money2(t.amount)} from ${t.from} to ${t.to}${t.note ? ` — ${t.note}` : ""}. The total is unchanged.`),
     ].map((n) => `<li>${escapeHtml(n)}</li>`).join("")}
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
@@ -467,6 +469,11 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
             ? { ...b.approval, confirmedBy: generatedByName(u) || by } : b.approval;
         })(),
         cmFee: b.cmFee,
+        transfers: b.approval.transfers.map((t) => ({
+          date: t.date, amount: t.amount, note: t.note,
+          from: b.project.baseline.find((x: any) => x.key === t.fromKey)?.description ?? 'a removed line',
+          to: b.project.baseline.find((x: any) => x.key === t.toKey)?.description ?? 'a removed line',
+        })),
         budgetCos: b.approval.changeOrders.map((c) => {
           const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
           return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, ...t };

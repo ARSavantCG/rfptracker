@@ -18,8 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { rollUp } from '@shared/cost-budget-approval';
+import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { rollUp, transferNet } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
 import { MoneyInput, PercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, BUCKET_LABEL, type ProjectBundle } from './types';
@@ -64,6 +64,29 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
   }, [a]);
   const coOther = r2(a.coSummary.approved - Array.from(coByKey.values()).reduce((s, v) => s + v, 0));
   const hasCos = a.coSummary.approved !== 0;
+  const xfer = useMemo(() => {
+    const keys = new Set(baseline.map((b) => b.key));
+    return transferNet(a.transfers.filter((t) => keys.has(t.fromKey) && keys.has(t.toKey)));
+  }, [a.transfers, baseline]);
+  const hasXfer = a.transfers.length > 0;
+  const [xForm, setXForm] = useState<{ fromKey: string; toKey: string; amount: string; note: string } | null>(null);
+  const lineName = (k: string) => baseline.find((b) => b.key === k)?.description ?? 'Removed line';
+  const moveMoney = async () => {
+    if (!xForm) return;
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers`, 'POST', { ...xForm, amount: xForm.amount.replace(/,/g, '') });
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: 'Money moved', description: `${lineName(xForm.fromKey)} → ${lineName(xForm.toKey)}` });
+      setXForm(null);
+    } catch (e: any) { toast({ title: 'Not moved', description: e?.message, variant: 'destructive' }); }
+  };
+  const undoTransfer = async (id: string) => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers/${id}`, 'DELETE');
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: 'Transfer undone' });
+    } catch (e: any) { toast({ title: 'Not undone', description: e?.message, variant: 'destructive' }); }
+  };
 
   const priced = r2(rows.reduce((s, r) => s + num(r.priced), 0));
   const typedLaf = laf.trim() === '' ? null : num(laf);
@@ -161,6 +184,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 <th className="px-2 py-1.5 w-40">Contract</th>
                 <th className="px-2 py-1.5 w-36 text-right">Priced</th>
                 {showDiscount && <th className="px-2 py-1.5 w-36 text-right">Discount</th>}
+                {hasXfer && <th className="px-2 py-1.5 w-32 text-right">Transfers</th>}
                 {hasCos && <th className="px-2 py-1.5 w-32 text-right">Change orders</th>}
                 <th className="px-2 py-1.5 w-36 text-right">Budget</th>
                 <th className="px-2 py-1.5 w-28 text-right">Tenant pays</th>
@@ -170,7 +194,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             <tbody>
               {rows.map((r, i) => {
                 const co = coByKey.get(r.key) ?? 0;
-                const budget = r2(num(r.priced) - num(r.discount) + co);
+                const tx = xfer.get(r.key) ?? 0;
+                const budget = r2(num(r.priced) - num(r.discount) + tx + co);
                 return (
                   <tr key={r.key} className="border-b last:border-0">
                     <td className="px-1 py-1"><Input className="h-8" value={r.description} aria-label="Budget line" onChange={(e) => update(i, { description: e.target.value })} /></td>
@@ -182,6 +207,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                     </td>
                     <td className="px-1 py-1"><MoneyInput className="h-8" value={r.priced} aria-label="Priced" onValueChange={(v) => update(i, { priced: v })} /></td>
                     {showDiscount && <td className="px-1 py-1"><MoneyInput className="h-8" value={r.discount} aria-label="Discount" onValueChange={(v) => update(i, { discount: v })} /></td>}
+                    {hasXfer && <td className={`px-2 py-1 text-right tabular-nums ${tx < 0 ? 'text-red-700' : 'text-green-700'}`}>{tx ? signedMoney(tx) : ''}</td>}
                     {hasCos && <td className="px-2 py-1 text-right tabular-nums text-gray-700">{co ? signedMoney(co) : ''}</td>}
                     <td className="px-2 py-1 text-right tabular-nums font-medium">{signedMoney(budget)}</td>
                     <td className="px-1 py-1"><PercentInput className="h-8" value={r.tenantSharePct} aria-label="Tenant pays" onValueChange={(v) => update(i, { tenantSharePct: v })} /></td>
@@ -202,6 +228,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 <tr className="bg-indigo-50/60 border-t">
                   <td className="px-2 py-1.5 italic text-indigo-900" colSpan={3}>{unplaced >= 0 ? 'Deal discount' : 'Deal premium'} — not on a line yet</td>
                   <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{money(unplaced)}</td>
+                  {hasXfer && <td />}
                   {hasCos && <td />}
                   <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{signedMoney(-unplaced)}</td>
                   <td colSpan={2} />
@@ -209,7 +236,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
               )}
               {Math.abs(coOther) >= 0.005 && (
                 <tr className="border-t">
-                  <td className="px-2 py-1.5 text-gray-700" colSpan={showDiscount ? 4 : 3}>CM fee on change orders (no CM line in this budget)</td>
+                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0)}>CM fee on change orders (no CM line in this budget)</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td colSpan={2} />
@@ -221,6 +248,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 <td className="px-2 py-2" colSpan={2}>Total{typedLaf != null && !hasCos ? ' (= LAF)' : ''}</td>
                 <td className="px-2 py-2 text-right tabular-nums">{money(priced)}</td>
                 {showDiscount && <td className="px-2 py-2 text-right tabular-nums">{money(discount)}</td>}
+                {hasXfer && <td className="px-2 py-2 text-right tabular-nums text-gray-500">{money(0)}</td>}
                 {hasCos && <td className="px-2 py-2 text-right tabular-nums">{signedMoney(a.coSummary.approved)}</td>}
                 <td className="px-2 py-2 text-right tabular-nums">{money(current)}</td>
                 <td colSpan={2} />
@@ -235,6 +263,12 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
           }])}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Budget line
           </Button>
+          {!xForm && baseline.length > 1 && (
+            <Button variant="outline" size="sm" disabled={dirty} title={dirty ? 'Save the budget first' : 'Move money between lines; the total stays the same'}
+                    onClick={() => setXForm({ fromKey: '', toKey: '', amount: '', note: '' })}>
+              <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Move money
+            </Button>
+          )}
           <div className="flex gap-2">
             {dirty && <Button variant="ghost" size="sm" onClick={() => { setRows(fromServer()); setLaf(serverLaf()); }}>Discard</Button>}
             <Button size="sm" disabled={!dirty || saving || rows.some((r) => !r.description.trim())} onClick={save}>
@@ -242,6 +276,60 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             </Button>
           </div>
         </div>
+
+        {xForm && (
+          <div className="border rounded-md bg-blue-50/40 p-3 space-y-2">
+            <div className="text-sm font-medium text-gray-900">Move money between budget lines — the total stays the same</div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
+              <div className="lg:col-span-3 space-y-1"><div className="text-xs text-gray-600">From</div>
+                <Select value={xForm.fromKey || undefined} onValueChange={(v) => setXForm({ ...xForm, fromKey: v })}>
+                  <SelectTrigger className="h-9 data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
+                  <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="lg:col-span-3 space-y-1"><div className="text-xs text-gray-600">To</div>
+                <Select value={xForm.toKey || undefined} onValueChange={(v) => setXForm({ ...xForm, toKey: v })}>
+                  <SelectTrigger className="h-9 data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
+                  <SelectContent className="pm-scope">{baseline.filter((b) => b.key !== xForm.fromKey).map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="lg:col-span-2 space-y-1"><div className="text-xs text-gray-600">Amount</div>
+                <MoneyInput className="h-9" value={xForm.amount} onValueChange={(v) => setXForm({ ...xForm, amount: v })} />
+              </div>
+              <div className="lg:col-span-4 space-y-1"><div className="text-xs text-gray-600">Why</div>
+                <Input className="h-9" value={xForm.note} onChange={(e) => setXForm({ ...xForm, note: e.target.value })} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setXForm(null)}>Cancel</Button>
+              <Button size="sm" disabled={!xForm.fromKey || !xForm.toKey || !(num(xForm.amount) > 0)} onClick={moveMoney}>Move money</Button>
+            </div>
+          </div>
+        )}
+
+        {hasXfer && (
+          <details className="text-xs text-gray-700" open>
+            <summary className="cursor-pointer font-medium text-gray-700">Transfers ({a.transfers.length})</summary>
+            <table className="w-full mt-1 text-xs">
+              <tbody>
+                {a.transfers.slice().reverse().map((t) => (
+                  <tr key={t.id} className="border-b last:border-0">
+                    <td className="py-1 pr-2 whitespace-nowrap">{shortDate(t.date)}</td>
+                    <td className="py-1 pr-2 tabular-nums whitespace-nowrap font-medium">{money(t.amount)}</td>
+                    <td className="py-1 pr-2">{lineName(t.fromKey)} → {lineName(t.toKey)}{t.note ? <span className="text-gray-500"> — {t.note}</span> : null}</td>
+                    <td className="py-1 pr-2 text-gray-500 whitespace-nowrap">{t.by || ''}</td>
+                    <td className="py-1 text-right">
+                      <button className="text-gray-400 hover:text-red-700" title="Undo this transfer"
+                              onClick={() => { if (window.confirm(`Undo moving ${money(t.amount)} from ${lineName(t.fromKey)} to ${lineName(t.toKey)}?`)) undoTransfer(t.id); }}>
+                        <Trash2 className="h-3.5 w-3.5 inline" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        )}
 
         {confirmed && a.revisions.length > 0 && (
           <details className="text-xs text-gray-600">

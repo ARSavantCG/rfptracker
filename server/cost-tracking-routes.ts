@@ -812,6 +812,60 @@ export function registerCostTrackingRoutes(app: Express): void {
     } catch (e) { fail(res, e, 'withdraw the invoice'); }
   });
 
+  // ---- budget transfers (money moved between lines; total unchanged)
+  app.post('/api/cost-projects/:id/budget-transfers', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      const b = req.body || {};
+      const fromKey = String(b.fromKey ?? ''), toKey = String(b.toKey ?? '');
+      const amount = Math.round(toCents(b.amount)) / 100;
+      const name = (k: string) => baseline.find((x) => x.key === k)?.description;
+      if (!name(fromKey) || !name(toKey)) return res.status(400).json({ message: 'Pick the line to move money from and the line to move it to.' });
+      if (fromKey === toKey) return res.status(400).json({ message: 'Pick two different lines.' });
+      if (!(amount > 0)) return res.status(400).json({ message: 'Enter the amount to move.' });
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || '')) ? String(b.date) : todayEastern();
+      const t = { id: `t-${nanoid(8)}`, fromKey, toKey, amount, note: String(b.note ?? '').trim().slice(0, 300), date, by: whoName(req) };
+      a.transfers = [...a.transfers, t];
+      if (a.status === 'confirmed') {
+        a.revisions = [...a.revisions, {
+          at: new Date().toISOString(), by: whoName(req),
+          total: Math.round((discountState(baseline, a).approvedTotal + coSummary(a.changeOrders).approved) * 100) / 100,
+          note: `Transfer ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}: ${name(fromKey)} → ${name(toKey)}${t.note ? ` (${t.note})` : ''}`,
+        }];
+      }
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'move the money'); }
+  });
+
+  app.delete('/api/cost-projects/:id/budget-transfers/:tid', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const a = normalizeApproval(project.budgetApproval);
+      const t = a.transfers.find((x) => x.id === req.params.tid);
+      if (!t) return res.status(404).json({ message: 'Transfer not found' });
+      a.transfers = a.transfers.filter((x) => x.id !== t.id);
+      if (a.status === 'confirmed') {
+        const baseline = (project.baseline || []) as BaselineLine[];
+        a.revisions = [...a.revisions, {
+          at: new Date().toISOString(), by: whoName(req),
+          total: Math.round((discountState(baseline, a).approvedTotal + coSummary(a.changeOrders).approved) * 100) / 100,
+          note: `Transfer of ${t.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} undone`,
+        }];
+      }
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'undo the transfer'); }
+  });
+
   /** Back to draft — for a budget confirmed by mistake. Drops the original. */
   app.post('/api/cost-projects/:id/approval/reopen', ...canEdit, async (req, res) => {
     try {

@@ -96,6 +96,22 @@ export interface BudgetApproval {
   originalTotal: number | null;
   revisions: Array<{ at: string; by: string | null; total: number; note: string }>;
   changeOrders: BudgetCO[];
+  transfers: BudgetTransfer[];
+}
+
+/**
+ * Money moved from one budget line to another — contingency to the office
+ * expansion, say. The total doesn't change; the trail of why a line moved
+ * is kept.
+ */
+export interface BudgetTransfer {
+  id: string;
+  fromKey: string;
+  toKey: string;
+  amount: number;
+  note: string;
+  date: string;
+  by: string | null;
 }
 
 const num = (v: unknown): number => {
@@ -107,7 +123,7 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 export function emptyApproval(): BudgetApproval {
   return {
     status: 'draft', lafTotal: null, lafLines: [], discount: 0, allocations: [],
-    confirmedAt: null, confirmedBy: null, original: null, originalTotal: null, revisions: [], changeOrders: [],
+    confirmedAt: null, confirmedBy: null, original: null, originalTotal: null, revisions: [], changeOrders: [], transfers: [],
   };
 }
 
@@ -137,6 +153,10 @@ export function normalizeApproval(raw: any): BudgetApproval {
   a.originalTotal = raw.originalTotal == null ? null : r2(num(raw.originalTotal));
   a.revisions = Array.isArray(raw.revisions) ? raw.revisions.slice(-200) : [];
   a.changeOrders = Array.isArray(raw.changeOrders) ? raw.changeOrders.map(normalizeCO).filter(Boolean) as BudgetCO[] : [];
+  a.transfers = Array.isArray(raw.transfers) ? raw.transfers.map((t: any) => ({
+    id: String(t?.id ?? ''), fromKey: String(t?.fromKey ?? ''), toKey: String(t?.toKey ?? ''),
+    amount: r2(num(t?.amount)), note: String(t?.note ?? ''), date: String(t?.date ?? '').slice(0, 10), by: t?.by ? String(t.by) : null,
+  })).filter((t: BudgetTransfer) => t.id && t.fromKey && t.toKey && t.fromKey !== t.toKey && t.amount > 0) : [];
   return a;
 }
 
@@ -209,6 +229,7 @@ export function effectiveBaseline(baseline: readonly BaselineLine[], a: BudgetAp
   const byKey = new Map<string, number>();
   for (const x of a.allocations) byKey.set(x.key, (byKey.get(x.key) ?? 0) + x.amount);
   let out: BaselineLine[] = (baseline || []).map((b) => ({ ...b, budget: r2(num(b.budget) - (byKey.get(b.key) ?? 0)) }));
+  out = applyTransfers(out, a.transfers || []);
   out = applyChangeOrders(out, a.changeOrders || [], cmKey);
   const { undistributed } = discountState(baseline, a);
   if (Math.abs(undistributed) >= 0.005) {
@@ -414,4 +435,22 @@ export function applyChangeOrders(lines: BaselineLine[], cos: readonly BudgetCO[
     if (Math.abs(b) >= 0.005) row.tenantSharePct = Math.round(((tenantAmt.get(row.key) ?? 0) / b) * 100 * 10000) / 10000;
   }
   return out;
+}
+
+/** Net transfer on each budget line: positive in, negative out. */
+export function transferNet(transfers: readonly BudgetTransfer[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const t of transfers) {
+    m.set(t.fromKey, r2((m.get(t.fromKey) ?? 0) - t.amount));
+    m.set(t.toKey, r2((m.get(t.toKey) ?? 0) + t.amount));
+  }
+  return m;
+}
+
+/** Move the money. A transfer touching a line that has since been removed is skipped whole, so nothing is lost on one side only. */
+export function applyTransfers(lines: BaselineLine[], transfers: readonly BudgetTransfer[]): BaselineLine[] {
+  if (!transfers.length) return lines;
+  const keys = new Set(lines.map((l) => l.key));
+  const net = transferNet(transfers.filter((t) => keys.has(t.fromKey) && keys.has(t.toKey)));
+  return lines.map((l) => (net.has(l.key) ? { ...l, budget: r2(num(l.budget) + (net.get(l.key) ?? 0)) } : l));
 }

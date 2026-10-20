@@ -162,6 +162,15 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         )}
       </Card>
 
+      <Card title="Budget Log" what="Why the budget is what it is: the confirmation, then every transfer, change order and edit since, oldest first, with the budget after each."
+            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-log/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+        <p className="text-sm text-gray-700">
+          {b.approval.status === 'confirmed'
+            ? `Original ${money(b.approval.originalTotal)} · current ${money(b.approval.currentTotal)} · ${b.approval.revisions.length} change${b.approval.revisions.length === 1 ? '' : 's'} logged · ${b.approval.transfers.length} transfer${b.approval.transfers.length === 1 ? '' : 's'}.`
+            : 'The log starts once the budget is confirmed on the Budget tab.'}
+        </p>
+      </Card>
+
       <Card title="Budget vs Actual" what="Each budget line: budget, committed, pending change orders, spent, variance — and the tenant and outstanding share."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (

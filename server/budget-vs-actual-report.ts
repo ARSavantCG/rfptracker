@@ -440,6 +440,79 @@ export function renderWaiverLogHtml(input: {
   </body></html>`;
 }
 
+/**
+ * Why the budget is what it is: when it was confirmed and at what, every
+ * change since in date order (transfers, change orders, edits) with the
+ * budget after each, and the change orders and transfers in full.
+ */
+export function renderBudgetLogHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  approval: { status: string; lafTotal: number | null; confirmedAt: string | null; confirmedBy: string | null; originalTotal: number | null; approvedTotal: number; currentTotal: number;
+    revisions: Array<{ at: string; by: string | null; total: number; note: string }>; coSummary: { approved: number; pending: number } };
+  transfers: Array<{ date: string; amount: number; from: string; to: string; note: string; by: string | null }>;
+  budgetCos: BudgetCoView[];
+  generatedBy?: string | null;
+}): string {
+  const a = input.approval;
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  const confirmedDay = a.confirmedAt ? a.confirmedAt.slice(0, 10) : null;
+  type Ev = { at: string; what: string; by: string | null; total: number | null };
+  const events: Ev[] = [];
+  if (a.confirmedAt) events.push({ at: a.confirmedAt, what: `Budget confirmed against the LAF (${money2(a.lafTotal ?? a.approvedTotal)})`, by: a.confirmedBy, total: a.originalTotal });
+  for (const v of a.revisions) events.push({ at: v.at, what: v.note, by: v.by, total: v.total });
+  // Transfers made while the budget was still a draft aren't in the revision log.
+  for (const t of input.transfers) {
+    if (!confirmedDay || t.date < confirmedDay) {
+      events.push({ at: `${t.date}T00:00:00Z`, what: `Transfer ${money2(t.amount)}: ${t.from} → ${t.to}${t.note ? ` (${t.note})` : ""} — before confirmation`, by: t.by, total: null });
+    }
+  }
+  events.sort((x, y) => x.at.localeCompare(y.at));
+  const statusLine = a.status === "confirmed"
+    ? `Confirmed ${longDate(a.confirmedAt)}${a.confirmedBy ? ` by ${a.confirmedBy}` : ""}`
+    : "Draft — not yet confirmed";
+  info.push({ label: "Budget", value: statusLine });
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Budget Log</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+    .sum { width: 55%; border-collapse: collapse; font-size: 12px; margin-bottom: 6px; }
+    .sum td { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; }
+    .sum td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .sum tr.big td { font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Budget Log", eyebrow: "Cost Report", info })}
+  <table class="sum"><tbody>
+    <tr><td>Original budget${a.status === "confirmed" ? "" : " (draft)"}</td><td class="num">${money2(a.originalTotal ?? a.approvedTotal)}</td></tr>
+    ${a.status === "confirmed" && Math.abs(a.approvedTotal - (a.originalTotal ?? a.approvedTotal)) >= 0.005 ? `<tr><td>Budget edits since confirmation</td><td class="num">${fmt(a.approvedTotal - (a.originalTotal ?? 0))}</td></tr>` : ""}
+    <tr><td>Approved change orders</td><td class="num">${fmt(a.coSummary.approved)}</td></tr>
+    <tr><td>Transfers between lines (${input.transfers.length})</td><td class="num">${money2(0)}</td></tr>
+    <tr class="big"><td>Current budget</td><td class="num">${money2(a.currentTotal)}</td></tr>
+  </tbody></table>
+  ${a.coSummary.pending ? `<div class="legend">Pending change orders of ${money2(a.coSummary.pending)} are not in the budget until approved.</div>` : ""}
+
+  <h3 class="sec">Log</h3>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">What changed</th><th class="l">By</th><th>Budget After</th></tr></thead><tbody>
+    ${events.length ? events.map((e) => `<tr><td style="white-space:nowrap">${escapeHtml(longDate(e.at))}</td><td>${escapeHtml(e.what)}</td><td style="white-space:nowrap">${escapeHtml(e.by || "")}</td><td class="num">${e.total == null ? "—" : money2(e.total)}</td></tr>`).join("")
+      : `<tr><td colspan="4" class="muted">Nothing logged yet. Confirm the budget on the Budget tab to start the log.</td></tr>`}
+  </tbody></table>
+
+  ${budgetCoTable(input.budgetCos)}
+
+  ${input.transfers.length ? `<h3 class="sec">Transfers</h3>
+  <table class="t"><thead><tr><th class="l">Date</th><th>Amount</th><th class="l">From</th><th class="l">To</th><th class="l">Why</th><th class="l">By</th></tr></thead><tbody>
+    ${input.transfers.map((t) => `<tr><td style="white-space:nowrap">${escapeHtml(longDate(t.date))}</td>${cell(t.amount)}<td>${escapeHtml(t.from)}</td><td>${escapeHtml(t.to)}</td><td>${escapeHtml(t.note)}</td><td style="white-space:nowrap">${escapeHtml(t.by || "")}</td></tr>`).join("")}
+  </tbody></table>` : ""}
+
+  <h3 class="sec">Notes</h3>
+  <ol class="notes">
+    <li>The original budget is fixed when the budget is confirmed; everything after it is listed above, oldest first.</li>
+    <li>Transfers move money between budget lines and never change the total. Change orders change it only once approved.</li>
+  </ol>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
 async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
   const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
@@ -508,6 +581,32 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Job cost ledger report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  app.get("/api/reports/budget-log/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const lineName = (k: string) => b.project.baseline.find((x: any) => x.key === k)?.description ?? "a removed line";
+      const u: any = (req as any).user;
+      const nameFor = (by: string | null) => (by && by.includes("@") && u?.email && by.toLowerCase() === String(u.email).toLowerCase() ? generatedByName(u) || by : by);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderBudgetLogHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        approval: { ...b.approval, confirmedBy: nameFor(b.approval.confirmedBy), revisions: b.approval.revisions.map((v) => ({ ...v, by: nameFor(v.by) })) },
+        transfers: b.approval.transfers.map((t) => ({ date: t.date, amount: t.amount, note: t.note, by: nameFor(t.by), from: lineName(t.fromKey), to: lineName(t.toKey) })),
+        budgetCos: b.approval.changeOrders.map((c) => {
+          const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
+          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, ...t };
+        }),
+        generatedBy: generatedByName(u),
+      }));
+    } catch (e: any) {
+      console.error("Budget log error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

@@ -65,7 +65,7 @@ export default function CostProjects() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Hammer className="h-7 w-7 text-blue-600" /> Projects
+              <Hammer className="h-7 w-7 text-blue-600" /> Project Management
             </h1>
             <p className="text-gray-600 mt-1 text-sm">What each job is actually costing, against what it was budgeted.</p>
           </div>

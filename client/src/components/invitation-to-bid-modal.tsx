@@ -31,6 +31,7 @@ import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
 
 // Helpers for per-role rfpVariant serialization
 import { parseRfpVariant } from "@shared/rfp-variant";
+import { ItbSendPanel } from "@/components/itb-send-panel";
 const serializeRfpVariant = (gcEnhanced: boolean, archEnhanced: boolean): string => {
   if (!gcEnhanced && !archEnhanced) return 'standard';
   return JSON.stringify({ gc: gcEnhanced ? 'enhanced' : 'standard', architect: archEnhanced ? 'enhanced' : 'standard' });
@@ -2302,6 +2303,20 @@ const formatQuantityDisplay = (val: any): string => {
                   {skipToBudgetMutation.isPending ? "Skipping..." : "Skip to Evaluation"}
                 </Button>
               </div>
+
+              {/* Sending it. The invitation was generated here and then had to
+                  leave the app by hand — downloaded, attached to an email,
+                  addressed from memory — with nothing afterwards recording who
+                  had actually been invited. */}
+              {rfp?.id && (
+                <div className="mt-4">
+                  <ItbSendPanel
+                    rfpId={rfp.id}
+                    projectName={rfp.projectName}
+                    rfpNumber={rfp.rfpNumber}
+                  />
+                </div>
+              )}
             </div>
           </form>
         </Form>

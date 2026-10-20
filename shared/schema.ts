@@ -677,6 +677,39 @@ export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 export type UpdateInvitation = z.infer<typeof updateInvitationSchema>;
 
 // Invitation to Bid data table
+/**
+ * Who the invitation to bid was actually sent to, and what happened.
+ *
+ * One row per recipient per send, written whether the send succeeded or
+ * failed. A bounce that leaves no trace is worse than no send at all: the
+ * bid never arrives and nobody knows why, and by the time anyone notices,
+ * the due date has passed.
+ *
+ * Contractors reply to the sender's own inbox — this records the sending,
+ * not the conversation.
+ */
+export const itbSends = pgTable("itb_sends", {
+  id: serial("id").primaryKey(),
+  rfpId: integer("rfp_id").notNull(),
+  // The contact it came from, when it came from the directory. Nullable: an
+  // address can be typed in for someone not in the directory yet, and a
+  // contact can be deleted later without erasing the record of the send.
+  contactId: integer("contact_id"),
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  recipientCompany: text("recipient_company"),
+  // Which document they were sent: the contractor and architect packages
+  // differ, and sending the wrong one is worth being able to see afterwards.
+  recipientType: text("recipient_type").notNull().default("contractor"),
+  subject: text("subject"),
+  status: text("status").notNull().default("sent"), // sent | failed
+  error: text("error"),
+  sentBy: text("sent_by"),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+});
+
+export type ItbSend = typeof itbSends.$inferSelect;
+
 export const invitationToBid = pgTable("invitation_to_bid", {
   id: serial("id").primaryKey(),
   rfpId: serial("rfp_id").notNull().references(() => rfpRequests.id),

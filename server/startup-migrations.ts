@@ -112,6 +112,23 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Who the invitation to bid went to, and whether it arrived (2026-10-20).
+  // No FK to contacts: an address can be typed for someone not in the
+  // directory, and deleting a contact must not erase the record of a send.
+  `CREATE TABLE IF NOT EXISTS itb_sends (
+    id serial PRIMARY KEY,
+    rfp_id integer NOT NULL,
+    contact_id integer,
+    recipient_email text NOT NULL,
+    recipient_name text,
+    recipient_company text,
+    recipient_type text NOT NULL DEFAULT 'contractor',
+    subject text,
+    status text NOT NULL DEFAULT 'sent',
+    error text,
+    sent_by text,
+    sent_at timestamp NOT NULL DEFAULT now()
+  )`,
   // Password reset tokens (2026-08-20). Hash stored, never the token.
   `CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id serial PRIMARY KEY,
@@ -212,6 +229,8 @@ const ADDITIVE_TABLES: string[] = [
 // index added to an existing table's definition would never be created.
 const ADDITIVE_INDEXES: string[] = [
   `CREATE INDEX IF NOT EXISTS user_report_pins_user_idx ON user_report_pins (user_id)`,
+  // The send log is always read for one RFP at a time.
+  `CREATE INDEX IF NOT EXISTS itb_sends_rfp_idx ON itb_sends (rfp_id)`,
 ];
 
 // dbi is injectable for tests (a drizzle handle over any pg driver); production

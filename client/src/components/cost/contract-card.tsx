@@ -87,8 +87,8 @@ export function ContractCard({
     const placed = l.allocations.reduce((s, a) => s + a.pct, 0);
     return (
       <span className="text-gray-800">
-        {l.allocations.map((a) => `${baselineName.get(a.baselineKey) ?? 'Removed line'}${l.allocations.length > 1 || a.pct !== 100 ? ` ${a.pct}%` : ''}`).join(' · ')}
-        {placed < 99.995 && <span className="text-amber-700"> · {(100 - placed).toFixed(0)}% unmapped</span>}
+        {l.allocations.map((a) => `${baselineName.get(a.baselineKey) ?? 'Removed line'}${l.allocations.length > 1 || a.pct !== 100 ? ` ${Number(a.pct).toFixed(2)}%` : ''}`).join(' · ')}
+        {placed < 99.995 && <span className="text-amber-700"> · {(100 - placed).toFixed(2)}% unmapped</span>}
       </span>
     );
   };
@@ -104,7 +104,7 @@ export function ContractCard({
           <div className="text-xs text-gray-600">
             {BUCKET_LABEL[contract.bucket] || contract.bucket}
             {contract.contractNumber ? ` · #${contract.contractNumber}` : ''}
-            {` · retainage ${contract.retainagePct}%`}
+            {` · retainage ${Number(contract.retainagePct).toFixed(2)}%`}
           </div>
         </div>
         {g702 && (
@@ -204,10 +204,12 @@ export function ContractCard({
       <div className="px-4 py-2 border-t flex flex-wrap gap-2 items-center">
         {coForm ? (
           <div className="flex flex-wrap gap-2 items-center">
-            <Input value={coForm.number} onChange={(e) => setCoForm({ ...coForm, number: e.target.value })}
-                   placeholder="PCCO #004" className="h-8 w-28 text-sm" />
-            <Input value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })}
-                   placeholder="What it's for" className="h-8 w-56 text-sm" />
+            <label className="text-xs text-gray-600" htmlFor={`co-no-${contract.id}`}>CO #</label>
+            <Input id={`co-no-${contract.id}`} value={coForm.number} onChange={(e) => setCoForm({ ...coForm, number: e.target.value })}
+                   className="h-8 w-28 text-sm" />
+            <label className="text-xs text-gray-600" htmlFor={`co-title-${contract.id}`}>For</label>
+            <Input id={`co-title-${contract.id}`} value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })}
+                   className="h-8 w-56 text-sm" />
             <Button size="sm" className="h-8" disabled={!coForm.number.trim() || addCo.isPending} onClick={() => addCo.mutate()}>Add</Button>
             <Button size="sm" variant="ghost" className="h-8" onClick={() => setCoForm(null)}>Cancel</Button>
           </div>

@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from './inputs';
+import { fmtMoneyText } from '@shared/format';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Trash2 } from 'lucide-react';
@@ -29,7 +31,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
 
   const [form, setForm] = useState({ amount: '', paidDate: todayIso(), reference: '', method: 'wire' });
   useEffect(() => {
-    if (app) setForm({ amount: open > 0 ? String(open) : '', paidDate: todayIso(), reference: '', method: 'wire' });
+    if (app) setForm({ amount: open > 0 ? fmtMoneyText(String(open)) : '', paidDate: todayIso(), reference: '', method: 'wire' });
   }, [app?.id]);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
@@ -82,8 +84,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end border-t pt-3">
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Amount</div>
-            <Input inputMode="decimal" className="text-right tabular-nums" value={form.amount}
-                   onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            <MoneyInput value={form.amount} onValueChange={(v) => setForm({ ...form, amount: v })} />
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Paid on</div>

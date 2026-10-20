@@ -22,6 +22,7 @@ import {
 import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, type LedgerEntry } from "@shared/cost-position";
+import { fmtPct } from "@shared/format";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -99,8 +100,8 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
   return `
   <h3 class="sec">CM Fee Earned to Date</h3>
   <table class="t"><thead><tr><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>CM Fee Budget</th><th>Remaining</th></tr></thead><tbody>
-    <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fee.pct.toFixed(2)}%</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
-    <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fee.pct.toFixed(2)}%</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
+    <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
+    <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
   </tbody></table>`;
 }
 
@@ -173,7 +174,7 @@ export function renderBudgetVsActualHtml(input: {
       ...(approval && Math.abs(approval.undistributed) >= 0.005 ? ["The Deal Discount line is the part of the LAF cut not yet put on a budget line."] : []),
       "Committed = contracts plus approved change orders. Variance = Budget less Committed; in parentheses when over budget.",
       `Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.`,
-      ...(input.cmFee ? [`CM fee at ${input.cmFee.pct.toFixed(2)}% of work billed on every other budget line.`] : []),
+      ...(input.cmFee ? [`CM fee at ${fmtPct(input.cmFee.pct)} of work billed on every other budget line.`] : []),
     ].map((n) => `<li>${escapeHtml(n)}</li>`).join("")}
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
@@ -196,10 +197,10 @@ export function renderCostPositionHtml(input: {
   const t = p.totals;
 
   const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
-    ${cell(c.contractSum)}${cell(c.billedToDate)}<td class="num">${c.pctComplete.toFixed(1)}%</td>${cell(c.retainageHeld)}
+    ${cell(c.contractSum)}${cell(c.billedToDate)}<td class="num">${fmtPct(c.pctComplete)}</td>${cell(c.retainageHeld)}
     ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("")
     + (p.direct && p.direct.count > 0 ? `<tr><td>Direct costs (${p.direct.count} ${p.direct.count === 1 ? "entry" : "entries"})</td>
-    ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.0%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
+    ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.00%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
 
   const appRows = p.applications.length === 0
     ? `<tr><td colspan="6" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
@@ -214,7 +215,7 @@ export function renderCostPositionHtml(input: {
     <th>Contract</th><th>Contract Sum</th><th>Billed to Date</th><th>% Billed</th><th>Retainage Held</th>
     <th>Net Billed</th><th>Paid</th><th>Owed</th><th>Left to Pay</th></tr></thead><tbody>
     ${contractRows}
-    <tr class="total"><td>Total</td>${cell(t.contractSum)}${cell(t.billedToDate)}<td class="num">${t.pctComplete.toFixed(1)}%</td>${cell(t.retainageHeld)}
+    <tr class="total"><td>Total</td>${cell(t.contractSum)}${cell(t.billedToDate)}<td class="num">${fmtPct(t.pctComplete)}</td>${cell(t.retainageHeld)}
       ${cell(t.netBilled)}${cell(t.paid)}${cell(t.owed)}${cell(t.leftToPay)}</tr>
   </tbody></table>
   <div class="legend">Billed to Date = work completed and stored. Net Billed = billed less retainage. Owed = net billed not yet paid.
@@ -269,7 +270,7 @@ export function renderJobCostLedgerHtml(input: {
     <th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">How Paid</th>
     <th class="l">Budget Line</th><th>Amount</th><th>Running Total</th><th title="Reconciled">✓</th></tr></thead><tbody>
     ${ledger.entries.length === 0 ? `<tr><td colspan="8" class="muted">No payments or charges in this period.</td></tr>` : ledger.entries.map((e) => `<tr>
-      <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}</td><td>${escapeHtml(e.description)}</td>
+      <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}</td><td>${escapeHtml(e.description)}${e.notes ? `<div style="font-size:9.5px;color:#4b5563;font-style:italic">${escapeHtml(e.notes)}</div>` : ""}</td>
       <td>${escapeHtml(how(e))}</td><td>${escapeHtml(e.budgetLine)}</td>${cell(e.amount)}${cell(e.running, "muted")}
       <td class="c${e.reconciled ? "" : " open"}">${e.reconciled ? "✓" : "○"}</td></tr>`).join("")}
     <tr class="total"><td colspan="5">Total</td>${cell(ledger.total)}<td></td><td></td></tr>

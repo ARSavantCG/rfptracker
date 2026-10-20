@@ -197,6 +197,7 @@ export interface LedgerEntry {
   budgetLine: string;
   amount: number;
   reconciled: boolean;
+  notes?: string | null;
   running: number;
 }
 
@@ -207,7 +208,7 @@ export interface LedgerEntry {
  */
 export function buildLedger(input: {
   payments: ReadonlyArray<{ id: number; contractId: number; applicationId: number | null; amount: number; paidDate: string; reference?: string | null; method?: string | null; reconciled?: boolean }>;
-  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; method?: string | null; reference?: string | null; key?: string | null; reconciled?: boolean }>;
+  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; method?: string | null; reference?: string | null; key?: string | null; reconciled?: boolean; notes?: string | null }>;
   contractName: (id: number) => string;
   applicationLabel: (id: number | null) => string;
   budgetLineName: (key: string | null | undefined) => string;
@@ -223,7 +224,7 @@ export function buildLedger(input: {
     ...input.directCosts.map((d) => ({
       kind: 'direct' as const, id: d.id, date: day(d.date), vendor: d.vendor, description: d.description,
       method: d.method ?? null, reference: d.reference ?? null, budgetLine: input.budgetLineName(d.key),
-      amount: r2(d.amount), reconciled: !!d.reconciled,
+      amount: r2(d.amount), reconciled: !!d.reconciled, notes: d.notes ?? null,
     })),
   ]
     .filter((e) => (!input.from || e.date >= day(input.from)) && (!input.to || e.date <= day(input.to)))

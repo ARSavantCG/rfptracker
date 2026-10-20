@@ -20,6 +20,8 @@ import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
 import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
+import { PercentInput } from '@/components/cost/inputs';
+import { ProjectNotes } from '@/components/cost/project-notes';
 import { SummaryTable } from '@/components/cost/summary-table';
 import { ContractCard, openDocument } from '@/components/cost/contract-card';
 import { AllocationDialog } from '@/components/cost/allocation-dialog';
@@ -186,7 +188,7 @@ export default function CostProject() {
               <div className="bg-white border rounded-lg p-4 grid grid-cols-1 sm:grid-cols-5 gap-2 items-end">
                 <div className="sm:col-span-2 space-y-1">
                   <div className="text-xs text-gray-600">With</div>
-                  <Input value={newContract.counterparty} placeholder="e.g. Nova Construction Management"
+                  <Input value={newContract.counterparty}
                          onChange={(e) => setNewContract({ ...newContract, counterparty: e.target.value })} />
                 </div>
                 <div className="space-y-1">
@@ -198,8 +200,7 @@ export default function CostProject() {
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Retainage %</div>
-                  <Input value={newContract.retainagePct} inputMode="decimal"
-                         onChange={(e) => setNewContract({ ...newContract, retainagePct: e.target.value })} />
+                  <PercentInput value={newContract.retainagePct} onValueChange={(v) => setNewContract({ ...newContract, retainagePct: v })} />
                 </div>
                 <div className="flex gap-2">
                   <Button disabled={!newContract.counterparty.trim() || addContract.isPending} onClick={() => addContract.mutate()}>Add</Button>
@@ -209,7 +210,7 @@ export default function CostProject() {
             ) : (
               <Button variant="outline" onClick={() => setNewContract({
                 counterparty: '', bucket: b.contracts.length ? 'design' : 'contractor',
-                retainagePct: b.contracts.length ? '0' : '10', contractNumber: '',
+                retainagePct: b.contracts.length ? '0.00' : '10.00', contractNumber: '',
               })}>
                 <Plus className="h-4 w-4 mr-1" /> Contract
               </Button>
@@ -265,6 +266,8 @@ export default function CostProject() {
             )}
           </TabsContent>
         </Tabs>
+
+        <ProjectNotes projectId={id} notes={p.notes} />
       </div>
 
       <AllocationDialog line={editing} baseline={p.baseline} projectId={id} onClose={() => setEditing(null)} />
@@ -278,7 +281,7 @@ export default function CostProject() {
               app{b.applications.length === 1 ? '' : 's'} and invoice{b.applications.length === 1 ? '' : 's'}, and {b.payments.length} payment{b.payments.length === 1 ? '' : 's'}.
               The RFP is not touched. To confirm, type <span className="font-mono font-semibold">{p.projectNumber}</span>.
             </p>
-            <Input autoFocus value={deleting ?? ''} onChange={(e) => setDeleting(e.target.value)} placeholder={p.projectNumber} />
+            <Input autoFocus value={deleting ?? ''} onChange={(e) => setDeleting(e.target.value)} aria-label="Project number to confirm" />
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleting(null)}>Cancel</Button>
               <Button variant="destructive" disabled={(deleting ?? '').trim().toUpperCase() !== p.projectNumber.toUpperCase() || deleteProject.isPending}

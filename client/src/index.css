@@ -493,3 +493,12 @@ input[type="number"] {
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   }
 }
+
+/* No hint text in empty boxes (Adolfo, 2026-10-20): grey example text in
+   an empty field read as if something had already been filled in. Labels
+   say what goes in a box; an empty box is empty. */
+input::placeholder,
+textarea::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
+}

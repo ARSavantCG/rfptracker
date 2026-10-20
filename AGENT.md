@@ -41,6 +41,19 @@ and live test output are proof. The gold standard is: click the button and watch
   — and they may DIFFER (one sorts, one doesn't). Treat these as real bugs, not noise.
 - Match existing patterns (auth, error handling, formatting) rather than inventing.
 
+## How numbers and fields look (Adolfo, 2026-10-20)
+- **Money: always commas and two decimals** — 1,466,500.00 — on screen, in reports,
+  and in input boxes. Use `MoneyInput` (`client/src/components/cost/inputs.tsx`) for
+  any money field and `money()` / `money2()` / `fmtMoneyText()` for display.
+- **Percentages: always two decimals** — 2.75%, 3.00%, 100.00%. Use `PercentInput`,
+  `fmtPct()`, and `pctText()` for percentages written inside labels
+  ("Permit Fees (3%)" → "Permit Fees (3.00%)"). All in `shared/format.ts`.
+- **No placeholder text in empty boxes.** Grey example text reads as if a value were
+  already filled in. Give every field a visible label instead. `index.css` hides
+  `::placeholder` app-wide; don't add `placeholder=` to new fields.
+- **Dropdowns inside table rows:** use the shadcn `Select`, not a native `<select>` —
+  a native one in a ledger row would not stay open in Chrome on Windows.
+
 ## Verification (required, not optional)
 - `npm run build` must pass.
 - Typecheck delta must be zero new errors in touched files.

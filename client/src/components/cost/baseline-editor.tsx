@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput, PercentInput } from './inputs';
+import { fmtMoneyText, fmtPctText } from '@shared/format';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Plus, Trash2 } from 'lucide-react';
@@ -25,7 +27,7 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
   const queryClient = useQueryClient();
   const toRows = (b: BaselineLine[]): Row[] => b.map((x: any) => ({
     key: x.key, description: x.description, bucket: x.bucket,
-    budget: String(x.budget), tenantSharePct: String(x.tenantSharePct ?? 100), masterItemId: x.masterItemId ?? null,
+    budget: fmtMoneyText(String(x.budget)), tenantSharePct: fmtPctText(String(x.tenantSharePct ?? 100)), masterItemId: x.masterItemId ?? null,
   }));
   const [rows, setRows] = useState<Row[]>(toRows(baseline));
   useEffect(() => { setRows(toRows(baseline)); }, [JSON.stringify(baseline)]);
@@ -40,7 +42,7 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
     mutationFn: () => apiRequest(`/api/cost-projects/${projectId}`, 'PATCH', {
       baseline: rows.map((r) => ({
         key: r.key, description: r.description, bucket: r.bucket,
-        budget: r.budget, tenantSharePct: parseFloat(r.tenantSharePct), masterItemId: r.masterItemId ?? null,
+        budget: r.budget.replace(/,/g, ''), tenantSharePct: parseFloat(r.tenantSharePct), masterItemId: r.masterItemId ?? null,
       })),
     }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); toast({ title: 'Budget saved' }); },
@@ -78,13 +80,8 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
                     {Object.entries(BUCKET_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </td>
-                <td className="px-2 py-1"><Input className="h-8 text-right tabular-nums" inputMode="decimal" value={r.budget} onChange={(e) => update(i, { budget: e.target.value })} /></td>
-                <td className="px-2 py-1">
-                  <div className="relative">
-                    <Input className="h-8 text-right pr-6 tabular-nums" inputMode="decimal" value={r.tenantSharePct} onChange={(e) => update(i, { tenantSharePct: e.target.value })} />
-                    <span className="absolute right-2 top-1.5 text-xs text-gray-500">%</span>
-                  </div>
-                </td>
+                <td className="px-2 py-1"><MoneyInput className="h-8" value={r.budget} onValueChange={(v) => update(i, { budget: v })} /></td>
+                <td className="px-2 py-1"><PercentInput className="h-8" value={r.tenantSharePct} onValueChange={(v) => update(i, { tenantSharePct: v })} /></td>
                 <td className="px-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8"
                           title={mappedKeys.has(r.key) ? 'Contract lines are mapped here; removing it moves them to Unallocated' : 'Remove'}
@@ -109,7 +106,7 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
       </div>
       <div className="flex gap-2 justify-between flex-wrap">
         <Button variant="outline" size="sm" onClick={() => setRows([...rows, {
-          key: `b-${Date.now().toString(36)}`, description: '', bucket: 'contractor', budget: '0', tenantSharePct: '100',
+          key: `b-${Date.now().toString(36)}`, description: '', bucket: 'contractor', budget: '0.00', tenantSharePct: '100.00',
         }])}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Budget line
         </Button>

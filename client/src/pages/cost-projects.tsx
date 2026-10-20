@@ -155,8 +155,8 @@ export default function CostProjects() {
             {source === 'rfp' ? (
               <div className="space-y-1.5">
                 <Label htmlFor="rfp">RFP</Label>
-                <Input id="rfp" autoFocus value={rfpSearch} onChange={(e) => setRfpSearch(e.target.value)}
-                       placeholder="Type an RFP number, tenant or property…" />
+                <p className="text-xs text-gray-600 -mt-1">Type any part of the RFP number, tenant or property to narrow the list.</p>
+                <Input id="rfp" autoFocus value={rfpSearch} onChange={(e) => setRfpSearch(e.target.value)} />
                 <div className="border rounded-md max-h-72 overflow-y-auto" role="listbox" aria-label="Signed deals">
                   {shown.length === 0 && (
                     <div className="px-3 py-3 text-sm text-gray-500">
@@ -189,7 +189,7 @@ export default function CostProjects() {
             ) : (
               <div className="space-y-1.5">
                 <Label htmlFor="pname">Name</Label>
-                <Input id="pname" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Building B power upgrade" />
+                <Input id="pname" value={name} onChange={(e) => setName(e.target.value)} />
                 <p className="text-xs text-gray-600">You can add budget lines on the project's Budget tab.</p>
               </div>
             )}

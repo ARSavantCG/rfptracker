@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { MoneyInput } from './inputs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CheckCircle2, Lock, Wand2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -51,7 +52,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
   const [showRollUp, setShowRollUp] = useState(!confirmed);
   const rolled = useMemo(() => rollUp(baseline), [baseline]);
 
-  const fromServer = () => Object.fromEntries(approval.allocations.map((a) => [a.key, String(a.amount)]));
+  const fromServer = () => Object.fromEntries(approval.allocations.map((a) => [a.key, fmtMoneyInput(String(a.amount))]));
   useEffect(() => {
     setLafTotal(serverLaf());
     setAlloc(fromServer());
@@ -143,9 +144,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
           </div>
           <div>
             <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF total</label>
-            <Input id="laf-total" className="h-9 tabular-nums text-right font-semibold" inputMode="decimal" placeholder="1,466,500.00"
-                   value={lafTotal} onChange={(e) => setLafTotal(e.target.value)} onBlur={() => setLafTotal(fmtMoneyInput(lafTotal))}
-                   onFocus={(e) => setLafTotal(e.target.value.replace(/,/g, ''))} />
+            <MoneyInput id="laf-total" className="h-9 font-semibold" value={lafTotal} onValueChange={setLafTotal} />
           </div>
           <div>
             <div className="text-[11px] uppercase tracking-wide text-gray-500">{(liveDiscount ?? 0) >= 0 ? 'Deal Discount' : 'Deal Premium'}</div>
@@ -220,8 +219,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                 skip this; the total is what counts.
               </p>
               <div className="flex gap-2 items-start">
-                <Textarea rows={3} value={paste} onChange={(e) => setPaste(e.target.value)} className="font-mono text-xs"
-                          placeholder={'Office Expansion (Additional 1,500 SF)\t200,121\nNew Office Area (4,000 SF)\t915,573'} />
+                <Textarea rows={3} value={paste} onChange={(e) => setPaste(e.target.value)} className="font-mono text-xs" aria-label="LAF lines" />
                 <Button variant="outline" size="sm" disabled={!paste.trim()} onClick={readPaste}>Read</Button>
               </div>
               {comparison && (
@@ -268,7 +266,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                       {comparison.unmatchedLaf.length > 0 && ` ${comparison.unmatchedLaf.length} LAF line(s) not matched — pick a budget line.`}
                     </p>
                     <Button variant="outline" size="sm" disabled={!comparison.suggested.length}
-                            onClick={() => setAlloc(Object.fromEntries(comparison.suggested.map((s) => [s.key, String(s.amount)])))}>
+                            onClick={() => setAlloc(Object.fromEntries(comparison.suggested.map((s) => [s.key, fmtMoneyInput(String(s.amount))])))}>
                       <Wand2 className="h-3.5 w-3.5 mr-1" /> Put the discount where the lines moved
                     </Button>
                   </div>
@@ -297,8 +295,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                       <td className="py-1 pr-2">{b.description}</td>
                       <td className="py-1 pr-2 text-right tabular-nums text-gray-600">{money(b.budget)}</td>
                       <td className="py-1 pr-2">
-                        <Input className="h-8 text-right tabular-nums" inputMode="decimal" placeholder="0"
-                               value={alloc[b.key] ?? ''} onChange={(e) => setAlloc({ ...alloc, [b.key]: e.target.value })} />
+                        <MoneyInput className="h-8" value={alloc[b.key] ?? ''} onValueChange={(v) => setAlloc({ ...alloc, [b.key]: v })} />
                       </td>
                       <td className="py-1 text-right tabular-nums font-medium">{money(r2(Number(b.budget) - v))}</td>
                     </tr>

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PercentInput } from './inputs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import type { BaselineLine } from '@shared/cost-tracking';
@@ -39,12 +40,7 @@ export function CmFeeSettings({ projectId, baseline, cmFee }: { projectId: numbe
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-600" htmlFor="cm-pct">Rate</label>
-        <div className="relative">
-          <Input id="cm-pct" className="h-9 w-24 text-right pr-6 tabular-nums" inputMode="decimal" placeholder="2.75" value={pct}
-                 onChange={(e) => setPct(e.target.value)}
-                 onBlur={() => { const v = parseFloat(pct); if (Number.isFinite(v)) setPct(v.toFixed(2)); }} />
-          <span className="absolute right-2 top-2 text-xs text-gray-500">%</span>
-        </div>
+        <div className="w-28"><PercentInput id="cm-pct" className="h-9" value={pct} onValueChange={setPct} /></div>
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-600" htmlFor="cm-line">On budget line</label>

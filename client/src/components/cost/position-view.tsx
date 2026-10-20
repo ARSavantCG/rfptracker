@@ -48,7 +48,7 @@ export function PositionView({ bundle, projectId, onPay }: {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        <Stat label="Billed to date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(1)}% of ${money(t.contractSum)}`} />
+        <Stat label="Billed to date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(2)}% of ${money(t.contractSum)}`} />
         <Stat label="Paid" value={money(t.paid)} />
         <Stat label="Owed (billed, unpaid)" value={money(t.owed)} tone={t.owed > 0.005 ? 'text-red-700' : undefined} />
         <Stat label="Retainage held" value={money(t.retainageHeld)} sub={`Left to pay ${money(t.leftToPay)}`} />
@@ -73,7 +73,7 @@ export function PositionView({ bundle, projectId, onPay }: {
               <tr key={c.contractId} className="border-b last:border-0">
                 <td className="px-3 py-1.5">{contractName.get(c.contractId)}</td>
                 <D v={c.contractSum} /><D v={c.billedToDate} />
-                <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{c.pctComplete.toFixed(1)}%</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{c.pctComplete.toFixed(2)}%</td>
                 <D v={c.retainageHeld} /><D v={c.netBilled} /><D v={c.paid} />
                 <D v={c.owed} tone={owedTone(c.owed)} /><D v={c.leftToPay} />
               </tr>
@@ -82,7 +82,7 @@ export function PositionView({ bundle, projectId, onPay }: {
               <tr className="border-b last:border-0">
                 <td className="px-3 py-1.5">Direct costs <span className="text-xs text-gray-500">({p.direct.count} on the ledger)</span></td>
                 <D v={p.direct.total} /><D v={p.direct.total} />
-                <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">100.0%</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">100.00%</td>
                 <D v={0} /><D v={p.direct.total} /><D v={p.direct.total} /><D v={0} tone="text-green-700" /><D v={0} />
               </tr>
             )}
@@ -91,7 +91,7 @@ export function PositionView({ bundle, projectId, onPay }: {
             <tr className="border-t-2 border-gray-800 font-semibold">
               <td className="px-3 py-2">Total</td>
               <D v={t.contractSum} /><D v={t.billedToDate} />
-              <td className="px-3 py-2 text-right tabular-nums">{t.pctComplete.toFixed(1)}%</td>
+              <td className="px-3 py-2 text-right tabular-nums">{t.pctComplete.toFixed(2)}%</td>
               <D v={t.retainageHeld} /><D v={t.netBilled} /><D v={t.paid} /><D v={t.owed} /><D v={t.leftToPay} />
             </tr>
           </tfoot>

@@ -35,6 +35,7 @@ import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-tot
 import { resolveContractBucket } from './budget-by-contract';
 import { backupToObjectStorage, streamFromObjectStorage } from './storage-backup';
 import { generatedByName } from './lib/report-shell';
+import { pctText } from '@shared/format';
 
 // Admins only for now (Adolfo, 2026-10-20).
 const canEdit = [requireAuth, requireAdmin] as const;
@@ -148,7 +149,7 @@ export function cleanBaseline(raw: unknown): BaselineLine[] {
     const pct = Number(b?.tenantSharePct);
     out.push({
       key,
-      description: String(b?.description ?? '').trim() || 'Untitled line',
+      description: pctText(String(b?.description ?? '').trim()) || 'Untitled line',
       bucket: BUCKETS.includes(String(b?.bucket)) ? String(b.bucket) : 'contractor',
       budget: Math.round((Number(String(b?.budget ?? 0).replace(/[$,\s]/g, '')) || 0) * 100) / 100,
       tenantSharePct: Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 100,
@@ -207,7 +208,8 @@ export async function loadProjectBundle(projectId: number) {
   }));
 
   // To the pure model, in dollars.
-  const baseline = (project.baseline || []) as BaselineLine[];
+  // Percentages in line names read to two decimals: "Permit Fees (3.00%)".
+  const baseline = ((project.baseline || []) as BaselineLine[]).map((b) => ({ ...b, description: pctText(b.description) }));
   const lines: SovLine[] = sov.map((l) => ({
     id: l.id, contractId: l.contractId, changeOrderId: l.changeOrderId ?? null,
     scheduledValue: dollars(l.scheduledValueCents),
@@ -283,7 +285,7 @@ export async function loadProjectBundle(projectId: number) {
   }));
 
   return {
-    project,
+    project: { ...project, baseline },
     contracts: contracts.map((c) => ({ ...c, retainagePct: c.retainageBp / 100 })),
     changeOrders: cos,
     sovLines: sov.map((l) => ({ ...l, scheduledValue: dollars(l.scheduledValueCents) })),

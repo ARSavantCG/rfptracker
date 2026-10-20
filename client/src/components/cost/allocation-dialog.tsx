@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput, PercentInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -68,7 +69,7 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
             </div>
             <div className="space-y-1">
               <Label>Scheduled value</Label>
-              <Input value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal" className="text-right" />
+              <MoneyInput value={value} onValueChange={setValue} />
             </div>
           </div>
 
@@ -102,10 +103,9 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
                       <option value="">Budget line…</option>
                       {baseline.map((b) => <option key={b.key} value={b.key}>{b.description}</option>)}
                     </select>
-                    <div className="relative w-24">
-                      <Input value={r.pct} inputMode="decimal" className="h-9 pr-6 text-right"
-                             onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, pct: e.target.value } : x)))} />
-                      <span className="absolute right-2 top-2 text-xs text-gray-500">%</span>
+                    <div className="w-28">
+                      <PercentInput value={String(r.pct)} className="h-9"
+                                    onValueChange={(v) => setRows(rows.map((x, j) => (j === i ? { ...x, pct: v } : x)))} />
                     </div>
                     <Button type="button" variant="ghost" size="icon" className="h-9 w-9"
                             onClick={() => setRows(rows.filter((_, j) => j !== i))} disabled={rows.length === 1}>
@@ -122,8 +122,8 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
                     {Math.abs(total - 100) < 0.01
                       ? '100% placed'
                       : total < 100
-                        ? `${total.toFixed(1)}% placed — ${(100 - total).toFixed(1)}% (${money(((100 - total) / 100) * (parseFloat(value) || 0))}) stays Unallocated`
-                        : `${total.toFixed(1)}% — over 100, will be scaled to 100`}
+                        ? `${total.toFixed(2)}% placed — ${(100 - total).toFixed(2)}% (${money(((100 - total) / 100) * (parseFloat(value) || 0))}) stays Unallocated`
+                        : `${total.toFixed(2)}% — over 100, will be scaled to 100`}
                   </span>
                 </div>
               </div>

@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -214,7 +215,7 @@ export function ApplicationDialog({
                   onClick={() => switchEntry('period')}>This period (E)</Button>
           <Button type="button" size="sm" variant={entry === 'toDate' ? 'default' : 'outline'} className="h-7"
                   onClick={() => switchEntry('toDate')}>Total to date (G)</Button>
-          <span>— whichever column is easier to copy off the G703. Retainage left blank is {contract.retainagePct}% of work to date.</span>
+          <span>— whichever column is easier to copy off the G703. Retainage left blank is {Number(contract.retainagePct).toFixed(2)}% of work to date.</span>
         </div>
 
         <div className="overflow-x-auto border rounded-md">
@@ -247,24 +248,24 @@ export function ApplicationDialog({
                       <td className="px-2 py-1 text-right tabular-nums">{money(l.scheduledValue)}</td>
                       <td className="px-2 py-1 text-right tabular-nums text-gray-600">{money(previous)}</td>
                       <td className="px-2 py-1">
-                        <Input className="h-8 text-right tabular-nums" inputMode="decimal"
+                        <MoneyInput className="h-8"
                                value={entry === 'period' ? (draft[l.id]?.work ?? '') : (draft[l.id]?.toDate ?? '')}
-                               placeholder={entry === 'toDate' ? money(previous).replace('$', '') : '0.00'}
-                               onChange={(e) => set(l.id, entry === 'period' ? 'work' : 'toDate', e.target.value)} />
+                               onValueChange={(v) => set(l.id, entry === 'period' ? 'work' : 'toDate', v)} />
                       </td>
                       <td className="px-2 py-1">
-                        <Input className="h-8 text-right tabular-nums" inputMode="decimal" placeholder="0.00"
-                               value={draft[l.id]?.stored ?? ''} onChange={(e) => set(l.id, 'stored', e.target.value)} />
+                        <MoneyInput className="h-8" value={draft[l.id]?.stored ?? ''} onValueChange={(v) => set(l.id, 'stored', v)} />
                       </td>
                       <td className={`px-2 py-1 text-right tabular-nums ${over ? 'text-red-700 font-semibold' : ''}`}
                           title={over ? 'More than the scheduled value' : undefined}>{money(toDate)}</td>
                       <td className="px-2 py-1 text-right tabular-nums text-gray-600">
-                        {l.scheduledValue ? `${((toDate / l.scheduledValue) * 100).toFixed(1)}%` : '—'}
+                        {l.scheduledValue ? `${((toDate / l.scheduledValue) * 100).toFixed(2)}%` : '—'}
                       </td>
                       <td className="px-2 py-1">
-                        <Input className="h-8 text-right tabular-nums" inputMode="decimal"
-                               placeholder={autoRetainage(l).toFixed(2)}
-                               value={draft[l.id]?.retainage ?? ''} onChange={(e) => set(l.id, 'retainage', e.target.value)} />
+                        <MoneyInput className="h-8" value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
+                                    title={`Left blank: ${money(autoRetainage(l))} (${Number(contract?.retainagePct ?? 0).toFixed(2)}% of work to date)`} />
+                        {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
+                          <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
+                        )}
                       </td>
                     </tr>
                   );

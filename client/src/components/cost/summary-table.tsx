@@ -72,7 +72,7 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
                     {!isUnallocated && !isDeal && (
                       <div className="text-[11px] text-gray-500">
                         {BUCKET_LABEL[r.bucket] || r.bucket}
-                        {r.tenantSharePct < 100 && ` · tenant pays ${r.tenantSharePct}%`}
+                        {r.tenantSharePct < 100 && ` · tenant pays ${Number(r.tenantSharePct).toFixed(2)}%`}
                       </div>
                     )}
                   </td>

@@ -186,7 +186,7 @@ export function signedMoney(n: number): string {
 
 export function pct(part: number, whole: number): string {
   if (!whole) return '—';
-  return `${((part / whole) * 100).toFixed(1)}%`;
+  return `${((part / whole) * 100).toFixed(2)}%`;
 }
 
 export const projectKey = (id: number) => `/api/cost-projects/${id}`;

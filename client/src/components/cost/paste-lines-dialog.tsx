@@ -49,7 +49,6 @@ export function PasteLinesDialog({ target, projectId, onClose }: {
             is fine too: <span className="font-mono">Fee&nbsp;&nbsp;1,483.00</span>
           </p>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={7}
-                    placeholder={'1.20\t22-0500.00.S\tPlumbing\t$65,625.00\n1.21\t23-0500.00.S\tHVAC\t$141,750.00'}
                     className="font-mono text-xs" />
           {parsed.lines.length > 0 && (
             <div className="border rounded-md max-h-64 overflow-auto">

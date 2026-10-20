@@ -15,10 +15,12 @@ import { apiRequest } from '@/lib/queryClient';
 import { AUTH_TOKEN_KEY } from '@/lib/auth-constants';
 import { ArrowLeft, Printer, Plus, Paperclip, AlertTriangle, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ApprovalPanel } from '@/components/cost/approval-panel';
+import { BudgetPanel, TeamRollUp } from '@/components/cost/budget-panel';
+import { BudgetChangeOrders } from '@/components/cost/budget-change-orders';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
+import { ReportsView } from '@/components/cost/reports-view';
 import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
 import { PercentInput } from '@/components/cost/inputs';
 import { ProjectNotes } from '@/components/cost/project-notes';
@@ -29,7 +31,7 @@ import { PasteLinesDialog } from '@/components/cost/paste-lines-dialog';
 import { ApplicationDialog } from '@/components/cost/application-dialog';
 import { BaselineEditor } from '@/components/cost/baseline-editor';
 import {
-  money, projectKey, BUCKET_LABEL, shortDate, openReport,
+  money, signedMoney, projectKey, BUCKET_LABEL, shortDate, openReport,
   type ProjectBundle, type SovLineRow, type ContractRow, type ApplicationRow,
 } from '@/components/cost/types';
 
@@ -38,7 +40,7 @@ export default function CostProject() {
   const id = Number(params?.id);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState('summary');
+  const [tab, setTab] = useState('budget');
   const [editing, setEditing] = useState<SovLineRow | null>(null);
   const [pasteTarget, setPasteTarget] = useState<{ contractId: number; changeOrderId: number | null; label: string } | null>(null);
   const [appState, setAppState] = useState<{ contract: ContractRow; app: ApplicationRow | null; kind: 'pay_app' | 'invoice' } | null>(null);
@@ -101,7 +103,7 @@ export default function CostProject() {
   const localFiles = b.documents.filter((d) => d.storage === 'local').length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pm-scope">
       <Navigation />
       <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4">
         <Link href="/projects" className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-1">
@@ -114,56 +116,42 @@ export default function CostProject() {
             <h1 className="text-2xl font-bold text-gray-900">{p.name}</h1>
             {p.tenantName && <div className="text-sm text-gray-600">{p.tenantName}</div>}
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={printReport}><Printer className="h-4 w-4 mr-1" /> Budget vs Actual</Button>
-            <Button variant="ghost" onClick={() => setStatus.mutate(p.status === 'closed' ? 'active' : 'closed')}>
-              {p.status === 'closed' ? 'Reopen' : 'Close project'}
-            </Button>
-            <Button variant="ghost" className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Delete this project"
-                    onClick={() => {
-                      if (window.confirm(`Delete ${p.projectNumber} — ${p.name}?\n\nIts contracts, change orders, pay apps, payments and file records all go with it. This cannot be undone.`)) setDeleting('');
-                    }}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+        </div>
+
+        {/* Where things stand, at a glance. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {[
+            ['Budget', money(b.summary.totals.budget), ''],
+            ['Committed', money(b.summary.totals.committed), ''],
+            ['Spent to date', money(b.summary.totals.toDate), ''],
+            ['Paid', money(b.position.totals.paid), ''],
+            ['Owed', money(b.position.totals.owed), b.position.totals.owed > 0.005 ? 'text-red-700' : ''],
+            ['Variance', signedMoney(b.summary.totals.variance), b.summary.totals.variance < -0.005 ? 'text-red-700' : 'text-green-700'],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="bg-white border rounded-md px-3 py-2">
+              <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
+              <div className={`text-base font-semibold tabular-nums ${tone || 'text-gray-900'}`}>{value}</div>
+            </div>
+          ))}
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="h-auto flex-wrap justify-start bg-gray-100 p-1 gap-1">
-            <TabsTrigger value="summary" className="text-sm px-3 py-1.5">Budget vs actual</TabsTrigger>
-            <TabsTrigger value="contracts" className="text-sm px-3 py-1.5">
-              Contracts{unmappedCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">{unmappedCount}</span>}
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-6 rounded-none border-b border-gray-300 bg-transparent p-0">
+            <TabsTrigger value="budget" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              Budget{b.approval.status !== 'confirmed' && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">Draft</span>}
             </TabsTrigger>
-            <TabsTrigger value="position" className="text-sm px-3 py-1.5">Position</TabsTrigger>
-            <TabsTrigger value="ledger" className="text-sm px-3 py-1.5">
-              Ledger{b.ledger.unreconciledCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">{b.ledger.unreconciledCount}</span>}
+            <TabsTrigger value="contracts" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              Contracts{unmappedCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">{unmappedCount}</span>}
             </TabsTrigger>
-            <TabsTrigger value="budget" className="text-sm px-3 py-1.5">
-              Budget{b.approval.status !== 'confirmed' && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">Draft</span>}
+            <TabsTrigger value="payapps" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Pay Apps</TabsTrigger>
+            <TabsTrigger value="ledger" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              Ledger{b.ledger.unreconciledCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">{b.ledger.unreconciledCount}</span>}
             </TabsTrigger>
-            <TabsTrigger value="files" className="text-sm px-3 py-1.5">Files{b.documents.length > 0 && ` (${b.documents.length})`}</TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="summary" className="mt-4">
-            {b.contracts.length === 0 ? (
-              <div className="bg-white border rounded-lg p-6 text-sm text-gray-600">
-                No contracts yet. Add the GC's contract on the Contracts tab and paste its schedule of values.
-                {p.baseline.length === 0 && ' This project has no budget lines either — add them on the Budget tab.'}
-              </div>
-            ) : (
-              <SummaryTable summary={b.summary} cmFee={b.cmFee} onShowUnallocated={() => setTab('contracts')}
-                budgetNote={b.approval.status === 'confirmed' ? (
-                  <p className="text-xs text-gray-600">
-                    Budget confirmed against the LAF ({money(b.approval.lafTotal)}) on {shortDate(b.approval.confirmedAt)}.
-                    {Math.abs(b.approval.approvedTotal - (b.approval.originalTotal ?? 0)) >= 0.005 && ` Revised since: original ${money(b.approval.originalTotal)}, now ${money(b.approval.approvedTotal)}.`}
-                  </p>
-                ) : (
-                  <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-2.5">
-                    Draft budget — {b.approval.lafTotal == null ? 'not yet checked against the LAF.' : `LAF entered (${money(b.approval.lafTotal)}), not yet confirmed.`}{' '}
-                    <button className="underline font-medium" onClick={() => setTab('budget')}>Confirm it on the Budget tab</button>
-                  </div>
-                )} />
-            )}
+          <TabsContent value="reports" className="mt-4">
+            <ReportsView bundle={b} projectId={id} onShowUnallocated={() => setTab('contracts')} onShowBudget={() => setTab('budget')} />
           </TabsContent>
 
           <TabsContent value="contracts" className="mt-4 space-y-4">
@@ -222,7 +210,7 @@ export default function CostProject() {
             )}
           </TabsContent>
 
-          <TabsContent value="position" className="mt-4">
+          <TabsContent value="payapps" className="mt-4">
             <PositionView bundle={b} projectId={id} onPay={setPayTarget} />
           </TabsContent>
 
@@ -231,13 +219,23 @@ export default function CostProject() {
           </TabsContent>
 
           <TabsContent value="budget" className="mt-4 space-y-4">
-            <ApprovalPanel projectId={id} baseline={p.baseline} approval={b.approval} />
+            <BudgetPanel bundle={b} projectId={id} />
+            <BudgetChangeOrders bundle={b} projectId={id} />
             <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} />
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Priced budget lines</div>
-            <BaselineEditor projectId={id} baseline={p.baseline} sovLines={b.sovLines} rfpLinked={!!p.rfpId} />
+            <TeamRollUp baseline={p.baseline} />
           </TabsContent>
 
-          <TabsContent value="files" className="mt-4 space-y-3">
+
+        </Tabs>
+
+        <ProjectNotes projectId={id} notes={p.notes} />
+
+        {/* Every file on the project in one list — pay apps, receipts, contracts. */}
+        <details className="bg-white border rounded-lg px-4 py-3 group">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-600">
+            Project files ({b.documents.length})
+          </summary>
+          <div className="mt-3 space-y-3">
             {localFiles > 0 && (
               <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-3 flex gap-2">
                 <AlertTriangle className="h-4 w-4 mt-0.5" />
@@ -276,17 +274,33 @@ export default function CostProject() {
                 })}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
+                    </div>
+        </details>
 
-        <ProjectNotes projectId={id} notes={p.notes} />
+        {/* Rarely used, so out of the way. */}
+        <div className="border-t pt-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-gray-500">
+            {p.status === 'closed' ? 'This project is closed. It still shows under Closed on the project list.' : 'Close the project once it is finished; it moves to Closed on the project list.'}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setStatus.mutate(p.status === 'closed' ? 'active' : 'closed')}>
+              {p.status === 'closed' ? 'Reopen project' : 'Close project'}
+            </Button>
+            <Button variant="ghost" size="sm" className="text-red-700 hover:text-red-800 hover:bg-red-50"
+                    onClick={() => {
+                      if (window.confirm(`Delete ${p.projectNumber} — ${p.name}?\n\nIts contracts, change orders, pay apps, payments and file records all go with it. This cannot be undone.`)) setDeleting('');
+                    }}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete project
+            </Button>
+          </div>
+        </div>
       </div>
 
       <AllocationDialog line={editing} baseline={p.baseline} projectId={id} onClose={() => setEditing(null)} />
       <PasteLinesDialog target={pasteTarget} projectId={id} onClose={() => setPasteTarget(null)} />
       <PaymentDialog target={payTarget} payments={b.payments} projectId={id} onClose={() => setPayTarget(null)} />
         <Dialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="pm-scope sm:max-w-md">
             <DialogHeader><DialogTitle>Delete {p.projectNumber}?</DialogTitle></DialogHeader>
             <p className="text-sm text-gray-700">
               This removes the project, its {b.contracts.length} contract{b.contracts.length === 1 ? '' : 's'}, {b.applications.length} pay

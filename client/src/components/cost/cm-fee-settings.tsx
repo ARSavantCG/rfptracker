@@ -31,7 +31,7 @@ export function CmFeeSettings({ projectId, baseline, cmFee }: { projectId: numbe
 
   return (
     <div className="bg-white border rounded-lg px-4 py-3 flex flex-wrap items-end gap-3">
-      <div className="mr-auto">
+      <div className="mr-auto min-w-[16rem] flex-1">
         <div className="font-semibold text-gray-900 text-sm">CM fee</div>
         <div className="text-xs text-gray-600">
           Earned as the work is billed: the rate × spent to date on every other budget line.

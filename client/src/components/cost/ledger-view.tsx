@@ -133,11 +133,6 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           ))}
         </div>
         <div className="flex gap-2 items-end flex-wrap">
-          <div className="space-y-0.5"><div className="text-[11px] text-gray-500">From</div>
-            <Input type="date" className="h-9 w-40" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-          <div className="space-y-0.5"><div className="text-[11px] text-gray-500">To</div>
-            <Input type="date" className="h-9 w-40" value={to} onChange={(e) => setTo(e.target.value)} /></div>
-          <Button variant="outline" onClick={print}><Printer className="h-4 w-4 mr-1" /> Job Cost Ledger</Button>
           {!form && <Button onClick={() => setForm(blank())}><Plus className="h-4 w-4 mr-1" /> Charge</Button>}
         </div>
       </div>
@@ -160,7 +155,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
             <Field label="Budget line" wide>
               <Select value={form.key || NONE} onValueChange={(v) => setForm({ ...form, key: v === NONE ? '' : v })}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="pm-scope">
                   <SelectItem value={NONE}>Unallocated — choose later</SelectItem>
                   {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                 </SelectContent>
@@ -256,7 +251,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                         <SelectTrigger className={`h-8 w-full max-w-[220px] text-xs ${e.budgetLine === 'Unallocated' ? 'text-amber-800' : ''}`}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="pm-scope">
                           <SelectItem value={NONE}>Unallocated</SelectItem>
                           {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                         </SelectContent>

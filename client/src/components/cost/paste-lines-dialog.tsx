@@ -40,7 +40,7 @@ export function PasteLinesDialog({ target, projectId, onClose }: {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="pm-scope sm:max-w-2xl">
         <DialogHeader><DialogTitle>Add lines — {target?.label}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <p className="text-xs text-gray-600">

@@ -22,10 +22,10 @@ import {
   costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts,
 } from '@shared/schema';
 import {
-  normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal,
-  type BudgetApproval,
+  normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
+  type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
-import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, type DatedApplication, type Payment } from '@shared/cost-position';
+import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
   budgetVsActual, g702For, formatProjectNumber,
@@ -234,7 +234,8 @@ export async function loadProjectBundle(projectId: number) {
   // Measured against the budget after the deal: each line less the discount
   // put on it, plus a Deal Discount line for whatever has not been placed.
   const approval = normalizeApproval(project.budgetApproval);
-  const effective = effectiveBaseline(baseline, approval);
+  const cmSettings = cmSettingsFor(project, baseline);
+  const effective = effectiveBaseline(baseline, approval, cmSettings.key);
   const summary0 = budgetVsActual({
     baseline: effective, lines, changeOrders, applications,
     directCosts: directCosts.map((d) => ({ key: d.key, amount: d.amount })),
@@ -265,11 +266,6 @@ export async function loadProjectBundle(projectId: number) {
   const position = positionAsOf(todayEastern(), positionInput);
 
   const settings = (project.settings || {}) as any;
-  const detected = detectCmFee(baseline);
-  const cmSettings = {
-    pct: settings.cmFeePct != null && Number.isFinite(Number(settings.cmFeePct)) ? Number(settings.cmFeePct) : (detected?.pct ?? 0),
-    key: settings.cmFeeKey !== undefined ? (settings.cmFeeKey || null) : (detected?.key ?? null),
-  };
   // The CM's own contract (if there is one) is not part of its base.
   const cmContractIds = new Set(contracts.filter((c) => c.bucket === 'cm').map((c) => c.id));
   const cmFee = cmSettings.key || settings.cmFeePct != null
@@ -302,7 +298,23 @@ export async function loadProjectBundle(projectId: number) {
     documents,
     summary,
     g702ByContract: g702,
-    approval: { ...approval, ...discountState(baseline, approval) },
+    approval: (() => {
+      const ds = discountState(baseline, approval);
+      const cos = coSummary(approval.changeOrders);
+      return {
+        ...approval, ...ds,
+        changeOrderTotals: approval.changeOrders.map((c) => ({ id: c.id, ...coTotals(c) })),
+        coSummary: cos,
+        currentTotal: Math.round((ds.approvedTotal + cos.approved) * 100) / 100,
+      };
+    })(),
+    cmSettings,
+    cmInvoices: ((settings.cmInvoices || []) as CmInvoiceRecord[]),
+    cmInvoiceDraft: cmInvoiceCalc({
+      rows: summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
+      cmKey: cmSettings.key, pct: cmSettings.pct,
+      previouslyInvoiced: ((settings.cmInvoices || []) as CmInvoiceRecord[]).reduce((s, i) => s + (Number(i.due) || 0), 0),
+    }),
     payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
     position,
     positionInput,
@@ -322,6 +334,31 @@ export async function loadProjectBundle(projectId: number) {
       },
       budgetLineName: (key) => (key ? baseline.find((b) => b.key === key)?.description ?? 'Unallocated' : 'Unallocated'),
     }),
+  };
+}
+
+/** A CM fee invoice as issued: its numbers frozen, so a reprint matches what was sent. */
+export interface CmInvoiceRecord {
+  number: string;
+  date: string;
+  base: number;
+  pct: number;
+  earned: number;
+  previous: number;
+  due: number;
+  lines: Array<{ key: string; description: string; spent: number; tenantSharePct: number; billable: number }>;
+  payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
+  issuedBy: string | null;
+  issuedAt: string;
+}
+
+/** The project's CM fee rate and line: set on the project, or read from the CM line's name. */
+export function cmSettingsFor(project: { settings?: any }, baseline: readonly BaselineLine[]) {
+  const settings = (project.settings || {}) as any;
+  const detected = detectCmFee(baseline);
+  return {
+    pct: settings.cmFeePct != null && Number.isFinite(Number(settings.cmFeePct)) ? Number(settings.cmFeePct) : (detected?.pct ?? 0),
+    key: settings.cmFeeKey !== undefined ? (settings.cmFeeKey || null) : (detected?.key ?? null) as string | null,
   };
 }
 
@@ -537,7 +574,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const a = normalizeApproval(project.budgetApproval);
       if (a.lafTotal == null) return res.status(400).json({ message: 'Enter the LAF total before confirming.' });
       if (baseline.length === 0) return res.status(400).json({ message: 'There are no budget lines to confirm.' });
-      const snap = snapshotOriginal(baseline, a);
+      const snap = snapshotOriginal(baseline, a, cmSettingsFor(project, baseline).key);
       a.status = 'confirmed';
       a.confirmedAt = new Date().toISOString();
       a.confirmedBy = whoName(req);
@@ -547,6 +584,165 @@ export function registerCostTrackingRoutes(app: Express): void {
       await saveApproval(id, a);
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'confirm the budget'); }
+  });
+
+  // ---- budget change orders
+  /**
+   * Write the contractor's change order from a budget change order: the same
+   * number and title, one SOV line per budget line, each mapped straight to
+   * it. The CM fee is ours, not the contractor's, so it isn't on it.
+   */
+  const writeContractCo = async (contractId: number, co: BudgetCO, baseline: BaselineLine[]) => {
+    const [c] = await db.select().from(costContracts).where(eq(costContracts.id, contractId));
+    if (!c) throw new UserError('That contract no longer exists.');
+    const [row] = await db.insert(costChangeOrders).values({
+      contractId, number: co.number, title: co.title || null,
+      status: co.status === 'void' ? 'void' : co.status, sortOrder: 0,
+    }).returning();
+    const existing = await db.select({ id: costSovLines.id }).from(costSovLines).where(eq(costSovLines.contractId, contractId));
+    if (co.lines.length) {
+      await db.insert(costSovLines).values(co.lines.map((l, i) => ({
+        contractId, changeOrderId: row.id, itemNo: null, code: null,
+        description: l.description || baseline.find((b) => b.key === l.key)?.description || 'Change order work',
+        scheduledValueCents: toCents(l.amount), allocationMode: 'direct',
+        allocations: [{ baselineKey: l.key, pct: 100 }], sortOrder: existing.length + i,
+      })));
+    }
+    return row.id;
+  };
+
+  const saveCos = async (id: number, project: any, a: BudgetApproval, req: Request, note: string) => {
+    const baseline = (project.baseline || []) as BaselineLine[];
+    const before = normalizeApproval(project.budgetApproval);
+    const total = (x: BudgetApproval) => coSummary(x.changeOrders).approved;
+    if (a.status === 'confirmed' && Math.abs(total(a) - total(before)) >= 0.005) {
+      a.revisions = [...a.revisions, {
+        at: new Date().toISOString(), by: whoName(req),
+        total: Math.round((discountState(baseline, a).approvedTotal + total(a)) * 100) / 100, note,
+      }];
+    }
+    await saveApproval(id, a);
+  };
+
+  app.post('/api/cost-projects/:id/budget-cos', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      const b = req.body || {};
+      const co = normalizeCO({
+        ...b, id: `co-${nanoid(8)}`,
+        cmFeePct: cmSettingsFor(project, baseline).pct,
+        contractId: null, contractCoId: null,
+      })!;
+      const keys = new Set(baseline.map((x) => x.key));
+      if (!co.lines.length) return res.status(400).json({ message: 'Add at least one line with an amount.' });
+      if (co.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
+      const contractId = b.contractId != null && b.contractId !== '' ? Number(b.contractId) : null;
+      if (contractId) {
+        co.contractCoId = await writeContractCo(contractId, co, baseline);
+        co.contractId = contractId;
+      }
+      a.changeOrders = [...a.changeOrders, co];
+      await saveCos(id, project, a, req, `${co.number} added${co.title ? ` — ${co.title}` : ''}`);
+      res.json(await loadProjectBundle(id));
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'add the change order');
+    }
+  });
+
+  app.patch('/api/cost-projects/:id/budget-cos/:coId', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      const i = a.changeOrders.findIndex((c) => c.id === req.params.coId);
+      if (i < 0) return res.status(404).json({ message: 'Change order not found' });
+      const cur = a.changeOrders[i];
+      const b = req.body || {};
+      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee']) })!;
+      const keys = new Set(baseline.map((x) => x.key));
+      if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
+      a.changeOrders[i] = next;
+      // Keep the contractor's change order in step on status.
+      if (next.contractCoId && next.status !== cur.status) {
+        await db.update(costChangeOrders).set({ status: next.status }).where(eq(costChangeOrders.id, next.contractCoId));
+      }
+      await saveCos(id, project, a, req, `${next.number} ${next.status !== cur.status ? next.status : 'changed'}`);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'update the change order'); }
+  });
+
+  app.delete('/api/cost-projects/:id/budget-cos/:coId', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const a = normalizeApproval(project.budgetApproval);
+      const co = a.changeOrders.find((c) => c.id === req.params.coId);
+      if (!co) return res.status(404).json({ message: 'Change order not found' });
+      a.changeOrders = a.changeOrders.filter((c) => c.id !== co.id);
+      await saveCos(id, project, a, req, `${co.number} deleted`);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'delete the change order'); }
+  });
+
+  // ---- CM fee invoices
+  /** The latest pay app on each contract — what the invoice's work figure stands on. */
+  const payAppsFor = (b: NonNullable<Awaited<ReturnType<typeof loadProjectBundle>>>) => b.contracts.map((c) => {
+    const apps = b.positionInput.applications.filter((a) => a.contractId === c.id);
+    if (!apps.length) return null;
+    const last = apps.reduce((m, a) => (a.number > m.number ? a : m), apps[0]);
+    return { contract: c.counterparty, number: last.number, date: last.date, billedToDate: b.g702ByContract[c.id]?.completedAndStored ?? 0 };
+  }).filter(Boolean) as CmInvoiceRecord['payApps'];
+
+  app.post('/api/cost-projects/:id/cm-invoices', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      const b = await loadProjectBundle(id);
+      if (!project || !b) return res.status(404).json({ message: 'Project not found' });
+      const number = String(req.body?.number ?? '').trim();
+      const date = String(req.body?.date ?? '').slice(0, 10);
+      if (!number) return res.status(400).json({ message: 'Enter an invoice number.' });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: 'Enter the invoice date.' });
+      const settings: any = { ...(project.settings || {}) };
+      const list: CmInvoiceRecord[] = settings.cmInvoices || [];
+      if (list.some((i) => i.number.toLowerCase() === number.toLowerCase())) return res.status(400).json({ message: `Invoice ${number} already exists.` });
+      const d = b.cmInvoiceDraft;
+      if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — the CM fee earned to date has been invoiced.' });
+      list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
+        lines: d.lines, payApps: payAppsFor(b), issuedBy: whoName(req), issuedAt: new Date().toISOString() });
+      settings.cmInvoices = list;
+      await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'issue the invoice'); }
+  });
+
+  /** Only the latest invoice can be withdrawn, so the "previously invoiced" chain stays true. */
+  app.delete('/api/cost-projects/:id/cm-invoices/:number', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const settings: any = { ...(project.settings || {}) };
+      const list: CmInvoiceRecord[] = settings.cmInvoices || [];
+      const last = list[list.length - 1];
+      if (!last || last.number !== req.params.number) return res.status(400).json({ message: 'Only the most recent invoice can be withdrawn.' });
+      settings.cmInvoices = list.slice(0, -1);
+      await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'withdraw the invoice'); }
   });
 
   /** Back to draft — for a budget confirmed by mistake. Drops the original. */

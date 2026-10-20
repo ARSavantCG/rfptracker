@@ -48,7 +48,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="pm-scope sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'App'} {app?.number}

@@ -59,7 +59,7 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
 
   return (
     <Dialog open={!!line} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="pm-scope sm:max-w-lg">
         <DialogHeader><DialogTitle>{line?.itemNo ? `${line.itemNo} · ` : ''}{line?.code || 'SOV line'}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

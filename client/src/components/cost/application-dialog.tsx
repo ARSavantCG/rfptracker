@@ -193,7 +193,7 @@ export function ApplicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto">
+      <DialogContent className="pm-scope max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{app ? `${label} ${app.number}` : `New ${label.toLowerCase()}`} — {contract.counterparty}</DialogTitle>
         </DialogHeader>

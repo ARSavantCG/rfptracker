@@ -219,7 +219,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                       <td className="px-1 py-1">
                         <Select value={r.map} onValueChange={(v) => update(r.rid, { map: v })}>
                           <SelectTrigger className={`h-8 text-xs ${r.map === UNMAPPED ? 'text-amber-800 border-amber-300' : ''}`}><SelectValue /></SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="pm-scope">
                             <SelectItem value={UNMAPPED}>Not mapped yet</SelectItem>
                             {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                             <SelectItem value={SPREAD}>Spread with the work (GCs, insurance, fee)</SelectItem>

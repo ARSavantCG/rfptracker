@@ -41,9 +41,9 @@ export function PositionView({ bundle, projectId, onPay }: {
           </div>
         </div>
         <Button variant="outline" onClick={async () => {
-          if (!(await openReport(`/api/reports/cost-position/${projectId}?asOf=${asOf}`))) toast({ title: 'Report failed', variant: 'destructive' });
+          if (!(await openReport(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}`))) toast({ title: 'Report failed', variant: 'destructive' });
         }}>
-          <Printer className="h-4 w-4 mr-1" /> Cost Position
+          <Printer className="h-4 w-4 mr-1" /> Print Pay App Status
         </Button>
       </div>
 

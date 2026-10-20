@@ -239,3 +239,36 @@ export function buildLedger(input: {
     unreconciledCount: open.length,
   };
 }
+
+// ------------------------------------------------------------ CM invoice
+
+/**
+ * What the tenant owes in CM fee, to date: the rate on the work the tenant
+ * pays for (each budget line's spent to date × its tenant share, leaving out
+ * the CM line itself), less what has already been invoiced.
+ */
+export interface CmInvoiceLine {
+  key: string;
+  description: string;
+  spent: number;
+  tenantSharePct: number;
+  billable: number;
+}
+
+export function cmInvoiceCalc(input: {
+  rows: ReadonlyArray<{ key: string; description: string; toDate: number; tenantSharePct: number }>;
+  cmKey: string | null;
+  pct: number;
+  previouslyInvoiced: number;
+}) {
+  const lines: CmInvoiceLine[] = input.rows
+    .filter((r) => r.key !== input.cmKey && Math.abs(r.toDate) >= 0.005)
+    .map((r) => ({
+      key: r.key, description: r.description, spent: r2(r.toDate), tenantSharePct: r.tenantSharePct,
+      billable: r2((r.toDate * r.tenantSharePct) / 100),
+    }));
+  const base = r2(lines.reduce((s, l) => s + l.billable, 0));
+  const earned = r2((base * input.pct) / 100);
+  const previous = r2(input.previouslyInvoiced);
+  return { lines, base, pct: input.pct, earned, previous, due: r2(earned - previous) };
+}

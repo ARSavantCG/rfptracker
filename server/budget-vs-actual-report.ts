@@ -76,6 +76,28 @@ export interface CmFeeView {
   remaining: number;
 }
 
+export interface BudgetCoView {
+  number: string; title: string; date: string | null; status: string; billable: boolean;
+  work: number; cm: number; total: number; cmFeePct: number; cmFee: boolean;
+}
+
+function budgetCoTable(cos: BudgetCoView[] | undefined): string {
+  const list = (cos || []).filter((c) => c.status !== 'void');
+  if (!list.length) return "";
+  const approved = list.filter((c) => c.status === 'approved');
+  const sum = (xs: BudgetCoView[], f: (c: BudgetCoView) => number) => xs.reduce((s, c) => s + f(c), 0);
+  return `
+  <h3 class="sec">Budget Change Orders</h3>
+  <table class="t"><thead><tr><th class="l">No.</th><th class="l">For</th><th class="l">Date</th><th class="l">Tenant</th>
+    <th>Cost of Work</th><th>CM Fee</th><th>Total</th><th class="l">Status</th></tr></thead><tbody>
+    ${list.map((c) => `<tr><td>${escapeHtml(c.number)}</td><td>${escapeHtml(c.title)}</td><td style="white-space:nowrap">${escapeHtml(longDate(c.date))}</td>
+      <td>${c.billable ? "Billable" : "Not billable"}</td>${cell(c.work)}<td class="num">${c.cm ? fmt(c.cm) : "—"}${c.cmFee ? ` <span class="muted">(${fmtPct(c.cmFeePct)})</span>` : ""}</td>${cell(c.total)}
+      <td>${c.status === "approved" ? "Approved" : "Pending"}</td></tr>`).join("")}
+    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.cm))}${cell(sum(approved, (c) => c.total))}<td></td></tr>
+  </tbody></table>
+  <div class="legend">Approved: billable ${money2(sum(approved.filter((c) => c.billable), (c) => c.total))} · not billable ${money2(sum(approved.filter((c) => !c.billable), (c) => c.total))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.total))} (not in the budget)` : ""}.</div>`;
+}
+
 export interface ApprovalView {
   status: "draft" | "confirmed";
   lafTotal: number | null;
@@ -114,6 +136,7 @@ export function renderBudgetVsActualHtml(input: {
   summary: BudgetVsActual & { rows: BvaRow[] };
   approval?: ApprovalView | null;
   cmFee?: CmFeeView | null;
+  budgetCos?: BudgetCoView[];
   generatedBy?: string | null;
 }): string {
   const { summary: s, project, approval } = input;
@@ -166,6 +189,7 @@ export function renderBudgetVsActualHtml(input: {
     ${BUCKETS.map(([k, l]) => group(k, l)).join("")}
     ${sums(allRows, "Total", "total")}
   </tbody></table>
+  ${budgetCoTable(input.budgetCos)}
   ${cmFeeTable(input.cmFee)}
   <h3 class="sec">Notes</h3>
   <ol class="notes">
@@ -207,10 +231,10 @@ export function renderCostPositionHtml(input: {
     : p.applications.map((a) => `<tr><td>${escapeHtml(name.get(a.contractId) || "")}</td><td>App ${a.number}</td>
       <td>${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}</tr>`).join("");
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Cost Position</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Pay App Status</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
-  ${reportHeaderHtml({ title: "Cost Position", eyebrow: "Cost Report", info })}
+  ${reportHeaderHtml({ title: "Pay App Status", eyebrow: "Cost Report", info })}
   <table class="t"><thead><tr>
     <th>Contract</th><th>Contract Sum</th><th>Billed to Date</th><th>% Billed</th><th>Retainage Held</th>
     <th>Net Billed</th><th>Paid</th><th>Owed</th><th>Left to Pay</th></tr></thead><tbody>
@@ -284,6 +308,73 @@ export function renderJobCostLedgerHtml(input: {
   </body></html>`;
 }
 
+export interface CmInvoiceView {
+  number: string | null;          // null = draft
+  date: string;
+  base: number; pct: number; earned: number; previous: number; due: number;
+  lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
+  payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
+}
+
+/**
+ * The CM fee invoice, ready for accounting to send on: who it's to, the
+ * work it's figured on (by budget line, and the pay apps behind it), the
+ * rate, what was invoiced before, and what is due now.
+ */
+export function renderCmInvoiceHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  invoice: CmInvoiceView;
+  generatedBy?: string | null;
+}): string {
+  const inv = input.invoice;
+  const info: ReportInfoRow[] = [
+    { label: "Bill To", value: input.project.tenantName || "" },
+    { label: "Property", value: input.propertyLabel || "" },
+    { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },
+    { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },
+    { label: "Invoice Date", value: longDate(inv.date) },
+  ];
+  return `<!doctype html><html><head><meta charset="utf-8"><title>CM Fee Invoice</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+    .due { margin-top: 10px; margin-left: auto; width: 55%; border-collapse: collapse; font-size: 12px; }
+    .due td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; }
+    .due td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .due tr.big td { font-size: 14px; font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
+    .draft-mark { color: #b45309; font-weight: 700; }
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Construction Management Fee Invoice", eyebrow: "Invoice", info,
+    notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
+
+  <h3 class="sec">Work Completed to Date</h3>
+  <table class="t"><thead><tr><th class="l">Description</th><th>Completed &amp; Stored to Date</th><th>Tenant Share</th><th>Billable to Tenant</th></tr></thead><tbody>
+    ${inv.lines.map((l) => `<tr><td>${escapeHtml(l.description)}</td>${cell(l.spent)}<td class="num">${fmtPct(l.tenantSharePct)}</td>${cell(l.billable)}</tr>`).join("")}
+    <tr class="total"><td>Total</td>${cell(inv.lines.reduce((s, l) => s + l.spent, 0))}<td></td>${cell(inv.base)}</tr>
+  </tbody></table>
+
+  <table class="due"><tbody>
+    <tr><td>Billable work completed to date</td><td class="num">${fmt(inv.base)}</td></tr>
+    <tr><td>Construction management fee at ${fmtPct(inv.pct)}</td><td class="num">${fmt(inv.earned)}</td></tr>
+    <tr><td>Less previously invoiced</td><td class="num">${inv.previous ? `(${money2(inv.previous)})` : money2(0)}</td></tr>
+    <tr class="big"><td>Amount Due This Invoice</td><td class="num">${fmt(inv.due)}</td></tr>
+  </tbody></table>
+
+  ${inv.payApps.length ? `<h3 class="sec">Contractor Pay Applications Included</h3>
+  <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Through Pay App</th><th class="l">Period Ending</th><th>Billed to Date</th></tr></thead><tbody>
+    ${inv.payApps.map((p) => `<tr><td>${escapeHtml(p.contract)}</td><td>No. ${p.number}</td><td>${escapeHtml(longDate(p.date))}</td>${cell(p.billedToDate)}</tr>`).join("")}
+  </tbody></table>` : ""}
+
+  <h3 class="sec">Notes</h3>
+  <ol class="notes">
+    <li>${escapeHtml(`Fee is ${fmtPct(inv.pct)} of work completed and stored to date that is billable to the tenant, per the tenant's share of each budget line.`)}</li>
+    <li>Completed and stored to date is before retainage, as certified on the contractors' pay applications listed above.</li>
+    ${inv.previous ? `<li>${escapeHtml(`Previously invoiced CM fees of ${money2(inv.previous)} are deducted.`)}</li>` : ""}
+  </ol>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
 async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
   const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
@@ -313,6 +404,10 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
             ? { ...b.approval, confirmedBy: generatedByName(u) || by } : b.approval;
         })(),
         cmFee: b.cmFee,
+        budgetCos: b.approval.changeOrders.map((c) => {
+          const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
+          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, ...t };
+        }),
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {
@@ -347,7 +442,38 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/reports/cost-position/:id", requireAuth, requireAdmin, async (req, res) => {
+  app.get("/api/reports/cm-invoice/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const want = String(req.query.invoice || "");
+      let invoice: CmInvoiceView;
+      if (want) {
+        const rec = b.cmInvoices.find((i) => i.number === want);
+        if (!rec) return res.status(404).json({ message: "Invoice not found" });
+        invoice = rec;
+      } else {
+        const d = b.cmInvoiceDraft;
+        invoice = { number: null, date: todayEastern(), ...d,
+          payApps: b.contracts.map((c) => {
+            const apps = b.positionInput.applications.filter((a) => a.contractId === c.id);
+            if (!apps.length) return null;
+            const last = apps.reduce((m, a) => (a.number > m.number ? a : m), apps[0]);
+            return { contract: c.counterparty, number: last.number, date: last.date, billedToDate: b.g702ByContract[c.id]?.completedAndStored ?? 0 };
+          }).filter(Boolean) as CmInvoiceView["payApps"] };
+      }
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderCmInvoiceHtml({ project: b.project, ...(await propertyFacts(b.project)), invoice, generatedBy: generatedByName((req as any).user) }));
+    } catch (e: any) {
+      console.error("CM invoice report error:", e);
+      res.status(500).json({ message: "Failed to generate the invoice", error: e?.message });
+    }
+  });
+
+  // "Pay App Status" is the name now; the old path keeps working.
+  app.get(["/api/reports/pay-app-status/:id", "/api/reports/cost-position/:id"], requireAuth, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });

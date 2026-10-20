@@ -92,8 +92,16 @@ export interface ProjectBundle {
     directCosts: { date: string; amount: number }[];
   };
   cmFee: CmFee | null;
+  cmSettings: { pct: number; key: string | null };
+  cmInvoices: CmInvoiceRow[];
+  cmInvoiceDraft: { base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
   ledger: { entries: LedgerEntry[]; total: number; unreconciled: number; unreconciledCount: number };
+}
+
+export interface CmInvoiceRow {
+  number: string; date: string; base: number; pct: number; earned: number; previous: number; due: number;
+  issuedBy: string | null; issuedAt: string;
 }
 
 export interface DirectCostRow {
@@ -117,8 +125,13 @@ export type ApprovalView = BudgetApproval & {
   priced: number;
   distributed: number;
   undistributed: number;
+  /** Priced less the deal discount: the LAF budget. */
   approvedTotal: number;
   orphaned: { key: string; amount: number }[];
+  changeOrderTotals: { id: string; work: number; cm: number; total: number }[];
+  coSummary: { approved: number; approvedBillable: number; approvedAbsorbed: number; pending: number };
+  /** LAF budget plus approved change orders. */
+  currentTotal: number;
 };
 
 export interface PaymentRow {

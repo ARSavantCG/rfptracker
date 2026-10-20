@@ -33,7 +33,7 @@ export default function CostProjects() {
   const [rfpId, setRfpId] = useState('');
   const [rfpSearch, setRfpSearch] = useState('');
   const [name, setName] = useState('');
-  const [showClosed, setShowClosed] = useState(false);
+  const [show, setShow] = useState<'active' | 'closed' | 'all'>('active');
 
   const { data, isLoading, error } = useQuery<{ projects: ListRow[] }>({ queryKey: ['/api/cost-projects'] });
   const { data: rfps = [] } = useQuery<any[]>({ queryKey: ['/api/rfp-requests'], enabled: open });
@@ -69,11 +69,12 @@ export default function CostProjects() {
     onError: (e: any) => toast({ title: 'Could not open the project', description: e?.message, variant: 'destructive' }),
   });
 
-  const projects = (data?.projects || []).filter((p) => showClosed || p.status !== 'closed');
-  const closedCount = (data?.projects || []).filter((p) => p.status === 'closed').length;
+  const all = data?.projects || [];
+  const projects = all.filter((p) => show === 'all' || (show === 'closed' ? p.status === 'closed' : p.status !== 'closed'));
+  const counts = { active: all.filter((p) => p.status !== 'closed').length, closed: all.filter((p) => p.status === 'closed').length, all: all.length };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pm-scope">
       <Navigation />
       <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -86,12 +87,21 @@ export default function CostProjects() {
           <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> New project</Button>
         </div>
 
+        <div className="flex gap-1 bg-gray-100 rounded-md p-1 w-fit">
+          {(['active', 'closed', 'all'] as const).map((k) => (
+            <button key={k} onClick={() => setShow(k)}
+                    className={`text-sm px-3 py-1 rounded ${show === k ? 'bg-white shadow-sm font-semibold text-gray-900' : 'text-gray-600'}`}>
+              {k === 'active' ? 'Active' : k === 'closed' ? 'Closed' : 'All'} ({counts[k]})
+            </button>
+          ))}
+        </div>
+
         {isLoading && <p className="text-sm text-gray-600">Loading…</p>}
         {error && <p className="text-sm text-red-700">{(error as Error).message}</p>}
 
         {!isLoading && projects.length === 0 && (
           <div className="bg-white border rounded-lg p-8 text-center text-sm text-gray-600">
-            No projects yet. When a deal signs, open a project from its RFP and the budget comes with it.
+            {show === 'closed' ? 'No closed projects.' : all.length === 0 ? 'No projects yet. When a deal signs, open a project from its RFP and the budget comes with it.' : 'No active projects.'}
           </div>
         )}
 
@@ -136,16 +146,10 @@ export default function CostProjects() {
             </table>
           </div>
         )}
-        {closedCount > 0 && (
-          <label className="flex items-center gap-2 text-xs text-gray-600">
-            <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
-            Show closed projects ({closedCount})
-          </label>
-        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="pm-scope sm:max-w-2xl">
           <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">

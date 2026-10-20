@@ -17,6 +17,8 @@ import Dashboard from "@/pages/dashboard";
 import Contacts from "@/pages/contacts";
 import Properties from "@/pages/properties";
 import RomPilot from "@/pages/rom-pilot";
+import CostProjects from "@/pages/cost-projects";
+import CostProject from "@/pages/cost-project";
 import Reports from "@/pages/reports";
 import Admin from "@/pages/admin";
 import AuditLogAdmin from "@/pages/audit-log-admin";
@@ -87,6 +89,8 @@ function Router() {
             <Route path="/contacts" component={Contacts} />
             <Route path="/properties" component={Properties} />
             <Route path="/rom-pilot" component={RomPilot} />
+            <Route path="/projects" component={CostProjects} />
+            <Route path="/projects/:id" component={CostProject} />
             <Route path="/reports" component={Reports} />
             <Route path="/data-scrubbing" component={DataScrubbing} />
             <Route path="/data-mapping" component={DataMapping} />

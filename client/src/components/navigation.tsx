@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Home, FileText, BarChart3, Users, Building, Calculator, Settings, LogOut, User, Key, ChevronDown, ClipboardCheck, FileBarChart, Tags, ClipboardList, Menu, X } from "lucide-react";
+import { Home, FileText, BarChart3, Users, Building, Calculator, Settings, LogOut, User, Key, ChevronDown, ClipboardCheck, FileBarChart, Tags, ClipboardList, Menu, X, Hammer } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ interface NavItem {
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, hasPermission } = usePermissions();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -115,9 +115,14 @@ export default function Navigation() {
     { path: "/reports/category-cost-breakdown", label: "Category Cost Breakdown", icon: Tags },
   ];
 
+  // Projects: what a job actually cost. Development team only — the same
+  // permission the API checks, so the link never leads to a 403.
+  const projectItems: NavItem[] = hasPermission('pricing.edit') || isAdmin()
+    ? [{ path: "/projects", label: "Projects", icon: Hammer }] : [];
+
   // Add admin item if user is admin
   const adminItems: NavItem[] = isAdmin() ? [{ path: "/admin", label: "Admin Panel", icon: Settings }] : [];
-  const navItems: NavItem[] = [...baseNavItems, ...adminItems];
+  const navItems: NavItem[] = [...baseNavItems, ...projectItems, ...adminItems];
 
   return (
     <>

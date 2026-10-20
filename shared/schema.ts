@@ -6,7 +6,7 @@
  * distribution, or use of this software is strictly prohibited.
  */
 
-import { pgTable, text, serial, integer, timestamp, json, jsonb, boolean, varchar, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, bigint, timestamp, json, jsonb, boolean, varchar, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { parseLocalDate } from "./date-utils";
@@ -2249,3 +2249,129 @@ export const userReportPins = pgTable("user_report_pins", {
 ]);
 
 export type UserReportPin = typeof userReportPins.$inferSelect;
+
+
+// ============================================================================
+// COST TRACKING — what the work actually cost, against what was budgeted.
+//
+// The model and all of the arithmetic live in shared/cost-tracking.ts; these
+// tables only hold it. Money is stored in CENTS as bigint: integer, so no
+// float drift, and 64-bit, so a building-wide contract cannot overflow the
+// $21M ceiling a 32-bit integer of cents would put on it.
+//
+// No foreign keys, on purpose and consistently with the rest of this schema's
+// additive tables: these are created by startup-migrations, and a constraint
+// that fails against an existing row would stop the app booting.
+// ============================================================================
+
+/** One job being built. Usually opened from a signed RFP; can start blank. */
+export const costProjects = pgTable("cost_projects", {
+  id: serial("id").primaryKey(),
+  projectNumber: text("project_number").notNull(),
+  name: text("name").notNull(),
+  rfpId: integer("rfp_id"),
+  propertyId: integer("property_id"),
+  tenantName: text("tenant_name"),
+  status: text("status").notNull().default("active"), // active | closed
+  // The budget, frozen when the project opened: BaselineLine[] in
+  // shared/cost-tracking.ts, budget in DOLLARS (it is a snapshot, not a ledger).
+  baseline: json("baseline").$type<Array<{
+    key: string; description: string; bucket: string; budget: number; tenantSharePct: number;
+    masterItemId?: number | null;
+  }>>().notNull().default([]),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => [index("cost_projects_rfp_idx").on(t.rfpId)]);
+
+/** A contract with one counterparty: the GC, the architect, the permit office. */
+export const costContracts = pgTable("cost_contracts", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  counterparty: text("counterparty").notNull(),
+  // contractor | design | cm | misc — the Budget by Contract buckets.
+  bucket: text("bucket").notNull().default("contractor"),
+  contractNumber: text("contract_number"),
+  retainageBp: integer("retainage_bp").notNull().default(1000), // basis points: 1000 = 10.00%
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_contracts_project_idx").on(t.projectId)]);
+
+/** A change order: a header on the contract, with its own SOV lines under it. */
+export const costChangeOrders = pgTable("cost_change_orders", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").notNull(),
+  number: text("number").notNull(),          // "PCCO #001", as the contractor numbers it
+  title: text("title"),
+  status: text("status").notNull().default("pending"), // approved | pending | void
+  approvedDate: timestamp("approved_date"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_change_orders_contract_idx").on(t.contractId)]);
+
+/** A schedule-of-values line. changeOrderId null = base contract. */
+export const costSovLines = pgTable("cost_sov_lines", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").notNull(),
+  changeOrderId: integer("change_order_id"),
+  itemNo: text("item_no"),                   // "1.13"
+  code: text("code"),                        // "09-2100.00.S"
+  description: text("description").notNull(),
+  scheduledValueCents: bigint("scheduled_value_cents", { mode: "number" }).notNull().default(0),
+  allocationMode: text("allocation_mode").notNull().default("unallocated"), // direct | spread | unallocated
+  allocations: json("allocations").$type<Array<{ baselineKey: string; pct: number }>>().notNull().default([]),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_sov_lines_contract_idx").on(t.contractId)]);
+
+/** A pay application or an invoice. */
+export const costApplications = pgTable("cost_applications", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").notNull(),
+  number: integer("number").notNull(),       // order within the contract
+  kind: text("kind").notNull().default("pay_app"), // pay_app | invoice
+  invoiceNumber: text("invoice_number"),
+  periodStart: timestamp("period_start"),
+  periodEnd: timestamp("period_end"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_applications_contract_idx").on(t.contractId)]);
+
+/** One SOV line on one application: columns E, F and I of a G703. */
+export const costApplicationLines = pgTable("cost_application_lines", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").notNull(),
+  sovLineId: integer("sov_line_id").notNull(),
+  workThisPeriodCents: bigint("work_this_period_cents", { mode: "number" }).notNull().default(0),
+  storedToDateCents: bigint("stored_to_date_cents", { mode: "number" }).notNull().default(0),
+  retainageToDateCents: bigint("retainage_to_date_cents", { mode: "number" }).notNull().default(0),
+}, (t) => [index("cost_application_lines_app_idx").on(t.applicationId)]);
+
+/** A pay app PDF, an invoice, a change order — kept in Object Storage. */
+export const costDocuments = pgTable("cost_documents", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  applicationId: integer("application_id"),
+  contractId: integer("contract_id"),
+  changeOrderId: integer("change_order_id"),
+  originalName: text("original_name").notNull(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  storageKey: text("storage_key").notNull(),
+  // 'object' once Object Storage has confirmed it holds the file. 'local' only
+  // where Object Storage is not configured (a dev workspace) — such a file is
+  // lost on the next publish, and the UI says so.
+  storage: text("storage").notNull().default("object"),
+  uploadedBy: text("uploaded_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_documents_project_idx").on(t.projectId)]);
+
+export type CostProject = typeof costProjects.$inferSelect;
+export type CostContract = typeof costContracts.$inferSelect;
+export type CostChangeOrder = typeof costChangeOrders.$inferSelect;
+export type CostSovLine = typeof costSovLines.$inferSelect;
+export type CostApplication = typeof costApplications.$inferSelect;
+export type CostApplicationLine = typeof costApplicationLines.$inferSelect;
+export type CostDocument = typeof costDocuments.$inferSelect;

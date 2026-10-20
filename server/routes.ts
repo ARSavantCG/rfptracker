@@ -79,6 +79,8 @@ import { registerPortfolioReportRoutes } from './portfolio-report';
 import { registerReportPinRoutes } from './report-pins-routes';
 import { registerBudgetReconciliationReport } from './budget-reconciliation-report';
 import { registerItbSendRoutes } from './itb-send';
+import { registerCostTrackingRoutes } from './cost-tracking-routes';
+import { registerBudgetVsActualReportRoutes } from './budget-vs-actual-report';
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
 import { parsePropertyScope, propertyInScope, describePropertyScope } from '@shared/property-scope';
@@ -123,6 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerReportPinRoutes(app);
   registerBudgetReconciliationReport(app);
   registerItbSendRoutes(app);
+  registerCostTrackingRoutes(app);
+  registerBudgetVsActualReportRoutes(app);
   registerAiRoutes(app);
   registerIntakeParserRoutes(app);
   registerProposalsRoutes(app);

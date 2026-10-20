@@ -112,6 +112,90 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Cost tracking (2026-10-20): budget vs actual on a job being built. Shapes
+  // mirror shared/schema.ts exactly; money in bigint cents. No foreign keys —
+  // a constraint that fails against an existing row would stop the boot.
+  `CREATE TABLE IF NOT EXISTS cost_projects (
+    id serial PRIMARY KEY,
+    project_number text NOT NULL,
+    name text NOT NULL,
+    rfp_id integer,
+    property_id integer,
+    tenant_name text,
+    status text NOT NULL DEFAULT 'active',
+    baseline json NOT NULL DEFAULT '[]'::json,
+    notes text,
+    created_by text,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_contracts (
+    id serial PRIMARY KEY,
+    project_id integer NOT NULL,
+    counterparty text NOT NULL,
+    bucket text NOT NULL DEFAULT 'contractor',
+    contract_number text,
+    retainage_bp integer NOT NULL DEFAULT 1000,
+    notes text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_change_orders (
+    id serial PRIMARY KEY,
+    contract_id integer NOT NULL,
+    number text NOT NULL,
+    title text,
+    status text NOT NULL DEFAULT 'pending',
+    approved_date timestamp,
+    sort_order integer NOT NULL DEFAULT 0,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_sov_lines (
+    id serial PRIMARY KEY,
+    contract_id integer NOT NULL,
+    change_order_id integer,
+    item_no text,
+    code text,
+    description text NOT NULL,
+    scheduled_value_cents bigint NOT NULL DEFAULT 0,
+    allocation_mode text NOT NULL DEFAULT 'unallocated',
+    allocations json NOT NULL DEFAULT '[]'::json,
+    sort_order integer NOT NULL DEFAULT 0,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_applications (
+    id serial PRIMARY KEY,
+    contract_id integer NOT NULL,
+    number integer NOT NULL,
+    kind text NOT NULL DEFAULT 'pay_app',
+    invoice_number text,
+    period_start timestamp,
+    period_end timestamp,
+    notes text,
+    created_by text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_application_lines (
+    id serial PRIMARY KEY,
+    application_id integer NOT NULL,
+    sov_line_id integer NOT NULL,
+    work_this_period_cents bigint NOT NULL DEFAULT 0,
+    stored_to_date_cents bigint NOT NULL DEFAULT 0,
+    retainage_to_date_cents bigint NOT NULL DEFAULT 0
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_documents (
+    id serial PRIMARY KEY,
+    project_id integer NOT NULL,
+    application_id integer,
+    contract_id integer,
+    change_order_id integer,
+    original_name text NOT NULL,
+    mime_type text,
+    size_bytes integer,
+    storage_key text NOT NULL,
+    storage text NOT NULL DEFAULT 'object',
+    uploaded_by text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
   // Who the invitation to bid went to, and whether it arrived (2026-10-20).
   // No FK to contacts: an address can be typed for someone not in the
   // directory, and deleting a contact must not erase the record of a send.
@@ -231,6 +315,20 @@ const ADDITIVE_INDEXES: string[] = [
   `CREATE INDEX IF NOT EXISTS user_report_pins_user_idx ON user_report_pins (user_id)`,
   // The send log is always read for one RFP at a time.
   `CREATE INDEX IF NOT EXISTS itb_sends_rfp_idx ON itb_sends (rfp_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_projects_rfp_idx ON cost_projects (rfp_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_contracts_project_idx ON cost_contracts (project_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_change_orders_contract_idx ON cost_change_orders (contract_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_sov_lines_contract_idx ON cost_sov_lines (contract_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_applications_contract_idx ON cost_applications (contract_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_application_lines_app_idx ON cost_application_lines (application_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_documents_project_idx ON cost_documents (project_id)`,
+  // One line per SOV line per application: entering a pay app twice must
+  // replace, never double, what it says was done.
+  `CREATE UNIQUE INDEX IF NOT EXISTS cost_application_lines_unique ON cost_application_lines (application_id, sov_line_id)`,
+  // Two applications with the same number on one contract would make
+  // "previous certificates" ambiguous.
+  `CREATE UNIQUE INDEX IF NOT EXISTS cost_applications_number_unique ON cost_applications (contract_id, number)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS cost_projects_number_unique ON cost_projects (project_number)`,
 ];
 
 // dbi is injectable for tests (a drizzle handle over any pg driver); production
@@ -267,7 +365,11 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
   // CREATE TABLE IF NOT EXISTS that fails leaves NO trace at runtime except a
   // 500 from whatever reads it later, so this states the outcome directly at
   // boot rather than leaving it to be discovered from a stack frame.
-  for (const name of ['app_settings', 'project_team_members', 'user_report_pins']) {
+  for (const name of [
+    'app_settings', 'project_team_members', 'user_report_pins', 'itb_sends',
+    'cost_projects', 'cost_contracts', 'cost_change_orders', 'cost_sov_lines',
+    'cost_applications', 'cost_application_lines', 'cost_documents',
+  ]) {
     try {
       await dbi.execute(sql.raw(`SELECT 1 FROM ${name} LIMIT 1`));
       console.log(`✅ table ${name} present`);

@@ -25,7 +25,7 @@ import {
   normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
-import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
+import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
   budgetVsActual, g702For, formatProjectNumber,
@@ -310,11 +310,41 @@ export async function loadProjectBundle(projectId: number) {
     })(),
     cmSettings,
     cmInvoices: ((settings.cmInvoices || []) as CmInvoiceRecord[]),
-    cmInvoiceDraft: cmInvoiceCalc({
-      rows: summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
-      cmKey: cmSettings.key, pct: cmSettings.pct,
-      previouslyInvoiced: ((settings.cmInvoices || []) as CmInvoiceRecord[]).reduce((s, i) => s + (Number(i.due) || 0), 0),
-    }),
+    cmInvoiceDraft: (() => {
+      const issued = (settings.cmInvoices || []) as CmInvoiceRecord[];
+      const calc = cmInvoiceCalc({
+        rows: summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
+        cmKey: cmSettings.key, pct: cmSettings.pct,
+        previouslyInvoiced: issued.reduce((s, i) => s + (Number(i.due) || 0), 0),
+      });
+      const covered = new Set(issued.flatMap((i) => (i.items || []).map((x) => x.ref)));
+      const items = billableItems({
+        lines, changeOrders,
+        applications: dated.map((a) => {
+          const row = apps.find((x) => x.id === a.id)!;
+          return { ...a, kind: row.kind, invoiceNumber: row.invoiceNumber };
+        }),
+        directCosts,
+        tenantPct: new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number])),
+        validKeys: new Set(effective.map((b) => b.key)),
+        cmKey: cmSettings.key,
+        contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
+      }).map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) }));
+      // Each item is rounded to the cent; put the rounding difference on the
+      // largest item so the column ties to the base the fee is figured on.
+      const drift = Math.round((calc.base - items.reduce((t, i) => t + i.billable, 0)) * 100) / 100;
+      if (items.length && Math.abs(drift) >= 0.005 && Math.abs(drift) < 1) {
+        const big = items.reduce((m, i) => (Math.abs(i.billable) > Math.abs(m.billable) ? i : m), items[0]);
+        big.billable = Math.round((big.billable + drift) * 100) / 100;
+      }
+      const spent = Math.round(calc.lines.reduce((t, l) => t + l.spent, 0) * 100) / 100;
+      const drift2 = Math.round((spent - items.reduce((t, i) => t + i.amount, 0)) * 100) / 100;
+      if (items.length && Math.abs(drift2) >= 0.005 && Math.abs(drift2) < 1) {
+        const big = items.reduce((m, i) => (Math.abs(i.amount) > Math.abs(m.amount) ? i : m), items[0]);
+        big.amount = Math.round((big.amount + drift2) * 100) / 100;
+      }
+      return { ...calc, items };
+    })(),
     payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
     position,
     positionInput,
@@ -348,6 +378,8 @@ export interface CmInvoiceRecord {
   due: number;
   lines: Array<{ key: string; description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
+  /** Every billable item behind it — pay apps, invoices, direct charges. */
+  items?: Array<{ ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
   issuedBy: string | null;
   issuedAt: string;
 }
@@ -721,7 +753,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const d = b.cmInvoiceDraft;
       if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — the CM fee earned to date has been invoiced.' });
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
-        lines: d.lines, payApps: payAppsFor(b), issuedBy: whoName(req), issuedAt: new Date().toISOString() });
+        lines: d.lines, payApps: payAppsFor(b), items: d.items, issuedBy: whoName(req), issuedAt: new Date().toISOString() });
       settings.cmInvoices = list;
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));

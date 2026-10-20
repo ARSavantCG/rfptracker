@@ -314,6 +314,7 @@ export interface CmInvoiceView {
   base: number; pct: number; earned: number; previous: number; due: number;
   lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
+  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
 }
 
 /**
@@ -347,7 +348,14 @@ export function renderCmInvoiceHtml(input: {
   ${reportHeaderHtml({ title: "Construction Management Fee Invoice", eyebrow: "Invoice", info,
     notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
-  <h3 class="sec">Work Completed to Date</h3>
+  ${inv.items && inv.items.length ? `<h3 class="sec">Costs Billed to Date</h3>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Amount</th><th>Billable to Tenant</th><th class="l"></th></tr></thead><tbody>
+    ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
+      <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${cell(it.billable)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
+    <tr class="total"><td colspan="3">Total</td>${cell(inv.items.reduce((s, i) => s + i.amount, 0))}${cell(inv.items.reduce((s, i) => s + i.billable, 0))}<td></td></tr>
+  </tbody></table>` : ""}
+
+  <h3 class="sec">${inv.items && inv.items.length ? "By Budget Line" : "Work Completed to Date"}</h3>
   <table class="t"><thead><tr><th class="l">Description</th><th>Completed &amp; Stored to Date</th><th>Tenant Share</th><th>Billable to Tenant</th></tr></thead><tbody>
     ${inv.lines.map((l) => `<tr><td>${escapeHtml(l.description)}</td>${cell(l.spent)}<td class="num">${fmtPct(l.tenantSharePct)}</td>${cell(l.billable)}</tr>`).join("")}
     <tr class="total"><td>Total</td>${cell(inv.lines.reduce((s, l) => s + l.spent, 0))}<td></td>${cell(inv.base)}</tr>
@@ -360,7 +368,7 @@ export function renderCmInvoiceHtml(input: {
     <tr class="big"><td>Amount Due This Invoice</td><td class="num">${fmt(inv.due)}</td></tr>
   </tbody></table>
 
-  ${inv.payApps.length ? `<h3 class="sec">Contractor Pay Applications Included</h3>
+  ${inv.payApps.length && !(inv.items && inv.items.length) ? `<h3 class="sec">Contractor Pay Applications Included</h3>
   <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Through Pay App</th><th class="l">Period Ending</th><th>Billed to Date</th></tr></thead><tbody>
     ${inv.payApps.map((p) => `<tr><td>${escapeHtml(p.contract)}</td><td>No. ${p.number}</td><td>${escapeHtml(longDate(p.date))}</td>${cell(p.billedToDate)}</tr>`).join("")}
   </tbody></table>` : ""}
@@ -368,7 +376,8 @@ export function renderCmInvoiceHtml(input: {
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     <li>${escapeHtml(`Fee is ${fmtPct(inv.pct)} of work completed and stored to date that is billable to the tenant, per the tenant's share of each budget line.`)}</li>
-    <li>Completed and stored to date is before retainage, as certified on the contractors' pay applications listed above.</li>
+    <li>Completed and stored to date is before retainage, as certified on the contractors' pay applications and invoices listed above. Direct charges are at cost.</li>
+    ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Items shaded and marked "This invoice" are new since the last CM invoice.</li>` : ""}
     ${inv.previous ? `<li>${escapeHtml(`Previously invoiced CM fees of ${money2(inv.previous)} are deducted.`)}</li>` : ""}
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}

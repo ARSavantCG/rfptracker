@@ -18,7 +18,7 @@
  *
  * Pure: no database import.
  */
-import { g702For, lineStatus, type SovLine, type ChangeOrder, type Application } from './cost-tracking';
+import { g702For, lineStatus, allocate, type SovLine, type ChangeOrder, type Application } from './cost-tracking';
 
 export interface DatedApplication extends Application {
   /** ISO date: period end, or the date entered. */
@@ -271,4 +271,82 @@ export function cmInvoiceCalc(input: {
   const earned = r2((base * input.pct) / 100);
   const previous = r2(input.previouslyInvoiced);
   return { lines, base, pct: input.pct, earned, previous, due: r2(earned - previous) };
+}
+
+// ------------------------------------------------------- billable items
+
+/**
+ * Every item the CM fee is figured on, one row each: each pay app or invoice
+ * (its work this period plus the change in stored material) and each direct
+ * charge. Each is split across budget lines the way its SOV lines are
+ * mapped, and each line's tenant share applied, so the billable column adds
+ * to exactly the figure the fee is figured on. Anything on the CM line itself
+ * is left out — the fee isn't charged on the fee.
+ */
+export interface BillableItem {
+  /** Stable: "app-12", "direct-7". Lets an issued invoice record which items it covered. */
+  ref: string;
+  date: string;
+  vendor: string;
+  item: string;
+  amount: number;
+  billable: number;
+}
+
+export function billableItems(input: {
+  lines: readonly SovLine[];
+  changeOrders: readonly ChangeOrder[];
+  applications: ReadonlyArray<DatedApplication & { kind?: string; invoiceNumber?: string | null }>;
+  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; key: string | null; method?: string | null; reference?: string | null }>;
+  /** Tenant share by budget line (effective, after change orders). */
+  tenantPct: Map<string, number>;
+  validKeys: Set<string>;
+  cmKey: string | null;
+  contractName: (id: number) => string;
+}): BillableItem[] {
+  const cos = new Map((input.changeOrders || []).map((c) => [c.id, c]));
+  const live = (input.lines || []).filter((l) => lineStatus(l, cos) !== 'void');
+  const pctOf = (k: string) => input.tenantPct.get(k) ?? 0;
+  const out: BillableItem[] = [];
+
+  const byContract = new Map<number, (typeof input.applications)[number][]>();
+  for (const a of input.applications) byContract.set(a.contractId, [...(byContract.get(a.contractId) ?? []), a]);
+  for (const [contractId, apps] of Array.from(byContract)) {
+    const sorted = [...apps].sort((x, y) => x.number - y.number);
+    const storedBefore = new Map<number, number>();
+    for (const a of sorted) {
+      const amounts = new Map<number, number>();
+      for (const l of a.lines) {
+        const stored = Number(l.storedToDate) || 0;
+        const delta = (Number(l.workThisPeriod) || 0) + stored - (storedBefore.get(l.sovLineId) ?? 0);
+        storedBefore.set(l.sovLineId, stored);
+        if (delta) amounts.set(l.sovLineId, (amounts.get(l.sovLineId) ?? 0) + delta);
+      }
+      const split = allocate(live, amounts, input.validKeys);
+      let amount = 0, billable = 0;
+      for (const [k, v] of Array.from(split)) {
+        if (k === input.cmKey) continue;
+        amount += v;
+        billable += (v * pctOf(k)) / 100;
+      }
+      if (Math.abs(amount) < 0.005) continue;
+      const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
+      out.push({
+        ref: `app-${a.id}`, date: a.date, vendor: input.contractName(contractId),
+        item: `${label} ${a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
+        amount: r2(amount), billable: r2(billable),
+      });
+    }
+  }
+  for (const d of input.directCosts) {
+    if (d.key && d.key === input.cmKey) continue;
+    const pct = d.key && input.validKeys.has(d.key) ? pctOf(d.key) : 0;
+    const how = [d.method === 'card' ? 'CC' : d.method ? d.method.toUpperCase() : '', d.reference || ''].filter(Boolean).join(' ');
+    out.push({
+      ref: `direct-${d.id}`, date: d.date, vendor: d.vendor,
+      item: `${d.description || 'Charge'}${how ? ` (${how})` : ''}`,
+      amount: r2(d.amount), billable: r2((d.amount * pct) / 100),
+    });
+  }
+  return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
 }

@@ -899,8 +899,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         // Preserve ROM pilot unit if available, otherwise use item unit
         let unit = item.romSnapshot?.unit || item.unit;
         
+        // A lump sum keeps whatever quantity it was given; none of the
+        // property-derived seeds below apply to it.
+        // Tested against the RESOLVED unit: this path prefers the ROM pilot's
+        // unit over the line's own, so that is the one that has to be read.
+        if (isLumpSumLine({ ...item, unit })) {
+          // quantity and unit stay exactly as entered
+        }
         // Match Demising Wall items - auto-populate with building depth
-        if (description.includes("demising wall") && propertyData?.buildingDepth) {
+        else if (description.includes("demising wall") && propertyData?.buildingDepth) {
           quantity = propertyData.buildingDepth;
           unit = "ft.";
         }
@@ -1412,6 +1419,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     electricalAllocations: [],
   });
 
+  /**
+   * Is this line a LUMP SUM, and therefore not to have its quantity
+   * auto-populated?
+   *
+   * Checks the catalog basis AND the unit the user typed. The basis alone was
+   * not enough: setting a line to "LS" in the unit box is what a person does
+   * to say "this is a lump sum, leave my number alone", and nothing was
+   * reading it. The quantity got overwritten with a dollar amount and
+   * multiplied by the new unit price.
+   *
+   * Only three of the six auto-populate branches checked the basis at all;
+   * Design (Architectural) and Demising Wall checked nothing.
+   */
+  const isLumpSumLine = (item: any): boolean => {
+    const basis = (item?.masterItemSnapshot?.calculationBasis || '').toString().toLowerCase();
+    if (basis === 'lump-sum' || basis === 'manual') return true;
+    const unit = (item?.unit || '').toString().trim().toLowerCase().replace(/[.\s]/g, '');
+    return unit === 'ls' || unit === 'lumpsum' || unit === 'lump';
+  };
+
   // Track which items have been manually overridden (won't auto-calculate)
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(new Set());
 
@@ -1511,6 +1538,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
       // Design (Architectural) - auto-populate with total rentable area
       if (desc.includes("design") && (desc.includes("architectural") || desc.includes("architect"))) {
+        // A lump sum keeps the quantity the user entered.
+        if (isLumpSumLine(item)) return item;
         const newQty = totalRentableArea;
         const unitPx = parseFloat(item.unitPrice || "0");
         // These auto-populate branches compute base x rate and ASSIGN over
@@ -1535,8 +1564,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Falls back to description-matching only when no basis is set.
       if (desc.includes("builder") && desc.includes("risk")) {
         const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
-        // Explicit lump-sum or manual: do NOT auto-populate — respect the user's quantity.
-        if (basis === "lump-sum" || basis === "manual") {
+        // Lump sum by catalog basis OR by the unit the user typed: do NOT
+        // auto-populate — respect the quantity they entered.
+        if (isLumpSumLine(item)) {
           return item;
         }
         // Explicit basis picks the total; otherwise default to TI total (legacy behavior).
@@ -1566,7 +1596,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Permit Fees - auto-populate with TI total (basis-aware; legacy default = TI total)
       if (desc.includes("permit") && desc.includes("fee")) {
         const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
-        if (basis === "lump-sum" || basis === "manual") {
+        // Lump sum by catalog basis OR by the unit the user typed.
+        if (isLumpSumLine(item)) {
           return item;
         }
         const newQty =
@@ -1595,7 +1626,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // Construction Management - auto-populate with TI + DSC (basis-aware; legacy default = cmBase)
       if (desc.includes("construction") && desc.includes("management")) {
         const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
-        if (basis === "lump-sum" || basis === "manual") {
+        // Lump sum by catalog basis OR by the unit the user typed.
+        if (isLumpSumLine(item)) {
           return item;
         }
         const newQty =
@@ -1656,7 +1688,8 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         // Basis-aware: lump-sum/manual leave quantity alone; pct-* pick the total.
         // Legacy default = contingencyBase (TI + all DSC except contingency itself).
         const basis = (item.masterItemSnapshot?.calculationBasis || "").toString();
-        if (basis === "lump-sum" || basis === "manual") {
+        // Lump sum by catalog basis OR by the unit the user typed.
+        if (isLumpSumLine(item)) {
           return item;
         }
         const newQty =
@@ -1919,6 +1952,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
       // Demising Wall - auto-populate with building depth
       if (desc.includes("demising wall")) {
+        if (isLumpSumLine(item)) return item;
         const newQty = buildingDepth;
         const unitPx = parseFloat(item.unitPrice || "0");
         // These auto-populate branches compute base x rate and ASSIGN over
@@ -2394,7 +2428,9 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
       // total up to billions and cascading into CM/contingency. The value is saved
       // under metadata.manualOverrides as an array; rehydrate it into the Set.
       const savedOverrides = (existingBudget as any).metadata?.manualOverrides;
-      if (Array.isArray(savedOverrides) && savedOverrides.length > 0) {
+      if (Array.isArray(savedOverrides)) {
+        // An EMPTY array is a real answer — "nothing is overridden" — and must
+        // clear the set rather than leave whatever a previous RFP left behind.
         setManualOverrides(new Set(savedOverrides));
       }
 
@@ -4841,8 +4877,26 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           regularDoorsOverride: budgetData.regularDoorsOverride,
           tenantVoltage: budgetData.tenantVoltage,
           electricalAllocations: budgetData.electricalAllocations,
-          // Manual overrides are intentionally NOT persisted here - they are session-only
-          // (component state) per spec and should reset on reload.
+          /**
+           * PERSISTED HERE TOO, and that is the whole point.
+           *
+           * This block used to say manual overrides were "session-only per
+           * spec and should reset on reload" — while Save & Advance saved
+           * them, and the load path warned that losing them lets
+           * auto-population "re-force quantity = TI total, blowing the total
+           * up to billions".
+           *
+           * That is precisely what happened. RFP-2026-002 carries a saved
+           * grand total of $68,924,181,264. Set a line to quantity 1 with a
+           * lump-sum unit, click SAVE PROGRESS rather than Save & Advance,
+           * and the override was dropped; on reload auto-population restored
+           * the dollar amount as the quantity and multiplied it by the new
+           * unit price.
+           *
+           * Two save paths writing different fields is the fault. Both now
+           * write the same metadata.
+           */
+          manualOverrides: Array.from(manualOverrides),
         },
       };
 

@@ -155,6 +155,16 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
    * Open a report. An 'api' report is HTML behind an auth token, so it has to
    * be fetched and opened as a blob; a 'page' is an in-app route; a 'modal' is
    * a dialog the Reports page owns.
+   *
+   * EVERY report opens in a new tab, including the 'page' ones. Those three
+   * (Property Data Audit, Project Reports, Category Cost Breakdown) used to
+   * navigate in place, which threw away the Reports page — the pins, the open
+   * catalog, the property scope just picked — and meant going Back and setting
+   * it all up again for the next one. Same gesture, same result, whichever kind
+   * of report it is.
+   *
+   * A relative URL is fine here: the new tab boots the SPA at that route and
+   * authenticates as the same user from localStorage.
    */
   const open = async (
     kind: 'api' | 'page' | 'modal' | null,
@@ -168,7 +178,12 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
     }
     if (!url) return;
     if (kind === 'page') {
-      navigate(url);
+      // Opened straight from the click, so it counts as a user gesture and the
+      // pop-up blocker lets it through. If it is blocked anyway, fall back to
+      // navigating in place rather than leaving the click doing nothing.
+      if (!window.open(url, '_blank')) {
+        navigate(url);
+      }
       return;
     }
     try {
@@ -445,21 +460,26 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                               )}
 
                               {def.params.length > 0 && (
-                                <div className="flex flex-wrap items-start gap-2 mt-2">
-                                  {def.params.map((param) => {
+                                /*
+                                 * Two rows, not one wrapping line.
+                                 *
+                                 * Pickers sat in a flex-wrap row with the
+                                 * checkboxes, so a native <select> sized itself
+                                 * to its longest option while the property
+                                 * dropdown was a fixed 20rem and a different
+                                 * height — Executive Summary, which has three
+                                 * pickers and a checkbox, came out as four
+                                 * mismatched controls in a ragged line.
+                                 *
+                                 * Now every picker is one cell of a grid, so
+                                 * they are the same width and the same height
+                                 * whatever is inside them, and the toggles sit
+                                 * on their own row underneath.
+                                 */
+                                <div className="mt-2 space-y-2">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-w-3xl">
+                                  {def.params.filter((p) => p.type !== 'boolean').map((param) => {
                                     const value = draftParams[`${def.key}.${param.name}`] || '';
-                                    if (param.type === 'boolean') {
-                                      return (
-                                        <label key={param.name} className="flex items-center gap-1.5 text-xs text-gray-700">
-                                          <input
-                                            type="checkbox"
-                                            checked={value === 'true'}
-                                            onChange={(e) => setParam(def, param, e.target.checked ? 'true' : '')}
-                                          />
-                                          {param.label}
-                                        </label>
-                                      );
-                                    }
                                     // Several properties at once — a whole
                                     // park, or any mix of buildings. Uses the
                                     // SAME dropdown as the RFP form rather than
@@ -473,7 +493,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                                     if (param.type === 'properties') {
                                       const ids = (value || '').split(',').map((v) => v.trim()).filter(Boolean);
                                       return (
-                                        <div key={param.name} className="w-full sm:w-80 mt-1">
+                                        <div key={param.name} className="w-full">
                                           <HierarchicalPropertySelector
                                             multiple
                                             values={ids}
@@ -511,7 +531,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                                         key={param.name}
                                         value={value}
                                         onChange={(e) => setParam(def, param, e.target.value)}
-                                        className={`h-8 rounded-md border bg-background px-2 text-xs max-w-full ${
+                                        className={`h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm ${
                                           !param.optional && !value ? 'border-amber-400' : 'border-input'
                                         }`}
                                       >
@@ -526,6 +546,25 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                                       </select>
                                     );
                                   })}
+                                  </div>
+
+                                  {def.params.some((p) => p.type === 'boolean') && (
+                                    <div className="flex flex-wrap items-center gap-4">
+                                      {def.params.filter((p) => p.type === 'boolean').map((param) => {
+                                        const value = draftParams[`${def.key}.${param.name}`] || '';
+                                        return (
+                                          <label key={param.name} className="flex items-center gap-1.5 text-xs text-gray-700">
+                                            <input
+                                              type="checkbox"
+                                              checked={value === 'true'}
+                                              onChange={(e) => setParam(def, param, e.target.checked ? 'true' : '')}
+                                            />
+                                            {param.label}
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

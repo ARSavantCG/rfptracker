@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import type { RfpRequest, Property } from "@shared/schema";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { isArchivedRfp, canArchiveRfp } from "@shared/rfp-archive";
 
 interface RfpTableProps {
   searchQuery: string;
@@ -684,6 +685,19 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
                        parentRfp.status === "cancelled" ? "Cancelled" :
                        parentRfp.status.charAt(0).toUpperCase() + parentRfp.status.slice(1)}
                     </span>
+                    {/* Archived is a second fact about the record, not a
+                        replacement for the first. A cancelled RFP that has
+                        been filed still reads "Cancelled", with this beside
+                        it — which is the point of being able to file one. */}
+                    {isArchivedRfp(parentRfp as any) && parentRfp.status !== 'archived' && (
+                      <span
+                        title="Archived — hidden from reports unless you include archived"
+                        className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
+                      >
+                        <i className="fas fa-archive mr-1 text-[9px]"></i>
+                        Archived
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <ResponsibleCell rfp={parentRfp} />
@@ -719,8 +733,10 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
                         <i className="fas fa-edit text-xs"></i>
                       </button>
                       
-                      {/* Archive button - only for completed RFPs */}
-                      {parentRfp.status === 'completed' && (
+                      {/* Archive button — completed or cancelled. Cancelled
+                          RFPs could not be archived at all while archiving
+                          meant overwriting the status. */}
+                      {canArchiveRfp(parentRfp as any) && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -734,8 +750,8 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
                         </button>
                       )}
                       
-                      {/* Reopen button - only for archived RFPs */}
-                      {parentRfp.status === 'archived' && (
+                      {/* Unarchive — brings it back with its own status intact. */}
+                      {isArchivedRfp(parentRfp as any) && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -743,7 +759,7 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
                           }}
                           disabled={reopenMutation.isPending}
                           className="text-blue-600 hover:text-blue-700 p-1"
-                          title="Reopen project"
+                          title="Bring back from the archive"
                         >
                           <i className="fas fa-undo text-xs"></i>
                         </button>
@@ -765,7 +781,7 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
                       )}
                       
                       {/* RFP Options button - available during any active phase */}
-                      {parentRfp.status !== 'archived' && (
+                      {!isArchivedRfp(parentRfp as any) && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();

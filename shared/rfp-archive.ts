@@ -7,11 +7,17 @@
  * app's first weeks would otherwise sit in the results forever with nothing
  * anyone intends to do about it.
  *
- * ARCHIVED IS NOT CANCELLED. Both are terminal, but they answer different
+ * ARCHIVED IS NOT CANCELLED, and an RFP can be BOTH. They answer different
  * questions. A cancelled deal is a real outcome worth counting — it tells you
- * how many pursuits died. An archived one is a filing decision: it says
- * nothing about the deal, only that it is off the desk. So cancelled still
- * appears in counts and archived does not, and the two are never merged.
+ * how many pursuits died. Archiving is a filing decision: it says nothing
+ * about the deal, only that it is off the desk.
+ *
+ * Which is why archiving is a TIMESTAMP on the record and not a status.
+ * Writing status='archived' erased whatever the record used to say, so a
+ * cancelled RFP could not be archived for the record without destroying the
+ * record. Status says what happened; archivedAt says whether you still want
+ * to see it. Rows archived under the old scheme carry status='archived' with
+ * no timestamp, and are still recognised here.
  *
  * Every report that can be scoped this way accepts ?includeArchived=true, so
  * the history is one parameter away rather than gone. Each one states how many
@@ -27,12 +33,34 @@ export const INCLUDE_ARCHIVED_PARAM = 'includeArchived';
 
 export interface ArchivableRecord {
   status?: string | null;
+  archivedAt?: Date | string | null;
 }
 
-/** Is this record archived? Case and padding tolerated; the column is free text. */
+/**
+ * Is this record archived?
+ *
+ * Either the timestamp is set, or it is a legacy row still carrying
+ * status='archived'. Case and padding tolerated; the column is free text.
+ * A bare string argument can only be a status, which is how the older call
+ * sites pass it.
+ */
 export function isArchivedRfp(record: ArchivableRecord | string | null | undefined): boolean {
+  if (record && typeof record !== 'string' && record.archivedAt) return true;
   const status = typeof record === 'string' ? record : record?.status;
   return String(status ?? '').trim().toLowerCase() === ARCHIVED_STATUS;
+}
+
+/**
+ * Can this RFP be archived?
+ *
+ * Only something finished. Archiving live work hides it from the very lists
+ * that exist to stop it being forgotten. Completed and cancelled both qualify
+ * — cancelled especially, since keeping the record is the reason for filing it.
+ */
+export function canArchiveRfp(record: ArchivableRecord | null | undefined): boolean {
+  if (!record || isArchivedRfp(record)) return false;
+  const status = String(record.status ?? '').trim().toLowerCase();
+  return status === 'completed' || status === 'cancelled';
 }
 
 /**

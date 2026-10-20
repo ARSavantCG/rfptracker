@@ -24,7 +24,7 @@ import { PinnedReports } from "@/components/pinned-reports";
 import { parseISO, isAfter, addDays } from "date-fns";
 import type { RfpRequest } from "@shared/schema";
 import { isRfpOverdue, daysUntilRfpDue } from "@shared/schema";
-import { applyArchiveFilter } from "@shared/rfp-archive";
+import { applyArchiveFilter, isArchivedRfp } from "@shared/rfp-archive";
 
 interface ReportFilters {
   status?: string;
@@ -85,10 +85,17 @@ export default function Reports() {
     inProgress: byStatus("in-progress"),
     completed: byStatus("completed"),
     onHold: byStatus("on-hold"),
-    // Cancelled and archived are NOT merged. A cancelled deal is an outcome
-    // worth counting; an archived one is a filing decision that says nothing
-    // about the deal. Archived only appears here when it is being included.
+    // Cancelled and archived are NOT merged, and a record can be both. A
+    // cancelled deal is an outcome worth counting; archiving is a filing
+    // decision that says nothing about the deal.
+    //
+    // So archiving is NOT a tile. These tiles are statuses, one per record,
+    // and they have to sum to the total; counting an archived-and-cancelled
+    // RFP in two of them would break that. How many of the visible records
+    // are archived is stated underneath instead.
     cancelled: byStatus("cancelled"),
+    // Legacy rows only: archiving used to overwrite the status, so these have
+    // no real status left to show.
     archived: byStatus("archived"),
     overdue: filteredRfps.filter((r) => isRfpOverdue(r)).length,
     dueSoon: filteredRfps.filter((r) => {
@@ -98,6 +105,11 @@ export default function Reports() {
         && !["completed", "cancelled", "archived", "on-hold"].includes(String(r.status));
     }).length,
   };
+  // Of what is on screen, how many are filed away. A count, not a bucket.
+  const archivedShown = includeArchived
+    ? filteredRfps.filter((r) => isArchivedRfp(r as any)).length
+    : 0;
+
   // If this is ever false the tiles are lying; surfaced rather than left to drift.
   const statusTilesReconcile =
     metrics.received + metrics.inProgress + metrics.completed + metrics.onHold +
@@ -176,6 +188,12 @@ export default function Reports() {
                   <span className="text-gray-500">
                     — {archiveFilter.excludedCount} archived RFP
                     {archiveFilter.excludedCount === 1 ? '' : 's'} not counted above
+                  </span>
+                )}
+                {includeArchived && archivedShown > 0 && (
+                  <span className="text-gray-500">
+                    — {archivedShown} of these {archivedShown === 1 ? 'is' : 'are'} archived,
+                    counted under whatever status {archivedShown === 1 ? 'it' : 'they'} finished with
                   </span>
                 )}
               </label>

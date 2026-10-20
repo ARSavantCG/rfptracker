@@ -81,7 +81,7 @@ import { registerBudgetReconciliationReport } from './budget-reconciliation-repo
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
 import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
-import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
+import { parseIncludeArchived, isArchivedRfp, canArchiveRfp, ARCHIVED_STATUS } from '@shared/rfp-archive';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -1343,11 +1343,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
-      if (rfp.status !== 'completed') {
-        return res.status(400).json({ message: "Only completed RFPs can be archived" });
+      // Completed OR cancelled. Archiving used to write status='archived',
+      // which would have erased the cancellation — so cancelled RFPs simply
+      // could not be filed. Now the status is left exactly as it is and only
+      // the timestamp is set, which is what makes "archive it for the record"
+      // mean something.
+      if (!canArchiveRfp(rfp as any)) {
+        return res.status(400).json({
+          message: isArchivedRfp(rfp as any)
+            ? "This RFP is already archived"
+            : "Only completed or cancelled RFPs can be archived",
+        });
       }
 
-      const updatedRequest = await storage.updateRfpRequest(id, { status: 'archived' });
+      const updatedRequest = await storage.updateRfpRequest(id, { archivedAt: new Date() } as any);
       res.json(updatedRequest);
     } catch (error) {
       res.status(400).json({ 
@@ -1369,8 +1378,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "RFP request not found" });
       }
 
+      // Un-archiving and reopening are different acts and this endpoint does
+      // both, because the button that calls it means "bring this back".
+      //
+      // An archived record goes back to the desk with its own status intact:
+      // a cancelled one is still cancelled, a completed one still completed.
+      // Only a completed RFP being genuinely reopened returns to in-progress.
+      if (isArchivedRfp(rfp as any)) {
+        const restored = await storage.updateRfpRequest(id, {
+          archivedAt: null,
+          // A legacy row has no status of its own left to restore — archiving
+          // overwrote it. 'completed' is the only status that could ever have
+          // been archived under the old scheme, so that is what it was.
+          ...(String(rfp.status).trim().toLowerCase() === ARCHIVED_STATUS
+            ? { status: 'completed' }
+            : {}),
+        } as any);
+        return res.json(restored);
+      }
+
       if (rfp.status !== 'completed') {
-        return res.status(400).json({ message: "Only completed RFPs can be reopened" });
+        return res.status(400).json({ message: "Only completed or archived RFPs can be reopened" });
       }
 
       // Clear completion date when reopening

@@ -119,6 +119,18 @@ export const rfpRequests = pgTable("rfp_requests", {
   tenantElectricalUpgradeTiming: text("tenant_electrical_upgrade_timing"), // "immediate" or "future" - transformer upgrade timing
   tenantElectricalNotes: text("tenant_electrical_notes"), // Notes about electrical requirements
   
+  // Archiving.
+  //
+  // A TIMESTAMP, not a status. Archiving used to overwrite status with
+  // 'archived', which meant a cancelled RFP could not be archived without
+  // erasing the fact that it was cancelled — and cancelled is an outcome worth
+  // keeping, not a filing state. Status says what happened to the deal;
+  // archived_at says whether it is still on the desk. The two are independent,
+  // so a record can be both, which is the whole point of archiving for the
+  // record. Rows archived under the old scheme still carry status='archived'
+  // and are recognised by shared/rfp-archive.ts.
+  archivedAt: timestamp("archived_at"),
+
   // Cancellation tracking
   cancelledAt: timestamp("cancelled_at"),
   cancellationReason: text("cancellation_reason"),

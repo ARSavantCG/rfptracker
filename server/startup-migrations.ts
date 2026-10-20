@@ -37,6 +37,9 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // This column never existed on rfp_requests — only invitation_to_bid had one.
   // The commit-to-scope write was a silent no-op until this migration.
   { table: 'rfp_requests', column: 'scope_of_work', type: "json DEFAULT '[]'::json" },
+  // Archiving as a timestamp rather than a status, so a cancelled RFP can be
+  // archived and stay cancelled. See the column comment in shared/schema.ts.
+  { table: 'rfp_requests', column: 'archived_at', type: 'timestamp' },
   // Allowance Fork (slice 2): pricing path on the RFP + back-link on the ROM.
   { table: 'rfp_requests', column: 'pricing_path', type: "text DEFAULT 'development'" },
   { table: 'rom_pilots', column: 'linked_rfp_id', type: 'integer' },

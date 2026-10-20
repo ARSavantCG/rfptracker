@@ -77,6 +77,10 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
     mutationFn: ({ id, patch }: { id: number; patch: any }) => apiRequest(`/api/cost-payments/${id}`, 'PATCH', patch),
     onSuccess: refresh, onError: fail('Not changed'),
   });
+  const removePayment = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/cost-payments/${id}`, 'DELETE'),
+    onSuccess: () => { refresh(); toast({ title: 'Payment removed' }); }, onError: fail('Not removed'),
+  });
   const removeDirect = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-direct-costs/${id}`, 'DELETE'),
     onSuccess: refresh, onError: fail('Not removed'),
@@ -280,6 +284,12 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                           <Trash2 className="h-3.5 w-3.5 inline" />
                         </button>
                       </>
+                    )}
+                    {e.kind === 'payment' && (
+                      <button className="text-gray-400 hover:text-red-700 align-middle" title="Remove this payment"
+                              onClick={() => { if (window.confirm(`Remove the ${money(e.amount)} payment to ${e.vendor} (${e.description})? The pay app stays; only the payment record goes.`)) removePayment.mutate(e.id); }}>
+                        <Trash2 className="h-3.5 w-3.5 inline" />
+                      </button>
                     )}
                   </td>
                 </tr>

@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, ClipboardPaste, FileText, AlertTriangle, Paperclip } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2 } from 'lucide-react';
+import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
   money, pct, projectKey, BUCKET_LABEL,
@@ -38,6 +39,36 @@ export function ContractCard({
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
   const [coForm, setCoForm] = useState<{ number: string; title: string } | null>(null);
+  // Which group's lines are open in the grid: 'base', a change order id, or none.
+  // A brand-new contract opens straight into its base contract.
+  const [editing, setEditing] = useState<string | null>(lines.length === 0 && changeOrders.length === 0 ? 'base' : null);
+  const billedIds = useMemo(() => new Set(applications.flatMap((a) => a.lines.map((l) => l.sovLineId))), [applications]);
+  const removeContract = useMutation({
+    mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}`, 'DELETE'),
+    onSuccess: () => { refresh(); toast({ title: `${contract.counterparty} deleted` }); },
+    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+  });
+  const removeCo = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/cost-change-orders/${id}`, 'DELETE'),
+    onSuccess: () => { refresh(); toast({ title: 'Change order deleted' }); },
+    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive', duration: 10000 }),
+  });
+  const confirmDeleteContract = () => {
+    const what = [
+      `${lines.length} line${lines.length === 1 ? '' : 's'}`,
+      `${changeOrders.length} change order${changeOrders.length === 1 ? '' : 's'}`,
+      `${applications.length} pay app${applications.length === 1 ? '' : 's'}/invoice${applications.length === 1 ? '' : 's'}`,
+      `${payments.filter((p) => p.contractId === contract.id).length} payment(s)`,
+    ].join(', ');
+    if (!window.confirm(`Delete the contract with ${contract.counterparty}?\n\nIts ${what} all go with it. This cannot be undone.`)) return;
+    const typed = window.prompt(`To confirm, type the name exactly: ${contract.counterparty}`);
+    if (typed == null) return;
+    if (typed.trim().toLowerCase() !== contract.counterparty.trim().toLowerCase()) {
+      toast({ title: 'Not deleted', description: 'The name did not match.' });
+      return;
+    }
+    removeContract.mutate();
+  };
 
   const progress = useMemo(() => lineProgress(applications.map((a) => ({
     id: a.id, contractId: a.contractId, number: a.number, lines: a.lines,
@@ -107,6 +138,7 @@ export function ContractCard({
             {` · retainage ${Number(contract.retainagePct).toFixed(2)}%`}
           </div>
         </div>
+        <div className="flex items-start gap-3">
         {g702 && (
           <div className="grid grid-cols-3 gap-x-5 text-right text-xs">
             <div><div className="text-gray-500">Contract to date</div><div className="font-semibold tabular-nums text-sm">{money(g702.contractSumToDate)}</div></div>
@@ -114,6 +146,11 @@ export function ContractCard({
             <div><div className="text-gray-500">Balance</div><div className="font-semibold tabular-nums text-sm">{money(g702.balanceToFinish)}</div></div>
           </div>
         )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-700" title="Delete this contract"
+                  disabled={removeContract.isPending} onClick={confirmDeleteContract}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -151,6 +188,14 @@ export function ContractCard({
                           <option value="void">Void</option>
                         </select>
                       )}
+                      {g.co && (
+                        <button className="text-gray-400 hover:text-red-700" title="Delete this change order"
+                                onClick={() => {
+                                  if (window.confirm(`Delete ${g.label} and its ${g.lines.length} line${g.lines.length === 1 ? '' : 's'}? This cannot be undone.`)) removeCo.mutate(g.co!.id);
+                                }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(total)}</td>
@@ -167,19 +212,22 @@ export function ContractCard({
                           <option value="__spread__">Spread with the work</option>
                         </select>
                       )}
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs"
-                              onClick={() => onPaste({ contractId: contract.id, changeOrderId: g.id, label: g.label })}>
-                        <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Add lines
+                      <Button size="sm" variant={editing === String(g.id ?? 'base') ? 'default' : 'outline'} className="h-7 px-2 text-xs"
+                              disabled={editing != null && editing !== String(g.id ?? 'base')}
+                              onClick={() => setEditing(editing === String(g.id ?? 'base') ? null : String(g.id ?? 'base'))}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit lines' : 'Enter lines'}
                       </Button>
                     </div>
                   </td>
                 </tr>
-                {g.lines.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-500 italic">
-                    No lines yet. {g.co ? 'Add the change order\'s cost of work, insurance and fee.' : 'Paste the schedule of values.'}
+                {editing === String(g.id ?? 'base') ? (
+                  <SovGridEditor contractId={contract.id} changeOrderId={g.id} label={g.label} lines={g.lines}
+                                 baseline={baseline} billedIds={billedIds} projectId={projectId} onDone={() => setEditing(null)} />
+                ) : g.lines.length === 0 ? (
+                  <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-600">
+                    No lines yet — click <span className="font-medium">Enter lines</span> to type {g.co ? 'the change order\'s cost of work, insurance and fee' : 'the schedule of values'}, or paste it from Excel.
                   </td></tr>
-                )}
-                {g.lines.map((l) => {
+                ) : g.lines.map((l) => {
                   const p = progress.get(l.id);
                   return (
                     <tr key={l.id} className="border-b hover:bg-blue-50/40 cursor-pointer" onClick={() => onEditLine(l)}>

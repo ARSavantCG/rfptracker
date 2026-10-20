@@ -78,6 +78,11 @@ export default function CostProject() {
   const printReport = async () => {
     if (!(await openReport(`/api/reports/budget-vs-actual/${id}`))) toast({ title: 'Report failed', variant: 'destructive' });
   };
+  const removeFile = useMutation({
+    mutationFn: (docId: number) => apiRequest(`/api/cost-documents/${docId}`, 'DELETE'),
+    onSuccess: () => { refresh(); toast({ title: 'File removed' }); },
+    onError: (e: any) => toast({ title: 'Not removed', description: e?.message, variant: 'destructive' }),
+  });
   const deleteProject = useMutation({
     mutationFn: (confirmText: string) => apiRequest(`/api/cost-projects/${id}`, 'DELETE', { confirm: confirmText }),
     onSuccess: () => {
@@ -255,9 +260,16 @@ export default function CostProject() {
                   return (
                     <div key={d.id} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
                       <button className="text-blue-700 hover:underline text-left break-all" onClick={() => openDocument(d.id)}>{d.originalName}</button>
-                      <div className="text-xs text-gray-500 text-right shrink-0">
-                        {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.number}` : ''}
-                        <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-xs text-gray-500 text-right">
+                          {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.number}` : ''}
+                          {d.directCostId ? 'Ledger receipt' : ''}
+                          <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
+                        </div>
+                        <button className="text-gray-400 hover:text-red-700" title="Remove this file"
+                                onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   );

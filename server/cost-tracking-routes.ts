@@ -794,6 +794,61 @@ export function registerCostTrackingRoutes(app: Express): void {
     } catch (e) { fail(res, e, 'add the change order'); }
   });
 
+  /**
+   * Delete a contract and everything under it — its change orders, lines,
+   * pay apps, payments and file records. Confirmed twice in the app. Stored
+   * files stay in Object Storage; only their records go.
+   */
+  app.delete('/api/cost-contracts/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [c] = await db.select().from(costContracts).where(eq(costContracts.id, id));
+      if (!c) return res.status(404).json({ message: 'Contract not found' });
+      await db.transaction(async (tx) => {
+        const appIds = (await tx.select({ id: costApplications.id }).from(costApplications)
+          .where(eq(costApplications.contractId, id))).map((a) => a.id);
+        if (appIds.length) {
+          await tx.delete(costApplicationLines).where(inArray(costApplicationLines.applicationId, appIds));
+          await tx.delete(costDocuments).where(inArray(costDocuments.applicationId, appIds));
+        }
+        await tx.delete(costPayments).where(eq(costPayments.contractId, id));
+        await tx.delete(costApplications).where(eq(costApplications.contractId, id));
+        await tx.delete(costSovLines).where(eq(costSovLines.contractId, id));
+        await tx.delete(costChangeOrders).where(eq(costChangeOrders.contractId, id));
+        await tx.delete(costDocuments).where(eq(costDocuments.contractId, id));
+        await tx.delete(costContracts).where(eq(costContracts.id, id));
+      });
+      console.log(`[cost] contract ${id} (${c.counterparty}) deleted by ${who(req)}`);
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'delete the contract'); }
+  });
+
+  /**
+   * Delete a change order and its lines. Refused when any of its lines has
+   * been billed — void it instead, so the billing history still adds up.
+   */
+  app.delete('/api/cost-change-orders/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const lineIds = (await db.select({ id: costSovLines.id }).from(costSovLines)
+        .where(eq(costSovLines.changeOrderId, id))).map((l) => l.id);
+      if (lineIds.length) {
+        const billed = await db.select({ id: costApplicationLines.id }).from(costApplicationLines)
+          .where(inArray(costApplicationLines.sovLineId, lineIds)).limit(1);
+        if (billed.length) {
+          return res.status(409).json({ message: 'This change order has been billed on a pay app, so it cannot be deleted. Set it to Void instead.' });
+        }
+      }
+      await db.transaction(async (tx) => {
+        if (lineIds.length) await tx.delete(costSovLines).where(inArray(costSovLines.id, lineIds));
+        await tx.delete(costChangeOrders).where(eq(costChangeOrders.id, id));
+      });
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'delete the change order'); }
+  });
+
   app.patch('/api/cost-change-orders/:id', ...canEdit, async (req, res) => {
     try {
       const id = intParam(req, 'id');

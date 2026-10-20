@@ -1,4 +1,5 @@
 import { COMPANY_NAME } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml } from './lib/report-shell';
 import { db } from './db';
 import { properties, executedLeases, propertyExistingImprovements, rfpRequests, transformers, mainPanels } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -113,6 +114,8 @@ function formatBayNumbersWithCount(bayNumbers: string): string {
 interface PropertySummaryData {
   properties: PropertyDetails[];
   generatedAt: string;
+  /** Who ran it, for the footer. Set by the caller. */
+  generatedBy?: string;
   rfpContext?: {
     rfpNumber: string;
     projectName: string;
@@ -582,13 +585,16 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Summary Report - All Properties</title>
     <style>
+        ${REPORT_SHELL_CSS}
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f5f7fa;
-            color: #333;
+            padding: 28px 32px;
+            background-color: #ffffff;
+            color: #111827;
+            font-size: 12px;
         }
+        @media print { body { padding: 0; } }
         
         .header {
             background: linear-gradient(135deg, ${BRAND_COLOR_PRIMARY_HEX} 0%, #0056b3 100%);
@@ -731,14 +737,24 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-          <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 28px; width: auto;" />
-        </div>
-        <h1>${data.rfpContext ? `RFP Property Summary - ${data.rfpContext.rfpNumber}` : 'Property Portfolio Summary Report'}</h1>
-        <div class="subtitle">${data.rfpContext ? `${data.rfpContext.projectName} | Tenant: ${data.rfpContext.tenantName}` : 'Comprehensive Property Information & Analysis'}</div>
-        <div class="subtitle">Generated: ${data.generatedAt}</div>
-    </div>
+    ${reportHeaderHtml(data.rfpContext
+      ? {
+          eyebrow: 'Portfolio Report',
+          title: 'Property Summary',
+          info: [
+            { label: 'Tenant', value: `${data.rfpContext.tenantName} (${data.rfpContext.rfpNumber})`, wide: true },
+            { label: 'Project', value: data.rfpContext.projectName },
+            { label: 'Properties', value: `${data.properties.length}` },
+          ],
+        }
+      : {
+          eyebrow: 'Portfolio Report',
+          title: 'Property Summary',
+          info: [
+            { label: 'Properties', value: `All properties (${data.properties.length})` },
+            { label: 'Shows', value: 'Headline figures for every property' },
+          ],
+        })}
 `;
 
   data.properties.forEach(property => {
@@ -956,10 +972,7 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
   });
 
   html += `
-    <div class="footer">
-        <p>Property Portfolio Summary Report | Generated: ${data.generatedAt}</p>
-        <p>© 2026 ${COMPANY_NAME} | All Rights Reserved</p>
-    </div>
+    ${reportFooterHtml({ generatedBy: data.generatedBy })}
 </body>
 </html>
 `;
@@ -967,13 +980,13 @@ function generatePropertySummaryHTML(data: PropertySummaryData): string {
   return html;
 }
 
-export async function generatePropertySummaryReport(options?: RfpOptions): Promise<string> {
+export async function generatePropertySummaryReport(options?: RfpOptions, generatedBy = ''): Promise<string> {
   console.log('Starting property summary report generation...', options ? 'in RFP mode' : 'for all properties');
   
   const data = await getPropertySummaryData(options);
   console.log(`Property summary data retrieved: ${data.properties.length} properties`);
   
-  const html = generatePropertySummaryHTML(data);
+  const html = generatePropertySummaryHTML({ ...data, generatedBy });
   console.log(`HTML generated, length: ${html.length}`);
   
   return html;

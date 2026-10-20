@@ -27,6 +27,7 @@ import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 import { parseIncludeArchived, applyArchiveFilter } from '@shared/rfp-archive';
 import { auditBudget, type BudgetAudit } from './budget-audit';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 
 // Re-exported: callers imported these from here before the audit moved out.
 export { auditBudget };
@@ -124,9 +125,9 @@ export function registerBudgetReconciliationReport(app: Express): void {
         const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Budget Reconciliation</title>
 <style>
-  body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
-  .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
-  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
+  ${REPORT_SHELL_CSS}
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+  @media print { body { padding: 0; } }
   .cards { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
   .card { flex: 1; min-width: 120px; border: 1px solid #ddd; border-radius: 5px; padding: 8px 10px; }
   .card .label { font-size: 10px; color: #666; text-transform: uppercase; }
@@ -146,16 +147,16 @@ export function registerBudgetReconciliationReport(app: Express): void {
   .explain { margin-top: 18px; padding: 10px 12px; background: #f1f5f9; border-radius: 4px; font-size: 11px; color: #334155; line-height: 1.5; }
   tr { page-break-inside: avoid; }
 </style></head><body>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height:30px;width:auto;" />
-    <div style="font-size:12px;color:#999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-  </div>
-  <div class="document-title">Budget Reconciliation</div>
-  <div class="report-subtitle">Saved grand total vs. the sum of its own line items</div>
-  ${archiveFilter.note
-    ? `<div class="report-subtitle">${escapeHtml(archiveFilter.note)}${
-        archiveFilter.included ? '' : ' Add ?includeArchived=true to see them.'}</div>`
-    : ''}
+  ${reportHeaderHtml({
+    eyebrow: 'Cost Report',
+    title: 'Budget Reconciliation',
+    info: [
+      { label: 'Shows', value: 'Saved grand total vs. the sum of its own line items', wide: true },
+    ],
+    notes: archiveFilter.note
+      ? [`${archiveFilter.note}${archiveFilter.included ? '' : ' Tick "Include archived" to see them.'}`]
+      : [],
+  })}
 
   <div class="cards">
     <div class="card"><div class="label">Budgets checked</div><div class="value">${audits.length}</div></div>
@@ -206,6 +207,7 @@ export function registerBudgetReconciliationReport(app: Express): void {
     This report reads only and changes nothing. A figure that has already gone to a tenant is not
     something to rewrite silently.
   </div>
+  ${reportFooterHtml({ generatedBy: generatedByName((req as any).user) })}
 </body></html>`;
 
         res.setHeader('Content-Type', 'text/html');

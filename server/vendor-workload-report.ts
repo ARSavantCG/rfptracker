@@ -6,6 +6,7 @@
  */
 
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml } from './lib/report-shell';
 import puppeteer from "puppeteer";
 import { storage } from "./storage";
 import { isArchivedRfp } from '@shared/rfp-archive';
@@ -35,6 +36,11 @@ export interface WorkloadReportData {
   totalArchitects: number;
   totalContractors: number;
   generatedAt: string;
+  /** Who ran it, for the footer. Set by the route; the data builder has no request. */
+  generatedBy?: string;
+  /** Which buildings, in words. */
+  scopeNote?: string;
+  incompleteOnly?: boolean;
   dateFilter?: {
     startDate?: string;
     endDate?: string;
@@ -252,7 +258,6 @@ export async function generateVendorWorkloadData(options: {
  * Generates HTML for the vendor workload report
  */
 export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
-  const logoBase64 = getBridgeLogo();
   
   return `
     <!DOCTYPE html>
@@ -261,11 +266,8 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       <meta charset="utf-8">
       <title>Vendor Workload Report</title>
       <style>
-        @page {
-          size: A4;
-          margin: 0.75in;
-        }
-        
+  ${REPORT_SHELL_CSS}
+
         @media print {
           .no-print {
             display: none !important;
@@ -278,13 +280,14 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
         }
         
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          font-size: 11px;
+          font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+          font-size: 12px;
           line-height: 1.4;
-          color: #1f2937;
+          color: #111827;
           margin: 0;
-          padding: 0;
+          padding: 28px 32px;
         }
+        @media print { body { padding: 0; } }
         
         .header {
           border-bottom: 3px solid ${BRAND_COLOR_PRIMARY};
@@ -466,29 +469,20 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
       </style>
     </head>
     <body>
-      <div class="header">
-        <div class="logo-container">
-          <div style="flex: 1;">
-            ${logoBase64 ? `<img src="data:image/png;base64,${logoBase64}" alt="Kurv Industrial" style="height: 30px; max-width: 200px;" />` : ''}
-          </div>
-          <div style="flex: 1; text-align: right; font-size: 10px; color: #666;">
-            <p style="margin: 0;">Generated: ${data.generatedAt}</p>
-          </div>
-        </div>
-        
-        <div class="document-title">Vendor Workload Report</div>
-        <div class="report-subtitle">
-          Architect & General Contractor RFP Summary
-        </div>
-      </div>
+      ${reportHeaderHtml({
+        eyebrow: 'People Report',
+        title: 'Vendor Workload Report',
+        info: [
+          { label: 'Shows', value: 'Architect & general contractor RFP summary' },
+          { label: 'Work', value: data.incompleteOnly ? 'Open work only' : 'All work' },
+          { label: 'Properties', value: data.scopeNote || 'All properties' },
+          { label: 'Dates', value: data.dateFilter
+              ? `${data.dateFilter.startDate ? `From ${data.dateFilter.startDate}` : 'All dates'}${data.dateFilter.endDate ? ` to ${data.dateFilter.endDate}` : ''}`
+              : 'All dates' },
+        ],
+      })}
       
-      ${data.dateFilter ? `
-      <div class="date-filter-info">
-        <strong>Date Filter Applied:</strong> 
-        ${data.dateFilter.startDate ? `From ${data.dateFilter.startDate}` : 'All dates'} 
-        ${data.dateFilter.endDate ? ` to ${data.dateFilter.endDate}` : ''}
-      </div>
-      ` : ''}
+
       
       <div class="summary-stats">
         <div class="stat">
@@ -593,7 +587,8 @@ export function generateVendorWorkloadHtml(data: WorkloadReportData): string {
         <p>Generated from RFP Tracker database on ${data.generatedAt}</p>
         <p>Report includes all Architect and General Contractor RFPs with vendor information</p>
       </div>
-    </body>
+      ${reportFooterHtml({ generatedBy: data.generatedBy })}
+</body>
     </html>
   `;
 }

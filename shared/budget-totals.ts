@@ -61,6 +61,73 @@ export function lineAmount(item: BudgetLine | null | undefined): number {
   return Number.isFinite(amount) ? amount : 0;
 }
 
+/** A line's full price, before any tenant share is applied. */
+export function fullLineAmount(item: BudgetLine | null | undefined): number {
+  if (!item) return 0;
+  const price = typeof item.totalPrice === 'number'
+    ? item.totalPrice
+    : parseFloat(String(item.totalPrice ?? '')) || 0;
+  return Number.isFinite(price) ? price : 0;
+}
+
+/**
+ * One line, split into what the tenant is billed and what is left over.
+ *
+ *   full        — what the work costs
+ *   tenant      — full × tenant share; this is what the grand total adds up
+ *   outstanding — the remainder: real money spent on the improvement that
+ *                 cannot be billed to the tenant (a shared demising wall at
+ *                 50% is the standing example)
+ *
+ * tenant + outstanding === full, always. Assembly-aware by the same rule as
+ * effectiveLineAmountWithHeads: a head is worth its children, a child under a
+ * head contributes nothing on its own, an orphan counts for itself.
+ *
+ * Exists because a report that reads totalPrice directly shows the full price
+ * of a shared line as if the tenant were paying all of it — and then totals
+ * to a figure that matches nothing on the evaluation screen.
+ */
+export interface LineSplit {
+  full: number;
+  tenant: number;
+  outstanding: number;
+}
+
+export function lineSplitWithHeads(
+  item: BudgetLine,
+  allItems: readonly BudgetLine[],
+  heads: Set<string>,
+): LineSplit {
+  const id = String(item?.id ?? '');
+  const own = (line: BudgetLine): LineSplit => {
+    const full = fullLineAmount(line);
+    const tenant = lineAmount(line);
+    return { full, tenant, outstanding: full - tenant };
+  };
+
+  if (heads.has(id)) {
+    return allItems
+      .filter((child) => child?.assemblyId && String(child.assemblyId) === id)
+      .map(own)
+      .reduce((acc, s) => ({
+        full: acc.full + s.full,
+        tenant: acc.tenant + s.tenant,
+        outstanding: acc.outstanding + s.outstanding,
+      }), { full: 0, tenant: 0, outstanding: 0 });
+  }
+
+  const parent = item?.assemblyId ? String(item.assemblyId) : '';
+  if (parent && heads.has(parent)) return { full: 0, tenant: 0, outstanding: 0 };
+
+  return own(item);
+}
+
+/** True when a line exists only as part of an assembly shown under its head. */
+export function isCoveredByHead(item: BudgetLine, heads: Set<string>): boolean {
+  const parent = item?.assemblyId ? String(item.assemblyId) : '';
+  return !!parent && heads.has(parent);
+}
+
 /** Ids that are assembly heads: declared as an assembly AND present as a line. */
 export function headIds(
   allItems: readonly BudgetLine[],

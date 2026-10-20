@@ -18,6 +18,7 @@ import { rfpRequests, properties } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
 import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
 
@@ -205,11 +206,11 @@ export function registerTurnaroundReport(app: Express) {
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>RFP Turnaround Report</title>
 <style>
-  body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
-  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
-  .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
+  ${REPORT_SHELL_CSS}
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+  @media print { body { padding: 0; } }
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
-  .cards { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .cards { display: flex; gap: 10px; margin-top: 0; flex-wrap: wrap; }
   .card { flex: 1; min-width: 130px; border: 1px solid #ddd; border-radius: 5px; padding: 8px 10px; }
   .card .label { font-size: 10px; color: #666; }
   .card .value { font-size: 20px; font-weight: bold; }
@@ -225,15 +226,14 @@ export function registerTurnaroundReport(app: Express) {
   .empty { padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 5px; margin-top: 12px; }
   tr { page-break-inside: avoid; }
 </style></head><body>
-  <div class="header">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-    <div class="document-title">RFP Turnaround Report</div>
-    <div class="report-subtitle">Internal Due Date vs. Actual Publish Date</div>
-    ${scopeIds === null ? '' : `<div class="report-subtitle">${escapeHtml(describePropertyScope(scopeIds, propRows as any))}</div>`}
-  </div>
+  ${reportHeaderHtml({
+    eyebrow: 'Pipeline Report',
+    title: 'RFP Turnaround Report',
+    info: [
+      { label: 'Properties', value: scopeIds === null ? 'All properties' : describePropertyScope(scopeIds, propRows as any) },
+      { label: 'Shows', value: 'Internal due date vs. actual publish date' },
+    ],
+  })}
 
   <div class="cards">
     <div class="card"><div class="label">On-time rate</div><div class="value">${onTimePct === null ? '—' : onTimePct + '%'}</div></div>
@@ -253,6 +253,7 @@ export function registerTurnaroundReport(app: Express) {
   ${section('In progress', open, 'Not yet due.')}
   ${section('Not measurable', unmeasurable,
       'Published before publish dates were recorded automatically (19 Aug 2026), or missing an internal due date. Excluded from the on-time rate rather than counted as misses.')}
+  ${reportFooterHtml({ generatedBy: generatedByName((req as any).user) })}
 </body></html>`;
 
       res.setHeader('Content-Type', 'text/html');

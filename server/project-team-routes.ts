@@ -16,6 +16,7 @@ import { requireAuth, requireAuthFlexible, checkPermission } from './middleware'
 import { parsePropertyScope, filterPropertiesByScope, describePropertyScope } from '@shared/property-scope';
 import { formatLeaseSuite } from '@shared/lease-utils';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -381,11 +382,11 @@ export function registerProjectTeamRoutes(app: Express) {
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Project Team Directory</title>
 <style>
-  body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
-  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
-  .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
+  ${REPORT_SHELL_CSS}
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+  @media print { body { padding: 0; } }
   .generated { text-align: right; color: #666; font-size: 10px; margin-top: 6px; }
-  .summary { margin-top: 10px; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
+  .summary { margin-top: 0; padding: 8px 10px; background: #eef2f9; border-radius: 4px; font-size: 11px; }
   .park { margin-top: 22px; }
   .park-head { font-size: 16px; font-weight: bold; color: #fff; background: ${BRAND_COLOR_PRIMARY}; padding: 6px 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: baseline; }
   .park-count { font-size: 10px; font-weight: normal; opacity: 0.9; }
@@ -403,14 +404,14 @@ export function registerProjectTeamRoutes(app: Express) {
   .pill { font-size: 9px; font-weight: normal; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 1px 7px; vertical-align: middle; }
   .pill.na { background: #eef2f9; color: #1e3a5f; border-color: #b6c6dd; }
 </style></head><body>
-  <div class="header">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-    <div class="document-title">Project Team Directory</div>
-    <div class="report-subtitle">Who is working on each executed lease</div>
-  </div>
+  ${reportHeaderHtml({
+    eyebrow: 'People Report',
+    title: 'Project Team Directory',
+    info: [
+      { label: 'Properties', value: scopeIds === null ? 'All properties' : describePropertyScope(scopeIds, propRows as any) },
+      { label: 'Shows', value: 'Who is working on each executed lease' },
+    ],
+  })}
   <div class="summary">
     <strong>${scopedProps.length}</strong> building${scopedProps.length === 1 ? '' : 's'} ·
     <strong>${allLeases}</strong> executed lease${allLeases === 1 ? '' : 's'} ·
@@ -421,6 +422,7 @@ export function registerProjectTeamRoutes(app: Express) {
   ${scopedProps.length === 0
     ? `<div class="empty">No properties on record.</div>`
     : sections}
+  ${reportFooterHtml({ generatedBy: generatedByName((req as any).user) })}
 </body></html>`;
 
       res.setHeader('Content-Type', 'text/html');

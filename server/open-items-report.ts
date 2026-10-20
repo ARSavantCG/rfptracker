@@ -15,6 +15,7 @@ import { rfpRequests, properties, WORKFLOW_PHASE_LABELS } from '@shared/schema';
 import { asc } from 'drizzle-orm';
 import { requireAuthFlexible } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 import { parsePropertyScope, describePropertyScope } from '@shared/property-scope';
 import { parseIncludeArchived, isArchivedRfp } from '@shared/rfp-archive';
 
@@ -175,10 +176,10 @@ export function registerOpenItemsReport(app: Express) {
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Open Items</title>
 <style>
-  body { font-family: Calibri, Arial, sans-serif; margin: 24px; color: #222; font-size: 12px; }
-  .document-title { font-size: 22px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
-  .report-subtitle { text-align: center; color: #666; font-size: 12px; margin-top: 4px; }
-  .cards { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  ${REPORT_SHELL_CSS}
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+  @media print { body { padding: 0; } }
+  .cards { display: flex; gap: 10px; margin-top: 0; flex-wrap: wrap; }
   .card { flex: 1; min-width: 110px; border: 1px solid #ddd; border-radius: 5px; padding: 8px 10px; }
   .card .label { font-size: 10px; color: #666; }
   .card .value { font-size: 20px; font-weight: bold; }
@@ -197,15 +198,14 @@ export function registerOpenItemsReport(app: Express) {
   .empty { padding: 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 5px; margin-top: 12px; }
   tr { page-break-inside: avoid; }
 </style></head><body>
-  <div class="header">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-    <div class="document-title">Open Items</div>
-    <div class="report-subtitle">Everything still in flight, by route</div>
-    ${scopeIds === null ? '' : `<div class="report-subtitle">${escapeHtml(describePropertyScope(scopeIds, propRows as any))}</div>`}
-  </div>
+  ${reportHeaderHtml({
+    eyebrow: 'Pipeline Report',
+    title: 'Open Items',
+    info: [
+      { label: 'Properties', value: scopeIds === null ? 'All properties' : describePropertyScope(scopeIds, propRows as any) },
+      { label: 'Shows', value: 'Everything still in flight, by route' },
+    ],
+  })}
 
   <div class="cards">
     <div class="card"><div class="label">Open</div><div class="value">${withAge.length}</div></div>
@@ -222,6 +222,7 @@ export function registerOpenItemsReport(app: Express) {
       ${routeBlock('ROM Pilot — self-served', 'rom_pilot', 'Priced against the database by the leasing team.')}
       ${routeBlock('Allowance deals', 'allowance', 'Allowance deals close on creation, so anything here was started and not finished.')}
     `}
+  ${reportFooterHtml({ generatedBy: generatedByName((req as any).user) })}
 </body></html>`;
 
       res.setHeader('Content-Type', 'text/html');

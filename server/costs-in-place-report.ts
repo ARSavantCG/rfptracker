@@ -13,6 +13,7 @@
 // divides by 100 exactly once, here, at the edge.
 
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuth } from './middleware';
@@ -245,18 +246,17 @@ function renderPropertySection(property: Property, improvements: PropertyExistin
     </div>`;
 }
 
-function renderReportHtml(title: string, subtitle: string, sections: string[], portfolioSummary?: string): string {
+function renderReportHtml(title: string, subtitle: string, sections: string[], portfolioSummary?: string, generatedBy = ''): string {
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>${escapeHtml(title)}</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; margin: 20px; color: #333; }
-    .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; }
-    .document-title { font-size: 24px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
-    .report-subtitle { font-size: 16px; color: #666; text-align: center; }
-    .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+  ${REPORT_SHELL_CSS}
+    body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+    @media print { body { padding: 0; } }
+    .summary { background: #f8f9fa; padding: 10px 12px; border-radius: 5px; margin: 0 0 14px; }
     .property-section { margin-bottom: 34px; page-break-inside: avoid; }
     .property-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #eee; padding-bottom: 6px; margin-bottom: 8px; }
     .property-title { font-size: 17px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; }
@@ -268,23 +268,23 @@ function renderReportHtml(title: string, subtitle: string, sections: string[], p
     .sf { text-align: right; white-space: nowrap; }
     .total-row td { background: #eef2f9; border-top: 2px solid ${BRAND_COLOR_PRIMARY}; }
     @media print {
-      body { margin: 10px; }
       .property-section { page-break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-    <div class="document-title">${escapeHtml(title)}</div>
-    <div class="report-subtitle">${escapeHtml(subtitle)}</div>
-  </div>
+  ${reportHeaderHtml({
+    eyebrow: 'Cost Report',
+    title: 'Costs in Place',
+    info: [
+      { label: 'Properties', value: subtitle },
+      { label: 'Shows', value: 'Improvements already built into each building' },
+    ],
+  })}
   ${portfolioSummary || ''}
   ${sections.join('\n')}
   <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
+  ${reportFooterHtml({ generatedBy })}
 </body>
 </html>`;
 }
@@ -317,6 +317,8 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
           'Costs-in-Place Report',
           property.displayName || property.propertyName,
           [section],
+          undefined,
+          generatedByName((req as any).user),
         );
         res.setHeader('Content-Type', 'text/html');
         return res.send(html);
@@ -367,6 +369,7 @@ export function registerCostsInPlaceReportRoutes(app: Express): void {
         describePropertyScope(scopeIds, allProperties as any),
         sections,
         portfolioSummary,
+        generatedByName((req as any).user),
       );
       res.setHeader('Content-Type', 'text/html');
       return res.send(html);

@@ -24,6 +24,7 @@ import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
 import type { Property, ExecutedLease, BayConfiguration } from '@shared/schema';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 import { derivePropertyRentableSf, deriveOccupiedSf } from './occupancy-report';
 import {
   parsePropertyScope,
@@ -151,7 +152,7 @@ export function totalOf(rows: BuildingRow[]) {
 
 type Totals = ReturnType<typeof totalOf>;
 
-export function renderHtml(groups: Array<{ name: string; rows: BuildingRow[] }>, scopeNote: string): string {
+export function renderHtml(groups: Array<{ name: string; rows: BuildingRow[] }>, scopeNote: string, generatedBy = ''): string {
   const allRows = groups.flatMap((g) => g.rows);
   const grand = totalOf(allRows);
   const multi = allRows.length > 1;
@@ -223,17 +224,16 @@ export function renderHtml(groups: Array<{ name: string; rows: BuildingRow[] }>,
 <html><head><meta charset="utf-8">
 <title>Portfolio Report — ${COMPANY_NAME}</title>
 <style>
+  ${REPORT_SHELL_CSS}
   @media print {
     .no-print { display: none !important; }
     @page { margin: 0.4in; size: landscape; }
     body { font-size: 10px; }
   }
-  body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 20px; line-height: 1.4; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; color: #111827; margin: 0; padding: 28px 32px; line-height: 1.4; }
+  @media print { body { padding: 0; } }
   .no-print { background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 12px; text-align: center; margin-bottom: 20px; border-radius: 8px; font-size: 13px; }
-  .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 18px; margin-bottom: 24px; }
-  .document-title { font-size: 26px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: #fff; padding: 10px; border-radius: 5px; text-align: center; }
-  .subtitle { font-size: 15px; color: #666; margin: 6px 0 0; text-align: center; }
-  .cards { display: flex; gap: 10px; margin-bottom: 26px; flex-wrap: wrap; }
+  .cards { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
   .card { flex: 1; min-width: 120px; border: 1px solid #ddd; border-radius: 6px; padding: 10px 12px; background: #f9fafb; }
   .card .label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .03em; }
   .card .value { font-size: 20px; font-weight: bold; color: #1f2937; }
@@ -262,14 +262,14 @@ export function renderHtml(groups: Array<{ name: string; rows: BuildingRow[] }>,
   <br><small>Set the layout to Landscape. This banner will not appear in the printed version.</small>
 </div>
 
-<div class="header">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-    <img src="${getBridgeLogo()}" alt="${COMPANY_NAME}" style="height: 30px; width: auto;" />
-    <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-  </div>
-  <div class="document-title">Portfolio Report</div>
-  <div class="subtitle">${escapeHtml(scopeNote)}</div>
-</div>
+${reportHeaderHtml({
+  eyebrow: 'Portfolio Report',
+  // The eyebrow already says Portfolio; the banner says what is in it.
+  title: 'Area, Parking & Availability',
+  info: [
+    { label: 'Properties', value: scopeNote, wide: true },
+  ],
+})}
 
 <div class="cards">
   <div class="card"><div class="label">Rentable Area</div><div class="value">${fmtSf(grand.rentableSf)} <span class="unit">SF</span></div></div>
@@ -343,6 +343,7 @@ export function renderHtml(groups: Array<{ name: string; rows: BuildingRow[] }>,
   ${anyTemporary ? 'Temporary access and licence agreements are counted as allocated and flagged in the tenant column.' : ''}
 </div>
 
+  ${reportFooterHtml({ generatedBy })}
 </body></html>`;
 }
 
@@ -362,8 +363,10 @@ export function registerPortfolioReportRoutes(app: Express): void {
       // so links and pins made before multi-select keep working unchanged.
       const scopeIds = parsePropertyScope(req.query || {}, properties as any);
       const scoped = filterPropertiesByScope(properties as any, scopeIds) as typeof properties;
+      // The header's Shows row already says what is measured, so the scope
+      // line only has to say which buildings.
       const scopeNote = scopeIds === null
-        ? 'All Buildings — Area, Parking and Availability'
+        ? 'All buildings'
         : describePropertyScope(scopeIds, properties as any);
 
       const rows = scoped.map((p) => buildRow(p, leasesByProperty[p.id] || []));
@@ -392,7 +395,7 @@ export function registerPortfolioReportRoutes(app: Express): void {
       }
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(renderHtml(groups, scopeNote));
+      res.send(renderHtml(groups, scopeNote, generatedByName((req as any).user)));
     } catch (error) {
       console.error('[portfolio-report] failed:', error);
       const message = error instanceof Error ? error.message : String(error);

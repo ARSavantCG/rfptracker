@@ -8,6 +8,7 @@
 // total (same helper the Costs-in-Place report uses).
 
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, generatedByName } from './lib/report-shell';
 import type { Express } from 'express';
 import { storage } from './storage';
 import { requireAuthFlexible } from './middleware';
@@ -191,7 +192,7 @@ function occupancyColor(pct: number): string {
   return '#991b1b'; // red
 }
 
-export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = ''): string {
+export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = '', generatedBy = ''): string {
   const totalRentable = rows.reduce((s, r) => s + r.rentableSf, 0);
   const totalOccupied = rows.reduce((s, r) => s + r.occupiedSf, 0);
   const totalVacant = Math.max(totalRentable - totalOccupied, 0);
@@ -251,11 +252,10 @@ export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = ''):
   <meta charset="utf-8">
   <title>Occupancy Report — Portfolio</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; margin: 20px; color: #333; }
-    .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; }
-    .document-title { font-size: 24px; font-weight: bold; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
-    .report-subtitle { font-size: 16px; color: #666; text-align: center; }
-    .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; display: flex; justify-content: space-around; text-align: center; }
+    body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 28px 32px; color: #111827; font-size: 12px; }
+    @media print { body { padding: 0; } }
+    ${REPORT_SHELL_CSS}
+    .summary { background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 0 0 12px; display: flex; justify-content: space-around; text-align: center; }
     .summary .metric { font-size: 26px; font-weight: bold; }
     .summary .label { font-size: 12px; color: #666; text-transform: uppercase; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 10px 0; }
@@ -274,19 +274,17 @@ export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = ''):
     .total-row td { background: #eef2f9; border-top: 2px solid ${BRAND_COLOR_PRIMARY}; font-weight: bold; }
     /* Keep a property and its leases together across page breaks where possible. */
     tr { page-break-inside: avoid; }
-    @media print { body { margin: 10px; } }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-      <div style="font-size: 12px; color: #999;">Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-    </div>
-    <div class="document-title">Occupancy Report</div>
-    ${scopeLabel ? `<div style="text-align:center;color:#666;font-size:12px;margin-top:4px;">${escapeHtml(scopeLabel)}</div>` : ''}
-    <div class="report-subtitle">Portfolio — Leased vs. Rentable Area</div>
-  </div>
+  ${reportHeaderHtml({
+    eyebrow: 'Portfolio Report',
+    title: 'Occupancy Report',
+    info: [
+      { label: 'Properties', value: scopeLabel || 'All properties' },
+      { label: 'Shows', value: 'Leased vs. rentable area' },
+    ],
+  })}
 
   <div class="summary">
     <div>
@@ -337,6 +335,7 @@ export function renderReportHtml(rows: PropertyOccupancyRow[], scopeLabel = ''):
     </tbody>
   </table>
   <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
+  ${reportFooterHtml({ generatedBy })}
 </body>
 </html>`;
 }
@@ -394,7 +393,7 @@ export function registerOccupancyReportRoutes(app: Express): void {
       );
       const rows = sorted.map((p) => computeRow(p, byProperty[p.id] || []));
       res.setHeader('Content-Type', 'text/html');
-      res.send(renderReportHtml(rows, scopeIds === null ? '' : describePropertyScope(scopeIds, allProperties as any)));
+      res.send(renderReportHtml(rows, scopeIds === null ? '' : describePropertyScope(scopeIds, allProperties as any), generatedByName((req as any).user)));
     } catch (error) {
       console.error('Occupancy report error:', error);
       res.status(500).json({ message: 'Failed to generate occupancy report' });

@@ -1,4 +1,5 @@
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY } from './lib/branding';
+import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml } from './lib/report-shell';
 import puppeteer from "puppeteer";
 import { db } from "./db";
 import { rfpRequests, bidCollections, bidLineItems } from "@shared/schema";
@@ -12,6 +13,8 @@ export interface HistoricalPricingData {
   generatedAt: string;
   totalProjects: number;
   totalBids: number;
+  /** Who ran it, for the footer. Set by the caller. */
+  generatedBy?: string;
 }
 
 export interface CompletedProject {
@@ -211,11 +214,8 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
     <head>
       <meta charset="utf-8">
       <style>
-        @page {
-          size: A4 portrait;
-          margin: 0.5in;
-        }
-        
+  ${REPORT_SHELL_CSS}
+
         @media print {
           .no-print {
             display: none !important;
@@ -237,12 +237,14 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         }
         
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          font-size: 11px;
-          line-height: 1.3;
+          font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+          font-size: 12px;
+          line-height: 1.35;
           margin: 0;
-          color: #333;
+          padding: 28px 32px;
+          color: #111827;
         }
+        @media print { body { padding: 0; } }
         
         .header {
           border-bottom: 3px solid ${BRAND_COLOR_PRIMARY};
@@ -460,15 +462,14 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
         <br><small>This banner will not appear in the printed version.</small>
       </div>
       
-      <div class="header">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-          <!-- Company logo -->
-          <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-        </div>
-        <div class="document-title">Historical Pricing Report</div>
-        <div class="subtitle">Completed RFP Projects - Pricing Analysis</div>
-        <div class="subtitle">Generated on ${data.generatedAt}</div>
-      </div>
+      ${reportHeaderHtml({
+        eyebrow: 'Pipeline Report',
+        title: 'Historical Pricing Report',
+        info: [
+          { label: 'Shows', value: 'Completed projects — pricing analysis' },
+          { label: 'Projects', value: `${data.totalProjects} completed, ${data.totalBids} bids` },
+        ],
+      })}
       
       ${data.completedProjects.length > 0 ? `
         
@@ -537,12 +538,13 @@ function generateHistoricalPricingHtml(data: HistoricalPricingData): string {
       <div class="footer">
         Historical Pricing Report - Generated ${data.generatedAt} - Page 1
       </div>
-    </body>
+      ${reportFooterHtml({ generatedBy: data.generatedBy })}
+</body>
     </html>
   `;
 }
 
-export async function generateHistoricalPricingPdf(): Promise<Buffer> {
+export async function generateHistoricalPricingPdf(generatedBy = ''): Promise<Buffer> {
   try {
     console.log("Starting historical pricing HTML generation...");
     const data = await getHistoricalPricingData();
@@ -551,7 +553,7 @@ export async function generateHistoricalPricingPdf(): Promise<Buffer> {
       totalBids: data.totalBids 
     });
     
-    const html = generateHistoricalPricingHtml(data);
+    const html = generateHistoricalPricingHtml({ ...data, generatedBy });
     console.log("HTML generated, length:", html.length);
 
     // Always return HTML for browser-based PDF generation in new window

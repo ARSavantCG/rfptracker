@@ -81,7 +81,8 @@ import { registerBudgetReconciliationReport } from './budget-reconciliation-repo
 import { registerItbSendRoutes } from './itb-send';
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
-import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
+import { parsePropertyScope, propertyInScope, describePropertyScope } from '@shared/property-scope';
+import { generatedByName, REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml } from './lib/report-shell';
 import { parseIncludeArchived, isArchivedRfp, canArchiveRfp, isActiveRfp, ARCHIVED_STATUS } from '@shared/rfp-archive';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
@@ -4586,6 +4587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // a property NAME, so `"9" === "Kurv Doral II"` was never true: filtering
       // by property returned an empty report every single time.
       //
+      // For the report header: which buildings, in words.
+      let execScopeLabel = 'All properties';
       // resolveScope speaks ids, still understands a legacy name by expanding
       // it to every id under that name (which is also how a whole park is
       // selected), and accepts ?propertyIds=1,9,10 for several buildings.
@@ -4595,6 +4598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         if (scope.ids !== null) {
           rfpData = rfpData.filter(rfp => scope.includes(rfp.property));
+          execScopeLabel = describePropertyScope(scope.ids, await storage.getAllProperties() as any);
         }
         // Archived RFPs drop out unless asked for: archiving means stop
         // showing me this, and it has to mean that everywhere.
@@ -4621,14 +4625,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <meta charset="utf-8">
           <title>Executive Summary Report</title>
           <style>
-            @page { size: A4 landscape; margin: 0.5in; }
-            @media print { .no-print { display: none !important; } }
-            body { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin: 0; }
-            .no-print { background: #3b82f6; color: white; padding: 15px; text-align: center; margin-bottom: 20px; border-radius: 8px; }
-            .header { border-bottom: 3px solid ${BRAND_COLOR_PRIMARY}; padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-            .document-title { font-size: 24px; font-weight: bold; color: ${BRAND_COLOR_PRIMARY}; margin-bottom: 10px; background: ${BRAND_COLOR_PRIMARY}; color: white; padding: 10px; border-radius: 5px; text-align: center; }
-            .header .subtitle { font-size: 14px; color: #666; margin: 5px 0; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            ${REPORT_SHELL_CSS}
+            @page { size: Letter landscape; margin: 0.5in; }
+            @media print { .no-print { display: none !important; } body { padding: 0; } }
+            body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; margin: 0; padding: 28px 32px; color: #111827; }
+            .no-print { background: #3b82f6; color: white; padding: 12px; text-align: center; margin-bottom: 16px; border-radius: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 0; }
             th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
             th { background: #f9fafb; font-weight: 600; }
             th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), th:nth-child(9) { text-align: center; }
@@ -4664,14 +4666,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <br><small>This banner will not appear in the printed version.</small>
           </div>
           
-          <div class="header">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-              <!-- Company logo -->
-              <img src="${getBridgeLogo()}" alt="Kurv Industrial" style="height: 30px; width: auto;" />
-            </div>
-            <div class="document-title">Executive Summary Report</div>
-            <div class="subtitle">RFP Status Overview - Generated on ${new Date().toLocaleDateString()}</div>
-          </div>
+          ${reportHeaderHtml({
+            eyebrow: 'Pipeline Report',
+            title: 'Executive Summary',
+            info: [
+              { label: 'Properties', value: execScopeLabel },
+              { label: 'Status', value: filters.status && filters.status !== 'all' ? String(filters.status).replace('-', ' ') : 'Every status' },
+              { label: 'Due within', value: filters.dueInDays && filters.dueInDays !== 'all' ? `${filters.dueInDays} days` : 'Any time' },
+              { label: 'RFPs', value: String(rfpData.length) },
+            ],
+            notes: parseIncludeArchived(req.query) ? [] : ['Archived RFPs are not included.'],
+          })}
           
           <table>
             <thead>
@@ -4853,6 +4858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </table>
           
           ${(rfpData || []).length === 0 ? '<p style="text-align: center; margin-top: 40px; color: #6b7280;">No RFPs found matching the current filters.</p>' : ''}
+          ${reportFooterHtml({ generatedBy: generatedByName((req as any).user) })}
         </body>
         </html>
       `;
@@ -6030,6 +6036,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { generateVendorWorkloadData, generateVendorWorkloadHtml } = await import('./vendor-workload-report');
       
       const data = await generateVendorWorkloadData(options);
+      data.generatedBy = generatedByName((req as any).user);
+      data.incompleteOnly = !!options.incompleteOnly;
+      data.scopeNote = options.propertyIds === null
+        ? 'All properties'
+        : describePropertyScope(options.propertyIds, await storage.getAllProperties() as any);
       const html = await generateVendorWorkloadHtml(data);
       
       res.setHeader('Content-Type', 'text/html');
@@ -6686,7 +6697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/historical", requireAuth, async (req, res) => {
     try {
       const { generateHistoricalPricingPdf } = await import("./historical-pricing-reports");
-      const pdfBuffer = await generateHistoricalPricingPdf();
+      const pdfBuffer = await generateHistoricalPricingPdf(generatedByName((req as any).user));
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('Content-Disposition', 'inline; filename="historical-pricing-report.html"');
       res.send(pdfBuffer);
@@ -6703,7 +6714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rfpId = req.query.rfpId as string;
       const propertyId = req.query.propertyId as string;
       const options = rfpId ? { rfpId: parseInt(rfpId), propertyId: propertyId ? parseInt(propertyId) : undefined } : undefined;
-      const html = await generatePropertySummaryReport(options);
+      const html = await generatePropertySummaryReport(options, generatedByName((req as any).user));
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('Content-Disposition', 'inline; filename="property-summary-report.html"');
       res.send(html);

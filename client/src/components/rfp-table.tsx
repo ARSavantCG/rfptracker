@@ -206,6 +206,10 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
       const params = new URLSearchParams();
       if (searchQuery) params.append("search", searchQuery);
       if (statusFilter) params.append("status", statusFilter);
+      // "All" means all. Without this the endpoint falls back to its old
+      // behaviour of hiding archived work, and the All pill would show less
+      // than the Archived pill does.
+      if (!statusFilter) params.append("include_archived", "true");
       
       const response = await fetch(`/api/rfp-requests?${params}`, {
         credentials: 'include',

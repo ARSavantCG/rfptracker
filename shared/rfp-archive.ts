@@ -51,6 +51,27 @@ export function isArchivedRfp(record: ArchivableRecord | string | null | undefin
 }
 
 /**
+ * The statuses that count as live work.
+ *
+ * Completed is in here on purpose: a finished project is still on the desk
+ * until someone files it. Cancelled is not — a dead pursuit is not work.
+ */
+export const ACTIVE_RFP_STATUSES = ['received', 'in-progress', 'completed'] as const;
+
+/**
+ * Is this RFP live work?
+ *
+ * Both halves matter. A completed RFP that has been archived is no longer
+ * active, which is the whole reason for archiving it, and a cancelled one
+ * never was.
+ */
+export function isActiveRfp(record: ArchivableRecord | null | undefined): boolean {
+  if (!record || isArchivedRfp(record)) return false;
+  const status = String(record.status ?? '').trim().toLowerCase();
+  return (ACTIVE_RFP_STATUSES as readonly string[]).includes(status);
+}
+
+/**
  * Can this RFP be archived?
  *
  * Only something finished. Archiving live work hides it from the very lists

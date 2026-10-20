@@ -70,7 +70,14 @@ export default function Dashboard() {
   const { isAdmin } = usePermissions();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  // "active" rather than "" — the list opens on live work.
+  //
+  // The default used to be everything-except-archived, which only worked
+  // while archiving overwrote the status. Now that a record keeps its own
+  // status when filed, "everything" quietly meant "everything", and archived
+  // projects stayed on screen. Active says what it means: received, in
+  // progress or completed, and not filed away.
+  const [statusFilter, setStatusFilter] = useState("active");
   // Responsible-party filter (2026-07-21): '' | 'rom' | 'development' | 'mine'.
   // Answers "who's picking this up?" without opening each RFP.
   const [responsibleFilter, setResponsibleFilter] = useState("");
@@ -255,7 +262,9 @@ export default function Dashboard() {
 
   const clearFilters = () => {
     setSearchQuery("");
-    setStatusFilter("");
+    // Back to the default view, which is Active — not All. Clearing filters
+    // should not quietly widen the list to include archived work.
+    setStatusFilter("active");
     setResponsibleFilter("");
     setDateFrom("");
     setDateTo("");
@@ -582,9 +591,17 @@ export default function Dashboard() {
                 />
               </div>
 
-              {/* Status pills */}
+              {/* Status pills. Active first, because it is the view you want
+                  nine times out of ten; All genuinely means all, archived
+                  and cancelled included. */}
+              <button
+                onClick={() => setStatusFilter("active")}
+                title="Received, in progress and completed — everything still on the desk"
+                className={`px-2.5 py-1 text-xs rounded transition-all ${statusFilter === "active" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
+              >Active</button>
               <button
                 onClick={() => setStatusFilter("")}
+                title="Everything, including cancelled and archived"
                 className={`px-2.5 py-1 text-xs rounded transition-all ${statusFilter === "" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >All</button>
               <button
@@ -642,7 +659,7 @@ export default function Dashboard() {
                   onChange={(e) => setDateTo(e.target.value)}
                   className="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                {(searchQuery || statusFilter || responsibleFilter || dateFrom || dateTo) && (
+                {(searchQuery || statusFilter !== "active" || responsibleFilter || dateFrom || dateTo) && (
                   <button
                     onClick={clearFilters}
                     className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"

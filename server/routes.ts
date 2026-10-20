@@ -82,7 +82,7 @@ import { registerItbSendRoutes } from './itb-send';
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
 import { parsePropertyScope, propertyInScope } from '@shared/property-scope';
-import { parseIncludeArchived, isArchivedRfp, canArchiveRfp, ARCHIVED_STATUS } from '@shared/rfp-archive';
+import { parseIncludeArchived, isArchivedRfp, canArchiveRfp, isActiveRfp, ARCHIVED_STATUS } from '@shared/rfp-archive';
 import { registerAiRoutes } from './ai-routes';
 import { registerIntakeParserRoutes } from './intake-parser-routes';
 import { registerProposalsRoutes } from './proposals-routes';
@@ -601,21 +601,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { search, status, include_archived } = req.query;
       
+      // Two pseudo-statuses the client can ask for, neither of which is a
+      // value in the column:
+      //
+      //   active   — live work: received, in progress or completed, and not
+      //              filed away. The default view.
+      //   archived — filed, however it was filed. Archiving is a timestamp
+      //              now, so an archived record keeps its own status; asking
+      //              the database for status='archived' finds only the rows
+      //              archived under the old scheme. That is exactly why
+      //              newly archived RFPs kept showing up in the main list.
+      //
+      // Everything else is a real status and goes to the database as one.
+      const wanted = String(status ?? '').trim().toLowerCase();
+      const isPseudo = wanted === 'active' || wanted === 'archived';
+
       let requests;
       if (search) {
         requests = await storage.searchRfpRequests(search as string);
-        // Exclude archived from search results unless specifically searching for archived
-        if (status !== "archived" && !include_archived) {
-          requests = requests.filter(r => r.status !== "archived");
-        }
-      } else if (status) {
+      } else if (status && !isPseudo) {
         requests = await storage.filterRfpRequestsByStatus(status as string);
       } else {
-        // Default view: get all RFPs except archived (unless include_archived is true)
         requests = await storage.getAllRfpRequests();
-        if (!include_archived) {
-          requests = requests.filter(r => r.status !== "archived");
-        }
+      }
+
+      if (wanted === 'active') {
+        requests = requests.filter(r => isActiveRfp(r as any));
+      } else if (wanted === 'archived') {
+        requests = requests.filter(r => isArchivedRfp(r as any));
+      } else if (!include_archived && !status) {
+        // No status asked for at all. Historically this meant "everything
+        // except archived"; the All pill now wants everything, and sends
+        // include_archived, so this only covers older callers.
+        requests = requests.filter(r => !isArchivedRfp(r as any));
+      } else if (search && !include_archived && wanted !== 'archived') {
+        requests = requests.filter(r => !isArchivedRfp(r as any));
       }
       
       // Fetch LIVE bay data from properties for all RFPs (single source of truth)

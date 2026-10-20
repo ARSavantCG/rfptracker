@@ -273,6 +273,12 @@ export function budgetVsActual(input: {
   lines: readonly SovLine[];
   changeOrders: readonly ChangeOrder[];
   applications: readonly Application[];
+  /**
+   * Costs with no contract behind them — a permit fee on the card, parking.
+   * Committed and spent the moment they are paid, on the budget line chosen,
+   * or Unallocated if none is.
+   */
+  directCosts?: ReadonlyArray<{ key: string | null; amount: number }>;
 }): BudgetVsActual {
   const baseline = input.baseline || [];
   const validKeys = new Set(baseline.map((b) => b.key));
@@ -296,6 +302,15 @@ export function budgetVsActual(input: {
   const pending = allocOver(pendingLines, sv(pendingLines));
   const toDate = allocOver(live, new Map<number, number>(Array.from(progress).map(([id, p]) => [id, p.toDate] as [number, number])));
   const retainage = allocOver(live, new Map<number, number>(Array.from(progress).map(([id, p]) => [id, p.retainage] as [number, number])));
+  let directTotal = 0;
+  for (const d of input.directCosts || []) {
+    const amt = n(d.amount);
+    if (amt === 0) continue;
+    const k = d.key && validKeys.has(d.key) ? d.key : UNALLOCATED_KEY;
+    committed.set(k, (committed.get(k) ?? 0) + amt);
+    toDate.set(k, (toDate.get(k) ?? 0) + amt);
+    directTotal += amt;
+  }
 
   const row = (key: string, description: string, bucket: string, budget: number, pct: number): BudgetVsActualRow => {
     const c = round2(committed.get(key) ?? 0);
@@ -327,8 +342,8 @@ export function budgetVsActual(input: {
     retainageHeld: sum('retainageHeld'), variance: sum('variance'),
     committedTenant: sum('committedTenant'), committedOutstanding: sum('committedOutstanding'),
   };
-  const contractCommitted = round2(committedLines.reduce((s, l) => s + n(l.scheduledValue), 0));
-  const contractToDate = round2(live.reduce((s, l) => s + (progress.get(l.id)?.toDate ?? 0), 0));
+  const contractCommitted = round2(committedLines.reduce((s, l) => s + n(l.scheduledValue), 0) + directTotal);
+  const contractToDate = round2(live.reduce((s, l) => s + (progress.get(l.id)?.toDate ?? 0), 0) + directTotal);
   return {
     rows, totals, contractCommitted, contractToDate,
     reconciles: Math.abs(totals.committed - contractCommitted) < 0.02

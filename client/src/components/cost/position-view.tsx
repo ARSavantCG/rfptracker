@@ -78,6 +78,14 @@ export function PositionView({ bundle, projectId, onPay }: {
                 <D v={c.owed} tone={owedTone(c.owed)} /><D v={c.leftToPay} />
               </tr>
             ))}
+            {p.direct.count > 0 && (
+              <tr className="border-b last:border-0">
+                <td className="px-3 py-1.5">Direct costs <span className="text-xs text-gray-500">({p.direct.count} on the ledger)</span></td>
+                <D v={p.direct.total} /><D v={p.direct.total} />
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">100.0%</td>
+                <D v={0} /><D v={p.direct.total} /><D v={p.direct.total} /><D v={0} tone="text-green-700" /><D v={0} />
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-gray-800 font-semibold">

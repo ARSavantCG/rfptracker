@@ -2361,6 +2361,7 @@ export const costDocuments = pgTable("cost_documents", {
   applicationId: integer("application_id"),
   contractId: integer("contract_id"),
   changeOrderId: integer("change_order_id"),
+  directCostId: integer("direct_cost_id"),
   originalName: text("original_name").notNull(),
   mimeType: text("mime_type"),
   sizeBytes: integer("size_bytes"),
@@ -2381,11 +2382,34 @@ export const costPayments = pgTable("cost_payments", {
   amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
   paidDate: timestamp("paid_date").notNull(),
   reference: text("reference"),               // check or wire number
+  method: text("method"),                     // check | wire | ach | card | other
+  reconciled: boolean("reconciled").notNull().default(false),
   notes: text("notes"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_payments_contract_idx").on(t.contractId)]);
 
+/**
+ * A cost with no contract behind it: the permit fee on the card, parking,
+ * reprographics, a utility deposit. Paid when it is entered.
+ */
+export const costDirectCosts = pgTable("cost_direct_costs", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  date: timestamp("date").notNull(),
+  vendor: text("vendor").notNull(),
+  description: text("description").notNull().default(""),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  method: text("method"),                     // card | check | ach | wire | other
+  reference: text("reference"),               // last 4, check number, confirmation
+  baselineKey: text("baseline_key"),          // budget line; null = Unallocated
+  reconciled: boolean("reconciled").notNull().default(false),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_direct_costs_project_idx").on(t.projectId)]);
+
+export type CostDirectCost = typeof costDirectCosts.$inferSelect;
 export type CostPayment = typeof costPayments.$inferSelect;
 export type CostProject = typeof costProjects.$inferSelect;
 export type CostContract = typeof costContracts.$inferSelect;

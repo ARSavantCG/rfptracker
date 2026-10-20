@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ApprovalPanel } from '@/components/cost/approval-panel';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
+import { LedgerView } from '@/components/cost/ledger-view';
 import { SummaryTable } from '@/components/cost/summary-table';
 import { ContractCard, openDocument } from '@/components/cost/contract-card';
 import { AllocationDialog } from '@/components/cost/allocation-dialog';
@@ -126,6 +127,9 @@ export default function CostProject() {
               Contracts{unmappedCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">{unmappedCount}</span>}
             </TabsTrigger>
             <TabsTrigger value="position" className="text-sm px-3 py-1.5">Position</TabsTrigger>
+            <TabsTrigger value="ledger" className="text-sm px-3 py-1.5">
+              Ledger{b.ledger.unreconciledCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">{b.ledger.unreconciledCount}</span>}
+            </TabsTrigger>
             <TabsTrigger value="budget" className="text-sm px-3 py-1.5">
               Budget{b.approval.status !== 'confirmed' && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">Draft</span>}
             </TabsTrigger>
@@ -213,6 +217,10 @@ export default function CostProject() {
 
           <TabsContent value="position" className="mt-4">
             <PositionView bundle={b} projectId={id} onPay={setPayTarget} />
+          </TabsContent>
+
+          <TabsContent value="ledger" className="mt-4">
+            <LedgerView bundle={b} projectId={id} />
           </TabsContent>
 
           <TabsContent value="budget" className="mt-4 space-y-4">

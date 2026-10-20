@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Trash2 } from 'lucide-react';
-import { money, projectKey, shortDate, todayIso, type ApplicationRow, type PaymentRow, type ContractRow } from './types';
+import { money, projectKey, shortDate, todayIso, PAY_METHODS, type ApplicationRow, type PaymentRow, type ContractRow } from './types';
 
 export function PaymentDialog({ target, payments, projectId, onClose }: {
   target: { app: ApplicationRow; contract: ContractRow } | null;
@@ -27,15 +27,15 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
   const paid = Math.round(mine.reduce((s, p) => s + p.amount, 0) * 100) / 100;
   const open = Math.round((due - paid) * 100) / 100;
 
-  const [form, setForm] = useState({ amount: '', paidDate: todayIso(), reference: '' });
+  const [form, setForm] = useState({ amount: '', paidDate: todayIso(), reference: '', method: 'wire' });
   useEffect(() => {
-    if (app) setForm({ amount: open > 0 ? String(open) : '', paidDate: todayIso(), reference: '' });
+    if (app) setForm({ amount: open > 0 ? String(open) : '', paidDate: todayIso(), reference: '', method: 'wire' });
   }, [app?.id]);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
   const add = useMutation({
     mutationFn: () => apiRequest(`/api/cost-applications/${app!.id}/payments`, 'POST', form),
-    onSuccess: () => { refresh(); toast({ title: 'Payment recorded' }); setForm({ amount: '', paidDate: todayIso(), reference: '' }); },
+    onSuccess: () => { refresh(); toast({ title: 'Payment recorded' }); setForm({ amount: '', paidDate: todayIso(), reference: '', method: form.method }); },
     onError: (e: any) => toast({ title: 'Not recorded', description: e?.message, variant: 'destructive' }),
   });
   const remove = useMutation({
@@ -79,7 +79,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
           </table>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end border-t pt-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end border-t pt-3">
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Amount</div>
             <Input inputMode="decimal" className="text-right tabular-nums" value={form.amount}
@@ -88,6 +88,13 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Paid on</div>
             <Input type="date" value={form.paidDate} onChange={(e) => setForm({ ...form, paidDate: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-gray-600">How</div>
+            <select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}
+                    className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
+              {PAY_METHODS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Check / wire #</div>

@@ -101,6 +101,10 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // cost_projects shipped earlier the same day without them.
   { table: 'cost_projects', column: 'budget_approval', type: "json NOT NULL DEFAULT '{}'::json" },
   { table: 'cost_projects', column: 'settings', type: "json NOT NULL DEFAULT '{}'::json" },
+  // Job cost ledger (2026-10-20): reconciliation and receipts.
+  { table: 'cost_payments', column: 'method', type: 'text' },
+  { table: 'cost_payments', column: 'reconciled', type: 'boolean NOT NULL DEFAULT false' },
+  { table: 'cost_documents', column: 'direct_cost_id', type: 'integer' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
@@ -195,6 +199,23 @@ const ADDITIVE_TABLES: string[] = [
     amount_cents bigint NOT NULL,
     paid_date timestamp NOT NULL,
     reference text,
+    method text,
+    reconciled boolean NOT NULL DEFAULT false,
+    notes text,
+    created_by text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`,
+  `CREATE TABLE IF NOT EXISTS cost_direct_costs (
+    id serial PRIMARY KEY,
+    project_id integer NOT NULL,
+    date timestamp NOT NULL,
+    vendor text NOT NULL,
+    description text NOT NULL DEFAULT '',
+    amount_cents bigint NOT NULL,
+    method text,
+    reference text,
+    baseline_key text,
+    reconciled boolean NOT NULL DEFAULT false,
     notes text,
     created_by text,
     created_at timestamp NOT NULL DEFAULT now()
@@ -205,6 +226,7 @@ const ADDITIVE_TABLES: string[] = [
     application_id integer,
     contract_id integer,
     change_order_id integer,
+    direct_cost_id integer,
     original_name text NOT NULL,
     mime_type text,
     size_bytes integer,
@@ -340,6 +362,7 @@ const ADDITIVE_INDEXES: string[] = [
   `CREATE INDEX IF NOT EXISTS cost_application_lines_app_idx ON cost_application_lines (application_id)`,
   `CREATE INDEX IF NOT EXISTS cost_documents_project_idx ON cost_documents (project_id)`,
   `CREATE INDEX IF NOT EXISTS cost_payments_contract_idx ON cost_payments (contract_id)`,
+  `CREATE INDEX IF NOT EXISTS cost_direct_costs_project_idx ON cost_direct_costs (project_id)`,
   // One line per SOV line per application: entering a pay app twice must
   // replace, never double, what it says was done.
   `CREATE UNIQUE INDEX IF NOT EXISTS cost_application_lines_unique ON cost_application_lines (application_id, sov_line_id)`,
@@ -386,7 +409,7 @@ export async function runStartupMigrations(dbi: any = db): Promise<void> {
   for (const name of [
     'app_settings', 'project_team_members', 'user_report_pins', 'itb_sends',
     'cost_projects', 'cost_contracts', 'cost_change_orders', 'cost_sov_lines',
-    'cost_applications', 'cost_application_lines', 'cost_documents', 'cost_payments',
+    'cost_applications', 'cost_application_lines', 'cost_documents', 'cost_payments', 'cost_direct_costs',
   ]) {
     try {
       await dbi.execute(sql.raw(`SELECT 1 FROM ${name} LIMIT 1`));

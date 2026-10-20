@@ -21,7 +21,7 @@ import {
 } from "./lib/report-shell";
 import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY } from "@shared/cost-budget-approval";
-import { positionAsOf } from "@shared/cost-position";
+import { positionAsOf, buildLedger, type LedgerEntry } from "@shared/cost-position";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -186,7 +186,9 @@ export function renderCostPositionHtml(input: {
 
   const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
     ${cell(c.contractSum)}${cell(c.billedToDate)}<td class="num">${c.pctComplete.toFixed(1)}%</td>${cell(c.retainageHeld)}
-    ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("");
+    ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("")
+    + (p.direct && p.direct.count > 0 ? `<tr><td>Direct costs (${p.direct.count} ${p.direct.count === 1 ? "entry" : "entries"})</td>
+    ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.0%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
 
   const appRows = p.applications.length === 0
     ? `<tr><td colspan="6" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
@@ -216,6 +218,60 @@ export function renderCostPositionHtml(input: {
   </body></html>`;
 }
 
+export function renderJobCostLedgerHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  ledger: ReturnType<typeof buildLedger>;
+  from?: string | null;
+  to?: string | null;
+  generatedBy?: string | null;
+}): string {
+  const { ledger } = input;
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  const period = input.from || input.to
+    ? `${input.from ? longDate(input.from) : "Start"} – ${input.to ? longDate(input.to) : "today"}`
+    : "All entries to date";
+  info.push({ label: "Period", value: period });
+  const notes = ledger.unreconciledCount
+    ? [`${ledger.unreconciledCount} ${ledger.unreconciledCount === 1 ? "entry is" : "entries are"} not yet reconciled (${money2(ledger.unreconciled)}), marked ○.`]
+    : [];
+  const METHOD: Record<string, string> = { card: "Card", check: "Check", ach: "ACH", wire: "Wire", other: "Other" };
+  const how = (e: LedgerEntry) => {
+    const m = e.method ? METHOD[e.method] || e.method : "";
+    const ref = e.reference || "";
+    // "WIRE 0912" already says how; don't print "Wire WIRE 0912".
+    return m && ref.toLowerCase().startsWith(m.toLowerCase()) ? ref : [m, ref].filter(Boolean).join(" ");
+  };
+
+  const byPayee = new Map<string, number>();
+  for (const e of ledger.entries) byPayee.set(e.vendor, (byPayee.get(e.vendor) ?? 0) + e.amount);
+  const payees = Array.from(byPayee).sort((a, b) => b[1] - a[1]);
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Job Cost Ledger</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+    .t td.c { text-align: center; color: #059669; }
+    .t td.c.open { color: #b45309; }
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Job Cost Ledger", eyebrow: "Cost Report", info, notes })}
+  <table class="t"><thead><tr>
+    <th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">How Paid</th>
+    <th class="l">Budget Line</th><th>Amount</th><th>Running Total</th><th title="Reconciled">✓</th></tr></thead><tbody>
+    ${ledger.entries.length === 0 ? `<tr><td colspan="8" class="muted">No payments or charges in this period.</td></tr>` : ledger.entries.map((e) => `<tr>
+      <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}</td><td>${escapeHtml(e.description)}</td>
+      <td>${escapeHtml(how(e))}</td><td>${escapeHtml(e.budgetLine)}</td>${cell(e.amount)}${cell(e.running, "muted")}
+      <td class="c${e.reconciled ? "" : " open"}">${e.reconciled ? "✓" : "○"}</td></tr>`).join("")}
+    <tr class="total"><td colspan="5">Total</td>${cell(ledger.total)}<td></td><td></td></tr>
+  </tbody></table>
+  ${payees.length > 1 ? `<h3 class="sec">By Payee</h3>
+  <table class="t" style="width:60%"><thead><tr><th class="l">Paid To</th><th>Total</th></tr></thead><tbody>
+    ${payees.map(([v, a]) => `<tr><td>${escapeHtml(v)}</td>${cell(a)}</tr>`).join("")}
+    <tr class="total"><td>Total</td>${cell(ledger.total)}</tr></tbody></table>` : ""}
+  <div class="legend">Payments against pay apps and invoices are split across budget lines by each line's schedule of values; see Budget vs Actual for that split.</div>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
 async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
   const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
@@ -240,6 +296,32 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Budget vs actual report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  app.get("/api/reports/job-cost-ledger/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const day = (v: unknown) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : null);
+      const from = day(req.query.from), to = day(req.query.to);
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      // Re-filter the bundle's ledger for the period; running totals restart at the period's start.
+      const all = b.ledger.entries;
+      const inPeriod = all.filter((e) => (!from || e.date >= from) && (!to || e.date <= to));
+      let running = 0;
+      const entries = inPeriod.map((e) => { running = Math.round((running + e.amount) * 100) / 100; return { ...e, running }; });
+      const open = entries.filter((e) => !e.reconciled);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderJobCostLedgerHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        ledger: { entries, total: running, unreconciled: Math.round(open.reduce((s, e) => s + e.amount, 0) * 100) / 100, unreconciledCount: open.length },
+        from, to, generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Job cost ledger report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

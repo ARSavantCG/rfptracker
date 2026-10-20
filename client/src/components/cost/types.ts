@@ -4,7 +4,7 @@
  */
 import type { BudgetVsActual, G702, BaselineLine, SovLine, ChangeOrder } from '@shared/cost-tracking';
 import type { BudgetApproval } from '@shared/cost-budget-approval';
-import type { positionAsOf, DatedApplication, Payment } from '@shared/cost-position';
+import type { positionAsOf, DatedApplication, Payment, LedgerEntry } from '@shared/cost-position';
 
 export interface CostProjectRow {
   id: number;
@@ -67,6 +67,7 @@ export interface DocumentRow {
   applicationId: number | null;
   contractId: number | null;
   changeOrderId: number | null;
+  directCostId: number | null;
   originalName: string;
   sizeBytes: number | null;
   storage: 'object' | 'local';
@@ -88,9 +89,29 @@ export interface ProjectBundle {
   positionInput: {
     contractIds: number[]; lines: SovLine[]; changeOrders: ChangeOrder[];
     applications: DatedApplication[]; payments: Payment[];
+    directCosts: { date: string; amount: number }[];
   };
   cmFee: CmFee | null;
+  directCosts: DirectCostRow[];
+  ledger: { entries: LedgerEntry[]; total: number; unreconciled: number; unreconciledCount: number };
 }
+
+export interface DirectCostRow {
+  id: number;
+  date: string;
+  vendor: string;
+  description: string;
+  amount: number;
+  method: string | null;
+  reference: string | null;
+  key: string | null;
+  reconciled: boolean;
+  notes: string | null;
+}
+
+export const PAY_METHODS: Array<[string, string]> = [
+  ['card', 'Card'], ['check', 'Check'], ['ach', 'ACH'], ['wire', 'Wire'], ['other', 'Other'],
+];
 
 export type ApprovalView = BudgetApproval & {
   priced: number;
@@ -107,6 +128,8 @@ export interface PaymentRow {
   amount: number;
   paidDate: string;
   reference: string | null;
+  method: string | null;
+  reconciled: boolean;
 }
 
 export interface CmFee {

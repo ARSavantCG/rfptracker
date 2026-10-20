@@ -19,13 +19,13 @@ import { storage } from './storage';
 import { requireAuth, requireAdmin } from './middleware';
 import {
   costProjects, costContracts, costChangeOrders, costSovLines,
-  costApplications, costApplicationLines, costDocuments, costPayments,
+  costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts,
 } from '@shared/schema';
 import {
   normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal,
   type BudgetApproval,
 } from '@shared/cost-budget-approval';
-import { positionAsOf, detectCmFee, cmFeeEarned, type DatedApplication, type Payment } from '@shared/cost-position';
+import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
   budgetVsActual, g702For, formatProjectNumber,
@@ -60,6 +60,9 @@ export function cleanAllocations(raw: unknown): Array<{ baselineKey: string; pct
     .map((a: any) => ({ baselineKey: String(a?.baselineKey ?? '').trim(), pct: Number(a?.pct) }))
     .filter((a) => a.baselineKey && Number.isFinite(a.pct) && a.pct > 0 && a.pct <= 100);
 }
+
+const METHODS = ['card', 'check', 'ach', 'wire', 'other'];
+class UserError extends Error {}
 
 const pick = (o: any, keys: string[]) => Object.fromEntries(keys.filter((k) => o && o[k] !== undefined).map((k) => [k, o[k]]));
 
@@ -192,6 +195,13 @@ export async function loadProjectBundle(projectId: number) {
     .where(eq(costDocuments.projectId, projectId)).orderBy(desc(costDocuments.createdAt));
   const payRows = none ? [] : await db.select().from(costPayments)
     .where(inArray(costPayments.contractId, contractIds)).orderBy(costPayments.paidDate, costPayments.id);
+  const directRows = await db.select().from(costDirectCosts)
+    .where(eq(costDirectCosts.projectId, projectId)).orderBy(costDirectCosts.date, costDirectCosts.id);
+  const directCosts = directRows.map((d) => ({
+    id: d.id, date: isoDay(d.date), vendor: d.vendor, description: d.description,
+    amount: dollars(d.amountCents), method: d.method, reference: d.reference,
+    key: d.baselineKey, reconciled: d.reconciled, notes: d.notes,
+  }));
 
   // To the pure model, in dollars.
   const baseline = (project.baseline || []) as BaselineLine[];
@@ -220,7 +230,10 @@ export async function loadProjectBundle(projectId: number) {
   // put on it, plus a Deal Discount line for whatever has not been placed.
   const approval = normalizeApproval(project.budgetApproval);
   const effective = effectiveBaseline(baseline, approval);
-  const summary0 = budgetVsActual({ baseline: effective, lines, changeOrders, applications });
+  const summary0 = budgetVsActual({
+    baseline: effective, lines, changeOrders, applications,
+    directCosts: directCosts.map((d) => ({ key: d.key, amount: d.amount })),
+  });
   const originalBy = new Map((approval.original || []).map((o) => [o.key, o.budget]));
   const priced = new Map(baseline.map((b) => [b.key, Number(b.budget) || 0]));
   const summary = {
@@ -240,7 +253,10 @@ export async function loadProjectBundle(projectId: number) {
     id: p.id, contractId: p.contractId, applicationId: p.applicationId ?? null,
     amount: dollars(p.amountCents), paidDate: isoDay(p.paidDate), reference: p.reference,
   }));
-  const positionInput = { contractIds, lines, changeOrders, applications: dated, payments };
+  const positionInput = {
+    contractIds, lines, changeOrders, applications: dated, payments,
+    directCosts: directCosts.map((d) => ({ date: d.date, amount: d.amount })),
+  };
   const position = positionAsOf(todayEastern(), positionInput);
 
   const settings = (project.settings || {}) as any;
@@ -254,7 +270,8 @@ export async function loadProjectBundle(projectId: number) {
   const cmFee = cmSettings.key || settings.cmFeePct != null
     ? cmFeeEarned(cmSettings, {
       rows: summary.rows.map((r) => ({ key: r.key, budget: r.budget, toDate: r.toDate })),
-      paidBase: payments.filter((p) => !cmContractIds.has(p.contractId)).reduce((s, p) => s + p.amount, 0),
+      paidBase: payments.filter((p) => !cmContractIds.has(p.contractId)).reduce((s, p) => s + p.amount, 0)
+        + directCosts.filter((d) => d.key !== cmSettings.key).reduce((s, d) => s + d.amount, 0),
     })
     : null;
   const g702 = Object.fromEntries(contracts.map((c) => {
@@ -285,6 +302,21 @@ export async function loadProjectBundle(projectId: number) {
     position,
     positionInput,
     cmFee,
+    directCosts,
+    ledger: buildLedger({
+      payments: payRows.map((p) => ({
+        id: p.id, contractId: p.contractId, applicationId: p.applicationId, amount: dollars(p.amountCents),
+        paidDate: isoDay(p.paidDate), reference: p.reference, method: p.method, reconciled: p.reconciled,
+      })),
+      directCosts,
+      contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
+      applicationLabel: (aid) => {
+        const a = apps.find((x) => x.id === aid);
+        if (!a) return 'Payment';
+        return `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`;
+      },
+      budgetLineName: (key) => (key ? baseline.find((b) => b.key === key)?.description ?? 'Unallocated' : 'Unallocated'),
+    }),
   };
 }
 
@@ -576,6 +608,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           await tx.delete(costChangeOrders).where(inArray(costChangeOrders.contractId, contractIds));
           await tx.delete(costContracts).where(inArray(costContracts.id, contractIds));
         }
+        await tx.delete(costDirectCosts).where(eq(costDirectCosts.projectId, id));
         await tx.delete(costDocuments).where(eq(costDocuments.projectId, id));
         await tx.delete(costProjects).where(eq(costProjects.id, id));
       });
@@ -600,6 +633,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         contractId: a.contractId, applicationId: a.id, amountCents: cents,
         paidDate: new Date(`${d}T12:00:00Z`),
         reference: b.reference ? String(b.reference).slice(0, 120) : null,
+        method: METHODS.includes(String(b.method)) ? String(b.method) : null,
         notes: b.notes ? String(b.notes) : null, createdBy: who(req),
       }).returning();
       res.json(row);
@@ -613,6 +647,87 @@ export function registerCostTrackingRoutes(app: Express): void {
       await db.delete(costPayments).where(eq(costPayments.id, id));
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'remove the payment'); }
+  });
+
+  app.patch('/api/cost-payments/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const b = req.body || {};
+      const patch: any = {};
+      if (b.reconciled !== undefined) patch.reconciled = !!b.reconciled;
+      if (b.method !== undefined) patch.method = METHODS.includes(String(b.method)) ? String(b.method) : null;
+      if (b.reference !== undefined) patch.reference = b.reference ? String(b.reference).slice(0, 120) : null;
+      if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      const [row] = await db.update(costPayments).set(patch).where(eq(costPayments.id, id)).returning();
+      if (!row) return res.status(404).json({ message: 'Payment not found' });
+      res.json(row);
+    } catch (e) { fail(res, e, 'update the payment'); }
+  });
+
+  // ---- direct costs (card charges, permits, parking — anything with no contract)
+  const directValues = (b: any, partial: boolean) => {
+    const out: any = {};
+    if (!partial || b.date !== undefined) {
+      const d = String(b.date || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new UserError('Enter the date of the charge.');
+      out.date = new Date(`${d}T12:00:00Z`);
+    }
+    if (!partial || b.vendor !== undefined) {
+      const v = String(b.vendor ?? '').trim();
+      if (!v) throw new UserError('Enter who was paid.');
+      out.vendor = v.slice(0, 200);
+    }
+    if (!partial || b.amount !== undefined) {
+      const c = toCents(b.amount);
+      if (c === 0) throw new UserError('Enter the amount.');
+      out.amountCents = c;
+    }
+    if (b.description !== undefined) out.description = String(b.description ?? '').slice(0, 500);
+    if (b.method !== undefined) out.method = METHODS.includes(String(b.method)) ? String(b.method) : null;
+    if (b.reference !== undefined) out.reference = b.reference ? String(b.reference).slice(0, 120) : null;
+    if (b.key !== undefined) out.baselineKey = b.key ? String(b.key) : null;
+    if (b.reconciled !== undefined) out.reconciled = !!b.reconciled;
+    if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;
+    return out;
+  };
+
+  app.post('/api/cost-projects/:id/direct-costs', ...canEdit, async (req, res) => {
+    try {
+      const projectId = intParam(req, 'id');
+      if (projectId === null) return res.status(400).json({ message: 'Invalid ID' });
+      if (!(await loadProject(projectId))) return res.status(404).json({ message: 'Project not found' });
+      const [row] = await db.insert(costDirectCosts)
+        .values({ projectId, ...directValues(req.body || {}, false), createdBy: who(req) }).returning();
+      res.json(row);
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'add the cost');
+    }
+  });
+
+  app.patch('/api/cost-direct-costs/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const patch = directValues(req.body || {}, true);
+      if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      const [row] = await db.update(costDirectCosts).set(patch).where(eq(costDirectCosts.id, id)).returning();
+      if (!row) return res.status(404).json({ message: 'Cost not found' });
+      res.json(row);
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'update the cost');
+    }
+  });
+
+  app.delete('/api/cost-direct-costs/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      await db.delete(costDirectCosts).where(eq(costDirectCosts.id, id));
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'remove the cost'); }
   });
 
   // ---- contracts
@@ -865,6 +980,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         applicationId: num(req.body?.applicationId),
         contractId: num(req.body?.contractId),
         changeOrderId: num(req.body?.changeOrderId),
+        directCostId: num(req.body?.directCostId),
         originalName: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: file.size,

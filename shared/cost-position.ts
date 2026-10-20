@@ -73,6 +73,8 @@ export function positionAsOf(asOf: string, input: {
   changeOrders: readonly ChangeOrder[];
   applications: readonly DatedApplication[];
   payments: readonly Payment[];
+  /** Card charges and other costs with no contract. Paid when dated. */
+  directCosts?: ReadonlyArray<{ date: string; amount: number }>;
 }) {
   const cutoff = day(asOf);
   // An application counts once its date has passed — and so does every
@@ -129,15 +131,21 @@ export function positionAsOf(asOf: string, input: {
     };
   }).sort((x, y) => x.contractId - y.contractId || x.number - y.number);
 
+  const directRows = (input.directCosts || []).filter((d) => day(d.date) <= cutoff);
+  const direct = { total: r2(directRows.reduce((s, d) => s + (Number(d.amount) || 0), 0)), count: directRows.length };
+
   const sum = (k: keyof ContractPosition) => r2(contracts.reduce((s, c) => s + (c[k] as number), 0));
+  // A direct cost is billed and paid in one go: it adds to the sum, the
+  // billed and the paid, and leaves nothing owed or left to pay.
   const totals = {
-    contractSum: sum('contractSum'), billedToDate: sum('billedToDate'), retainageHeld: sum('retainageHeld'),
-    netBilled: sum('netBilled'), paid: sum('paid'), owed: sum('owed'),
+    contractSum: r2(sum('contractSum') + direct.total), billedToDate: r2(sum('billedToDate') + direct.total),
+    retainageHeld: sum('retainageHeld'),
+    netBilled: r2(sum('netBilled') + direct.total), paid: r2(sum('paid') + direct.total), owed: sum('owed'),
     leftToBill: sum('leftToBill'), leftToPay: sum('leftToPay'),
     pctComplete: 0,
   };
   totals.pctComplete = totals.contractSum ? r2((totals.billedToDate / totals.contractSum) * 100) : 0;
-  return { asOf: cutoff, contracts, applications, totals };
+  return { asOf: cutoff, contracts, applications, direct, totals };
 }
 
 // ------------------------------------------------------------- CM fee
@@ -173,4 +181,60 @@ export function cmFeeEarned(settings: CmFeeSettings, input: {
   const earned = r2((base * pct) / 100);
   const earnedOnPaid = r2((input.paidBase * pct) / 100);
   return { pct, key: settings.key, base, earned, paidBase: r2(input.paidBase), earnedOnPaid, budget, remaining: r2(budget - earned) };
+}
+
+// ------------------------------------------------------------- the ledger
+
+export interface LedgerEntry {
+  kind: 'payment' | 'direct';
+  id: number;
+  date: string;
+  vendor: string;
+  description: string;
+  method: string | null;
+  reference: string | null;
+  /** Budget line name; for a pay app payment, "Per pay app". */
+  budgetLine: string;
+  amount: number;
+  reconciled: boolean;
+  running: number;
+}
+
+/**
+ * Every dollar out, in date order, with a running total: payments to the
+ * contractors and the architect, and the card charges with no contract. The
+ * page someone means when they ask for the job cost ledger.
+ */
+export function buildLedger(input: {
+  payments: ReadonlyArray<{ id: number; contractId: number; applicationId: number | null; amount: number; paidDate: string; reference?: string | null; method?: string | null; reconciled?: boolean }>;
+  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; method?: string | null; reference?: string | null; key?: string | null; reconciled?: boolean }>;
+  contractName: (id: number) => string;
+  applicationLabel: (id: number | null) => string;
+  budgetLineName: (key: string | null | undefined) => string;
+  from?: string | null;
+  to?: string | null;
+}): { entries: LedgerEntry[]; total: number; unreconciled: number; unreconciledCount: number } {
+  const rows: Omit<LedgerEntry, 'running'>[] = [
+    ...input.payments.map((p) => ({
+      kind: 'payment' as const, id: p.id, date: day(p.paidDate), vendor: input.contractName(p.contractId),
+      description: input.applicationLabel(p.applicationId), method: p.method ?? null, reference: p.reference ?? null,
+      budgetLine: 'Per pay app', amount: r2(p.amount), reconciled: !!p.reconciled,
+    })),
+    ...input.directCosts.map((d) => ({
+      kind: 'direct' as const, id: d.id, date: day(d.date), vendor: d.vendor, description: d.description,
+      method: d.method ?? null, reference: d.reference ?? null, budgetLine: input.budgetLineName(d.key),
+      amount: r2(d.amount), reconciled: !!d.reconciled,
+    })),
+  ]
+    .filter((e) => (!input.from || e.date >= day(input.from)) && (!input.to || e.date <= day(input.to)))
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.kind === b.kind ? a.id - b.id : a.kind === 'payment' ? -1 : 1));
+  let running = 0;
+  const entries = rows.map((e) => { running = r2(running + e.amount); return { ...e, running }; });
+  const open = entries.filter((e) => !e.reconciled);
+  return {
+    entries,
+    total: running,
+    unreconciled: r2(open.reduce((s, e) => s + e.amount, 0)),
+    unreconciledCount: open.length,
+  };
 }

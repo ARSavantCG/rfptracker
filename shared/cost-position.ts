@@ -350,3 +350,46 @@ export function billableItems(input: {
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
 }
+
+// ------------------------------------------------------ invoice by type
+
+export type InvoiceType = 'fee' | 'reimbursable';
+export type InvoiceBasis = 'paid' | 'billed';
+
+/**
+ * Billable items on a PAID basis: what has actually gone out. Each payment
+ * against a pay app carries that pay app's billable share (billable ÷
+ * amount, from its billed item); direct charges are paid when entered.
+ */
+export function paidItems(billed: readonly BillableItem[], payments: ReadonlyArray<{ id: number; applicationId: number | null; amount: number; paidDate: string; reference?: string | null }>,
+  appInfo: (id: number | null) => { vendor: string; item: string } | null): BillableItem[] {
+  const ratio = new Map<string, number>();
+  for (const b of billed) if (b.ref.startsWith('app-') && Math.abs(b.amount) >= 0.005) ratio.set(b.ref, b.billable / b.amount);
+  const out: BillableItem[] = billed.filter((b) => b.ref.startsWith('direct-')).map((b) => ({ ...b }));
+  for (const p of payments) {
+    const info = appInfo(p.applicationId);
+    const k = `app-${p.applicationId}`;
+    out.push({
+      ref: `pay-${p.id}`, date: String(p.paidDate).slice(0, 10), vendor: info?.vendor ?? 'Payment',
+      item: `Payment — ${info?.item ?? 'pay app'}${p.reference ? ` (${p.reference})` : ''}`,
+      amount: r2(p.amount), billable: r2(p.amount * (ratio.get(k) ?? 0)),
+    });
+  }
+  return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
+}
+
+/**
+ * What an invoice asks for.
+ *   fee           the CM fee on the billable costs (to a capital partner,
+ *                 when the improvement is in the rent)
+ *   reimbursable  the billable costs themselves plus the CM fee on them
+ *                 (to the tenant, when we pay and are reimbursed)
+ * Less whatever earlier invoices already asked for.
+ */
+export function invoiceCalc(input: { type: InvoiceType; items: readonly BillableItem[]; pct: number; previouslyInvoiced: number }) {
+  const costs = r2(input.items.reduce((s, i) => s + i.billable, 0));
+  const fee = r2((costs * input.pct) / 100);
+  const toDate = input.type === 'reimbursable' ? r2(costs + fee) : fee;
+  const previous = r2(input.previouslyInvoiced);
+  return { type: input.type, costs, pct: input.pct, fee, toDate, previous, due: r2(toDate - previous) };
+}

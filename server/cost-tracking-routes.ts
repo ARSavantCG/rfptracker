@@ -25,7 +25,7 @@ import {
   normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
-import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, type DatedApplication, type Payment } from '@shared/cost-position';
+import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
   budgetVsActual, g702For, formatProjectNumber,
@@ -321,7 +321,7 @@ export async function loadProjectBundle(projectId: number) {
         previouslyInvoiced: issued.reduce((s, i) => s + (Number(i.due) || 0), 0),
       });
       const covered = new Set(issued.flatMap((i) => (i.items || []).map((x) => x.ref)));
-      const items = billableItems({
+      const billed = billableItems({
         lines, changeOrders,
         applications: dated.map((a) => {
           const row = apps.find((x) => x.id === a.id)!;
@@ -332,7 +332,8 @@ export async function loadProjectBundle(projectId: number) {
         validKeys: new Set(effective.map((b) => b.key)),
         cmKey: cmSettings.key,
         contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
-      }).map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) }));
+      });
+      const items = billed;
       // Each item is rounded to the cent; put the rounding difference on the
       // largest item so the column ties to the base the fee is figured on.
       const drift = Math.round((calc.base - items.reduce((t, i) => t + i.billable, 0)) * 100) / 100;
@@ -346,7 +347,26 @@ export async function loadProjectBundle(projectId: number) {
         const big = items.reduce((m, i) => (Math.abs(i.amount) > Math.abs(m.amount) ? i : m), items[0]);
         big.amount = Math.round((big.amount + drift2) * 100) / 100;
       }
-      return { ...calc, items };
+      // How this project invoices (set on the Reports tab).
+      const type = settings.invoiceType === 'reimbursable' ? 'reimbursable' as const : 'fee' as const;
+      const basis = settings.invoiceBasis === 'billed' ? 'billed' as const : 'paid' as const;
+      const billTo = String(settings.billTo || project.tenantName || '');
+      const chosen = basis === 'billed' ? items : paidItems(items, payments, (aid) => {
+        const row = apps.find((x) => x.id === aid);
+        if (!row) return null;
+        return {
+          vendor: contracts.find((c) => c.id === row.contractId)?.counterparty ?? 'Contract',
+          item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${row.number}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
+        };
+      });
+      const inv = invoiceCalc({ type, items: chosen, pct: cmSettings.pct, previouslyInvoiced: calc.previous });
+      return {
+        ...calc, type, basis, billTo,
+        // base/earned/due follow the chosen type and basis.
+        base: inv.costs, earned: inv.fee, toDate: inv.toDate, due: inv.due,
+        items: chosen.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
+        lines: basis === 'billed' ? calc.lines : [],
+      };
     })(),
     payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
     position,
@@ -388,6 +408,10 @@ export interface CmInvoiceRecord {
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
   /** Every billable item behind it — pay apps, invoices, direct charges. */
   items?: Array<{ ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
+  type?: 'fee' | 'reimbursable';
+  basis?: 'paid' | 'billed';
+  billTo?: string;
+  toDate?: number;
   issuedBy: string | null;
   issuedAt: string;
 }
@@ -761,9 +785,10 @@ export function registerCostTrackingRoutes(app: Express): void {
       const list: CmInvoiceRecord[] = settings.cmInvoices || [];
       if (list.some((i) => i.number.toLowerCase() === number.toLowerCase())) return res.status(400).json({ message: `Invoice ${number} already exists.` });
       const d = b.cmInvoiceDraft;
-      if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — the CM fee earned to date has been invoiced.' });
+      if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — everything to date has been invoiced.' });
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
-        lines: d.lines, payApps: payAppsFor(b), items: d.items, issuedBy: whoName(req), issuedAt: new Date().toISOString() });
+        lines: d.lines, payApps: payAppsFor(b), items: d.items, type: d.type, basis: d.basis, billTo: d.billTo, toDate: d.toDate,
+        issuedBy: whoName(req), issuedAt: new Date().toISOString() });
       settings.cmInvoices = list;
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
@@ -818,6 +843,9 @@ export function registerCostTrackingRoutes(app: Express): void {
         else return res.status(400).json({ message: 'CM fee must be a percentage between 0 and 100.' });
       }
       if (b.cmFeeKey !== undefined) next.cmFeeKey = b.cmFeeKey ? String(b.cmFeeKey) : '';
+      if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
+      if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
+      if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
       await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'save the settings'); }

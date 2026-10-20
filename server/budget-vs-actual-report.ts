@@ -316,6 +316,11 @@ export interface CmInvoiceView {
   lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
   items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
+  /** fee: the CM fee only. reimbursable: the billable costs plus the CM fee. */
+  type?: 'fee' | 'reimbursable';
+  basis?: 'paid' | 'billed';
+  billTo?: string;
+  toDate?: number;
 }
 
 /**
@@ -331,14 +336,19 @@ export function renderCmInvoiceHtml(input: {
   generatedBy?: string | null;
 }): string {
   const inv = input.invoice;
+  const reimb = inv.type === 'reimbursable';
+  const paid = inv.basis === 'paid';
   const info: ReportInfoRow[] = [
-    { label: "Bill To", value: input.project.tenantName || "" },
+    { label: "Bill To", value: inv.billTo || input.project.tenantName || "" },
+    ...(inv.billTo && input.project.tenantName && inv.billTo !== input.project.tenantName ? [{ label: "Tenant", value: input.project.tenantName }] : []),
     { label: "Property", value: input.propertyLabel || "" },
     { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },
     { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },
     { label: "Invoice Date", value: longDate(inv.date) },
   ];
-  return `<!doctype html><html><head><meta charset="utf-8"><title>CM Fee Invoice</title><style>
+  const title = reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
+  const costWord = paid ? "paid" : "billed";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${reimb ? "Reimbursement Invoice" : "CM Fee Invoice"}</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
     .due { margin-top: 10px; margin-left: auto; width: 55%; border-collapse: collapse; font-size: 12px; }
     .due td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; }
@@ -346,25 +356,26 @@ export function renderCmInvoiceHtml(input: {
     .due tr.big td { font-size: 14px; font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
     .draft-mark { color: #b45309; font-weight: 700; }
   </style></head><body>
-  ${reportHeaderHtml({ title: "Construction Management Fee Invoice", eyebrow: "Invoice", info,
+  ${reportHeaderHtml({ title, eyebrow: "Invoice", info,
     notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
-  ${inv.items && inv.items.length ? `<h3 class="sec">Costs Billed to Date</h3>
+  ${inv.items && inv.items.length ? `<h3 class="sec">Costs ${paid ? "Paid" : "Billed"} to Date</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Amount</th><th>Billable to Tenant</th><th class="l"></th></tr></thead><tbody>
     ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
       <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${cell(it.billable)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
     <tr class="total"><td colspan="3">Total</td>${cell(inv.items.reduce((s, i) => s + i.amount, 0))}${cell(inv.items.reduce((s, i) => s + i.billable, 0))}<td></td></tr>
   </tbody></table>` : ""}
 
-  <h3 class="sec">${inv.items && inv.items.length ? "By Budget Line" : "Work Completed to Date"}</h3>
+  ${inv.lines.length ? `<h3 class="sec">${inv.items && inv.items.length ? "By Budget Line" : "Work Completed to Date"}</h3>
   <table class="t"><thead><tr><th class="l">Description</th><th>Completed &amp; Stored to Date</th><th>Tenant Share</th><th>Billable to Tenant</th></tr></thead><tbody>
     ${inv.lines.map((l) => `<tr><td>${escapeHtml(l.description)}</td>${cell(l.spent)}<td class="num">${fmtPct(l.tenantSharePct)}</td>${cell(l.billable)}</tr>`).join("")}
     <tr class="total"><td>Total</td>${cell(inv.lines.reduce((s, l) => s + l.spent, 0))}<td></td>${cell(inv.base)}</tr>
-  </tbody></table>
+  </tbody></table>` : ""}
 
   <table class="due"><tbody>
-    <tr><td>Billable work completed to date</td><td class="num">${fmt(inv.base)}</td></tr>
+    <tr><td>Billable costs ${costWord} to date</td><td class="num">${fmt(inv.base)}</td></tr>
     <tr><td>Construction management fee at ${fmtPct(inv.pct)}</td><td class="num">${fmt(inv.earned)}</td></tr>
+    ${reimb ? `<tr><td><strong>Total costs and fee to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.base + inv.earned)}</strong></td></tr>` : ""}
     <tr><td>Less previously invoiced</td><td class="num">${inv.previous ? `(${money2(inv.previous)})` : money2(0)}</td></tr>
     <tr class="big"><td>Amount Due This Invoice</td><td class="num">${fmt(inv.due)}</td></tr>
   </tbody></table>
@@ -376,8 +387,8 @@ export function renderCmInvoiceHtml(input: {
 
   <h3 class="sec">Notes</h3>
   <ol class="notes">
-    <li>${escapeHtml(`Fee is ${fmtPct(inv.pct)} of work completed and stored to date that is billable to the tenant, per the tenant's share of each budget line.`)}</li>
-    <li>Completed and stored to date is before retainage, as certified on the contractors' pay applications and invoices listed above. Direct charges are at cost.</li>
+    <li>${escapeHtml(`${reimb ? "Reimbursement of the billable costs listed, plus a" : "A"} construction management fee of ${fmtPct(inv.pct)} on them. Billable means the tenant's share of each budget line.`)}</li>
+    <li>${paid ? "Costs are amounts paid to date: payments against the contractors' pay applications and invoices listed, and direct charges at cost." : "Costs are work completed and stored to date, before retainage, as certified on the pay applications and invoices listed. Direct charges are at cost."}</li>
     ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Items shaded and marked "This invoice" are new since the last CM invoice.</li>` : ""}
     ${inv.previous ? `<li>${escapeHtml(`Previously invoiced CM fees of ${money2(inv.previous)} are deducted.`)}</li>` : ""}
   </ol>

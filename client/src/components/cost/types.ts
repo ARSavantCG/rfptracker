@@ -95,7 +95,8 @@ export interface ProjectBundle {
   cmFee: CmFee | null;
   cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none' };
   cmInvoices: CmInvoiceRow[];
-  cmInvoiceDraft: { base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
+  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }[];
+    base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
   waivers: Array<import('@shared/cost-waivers').Waiver & { notes: string | null }>;
   ledger: { entries: LedgerEntry[]; total: number; unreconciled: number; unreconciledCount: number };

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Printer, FileText, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
 import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle } from './types';
 
@@ -28,6 +29,14 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   const [invNo, setInvNo] = useState(nextInv);
   const [invDate, setInvDate] = useState(todayIso());
   const [busy, setBusy] = useState(false);
+  const [billTo, setBillTo] = useState(b.cmInvoiceDraft.billTo);
+  const saveSetting = async (patch: Record<string, string>, ok: string) => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', patch);
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: ok });
+    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+  };
 
   const open = async (url: string) => { if (!(await openReport(url))) toast({ title: 'Report failed', variant: 'destructive' }); };
   const d = b.cmInvoiceDraft;
@@ -84,13 +93,44 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         </p>
       </Card>
 
-      <Card title="CM Fee Invoice" what={`For accounting to send the tenant: ${d.pct.toFixed(2)}% on billable work completed to date, less what's been invoiced, with the budget lines and pay apps behind it.`}>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-          <Fig label="Billable work to date" value={money(d.base)} />
-          <Fig label={`Fee earned (${d.pct.toFixed(2)}%)`} value={money(d.earned)} />
+      <Card title={d.type === 'reimbursable' ? 'Reimbursement & CM Fee Invoice' : 'CM Fee Invoice'}
+            what={d.type === 'reimbursable'
+              ? `For accounting to send ${d.billTo || 'the tenant'}: the billable costs ${d.basis} to date plus the CM fee at ${d.pct.toFixed(2)}%, less what's been invoiced. Every pay app, invoice and charge itemized.`
+              : `For accounting to send ${d.billTo || 'the tenant'}: the CM fee at ${d.pct.toFixed(2)}% on billable costs ${d.basis} to date, less what's been invoiced. Every pay app, invoice and charge itemized as backup.`}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 pb-2 border-b">
+          <Labeled label="Invoice type">
+            <Select value={d.type} onValueChange={(v) => saveSetting({ invoiceType: v }, 'Invoice type saved')}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="fee">CM fee only — e.g. to the capital partner</SelectItem>
+                <SelectItem value="reimbursable">Costs + CM fee — reimbursed by the tenant</SelectItem>
+              </SelectContent>
+            </Select>
+          </Labeled>
+          <Labeled label="Costs counted">
+            <Select value={d.basis} onValueChange={(v) => saveSetting({ invoiceBasis: v }, 'Saved')}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="paid">What we've paid</SelectItem>
+                <SelectItem value="billed">What's been billed (completed & stored)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Labeled>
+          <Labeled label="Bill to">
+            <div className="flex gap-2">
+              <Input className="h-9" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
+              {billTo !== d.billTo && <Button className="h-9" variant="outline" onClick={() => saveSetting({ billTo }, 'Bill to saved')}>Save</Button>}
+            </div>
+          </Labeled>
+        </div>
+        <div className={`grid grid-cols-2 ${d.type === 'reimbursable' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 text-sm`}>
+          <Fig label={`Billable costs ${d.basis}`} value={money(d.base)} />
+          <Fig label={`CM fee (${d.pct.toFixed(2)}%)`} value={money(d.earned)} />
+          {d.type === 'reimbursable' && <Fig label="Costs + fee to date" value={money(d.toDate)} />}
           <Fig label="Previously invoiced" value={money(d.previous)} />
           <Fig label="Due now" value={money(d.due)} strong />
         </div>
+        <p className="text-xs text-gray-600">{d.items.length} item{d.items.length === 1 ? '' : 's'} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
         <div className="flex items-end gap-2 flex-wrap mt-3">
           <Labeled label="Invoice no."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
           <Labeled label="Date"><Input type="date" className="h-9 w-44" value={invDate} onChange={(e) => setInvDate(e.target.value)} /></Labeled>

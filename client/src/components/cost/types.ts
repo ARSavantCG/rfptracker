@@ -2,7 +2,9 @@
  * The shapes the cost-tracking API returns, and the money formatting every
  * cost screen uses. Amounts arrive in DOLLARS; the API converts from cents.
  */
-import type { BudgetVsActual, G702, BaselineLine } from '@shared/cost-tracking';
+import type { BudgetVsActual, G702, BaselineLine, SovLine, ChangeOrder } from '@shared/cost-tracking';
+import type { BudgetApproval } from '@shared/cost-budget-approval';
+import type { positionAsOf, DatedApplication, Payment } from '@shared/cost-position';
 
 export interface CostProjectRow {
   id: number;
@@ -78,8 +80,65 @@ export interface ProjectBundle {
   sovLines: SovLineRow[];
   applications: ApplicationRow[];
   documents: DocumentRow[];
-  summary: BudgetVsActual;
+  summary: BudgetVsActual & { rows: Array<BudgetVsActual['rows'][number] & { priced: number | null; originalBudget: number | null }> };
   g702ByContract: Record<number, G702>;
+  approval: ApprovalView;
+  payments: PaymentRow[];
+  position: ReturnType<typeof positionAsOf>;
+  positionInput: {
+    contractIds: number[]; lines: SovLine[]; changeOrders: ChangeOrder[];
+    applications: DatedApplication[]; payments: Payment[];
+  };
+  cmFee: CmFee | null;
+}
+
+export type ApprovalView = BudgetApproval & {
+  priced: number;
+  distributed: number;
+  undistributed: number;
+  approvedTotal: number;
+  orphaned: { key: string; amount: number }[];
+};
+
+export interface PaymentRow {
+  id: number;
+  contractId: number;
+  applicationId: number | null;
+  amount: number;
+  paidDate: string;
+  reference: string | null;
+}
+
+export interface CmFee {
+  pct: number;
+  key: string | null;
+  base: number;
+  earned: number;
+  paidBase: number;
+  earnedOnPaid: number;
+  budget: number;
+  remaining: number;
+}
+
+/** "Oct 20, 2026" from an ISO date or timestamp. */
+export function shortDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(String(iso).length === 10 ? `${iso}T12:00:00Z` : String(iso));
+  return d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/** Today in Eastern time: "2026-10-20". */
+export const todayIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+/** Open a server-rendered report in a new tab, carrying the auth token. */
+export async function openReport(url: string): Promise<boolean> {
+  const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
+  const win = window.open('', '_blank');
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
+  if (!res.ok) { if (win) win.close(); return false; }
+  const blobUrl = URL.createObjectURL(await res.blob());
+  if (win) win.location.href = blobUrl; else window.location.href = blobUrl;
+  return true;
 }
 
 export const BUCKET_LABEL: Record<string, string> = {

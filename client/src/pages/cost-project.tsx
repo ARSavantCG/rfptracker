@@ -3,6 +3,7 @@
  * itself.
  */
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useRoute } from 'wouter';
 import Navigation from '@/components/navigation';
@@ -12,7 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { AUTH_TOKEN_KEY } from '@/lib/auth-constants';
-import { ArrowLeft, Printer, Plus, Paperclip, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, Paperclip, AlertTriangle, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ApprovalPanel } from '@/components/cost/approval-panel';
+import { PaymentDialog } from '@/components/cost/payment-dialog';
+import { PositionView } from '@/components/cost/position-view';
 import { SummaryTable } from '@/components/cost/summary-table';
 import { ContractCard, openDocument } from '@/components/cost/contract-card';
 import { AllocationDialog } from '@/components/cost/allocation-dialog';
@@ -20,7 +25,7 @@ import { PasteLinesDialog } from '@/components/cost/paste-lines-dialog';
 import { ApplicationDialog } from '@/components/cost/application-dialog';
 import { BaselineEditor } from '@/components/cost/baseline-editor';
 import {
-  money, projectKey, BUCKET_LABEL,
+  money, projectKey, BUCKET_LABEL, shortDate, openReport,
   type ProjectBundle, type SovLineRow, type ContractRow, type ApplicationRow,
 } from '@/components/cost/types';
 
@@ -33,6 +38,9 @@ export default function CostProject() {
   const [editing, setEditing] = useState<SovLineRow | null>(null);
   const [pasteTarget, setPasteTarget] = useState<{ contractId: number; changeOrderId: number | null; label: string } | null>(null);
   const [appState, setAppState] = useState<{ contract: ContractRow; app: ApplicationRow | null; kind: 'pay_app' | 'invoice' } | null>(null);
+  const [payTarget, setPayTarget] = useState<{ app: ApplicationRow; contract: ContractRow } | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [, navigate] = useLocation();
   const [newContract, setNewContract] = useState<{ counterparty: string; bucket: string; retainagePct: string; contractNumber: string } | null>(null);
 
   const { data: b, isLoading, error } = useQuery<ProjectBundle>({ queryKey: [projectKey(id)], enabled: Number.isFinite(id) });
@@ -64,14 +72,17 @@ export default function CostProject() {
   });
 
   const printReport = async () => {
-    const win = window.open('', '_blank');
-    const res = await fetch(`/api/reports/budget-vs-actual/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` },
-    });
-    if (!res.ok) { if (win) win.close(); toast({ title: 'Report failed', variant: 'destructive' }); return; }
-    const url = URL.createObjectURL(await res.blob());
-    if (win) win.location.href = url; else window.location.href = url;
+    if (!(await openReport(`/api/reports/budget-vs-actual/${id}`))) toast({ title: 'Report failed', variant: 'destructive' });
   };
+  const deleteProject = useMutation({
+    mutationFn: (confirmText: string) => apiRequest(`/api/cost-projects/${id}`, 'DELETE', { confirm: confirmText }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cost-projects'] });
+      toast({ title: 'Project deleted' });
+      navigate('/projects');
+    },
+    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+  });
 
   if (isLoading) return <div className="min-h-screen bg-gray-50"><Navigation /><div className="p-6 text-sm text-gray-600">Loading…</div></div>;
   if (error || !b) return <div className="min-h-screen bg-gray-50"><Navigation /><div className="p-6 text-sm text-red-700">{(error as Error)?.message || 'Project not found'}</div></div>;
@@ -99,6 +110,12 @@ export default function CostProject() {
             <Button variant="ghost" onClick={() => setStatus.mutate(p.status === 'closed' ? 'active' : 'closed')}>
               {p.status === 'closed' ? 'Reopen' : 'Close project'}
             </Button>
+            <Button variant="ghost" className="text-red-700 hover:text-red-800 hover:bg-red-50" title="Delete this project"
+                    onClick={() => {
+                      if (window.confirm(`Delete ${p.projectNumber} — ${p.name}?\n\nIts contracts, change orders, pay apps, payments and file records all go with it. This cannot be undone.`)) setDeleting('');
+                    }}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -108,7 +125,10 @@ export default function CostProject() {
             <TabsTrigger value="contracts" className="text-sm px-3 py-1.5">
               Contracts{unmappedCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">{unmappedCount}</span>}
             </TabsTrigger>
-            <TabsTrigger value="budget" className="text-sm px-3 py-1.5">Budget</TabsTrigger>
+            <TabsTrigger value="position" className="text-sm px-3 py-1.5">Position</TabsTrigger>
+            <TabsTrigger value="budget" className="text-sm px-3 py-1.5">
+              Budget{b.approval.status !== 'confirmed' && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1">Draft</span>}
+            </TabsTrigger>
             <TabsTrigger value="files" className="text-sm px-3 py-1.5">Files{b.documents.length > 0 && ` (${b.documents.length})`}</TabsTrigger>
           </TabsList>
 
@@ -119,7 +139,18 @@ export default function CostProject() {
                 {p.baseline.length === 0 && ' This project has no budget lines either — add them on the Budget tab.'}
               </div>
             ) : (
-              <SummaryTable summary={b.summary} onShowUnallocated={() => setTab('contracts')} />
+              <SummaryTable summary={b.summary} cmFee={b.cmFee} onShowUnallocated={() => setTab('contracts')}
+                budgetNote={b.approval.status === 'confirmed' ? (
+                  <p className="text-xs text-gray-600">
+                    Budget confirmed against the LAF ({money(b.approval.lafTotal)}) on {shortDate(b.approval.confirmedAt)}.
+                    {Math.abs(b.approval.approvedTotal - (b.approval.originalTotal ?? 0)) >= 0.005 && ` Revised since: original ${money(b.approval.originalTotal)}, now ${money(b.approval.approvedTotal)}.`}
+                  </p>
+                ) : (
+                  <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-2.5">
+                    Draft budget — {b.approval.lafTotal == null ? 'not yet checked against the LAF.' : `LAF entered (${money(b.approval.lafTotal)}), not yet confirmed.`}{' '}
+                    <button className="underline font-medium" onClick={() => setTab('budget')}>Confirm it on the Budget tab</button>
+                  </div>
+                )} />
             )}
           </TabsContent>
 
@@ -142,6 +173,8 @@ export default function CostProject() {
                 onEditLine={setEditing}
                 onPaste={setPasteTarget}
                 onOpenApplication={(contract, app, kind) => setAppState({ contract, app, kind })}
+                payments={b.payments}
+                onPay={(contract, app) => setPayTarget({ contract, app })}
               />
             ))}
             {newContract ? (
@@ -178,7 +211,13 @@ export default function CostProject() {
             )}
           </TabsContent>
 
-          <TabsContent value="budget" className="mt-4">
+          <TabsContent value="position" className="mt-4">
+            <PositionView bundle={b} projectId={id} onPay={setPayTarget} />
+          </TabsContent>
+
+          <TabsContent value="budget" className="mt-4 space-y-4">
+            <ApprovalPanel projectId={id} baseline={p.baseline} approval={b.approval} />
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Priced budget lines</div>
             <BaselineEditor projectId={id} baseline={p.baseline} sovLines={b.sovLines} rfpLinked={!!p.rfpId} />
           </TabsContent>
 
@@ -220,7 +259,26 @@ export default function CostProject() {
 
       <AllocationDialog line={editing} baseline={p.baseline} projectId={id} onClose={() => setEditing(null)} />
       <PasteLinesDialog target={pasteTarget} projectId={id} onClose={() => setPasteTarget(null)} />
-      <ApplicationDialog
+      <PaymentDialog target={payTarget} payments={b.payments} projectId={id} onClose={() => setPayTarget(null)} />
+        <Dialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader><DialogTitle>Delete {p.projectNumber}?</DialogTitle></DialogHeader>
+            <p className="text-sm text-gray-700">
+              This removes the project, its {b.contracts.length} contract{b.contracts.length === 1 ? '' : 's'}, {b.applications.length} pay
+              app{b.applications.length === 1 ? '' : 's'} and invoice{b.applications.length === 1 ? '' : 's'}, and {b.payments.length} payment{b.payments.length === 1 ? '' : 's'}.
+              The RFP is not touched. To confirm, type <span className="font-mono font-semibold">{p.projectNumber}</span>.
+            </p>
+            <Input autoFocus value={deleting ?? ''} onChange={(e) => setDeleting(e.target.value)} placeholder={p.projectNumber} />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleting(null)}>Cancel</Button>
+              <Button variant="destructive" disabled={(deleting ?? '').trim().toUpperCase() !== p.projectNumber.toUpperCase() || deleteProject.isPending}
+                      onClick={() => deleteProject.mutate((deleting ?? '').trim())}>
+                {deleteProject.isPending ? 'Deleting…' : 'Delete project'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <ApplicationDialog
         open={!!appState}
         contract={appState?.contract ?? null}
         app={appState?.app ?? null}

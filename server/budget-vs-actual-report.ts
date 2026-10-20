@@ -1,82 +1,228 @@
 /**
- * Budget vs Actual — printable. Pure renderer plus a thin route.
- * Same shell as every other report. Columns: Description, Budget, Committed
- * (contract + approved COs), Pending COs, Billed to date, Variance, and the
- * tenant/outstanding split of committed cost.
+ * The two printable cost reports, on the shared report layout:
+ *
+ *   Budget vs Actual   by budget line: budget (after the deal), committed,
+ *                      pending COs, spent, variance, tenant / outstanding share.
+ *                      Shows the ORIGINAL budget beside the current one once
+ *                      the budget has been confirmed and since revised.
+ *   Cost Position      by contract, as of a date: billed, retainage, paid,
+ *                      owed, left to pay — and every pay app's due / paid /
+ *                      open. The page a refinance asks for.
+ *
+ * Renderers are pure; the routes only fetch.
  */
 import type { Express } from "express";
 import { requireAuth, requireAdmin } from "./middleware";
 import { storage } from "./storage";
-import { loadProjectBundle } from "./cost-tracking-routes";
+import { loadProjectBundle, todayEastern } from "./cost-tracking-routes";
 import {
-  REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, money2, generatedByName, rfpPropertyLabel, rfpRentableSf,
+  REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, money2, generatedByName,
+  rfpPropertyLabel, rfpRentableSf, type ReportInfoRow,
 } from "./lib/report-shell";
 import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
+import { DEAL_DISCOUNT_KEY } from "@shared/cost-budget-approval";
+import { positionAsOf } from "@shared/cost-position";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
 ];
 
+const fmt = (n: number) => (n < -0.005 ? `(${money2(-n)})` : money2(n));
+const cell = (n: number, cls = "") => `<td class="num ${cls}">${fmt(n)}</td>`;
+const negCls = (n: number) => (n < -0.005 ? "neg" : "");
+const longDate = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso);
+  return d.toLocaleDateString("en-US", { timeZone: "America/New_York", year: "numeric", month: "long", day: "numeric" });
+};
+
+const TABLE_CSS = `
+  body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; padding: 0.5in; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .t th { text-align: right; background: #f3f4f6; padding: 5px 6px; border-bottom: 2px solid #374151; font-size: 10px; }
+  .t th:first-child, .t th.l { text-align: left; }
+  .t td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; }
+  .t td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .t td.neg { color: #b91c1c; font-weight: 700; }
+  .t td.muted { color: #6b7280; }
+  .t tr.grp td { background: #e5e7eb; font-weight: 700; text-transform: uppercase; font-size: 9.5px; letter-spacing: .06em; }
+  .t tr.sub td { font-weight: 700; border-top: 1px solid #6b7280; }
+  .t tr.unalloc td { background: #fef3c7; }
+  .t tr.deal td { background: #eef2ff; font-style: italic; }
+  .t tr.total td { font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
+  .t tr { page-break-inside: avoid; }
+  h3.sec { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #374151; margin: 16px 0 6px; }
+  .legend { margin-top: 8px; font-size: 10px; color: #6b7280; }
+  .draft { display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; border-radius: 3px;
+    padding: 1px 6px; font-weight: 700; font-size: 10px; letter-spacing: .06em; }
+`;
+
+export interface CostReportProject {
+  name: string;
+  projectNumber: string;
+  tenantName?: string | null;
+}
+
+export interface CmFeeView {
+  pct: number;
+  base: number;
+  earned: number;
+  paidBase: number;
+  earnedOnPaid: number;
+  budget: number;
+  remaining: number;
+}
+
+export interface ApprovalView {
+  status: "draft" | "confirmed";
+  lafTotal: number | null;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  originalTotal: number | null;
+  approvedTotal: number;
+  discount: number;
+  undistributed: number;
+}
+
+function infoRows(project: CostReportProject, propertyLabel?: string, rentableSf?: number): ReportInfoRow[] {
+  return [
+    { label: "Tenant", value: project.tenantName || "" },
+    { label: "Property", value: propertyLabel || "" },
+    { label: "Rentable Area", value: rentableSf ? `${Math.round(rentableSf).toLocaleString("en-US")} SF` : "" },
+  ];
+}
+
+function cmFeeTable(fee: CmFeeView | null | undefined): string {
+  if (!fee) return "";
+  return `
+  <h3 class="sec">CM Fee Earned to Date</h3>
+  <table class="t"><thead><tr><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>CM Fee Budget</th><th>Remaining</th></tr></thead><tbody>
+    <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fee.pct}%</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
+    <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fee.pct}%</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
+  </tbody></table>`;
+}
+
+type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null };
+
 export function renderBudgetVsActualHtml(input: {
-  project: { name: string; projectNumber: string; tenantName?: string | null };
+  project: CostReportProject;
   propertyLabel?: string;
   rentableSf?: number;
-  summary: BudgetVsActual;
+  summary: BudgetVsActual & { rows: BvaRow[] };
+  approval?: ApprovalView | null;
+  cmFee?: CmFeeView | null;
   generatedBy?: string | null;
 }): string {
-  const { summary: s, project } = input;
-  const info = [
-    { label: "Tenant", value: project.tenantName || "" },
-    { label: "Property", value: input.propertyLabel || "" },
-    { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },
-  ];
-  const notes = s.reconciles ? [] : ["Lines do not add back to the contracts. Check Unallocated lines on the project page."];
-  const fmt = (n: number) => (n < -0.005 ? `(${money2(-n)})` : money2(n));
-  const cell = (n: number, cls = "") => `<td class="num ${cls}">${fmt(n)}</td>`;
-  const varCls = (n: number) => (n < -0.005 ? "neg" : "");
+  const { summary: s, project, approval } = input;
+  const allRows = s.rows as BvaRow[];
+  const info = infoRows(project, input.propertyLabel, input.rentableSf);
+  const notes: string[] = [];
+  if (approval?.status === "confirmed") {
+    info.push({
+      label: "Budget",
+      value: `Confirmed against the LAF (${money2(approval.lafTotal ?? approval.approvedTotal)}) on ${longDate(approval.confirmedAt)}${approval.confirmedBy ? ` by ${approval.confirmedBy}` : ""}`,
+    });
+  } else if (approval?.lafTotal != null) {
+    info.push({ label: "Budget", value: `Draft — LAF entered (${money2(approval.lafTotal)}), not yet confirmed` });
+  } else {
+    info.push({ label: "Budget", value: "Draft — priced budget, not yet confirmed against the LAF" });
+  }
+  if (!s.reconciles) notes.push("Lines do not add back to the contracts. Check Unallocated lines on the project page.");
 
+  // The Original column earns its width only once the budget has moved since it was confirmed.
+  const showOriginal = approval?.status === "confirmed"
+    && allRows.some((r) => Math.abs((r.originalBudget ?? 0) - r.budget) >= 0.005);
+  const cols = showOriginal ? 9 : 8;
+
+  const row = (r: BvaRow) => {
+    const cls = r.key === UNALLOCATED_KEY ? ' class="unalloc"' : r.key === DEAL_DISCOUNT_KEY ? ' class="deal"' : "";
+    return `<tr${cls}><td>${escapeHtml(r.description)}</td>${showOriginal ? cell(r.originalBudget ?? 0, "muted") : ""}${cell(r.budget)}${cell(r.committed)}${cell(r.pending)}${cell(r.toDate)}
+      ${cell(r.variance, negCls(r.variance))}${cell(r.committedTenant)}${cell(r.committedOutstanding)}</tr>`;
+  };
+  const sums = (rows: BvaRow[], label: string, cls: string) => {
+    const sum = (f: (r: BvaRow) => number) => rows.reduce((a, r) => a + f(r), 0);
+    const v = sum((r) => r.variance);
+    return `<tr class="${cls}"><td>${escapeHtml(label)}</td>${showOriginal ? cell(sum((r) => r.originalBudget ?? 0)) : ""}${cell(sum((r) => r.budget))}${cell(sum((r) => r.committed))}${cell(sum((r) => r.pending))}
+      ${cell(sum((r) => r.toDate))}${cell(v, negCls(v))}${cell(sum((r) => r.committedTenant))}${cell(sum((r) => r.committedOutstanding))}</tr>`;
+  };
   const group = (key: string, label: string) => {
-    const rows = s.rows.filter((r) => (key === "misc" ? r.bucket === "misc" || !BUCKETS.some(([k]) => k === r.bucket) : r.bucket === key));
+    const rows = allRows.filter((r) => (key === "misc" ? r.bucket === "misc" || !BUCKETS.some(([k]) => k === r.bucket) : r.bucket === key));
     if (!rows.length) return "";
-    const sum = (f: (r: typeof rows[number]) => number) => rows.reduce((a, r) => a + f(r), 0);
-    return `<tr class="grp"><td colspan="8">${escapeHtml(label)}</td></tr>` + rows.map((r) => `
-      <tr${r.key === UNALLOCATED_KEY ? ' class="unalloc"' : ""}>
-        <td>${escapeHtml(r.description)}</td>${cell(r.budget)}${cell(r.committed)}${cell(r.pending)}${cell(r.toDate)}
-        ${cell(r.variance, varCls(r.variance))}${cell(r.committedTenant)}${cell(r.committedOutstanding)}
-      </tr>`).join("") + `
-      <tr class="sub"><td>${escapeHtml(label)} subtotal</td>${cell(sum((r) => r.budget))}${cell(sum((r) => r.committed))}${cell(sum((r) => r.pending))}
-        ${cell(sum((r) => r.toDate))}${cell(sum((r) => r.variance))}${cell(sum((r) => r.committedTenant))}${cell(sum((r) => r.committedOutstanding))}</tr>`;
+    return `<tr class="grp"><td colspan="${cols}">${escapeHtml(label)}</td></tr>${rows.map(row).join("")}${sums(rows, `${label} subtotal`, "sub")}`;
   };
 
-  const t = s.totals;
   return `<!doctype html><html><head><meta charset="utf-8"><title>Budget vs Actual</title><style>
-    ${REPORT_SHELL_CSS}
-    body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; padding: 0.5in; }
-    table.bva { width: 100%; border-collapse: collapse; font-size: 10.5px; }
-    .bva th { text-align: right; background: #f3f4f6; padding: 5px 6px; border-bottom: 2px solid #374151; font-size: 10px; }
-    .bva th:first-child { text-align: left; }
-    .bva td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; }
-    .bva td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .bva td.neg { color: #b91c1c; font-weight: 700; }
-    .bva tr.grp td { background: #e5e7eb; font-weight: 700; text-transform: uppercase; font-size: 9.5px; letter-spacing: .06em; }
-    .bva tr.sub td { font-weight: 700; border-top: 1px solid #6b7280; }
-    .bva tr.unalloc td { background: #fef3c7; }
-    .bva tr.total td { font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
-    .bva tr { page-break-inside: avoid; }
-    .legend { margin-top: 8px; font-size: 10px; color: #6b7280; }
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
   ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes })}
-  <table class="bva"><thead><tr>
-    <th>Description</th><th>Budget</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
+  <table class="t"><thead><tr>
+    <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}<th>${showOriginal ? "Current Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
     <th>Variance</th><th>Tenant Share</th><th>Outstanding Share</th></tr></thead><tbody>
     ${BUCKETS.map(([k, l]) => group(k, l)).join("")}
-    <tr class="total"><td>Total</td>${cell(t.budget)}${cell(t.committed)}${cell(t.pending)}${cell(t.toDate)}
-      ${cell(t.variance, varCls(t.variance))}${cell(t.committedTenant)}${cell(t.committedOutstanding)}</tr>
+    ${sums(allRows, "Total", "total")}
   </tbody></table>
   <div class="legend">Committed = contracts plus approved change orders. Variance = Budget less Committed (negative is over budget).
-    Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(t.retainageHeld)}.</div>
+    Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.
+    ${approval && Math.abs(approval.undistributed) >= 0.005 ? `The Deal Discount line is the part of the LAF cut not yet put on a budget line.` : ""}</div>
+  ${cmFeeTable(input.cmFee)}
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
+}
+
+export function renderCostPositionHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  position: ReturnType<typeof positionAsOf>;
+  contracts: Array<{ id: number; counterparty: string; contractNumber?: string | null }>;
+  cmFee?: CmFeeView | null;
+  generatedBy?: string | null;
+}): string {
+  const { position: p } = input;
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  info.push({ label: "As Of", value: longDate(p.asOf) });
+  const name = new Map(input.contracts.map((c) => [c.id, c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : "")]));
+  const t = p.totals;
+
+  const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
+    ${cell(c.contractSum)}${cell(c.billedToDate)}<td class="num">${c.pctComplete.toFixed(1)}%</td>${cell(c.retainageHeld)}
+    ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("");
+
+  const appRows = p.applications.length === 0
+    ? `<tr><td colspan="6" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
+    : p.applications.map((a) => `<tr><td>${escapeHtml(name.get(a.contractId) || "")}</td><td>App ${a.number}</td>
+      <td>${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}</tr>`).join("");
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Cost Position</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Cost Position", eyebrow: "Cost Report", info })}
+  <table class="t"><thead><tr>
+    <th>Contract</th><th>Contract Sum</th><th>Billed to Date</th><th>% Billed</th><th>Retainage Held</th>
+    <th>Net Billed</th><th>Paid</th><th>Owed</th><th>Left to Pay</th></tr></thead><tbody>
+    ${contractRows}
+    <tr class="total"><td>Total</td>${cell(t.contractSum)}${cell(t.billedToDate)}<td class="num">${t.pctComplete.toFixed(1)}%</td>${cell(t.retainageHeld)}
+      ${cell(t.netBilled)}${cell(t.paid)}${cell(t.owed)}${cell(t.leftToPay)}</tr>
+  </tbody></table>
+  <div class="legend">Billed to Date = work completed and stored. Net Billed = billed less retainage. Owed = net billed not yet paid.
+    Left to Pay = contract sum less paid (owed + retainage + work not yet billed). Approved change orders only.</div>
+
+  <h3 class="sec">Pay Apps &amp; Invoices</h3>
+  <table class="t"><thead><tr><th>Contract</th><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th></tr></thead><tbody>
+    ${appRows}
+  </tbody></table>
+  ${cmFeeTable(input.cmFee)}
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
+async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
+  const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
+  const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
+  return {
+    propertyLabel: rfp ? rfpPropertyLabel(rfp, property) : (property?.name ?? ""),
+    rentableSf: rfp ? rfpRentableSf(rfp, property) : 0,
+  };
 }
 
 export function registerBudgetVsActualReportRoutes(app: Express): void {
@@ -86,18 +232,37 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const property: any = b.project.propertyId
-        ? await storage.getProperty(b.project.propertyId).catch(() => undefined) : undefined;
-      const rfp: any = b.project.rfpId ? await storage.getRfpRequest(b.project.rfpId).catch(() => undefined) : undefined;
-      const label = rfp ? rfpPropertyLabel(rfp, property) : (property?.name ?? "");
-      const sf = rfp ? rfpRentableSf(rfp, property) : 0;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderBudgetVsActualHtml({
-        project: b.project, propertyLabel: label, rentableSf: sf,
-        summary: b.summary, generatedBy: generatedByName((req as any).user),
+        project: b.project, ...(await propertyFacts(b.project)),
+        summary: b.summary, approval: b.approval, cmFee: b.cmFee,
+        generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {
       console.error("Budget vs actual report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  app.get("/api/reports/cost-position/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const asOfRaw = String(req.query.asOf || "");
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : todayEastern();
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderCostPositionHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        position: positionAsOf(asOf, b.positionInput),
+        contracts: b.contracts,
+        // The fee is earned on what has been billed so far — today's figure.
+        cmFee: asOf === todayEastern() ? b.cmFee : null,
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Cost position report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

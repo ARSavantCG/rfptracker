@@ -2280,6 +2280,11 @@ export const costProjects = pgTable("cost_projects", {
     masterItemId?: number | null;
   }>>().notNull().default([]),
   notes: text("notes"),
+  // Draft → LAF → Deal Discount → confirmed. BudgetApproval in
+  // shared/cost-budget-approval.ts. Dollars.
+  budgetApproval: json("budget_approval").$type<Record<string, any>>().notNull().default({}),
+  // Small per-project settings: { cmFeePct, cmFeeKey }.
+  settings: json("settings").$type<Record<string, any>>().notNull().default({}),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -2368,6 +2373,20 @@ export const costDocuments = pgTable("cost_documents", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_documents_project_idx").on(t.projectId)]);
 
+/** Money out the door against a pay app or invoice. */
+export const costPayments = pgTable("cost_payments", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").notNull(),
+  applicationId: integer("application_id"),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  paidDate: timestamp("paid_date").notNull(),
+  reference: text("reference"),               // check or wire number
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [index("cost_payments_contract_idx").on(t.contractId)]);
+
+export type CostPayment = typeof costPayments.$inferSelect;
 export type CostProject = typeof costProjects.$inferSelect;
 export type CostContract = typeof costContracts.$inferSelect;
 export type CostChangeOrder = typeof costChangeOrders.$inferSelect;

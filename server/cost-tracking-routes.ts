@@ -19,8 +19,13 @@ import { storage } from './storage';
 import { requireAuth, requireAdmin } from './middleware';
 import {
   costProjects, costContracts, costChangeOrders, costSovLines,
-  costApplications, costApplicationLines, costDocuments,
+  costApplications, costApplicationLines, costDocuments, costPayments,
 } from '@shared/schema';
+import {
+  normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal,
+  type BudgetApproval,
+} from '@shared/cost-budget-approval';
+import { positionAsOf, detectCmFee, cmFeeEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
   budgetVsActual, g702For, formatProjectNumber,
@@ -55,6 +60,8 @@ export function cleanAllocations(raw: unknown): Array<{ baselineKey: string; pct
     .map((a: any) => ({ baselineKey: String(a?.baselineKey ?? '').trim(), pct: Number(a?.pct) }))
     .filter((a) => a.baselineKey && Number.isFinite(a.pct) && a.pct > 0 && a.pct <= 100);
 }
+
+const pick = (o: any, keys: string[]) => Object.fromEntries(keys.filter((k) => o && o[k] !== undefined).map((k) => [k, o[k]]));
 
 const intParam = (req: Request, name: string) => {
   const v = parseInt(String(req.params[name]), 10);
@@ -183,6 +190,8 @@ export async function loadProjectBundle(projectId: number) {
     .where(inArray(costApplicationLines.applicationId, appIds));
   const documents = await db.select().from(costDocuments)
     .where(eq(costDocuments.projectId, projectId)).orderBy(desc(costDocuments.createdAt));
+  const payRows = none ? [] : await db.select().from(costPayments)
+    .where(inArray(costPayments.contractId, contractIds)).orderBy(costPayments.paidDate, costPayments.id);
 
   // To the pure model, in dollars.
   const baseline = (project.baseline || []) as BaselineLine[];
@@ -207,7 +216,47 @@ export async function loadProjectBundle(projectId: number) {
     })),
   }));
 
-  const summary = budgetVsActual({ baseline, lines, changeOrders, applications });
+  // Measured against the budget after the deal: each line less the discount
+  // put on it, plus a Deal Discount line for whatever has not been placed.
+  const approval = normalizeApproval(project.budgetApproval);
+  const effective = effectiveBaseline(baseline, approval);
+  const summary0 = budgetVsActual({ baseline: effective, lines, changeOrders, applications });
+  const originalBy = new Map((approval.original || []).map((o) => [o.key, o.budget]));
+  const priced = new Map(baseline.map((b) => [b.key, Number(b.budget) || 0]));
+  const summary = {
+    ...summary0,
+    rows: summary0.rows.map((r) => ({
+      ...r,
+      priced: priced.has(r.key) ? Math.round(priced.get(r.key)! * 100) / 100 : null,
+      originalBudget: approval.status === 'confirmed' ? (originalBy.get(r.key) ?? 0) : null,
+    })),
+  };
+
+  const dated: DatedApplication[] = applications.map((a) => {
+    const row = apps.find((x) => x.id === a.id)!;
+    return { ...a, date: isoDay(row.periodEnd ?? row.createdAt) };
+  });
+  const payments: Payment[] = payRows.map((p) => ({
+    id: p.id, contractId: p.contractId, applicationId: p.applicationId ?? null,
+    amount: dollars(p.amountCents), paidDate: isoDay(p.paidDate), reference: p.reference,
+  }));
+  const positionInput = { contractIds, lines, changeOrders, applications: dated, payments };
+  const position = positionAsOf(todayEastern(), positionInput);
+
+  const settings = (project.settings || {}) as any;
+  const detected = detectCmFee(baseline);
+  const cmSettings = {
+    pct: settings.cmFeePct != null && Number.isFinite(Number(settings.cmFeePct)) ? Number(settings.cmFeePct) : (detected?.pct ?? 0),
+    key: settings.cmFeeKey !== undefined ? (settings.cmFeeKey || null) : (detected?.key ?? null),
+  };
+  // The CM's own contract (if there is one) is not part of its base.
+  const cmContractIds = new Set(contracts.filter((c) => c.bucket === 'cm').map((c) => c.id));
+  const cmFee = cmSettings.key || settings.cmFeePct != null
+    ? cmFeeEarned(cmSettings, {
+      rows: summary.rows.map((r) => ({ key: r.key, budget: r.budget, toDate: r.toDate })),
+      paidBase: payments.filter((p) => !cmContractIds.has(p.contractId)).reduce((s, p) => s + p.amount, 0),
+    })
+    : null;
   const g702 = Object.fromEntries(contracts.map((c) => {
     const nums = applications.filter((a) => a.contractId === c.id).map((a) => a.number);
     return [c.id, g702For(c.id, nums.length ? Math.max(...nums) : 0, { lines, changeOrders, applications })];
@@ -231,7 +280,18 @@ export async function loadProjectBundle(projectId: number) {
     documents,
     summary,
     g702ByContract: g702,
+    approval: { ...approval, ...discountState(baseline, approval) },
+    payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
+    position,
+    positionInput,
+    cmFee,
   };
+}
+
+const isoDay = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : '');
+/** Today in Eastern time, where the team works: "2026-10-20". */
+export function todayEastern(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 // ----------------------------------------------------------- application
@@ -387,6 +447,172 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (!row) return res.status(404).json({ message: 'Project not found' });
       res.json(row);
     } catch (e) { fail(res, e, 'update the project'); }
+  });
+
+  // ---- budget approval (LAF, Deal Discount, confirm)
+  const loadProject = async (id: number) => (await db.select().from(costProjects).where(eq(costProjects.id, id)))[0];
+  const saveApproval = async (id: number, a: BudgetApproval) =>
+    db.update(costProjects).set({ budgetApproval: a as any, updatedAt: new Date() }).where(eq(costProjects.id, id));
+
+  /**
+   * Enter or change the LAF, and where the discount goes.
+   *
+   * A new LAF total resets the discount to (priced − LAF). Allocations are
+   * kept: they are amounts on lines, and the remainder simply moves. On a
+   * confirmed budget every change that moves the total is logged as a
+   * revision; the original stays as it was confirmed.
+   */
+  app.put('/api/cost-projects/:id/approval', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const cur = normalizeApproval(project.budgetApproval);
+      const body = req.body || {};
+      const beforeTotal = discountState(baseline, cur).approvedTotal;
+      const next = normalizeApproval({ ...cur, ...pick(body, ['lafLines', 'allocations']) });
+      if (body.lafTotal !== undefined) {
+        next.lafTotal = body.lafTotal === null || body.lafTotal === '' ? null : Math.round(toCents(body.lafTotal)) / 100;
+        next.discount = next.lafTotal == null ? 0 : Math.round((pricedTotal(baseline) - next.lafTotal) * 100) / 100;
+      }
+      const afterTotal = discountState(baseline, next).approvedTotal;
+      if (next.status === 'confirmed' && Math.abs(afterTotal - beforeTotal) >= 0.005) {
+        next.revisions = [...next.revisions, {
+          at: new Date().toISOString(), by: who(req), total: afterTotal,
+          note: String(body.note || (body.lafTotal !== undefined ? 'LAF total changed' : 'Budget revised')),
+        }];
+      }
+      await saveApproval(id, next);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'save the budget approval'); }
+  });
+
+  /** Lock the budget as the original. The LAF total has to be in. */
+  app.post('/api/cost-projects/:id/approval/confirm', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      if (a.lafTotal == null) return res.status(400).json({ message: 'Enter the LAF total before confirming.' });
+      if (baseline.length === 0) return res.status(400).json({ message: 'There are no budget lines to confirm.' });
+      const snap = snapshotOriginal(baseline, a);
+      a.status = 'confirmed';
+      a.confirmedAt = new Date().toISOString();
+      a.confirmedBy = who(req);
+      a.original = snap.lines;
+      a.originalTotal = snap.total;
+      a.revisions = [];
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'confirm the budget'); }
+  });
+
+  /** Back to draft — for a budget confirmed by mistake. Drops the original. */
+  app.post('/api/cost-projects/:id/approval/reopen', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const a = normalizeApproval(project.budgetApproval);
+      a.status = 'draft';
+      a.confirmedAt = null; a.confirmedBy = null; a.original = null; a.originalTotal = null; a.revisions = [];
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'reopen the budget'); }
+  });
+
+  /** CM fee rate and line. */
+  app.put('/api/cost-projects/:id/settings', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const next: any = { ...(project.settings || {}) };
+      const b = req.body || {};
+      if (b.cmFeePct !== undefined) {
+        const v = parseFloat(String(b.cmFeePct));
+        if (b.cmFeePct === null || b.cmFeePct === '') delete next.cmFeePct;
+        else if (Number.isFinite(v) && v >= 0 && v <= 100) next.cmFeePct = v;
+        else return res.status(400).json({ message: 'CM fee must be a percentage between 0 and 100.' });
+      }
+      if (b.cmFeeKey !== undefined) next.cmFeeKey = b.cmFeeKey ? String(b.cmFeeKey) : '';
+      await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'save the settings'); }
+  });
+
+  /**
+   * Delete a project and everything under it. The caller must send the
+   * project number back as confirmation — the second of two prompts.
+   * Stored files stay in Object Storage; only their records go.
+   */
+  app.delete('/api/cost-projects/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const typed = String((req.body || {}).confirm ?? req.query.confirm ?? '').trim();
+      if (typed.toUpperCase() !== project.projectNumber.toUpperCase()) {
+        return res.status(400).json({ message: `Type ${project.projectNumber} to delete this project.` });
+      }
+      const contractIds = (await db.select({ id: costContracts.id }).from(costContracts)
+        .where(eq(costContracts.projectId, id))).map((c) => c.id);
+      await db.transaction(async (tx) => {
+        if (contractIds.length) {
+          const appIds = (await tx.select({ id: costApplications.id }).from(costApplications)
+            .where(inArray(costApplications.contractId, contractIds))).map((a) => a.id);
+          if (appIds.length) await tx.delete(costApplicationLines).where(inArray(costApplicationLines.applicationId, appIds));
+          await tx.delete(costPayments).where(inArray(costPayments.contractId, contractIds));
+          await tx.delete(costApplications).where(inArray(costApplications.contractId, contractIds));
+          await tx.delete(costSovLines).where(inArray(costSovLines.contractId, contractIds));
+          await tx.delete(costChangeOrders).where(inArray(costChangeOrders.contractId, contractIds));
+          await tx.delete(costContracts).where(inArray(costContracts.id, contractIds));
+        }
+        await tx.delete(costDocuments).where(eq(costDocuments.projectId, id));
+        await tx.delete(costProjects).where(eq(costProjects.id, id));
+      });
+      console.log(`[cost] project ${project.projectNumber} (${project.name}) deleted by ${who(req)}`);
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'delete the project'); }
+  });
+
+  // ---- payments
+  app.post('/api/cost-applications/:id/payments', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [a] = await db.select().from(costApplications).where(eq(costApplications.id, id));
+      if (!a) return res.status(404).json({ message: 'Application not found' });
+      const b = req.body || {};
+      const cents = toCents(b.amount);
+      if (cents === 0) return res.status(400).json({ message: 'Enter the amount paid.' });
+      const d = String(b.paidDate || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return res.status(400).json({ message: 'Enter the date it was paid.' });
+      const [row] = await db.insert(costPayments).values({
+        contractId: a.contractId, applicationId: a.id, amountCents: cents,
+        paidDate: new Date(`${d}T12:00:00Z`),
+        reference: b.reference ? String(b.reference).slice(0, 120) : null,
+        notes: b.notes ? String(b.notes) : null, createdBy: who(req),
+      }).returning();
+      res.json(row);
+    } catch (e) { fail(res, e, 'record the payment'); }
+  });
+
+  app.delete('/api/cost-payments/:id', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      await db.delete(costPayments).where(eq(costPayments.id, id));
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'remove the payment'); }
   });
 
   // ---- contracts
@@ -594,6 +820,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const id = intParam(req, 'id');
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       await db.delete(costApplicationLines).where(eq(costApplicationLines.applicationId, id));
+      await db.delete(costPayments).where(eq(costPayments.applicationId, id));
       await db.delete(costApplications).where(eq(costApplications.id, id));
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'delete the application'); }

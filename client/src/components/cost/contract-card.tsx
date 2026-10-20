@@ -13,12 +13,12 @@ import { Plus, ClipboardPaste, FileText, AlertTriangle, Paperclip } from 'lucide
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
   money, pct, projectKey, BUCKET_LABEL,
-  type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow,
+  type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow, type PaymentRow,
 } from './types';
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication,
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay,
 }: {
   contract: ContractRow;
   changeOrders: ChangeOrderRow[];
@@ -31,6 +31,8 @@ export function ContractCard({
   onEditLine: (l: SovLineRow) => void;
   onPaste: (t: { contractId: number; changeOrderId: number | null; label: string }) => void;
   onOpenApplication: (contract: ContractRow, app: ApplicationRow | null, kind: 'pay_app' | 'invoice') => void;
+  payments?: PaymentRow[];
+  onPay?: (contract: ContractRow, app: ApplicationRow) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -235,11 +237,11 @@ export function ContractCard({
         {lines.length === 0 && <p className="text-xs text-gray-500">Add the schedule of values first.</p>}
         {applications.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
+            <table className="w-full text-sm min-w-[720px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                   <th className="py-1 pr-2">No.</th><th className="py-1 pr-2">Invoice</th><th className="py-1 pr-2">Period</th>
-                  <th className="py-1 pr-2 text-right">This period</th><th className="py-1 pr-2 text-right">Payment due</th><th className="py-1">Files</th>
+                  <th className="py-1 pr-2 text-right">This period</th><th className="py-1 pr-2 text-right">Payment due</th><th className="py-1 pr-2 text-right">Paid</th><th className="py-1 pr-2 text-right">Open</th><th className="py-1">Files</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,6 +255,19 @@ export function ContractCard({
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">{money(appTotal(a))}</td>
                     <td className="py-1.5 pr-2 text-right tabular-nums font-medium">{money(a.g702.currentPaymentDue)}</td>
+                    {(() => {
+                      const paid = Math.round(payments.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0) * 100) / 100;
+                      const open = Math.round((a.g702.currentPaymentDue - paid) * 100) / 100;
+                      return (<>
+                        <td className="py-1.5 pr-2 text-right tabular-nums">{paid ? money(paid) : '—'}</td>
+                        <td className="py-1.5 pr-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          <button className={`tabular-nums hover:underline ${open > 0.005 ? 'text-red-700 font-medium' : 'text-green-700'}`}
+                                  title="Record or view payments" onClick={() => onPay?.(contract, a)}>
+                            {open > 0.005 ? money(open) : 'Paid'}
+                          </button>
+                        </td>
+                      </>);
+                    })()}
                     <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
                       {docsFor(a.id).map((d) => (
                         <a key={d.id} href={`/api/cost-documents/${d.id}/download`} target="_blank" rel="noreferrer"

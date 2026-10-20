@@ -4,14 +4,19 @@
  * Every row is a line Adolfo wrote the budget in — Office Area, Warehouse
  * LED, Design — with the contractor's trades already translated into it.
  */
+import type React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import type { BudgetVsActual } from '@shared/cost-tracking';
 import { UNALLOCATED_KEY } from '@shared/cost-tracking';
-import { money, signedMoney, pct, BUCKET_LABEL } from './types';
+import { DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
+import { money, signedMoney, pct, BUCKET_LABEL, type CmFee } from './types';
 
-export function SummaryTable({ summary, onShowUnallocated }: {
+export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: {
   summary: BudgetVsActual;
   onShowUnallocated?: () => void;
+  cmFee?: CmFee | null;
+  /** "Draft" or "Confirmed against the LAF …", shown above the table. */
+  budgetNote?: React.ReactNode;
 }) {
   const { rows, totals } = summary;
   const hasPending = Math.abs(totals.pending) >= 0.005;
@@ -41,6 +46,7 @@ export function SummaryTable({ summary, onShowUnallocated }: {
         </div>
       )}
 
+      {budgetNote}
       <div className="bg-white border rounded-lg overflow-x-auto">
         <table className="w-full text-sm min-w-[720px]">
           <thead>
@@ -57,23 +63,25 @@ export function SummaryTable({ summary, onShowUnallocated }: {
           <tbody>
             {rows.map((r) => {
               const isUnallocated = r.key === UNALLOCATED_KEY;
+              const isDeal = r.key === DEAL_DISCOUNT_KEY;
               return (
-                <tr key={r.key} className={`border-b last:border-0 ${isUnallocated ? 'bg-amber-50' : ''}`}>
+                <tr key={r.key} className={`border-b last:border-0 ${isUnallocated ? 'bg-amber-50' : isDeal ? 'bg-indigo-50/60' : ''}`}>
                   <td className="px-3 py-1.5">
                     <div className={isUnallocated ? 'text-amber-900 font-medium' : 'text-gray-900'}>{r.description}</div>
-                    {!isUnallocated && (
+                    {isDeal && <div className="text-[11px] text-indigo-700">Not yet put on a budget line — Budget tab</div>}
+                    {!isUnallocated && !isDeal && (
                       <div className="text-[11px] text-gray-500">
                         {BUCKET_LABEL[r.bucket] || r.bucket}
                         {r.tenantSharePct < 100 && ` · tenant pays ${r.tenantSharePct}%`}
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{isUnallocated ? '—' : money(r.budget)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{isUnallocated ? '—' : signedMoney(r.budget)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums">{money(r.committed)}</td>
                   {hasPending && <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{r.pending ? money(r.pending) : ''}</td>}
                   <td className="px-3 py-1.5 text-right tabular-nums">{money(r.toDate)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(r.toDate, r.committed)}</td>
-                  <td className={`px-3 py-1.5 text-right tabular-nums ${r.variance < 0 ? 'text-red-700 font-medium' : ''}`}>
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${isDeal ? 'text-indigo-800' : r.variance < 0 ? 'text-red-700 font-medium' : ''}`}>
                     {isUnallocated ? '—' : signedMoney(r.variance)}
                   </td>
                 </tr>
@@ -95,21 +103,26 @@ export function SummaryTable({ summary, onShowUnallocated }: {
       </div>
 
       {/* Who pays. Committed cost split the way each budget line is split. */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${cmFee ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2`}>
         <Stat label="Retainage held" value={money(totals.retainageHeld)} />
         <Stat label="Tenant share of committed" value={money(totals.committedTenant)} />
         <Stat label="Outstanding share (absorbed)" value={money(totals.committedOutstanding)}
               tone={totals.committedOutstanding > 0 ? 'text-red-800' : undefined} />
+        {cmFee && (
+          <Stat label={`CM fee earned to date (${cmFee.pct}%)`} value={money(cmFee.earned)}
+                sub={`of ${money(cmFee.budget)} · ${money(cmFee.earnedOnPaid)} on payments made`} />
+        )}
       </div>
     </div>
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Stat({ label, value, tone, sub }: { label: string; value: string; tone?: string; sub?: string }) {
   return (
     <div className="bg-white border rounded-md px-3 py-2">
       <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
       <div className={`text-lg font-semibold tabular-nums ${tone || 'text-gray-900'}`}>{value}</div>
+      {sub && <div className="text-[11px] text-gray-500 tabular-nums">{sub}</div>}
     </div>
   );
 }

@@ -26,6 +26,11 @@ import { eq, asc } from 'drizzle-orm';
 import { requireAuthFlexible, checkPermission } from './middleware';
 import { getBrandLogo as getBridgeLogo, BRAND_COLOR_PRIMARY, COMPANY_NAME } from './lib/branding';
 import { parseIncludeArchived, applyArchiveFilter } from '@shared/rfp-archive';
+import { auditBudget, type BudgetAudit } from './budget-audit';
+
+// Re-exported: callers imported these from here before the audit moved out.
+export { auditBudget };
+export type { BudgetAudit };
 
 function escapeHtml(s: any): string {
   return String(s ?? '')
@@ -34,110 +39,6 @@ function escapeHtml(s: any): string {
 
 const money = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-
-interface LineItem {
-  id?: string;
-  description?: string;
-  totalPrice?: string | number | null;
-  tenantShare?: number | null;
-  assemblyId?: string | null;
-}
-
-/** One line's contribution: price times the tenant's share. */
-function lineAmount(item: LineItem): number {
-  const price = typeof item?.totalPrice === 'number'
-    ? item.totalPrice
-    : parseFloat(String(item?.totalPrice ?? '')) || 0;
-  const share = (item?.tenantShare ?? 100) / 100;
-  return price * share;
-}
-
-export interface BudgetAudit {
-  rfpId: number;
-  rfpNumber: string | null;
-  projectName: string | null;
-  tenantName: string | null;
-  propertyRef: string | null;
-  status: string | null;
-  updatedAt: Date | null;
-
-  /** What was saved, and shown on the published document. */
-  storedTotal: number;
-  /** Every line item, with nothing skipped. */
-  sumOfAllLines: number;
-  /** What the app's own rule produces: items tagged into an assembly skipped. */
-  sumExcludingAssemblyItems: number;
-
-  /** Items tagged into an assembly whose head line item does NOT exist. */
-  orphanedAssemblyTotal: number;
-  orphanedAssemblyCount: number;
-  /** The assembly names involved, for the explanation. */
-  orphanedAssemblyNames: string[];
-
-  /** storedTotal − sumOfAllLines. Negative means the total is UNDERSTATED. */
-  gap: number;
-  verdict: 'reconciled' | 'understated' | 'overstated' | 'no-lines';
-  /** Whether the gap is explained by orphaned assembly items. */
-  explainedByAssemblies: boolean;
-}
-
-export function auditBudget(row: any, rfp: any): BudgetAudit {
-  const ti: LineItem[] = (row.tenantImprovements || []) as LineItem[];
-  const dsc: LineItem[] = (row.designSoftCosts || []) as LineItem[];
-  const ei: LineItem[] = (row.existingImprovements || []) as LineItem[];
-
-  // Existing improvements only count when the budget says to include them,
-  // which is the same condition calculateGrandTotal applies.
-  const includeExisting = !!row.hasExistingImprovements && !!row.includeExistingInTotal;
-  const counted: LineItem[] = [...ti, ...dsc, ...(includeExisting ? ei : [])];
-
-  const allIds = new Set([...ti, ...dsc, ...ei].map((i) => String(i?.id ?? '')));
-
-  const sumOfAllLines = counted.reduce((s, i) => s + lineAmount(i), 0);
-  const sumExcludingAssemblyItems = counted
-    .filter((i) => !i?.assemblyId)
-    .reduce((s, i) => s + lineAmount(i), 0);
-
-  // An assembly item is ORPHANED when its assemblyId does not name a line item
-  // that exists — i.e. there is no head carrying its value. Those are the ones
-  // that vanish from the total with nothing replacing them.
-  const orphans = counted.filter(
-    (i) => i?.assemblyId && !allIds.has(String(i.assemblyId)));
-  const orphanedAssemblyTotal = orphans.reduce((s, i) => s + lineAmount(i), 0);
-  const orphanedAssemblyNames = Array.from(
-    new Set(orphans.map((i) => String(i.assemblyId))));
-
-  const storedTotal = parseFloat(String(row.grandTotal ?? '')) || 0;
-  const gap = storedTotal - sumOfAllLines;
-
-  let verdict: BudgetAudit['verdict'];
-  if (counted.length === 0) verdict = 'no-lines';
-  // A dollar of rounding is not a discrepancy; $57,200 is.
-  else if (Math.abs(gap) < 1) verdict = 'reconciled';
-  else if (gap < 0) verdict = 'understated';
-  else verdict = 'overstated';
-
-  return {
-    rfpId: row.rfpId,
-    rfpNumber: rfp?.rfpNumber ?? null,
-    projectName: rfp?.projectName ?? null,
-    tenantName: rfp?.tenantName ?? null,
-    propertyRef: rfp?.property ?? null,
-    status: rfp?.status ?? null,
-    updatedAt: row.updatedAt ?? null,
-    storedTotal,
-    sumOfAllLines,
-    sumExcludingAssemblyItems,
-    orphanedAssemblyTotal,
-    orphanedAssemblyCount: orphans.length,
-    orphanedAssemblyNames,
-    gap,
-    verdict,
-    // Within a dollar: the gap IS the orphaned assembly money, not a coincidence.
-    explainedByAssemblies:
-      orphanedAssemblyTotal > 0 && Math.abs(Math.abs(gap) - orphanedAssemblyTotal) < 1,
-  };
-}
 
 export function registerBudgetReconciliationReport(app: Express): void {
   app.get('/api/reports/budget-reconciliation', requireAuthFlexible, checkPermission('admin.access'),

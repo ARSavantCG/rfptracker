@@ -117,7 +117,7 @@ export default function Navigation() {
 
   // Projects: what a job actually cost. Development team only — the same
   // permission the API checks, so the link never leads to a 403.
-  const projectItems: NavItem[] = hasPermission('pricing.edit') || isAdmin()
+  const projectItems: NavItem[] = isAdmin()
     ? [{ path: "/projects", label: "Projects", icon: Hammer }] : [];
 
   // Add admin item if user is admin

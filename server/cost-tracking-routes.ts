@@ -5,7 +5,7 @@
  * fetches, converts cents to dollars at the edge, and freezes a baseline from
  * an RFP's budget when a project is opened.
  *
- * Reads and writes both require pricing.edit — the development team. What a
+ * Reads and writes are admin-only for now (Adolfo, 2026-10-20). What a
  * job actually cost is not leasing-team data.
  */
 import type { Express, Request, Response } from 'express';
@@ -16,7 +16,7 @@ import os from 'os';
 import path from 'path';
 import { db } from './db';
 import { storage } from './storage';
-import { requireAuth, checkPermission } from './middleware';
+import { requireAuth, requireAdmin } from './middleware';
 import {
   costProjects, costContracts, costChangeOrders, costSovLines,
   costApplications, costApplicationLines, costDocuments,
@@ -30,7 +30,8 @@ import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-tot
 import { resolveContractBucket } from './budget-by-contract';
 import { backupToObjectStorage, streamFromObjectStorage } from './storage-backup';
 
-const canEdit = [requireAuth, checkPermission('pricing.edit')] as const;
+// Admins only for now (Adolfo, 2026-10-20).
+const canEdit = [requireAuth, requireAdmin] as const;
 const docUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ------------------------------------------------------------------ money

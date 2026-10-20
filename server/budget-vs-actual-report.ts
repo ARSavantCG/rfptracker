@@ -5,7 +5,7 @@
  * tenant/outstanding split of committed cost.
  */
 import type { Express } from "express";
-import { requireAuth, checkPermission } from "./middleware";
+import { requireAuth, requireAdmin } from "./middleware";
 import { storage } from "./storage";
 import { loadProjectBundle } from "./cost-tracking-routes";
 import {
@@ -81,7 +81,7 @@ export function renderBudgetVsActualHtml(input: {
 }
 
 export function registerBudgetVsActualReportRoutes(app: Express): void {
-  app.get("/api/reports/budget-vs-actual/:id", requireAuth, checkPermission("pricing.edit"), async (req, res) => {
+  app.get("/api/reports/budget-vs-actual/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });

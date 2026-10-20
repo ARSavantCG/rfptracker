@@ -107,6 +107,10 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_documents', column: 'direct_cost_id', type: 'integer' },
   // Pay app packages (2026-10-20).
   { table: 'cost_documents', column: 'doc_type', type: 'text' },
+  // Contract dates (2026-10-20).
+  { table: 'cost_contracts', column: 'contract_date', type: 'text' },
+  { table: 'cost_contracts', column: 'start_date', type: 'text' },
+  { table: 'cost_contracts', column: 'completion_date', type: 'text' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).
@@ -148,6 +152,9 @@ const ADDITIVE_TABLES: string[] = [
     bucket text NOT NULL DEFAULT 'contractor',
     contract_number text,
     retainage_bp integer NOT NULL DEFAULT 1000,
+    contract_date text,
+    start_date text,
+    completion_date text,
     notes text,
     created_at timestamp NOT NULL DEFAULT now()
   )`,

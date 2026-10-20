@@ -179,6 +179,7 @@ export default function CostProject() {
                 payments={b.payments}
                 onPay={(contract, app) => setPayTarget({ contract, app })}
                 onPackage={(contract, app) => setPkgTarget({ contract, app })}
+                defaultOpen={b.contracts.length <= 1 || !b.sovLines.some((l) => l.contractId === c.id)}
               />
             ))}
             {newContract ? (

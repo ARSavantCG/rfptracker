@@ -10,7 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { PercentInput } from './inputs';
+import { fmtPctText } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
@@ -20,7 +23,7 @@ import {
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage,
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen,
 }: {
   contract: ContractRow;
   changeOrders: ChangeOrderRow[];
@@ -36,11 +39,24 @@ export function ContractCard({
   payments?: PaymentRow[];
   onPay?: (contract: ContractRow, app: ApplicationRow) => void;
   onPackage?: (contract: ContractRow, app: ApplicationRow) => void;
+  defaultOpen?: boolean;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
   const [coForm, setCoForm] = useState<{ number: string; title: string } | null>(null);
+  // Open or folded, remembered per contract in this browser. Open by default
+  // when it's the only contract, or a new one with nothing in it yet.
+  const storeKey = `pm-contract-open-${contract.id}`;
+  const [open, setOpen] = useState<boolean>(() => {
+    try { const v = localStorage.getItem(storeKey); if (v != null) return v === '1'; } catch {}
+    return defaultOpen ?? true;
+  });
+  const toggle = (v?: boolean) => {
+    const next = v ?? !open;
+    setOpen(next);
+    try { localStorage.setItem(storeKey, next ? '1' : '0'); } catch {}
+  };
   // Which group's lines are open in the grid: 'base', a change order id, or none.
   // A brand-new contract opens straight into its base contract.
   const [editing, setEditing] = useState<string | null>(lines.length === 0 && changeOrders.length === 0 ? 'base' : null);
@@ -131,15 +147,19 @@ export function ContractCard({
 
   return (
     <div className="bg-white border rounded-lg">
-      <div className="px-4 py-3 border-b flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="font-semibold text-gray-900">{contract.counterparty}</div>
-          <div className="text-xs text-gray-600">
-            {BUCKET_LABEL[contract.bucket] || contract.bucket}
-            {contract.contractNumber ? ` · #${contract.contractNumber}` : ''}
-            {` · retainage ${Number(contract.retainagePct).toFixed(2)}%`}
+      <div className={`px-4 py-3 ${open ? 'border-b' : ''} flex flex-wrap items-start justify-between gap-3`}>
+        <button className="text-left flex items-start gap-2" onClick={() => toggle()} aria-expanded={open}>
+          {open ? <ChevronDown className="h-5 w-5 mt-0.5 text-gray-500" /> : <ChevronRight className="h-5 w-5 mt-0.5 text-gray-500" />}
+          <div>
+            <div className="font-semibold text-gray-900">{contract.counterparty}</div>
+            <div className="text-xs text-gray-600">
+              {BUCKET_LABEL[contract.bucket] || contract.bucket}
+              {contract.contractNumber ? ` · #${contract.contractNumber}` : ''}
+              {` · retainage ${Number(contract.retainagePct).toFixed(2)}%`}
+              {!open && ` · ${lines.length} line${lines.length === 1 ? '' : 's'} · ${applications.length} pay app${applications.length === 1 ? '' : 's'}`}
+            </div>
           </div>
-        </div>
+        </button>
         <div className="flex items-start gap-3">
         {g702 && (
           <div className="grid grid-cols-3 gap-x-5 text-right text-xs">
@@ -155,6 +175,8 @@ export function ContractCard({
         </div>
       </div>
 
+      {open && (<>
+      <ContractDetails contract={contract} documents={documents} projectId={projectId} />
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[760px]">
           <thead>
@@ -221,11 +243,15 @@ export function ContractCard({
                           </Select>
                         </div>
                       )}
-                      <Button size="sm" variant={editing === String(g.id ?? 'base') ? 'default' : 'outline'} className="h-7 px-2 text-xs"
-                              disabled={editing != null && editing !== String(g.id ?? 'base')}
-                              onClick={() => setEditing(editing === String(g.id ?? 'base') ? null : String(g.id ?? 'base'))}>
-                        <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit lines' : 'Enter lines'}
-                      </Button>
+                      {editing === String(g.id ?? 'base') ? (
+                        <span className="text-xs font-semibold text-blue-800 bg-blue-100 rounded px-2 py-1">Editing</span>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={editing != null}
+                                title={editing != null ? 'Save or cancel the lines you are editing first' : undefined}
+                                onClick={() => setEditing(String(g.id ?? 'base'))}>
+                          <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit lines' : 'Enter lines'}
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -346,6 +372,7 @@ export function ContractCard({
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }
@@ -366,4 +393,83 @@ export async function openDocument(id: number) {
   }
   const url = URL.createObjectURL(await res.blob());
   if (win) win.location.href = url; else window.location.href = url;
+}
+
+/**
+ * The contract's particulars — number, retainage, the few dates worth
+ * knowing — its documents (drop the signed contract here), and its notes.
+ * Each saves when you leave the box.
+ */
+function ContractDetails({ contract, documents, projectId }: { contract: ContractRow; documents: DocumentRow[]; projectId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
+  const [notes, setNotes] = useState(contract.notes ?? '');
+  const [ret, setRet] = useState(fmtPctText(String(contract.retainagePct)));
+  const [drag, setDrag] = useState(false);
+  const save = async (patch: Record<string, any>) => {
+    try { await apiRequest(`/api/cost-contracts/${contract.id}`, 'PATCH', patch); refresh(); }
+    catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+  };
+  const files = documents.filter((d) => d.contractId === contract.id && !d.applicationId && !d.directCostId);
+  const upload = async (list: File[]) => {
+    try {
+      for (const f of list) {
+        const fd = new FormData();
+        fd.append('file', f); fd.append('contractId', String(contract.id)); fd.append('docType', 'other');
+        await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
+      }
+      refresh(); toast({ title: list.length === 1 ? 'Contract file saved' : `${list.length} files saved` });
+    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+  };
+  const D = ({ label, field }: { label: string; field: 'contractDate' | 'startDate' | 'completionDate' }) => (
+    <div className="space-y-1">
+      <div className="text-xs text-gray-600">{label}</div>
+      <Input type="date" className="h-8 text-sm" defaultValue={contract[field] ?? ''} key={`${field}-${contract[field] ?? ''}`}
+             onBlur={(e) => { if ((e.target.value || null) !== (contract[field] || null)) save({ [field]: e.target.value || null }); }} />
+    </div>
+  );
+  return (
+    <div className="px-4 py-3 border-b bg-gray-50/60 space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+        <div className="space-y-1">
+          <div className="text-xs text-gray-600">Contract #</div>
+          <Input className="h-8 text-sm" defaultValue={contract.contractNumber ?? ''} key={`no-${contract.contractNumber ?? ''}`}
+                 onBlur={(e) => { if (e.target.value !== (contract.contractNumber ?? '')) save({ contractNumber: e.target.value }); }} />
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs text-gray-600">Retainage</div>
+          <PercentInput className="h-8 text-sm" value={ret} onValueChange={setRet}
+                        onBlur={(e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v) && Math.abs(v - contract.retainagePct) >= 0.005) save({ retainagePct: v }); }} />
+        </div>
+        <D label="Contract date" field="contractDate" />
+        <D label="Start" field="startDate" />
+        <D label="Substantial completion" field="completionDate" />
+        <div className="space-y-1">
+          <div className="text-xs text-gray-600">Contract documents</div>
+          <label className={`h-8 flex items-center gap-1.5 rounded-md border border-dashed px-2 text-xs cursor-pointer ${drag ? 'border-blue-400 bg-blue-50 text-blue-800' : 'border-gray-300 text-gray-600 hover:text-blue-700'}`}
+                 onDragOver={(e) => { if (Array.from(e.dataTransfer?.types ?? []).includes('Files')) { e.preventDefault(); setDrag(true); } }}
+                 onDragLeave={() => setDrag(false)}
+                 onDrop={(e) => { e.preventDefault(); setDrag(false); const l = Array.from(e.dataTransfer.files); if (l.length) upload(l); }}>
+            <Paperclip className="h-3.5 w-3.5" /> Drop or attach
+            <input type="file" multiple className="hidden" onChange={(e) => { const l = Array.from(e.target.files ?? []); e.target.value = ''; if (l.length) upload(l); }} />
+          </label>
+        </div>
+      </div>
+      {files.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {files.map((d) => (
+            <button key={d.id} className="text-xs text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => openDocument(d.id)}>
+              <Paperclip className="h-3 w-3" />{d.originalName}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="space-y-1">
+        <div className="text-xs text-gray-600">Notes on this contract</div>
+        <Textarea rows={2} className="text-sm bg-white" value={notes} onChange={(e) => setNotes(e.target.value)}
+                  onBlur={() => { if (notes !== (contract.notes ?? '')) save({ notes }).then(() => toast({ title: 'Notes saved' })); }} />
+      </div>
+    </div>
+  );
 }

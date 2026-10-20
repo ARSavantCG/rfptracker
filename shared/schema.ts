@@ -2299,6 +2299,10 @@ export const costContracts = pgTable("cost_contracts", {
   bucket: text("bucket").notNull().default("contractor"),
   contractNumber: text("contract_number"),
   retainageBp: integer("retainage_bp").notNull().default(1000), // basis points: 1000 = 10.00%
+  // Optional dates, as YYYY-MM-DD.
+  contractDate: text("contract_date"),
+  startDate: text("start_date"),
+  completionDate: text("completion_date"),       // substantial completion
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_contracts_project_idx").on(t.projectId)]);

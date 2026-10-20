@@ -20,7 +20,7 @@ export function ProjectNotes({ projectId, notes }: { projectId: number; notes: s
   });
   return (
     <div className="bg-white border rounded-lg px-4 py-3 space-y-2">
-      <label htmlFor="project-notes" className="text-xs font-semibold uppercase tracking-wide text-gray-600">Notes</label>
+      <label htmlFor="project-notes" className="text-xs font-semibold uppercase tracking-wide text-gray-600">Project notes</label>
       <Textarea id="project-notes" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
       {dirty && (
         <div className="flex justify-end gap-2">

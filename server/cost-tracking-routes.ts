@@ -1089,6 +1089,13 @@ export function registerCostTrackingRoutes(app: Express): void {
         patch.retainageBp = Math.round(Math.min(100, Math.max(0, Number(b.retainagePct))) * 100);
       }
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
+      for (const [k, col] of [['contractDate', 'contractDate'], ['startDate', 'startDate'], ['completionDate', 'completionDate']] as const) {
+        if (b[k] !== undefined) {
+          const v = String(b[k] ?? '').slice(0, 10);
+          patch[col] = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+        }
+      }
+      if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
       const [row] = await db.update(costContracts).set(patch).where(eq(costContracts.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'Contract not found' });
       res.json(row);

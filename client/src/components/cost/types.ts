@@ -26,6 +26,10 @@ export interface ContractRow {
   bucket: string;
   contractNumber: string | null;
   retainagePct: number;
+  contractDate: string | null;
+  startDate: string | null;
+  completionDate: string | null;
+  notes: string | null;
 }
 
 export interface ChangeOrderRow {

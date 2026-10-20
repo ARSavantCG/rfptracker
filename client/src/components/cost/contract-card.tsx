@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen } from 'lucide-react';
@@ -178,16 +179,19 @@ export function ContractCard({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span>{g.label}</span>
                       {g.co && (
-                        <select value={g.co.status}
-                                onChange={(e) => setCoStatus.mutate({ id: g.co!.id, status: e.target.value })}
-                                className={`h-6 rounded border px-1 text-[11px] font-medium ${
-                                  g.co.status === 'approved' ? 'bg-green-50 border-green-300 text-green-800'
-                                  : g.co.status === 'pending' ? 'bg-amber-50 border-amber-300 text-amber-800'
-                                  : 'bg-gray-50 border-gray-300 text-gray-600'}`}>
-                          <option value="approved">Approved</option>
-                          <option value="pending">Pending</option>
-                          <option value="void">Void</option>
-                        </select>
+                        <div className="w-28">
+                          <Select value={g.co.status} onValueChange={(v) => setCoStatus.mutate({ id: g.co!.id, status: v })}>
+                            <SelectTrigger className={`h-7 text-xs font-medium ${
+                              g.co.status === 'approved' ? 'bg-green-50 border-green-300 text-green-800'
+                              : g.co.status === 'pending' ? 'bg-amber-50 border-amber-300 text-amber-800'
+                              : 'bg-gray-50 border-gray-300 text-gray-600'}`}><SelectValue /></SelectTrigger>
+                            <SelectContent className="pm-scope">
+                              <SelectItem value="approved">Approved</SelectItem>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="void">Void</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
                       {g.co && (
                         <button className="text-gray-400 hover:text-red-700" title="Delete this change order"
@@ -205,13 +209,17 @@ export function ContractCard({
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-1 justify-end flex-wrap">
                       {unmapped.length > 0 && baseline.length > 0 && (
-                        <select value="" disabled={bulkMap.isPending}
-                                onChange={(e) => e.target.value && bulkMap.mutate({ ids: unmapped.map((l) => l.id), key: e.target.value })}
-                                className="h-7 rounded border border-amber-300 bg-amber-50 px-1 text-[11px] text-amber-900 max-w-[11rem]">
-                          <option value="">Map {unmapped.length} unmapped to…</option>
-                          {baseline.map((b) => <option key={b.key} value={b.key}>{b.description}</option>)}
-                          <option value="__spread__">Spread with the work</option>
-                        </select>
+                        <div className="w-52">
+                          <Select value="" disabled={bulkMap.isPending} onValueChange={(v) => v && bulkMap.mutate({ ids: unmapped.map((l) => l.id), key: v })}>
+                            <SelectTrigger className="h-7 text-xs border-amber-300 bg-amber-50 text-amber-900 data-[placeholder]:text-amber-900">
+                              <SelectValue placeholder={`Map ${unmapped.length} unmapped to…`} />
+                            </SelectTrigger>
+                            <SelectContent className="pm-scope">
+                              {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                              <SelectItem value="__spread__">Spread with the work</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
                       <Button size="sm" variant={editing === String(g.id ?? 'base') ? 'default' : 'outline'} className="h-7 px-2 text-xs"
                               disabled={editing != null && editing !== String(g.id ?? 'base')}

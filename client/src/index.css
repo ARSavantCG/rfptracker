@@ -247,9 +247,11 @@ div[class*="electrical-management-compact"] [role="tab"] {
 .electrical-tabs-compact [role="tab"],
 .electrical-tabs-compact button,
 /* Project Management (.pm-scope) is left out: this rule shrank every tab
-   and every dropdown there to 10px and 20px tall. */
-[data-state][class*="text"]:not(.pm-scope *),
-[role="tab"][class*="text"]:not(.pm-scope *) {
+   and every dropdown there to 10px and 20px tall. Open dropdown lists
+   (role=listbox) are left out everywhere: capped at 20px they showed one
+   option and hid the rest. */
+[data-state][class*="text"]:not(.pm-scope):not(.pm-scope *):not([role="listbox"]),
+[role="tab"][class*="text"]:not(.pm-scope):not(.pm-scope *) {
   font-size: 10px !important;
   height: 20px !important;
   min-height: 20px !important;

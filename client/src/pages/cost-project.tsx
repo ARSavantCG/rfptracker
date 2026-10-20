@@ -9,6 +9,7 @@ import { Link, useRoute } from 'wouter';
 import Navigation from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -189,10 +190,10 @@ export default function CostProject() {
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Type</div>
-                  <select value={newContract.bucket} onChange={(e) => setNewContract({ ...newContract, bucket: e.target.value })}
-                          className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-                    {Object.entries(BUCKET_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
+                  <Select value={newContract.bucket} onValueChange={(v) => setNewContract({ ...newContract, bucket: v })}>
+                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent className="pm-scope">{Object.entries(BUCKET_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Retainage %</div>

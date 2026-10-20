@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MoneyInput, PercentInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -97,12 +98,12 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
               <div className="space-y-2">
                 {rows.map((r, i) => (
                   <div key={i} className="flex gap-2 items-center">
-                    <select value={r.baselineKey}
-                            onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, baselineKey: e.target.value } : x)))}
-                            className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-2 text-sm">
-                      <option value="">Budget line…</option>
-                      {baseline.map((b) => <option key={b.key} value={b.key}>{b.description}</option>)}
-                    </select>
+                    <div className="flex-1 min-w-0">
+                      <Select value={r.baselineKey || undefined} onValueChange={(v) => setRows(rows.map((x, j) => (j === i ? { ...x, baselineKey: v } : x)))}>
+                        <SelectTrigger className="h-9 data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose a budget line —" /></SelectTrigger>
+                        <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                     <div className="w-28">
                       <PercentInput value={String(r.pct)} className="h-9"
                                     onValueChange={(v) => setRows(rows.map((x, j) => (j === i ? { ...x, pct: v } : x)))} />

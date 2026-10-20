@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MoneyInput } from './inputs';
 import { fmtMoneyText } from '@shared/format';
 import { useToast } from '@/hooks/use-toast';
@@ -92,10 +93,10 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-600">How</div>
-            <select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}
-                    className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-              {PAY_METHODS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            <Select value={form.method} onValueChange={(v) => setForm({ ...form, method: v })}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">{PAY_METHODS.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
           </div>
           <div className="space-y-1">
             <div className="text-xs text-gray-600">Check / wire #</div>

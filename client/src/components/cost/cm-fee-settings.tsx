@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PercentInput } from './inputs';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -47,11 +48,15 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source }: { projectI
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-600" htmlFor="cm-line">On budget line</label>
-        <select id="cm-line" value={key} onChange={(e) => setKey(e.target.value)}
-                className="h-9 w-64 max-w-full rounded-md border border-input bg-background px-2 text-sm">
-          <option value="">— none —</option>
-          {baseline.map((b) => <option key={b.key} value={b.key}>{b.description}</option>)}
-        </select>
+        <div className="w-64 max-w-full">
+          <Select value={key || '__none__'} onValueChange={(v) => setKey(v === '__none__' ? '' : v)}>
+            <SelectTrigger id="cm-line" className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent className="pm-scope">
+              <SelectItem value="__none__">— none —</SelectItem>
+              {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <Button size="sm" className="h-9" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save'}</Button>
     </div>

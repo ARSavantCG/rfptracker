@@ -146,10 +146,10 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
             <Field label="For" wide><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
             <Field label="Amount"><MoneyInput value={form.amount} onValueChange={(v) => setForm({ ...form, amount: v })} /></Field>
             <Field label="How">
-              <select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })}
-                      className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-                {PAY_METHODS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              <Select value={form.method} onValueChange={(v) => setForm({ ...form, method: v })}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">{PAY_METHODS.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
             </Field>
             <Field label="Card last 4 / check #"><Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
             <Field label="Budget line" wide>

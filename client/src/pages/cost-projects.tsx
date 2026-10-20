@@ -36,12 +36,19 @@ export default function CostProjects() {
   const [show, setShow] = useState<'active' | 'closed' | 'all'>('active');
 
   const { data, isLoading, error } = useQuery<{ projects: ListRow[] }>({ queryKey: ['/api/cost-projects'] });
-  const { data: rfps = [] } = useQuery<any[]>({ queryKey: ['/api/rfp-requests'], enabled: open });
+  // Everything, archived included, so the picker can say WHY an RFP can't be chosen
+  // rather than leaving it out without a word.
+  const { data: rfps = [] } = useQuery<any[]>({ queryKey: ['/api/rfp-requests?include_archived=true'], enabled: open });
 
-  // Only RFPs with a budget to freeze: past evaluation, or completed.
+  /** Why an RFP can't open a project, or null when it can. */
+  const blockedBy = (r: any): string | null => {
+    if (r.status === 'cancelled') return 'cancelled';
+    if (isArchivedRfp(r)) return 'archived — restore it from the dashboard to use it';
+    return null;
+  };
+  /** Has it a budget to bring with it? One that never reached evaluation opens with an empty budget. */
+  const hasBudget = (r: any) => ['evaluation', 'publish'].includes(r.workflowPhase) || r.status === 'completed' || r.pricingPath === 'rom_pilot';
   const eligible = useMemo(() => (rfps || [])
-    .filter((r: any) => ['evaluation', 'publish'].includes(r.workflowPhase) || r.status === 'completed')
-    .filter((r: any) => r.status !== 'cancelled' && !isArchivedRfp(r))
     .sort((a: any, b: any) => String(b.rfpNumber).localeCompare(String(a.rfpNumber), undefined, { numeric: true })), [rfps]);
   const alreadyOpened = new Set((data?.projects || []).map((p) => p.rfpId).filter(Boolean));
   const rfpLabel = (r: any) => [r.tenantName, r.projectName && r.projectName !== r.tenantName ? r.projectName : null].filter(Boolean).join(' · ');
@@ -53,8 +60,11 @@ export default function CostProjects() {
         const hay = `${r.rfpNumber} ${r.tenantName ?? ''} ${r.projectName ?? ''}`.toLowerCase();
         return words.every((w) => hay.includes(w));
       })
-      // Ones already opened go to the bottom.
-      .sort((a: any, b: any) => Number(alreadyOpened.has(a.id)) - Number(alreadyOpened.has(b.id)));
+      // Without a search, only what can be chosen; with one, everything that matches,
+      // so a missing RFP shows up with its reason.
+      .filter((r: any) => words.length > 0 || !blockedBy(r))
+      // Choosable first; then already opened; then blocked.
+      .sort((a: any, b: any) => (Number(!!blockedBy(a)) * 2 + Number(alreadyOpened.has(a.id))) - (Number(!!blockedBy(b)) * 2 + Number(alreadyOpened.has(b.id))));
   }, [eligible, rfpSearch, data]);
   const chosen = eligible.find((r: any) => String(r.id) === rfpId);
 
@@ -164,11 +174,12 @@ export default function CostProjects() {
                 <div className="border rounded-md max-h-72 overflow-y-auto" role="listbox" aria-label="Signed deals">
                   {shown.length === 0 && (
                     <div className="px-3 py-3 text-sm text-gray-500">
-                      {eligible.length === 0 ? 'No RFPs have reached evaluation yet.' : 'Nothing matches that.'}
+                      {rfpSearch.trim() ? 'Nothing matches that.' : 'No RFPs available to open. Type to search — archived and cancelled ones show with the reason.'}
                     </div>
                   )}
                   {shown.map((r: any) => {
-                    const taken = alreadyOpened.has(r.id);
+                    const blocked = blockedBy(r);
+                    const taken = alreadyOpened.has(r.id) || !!blocked;
                     const sel = String(r.id) === rfpId;
                     return (
                       <button key={r.id} type="button" role="option" aria-selected={sel} disabled={taken}
@@ -177,8 +188,10 @@ export default function CostProjects() {
                                 ${sel ? 'bg-blue-600 text-white' : taken ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
                         <span className={`font-mono text-xs whitespace-nowrap ${sel ? 'text-blue-100' : 'text-gray-500'}`}>{r.rfpNumber}</span>
                         <span className="min-w-0">
-                          {rfpLabel(r)}
-                          {taken && <span className="ml-1 text-xs">(already a project)</span>}
+                          {rfpLabel(r)}{' '}
+                          {alreadyOpened.has(r.id) && <span className="ml-1 text-xs">(already a project)</span>}
+                          {blocked && <span className="ml-1 text-xs">({blocked})</span>}
+                          {!taken && !hasBudget(r) && <span className={`ml-1 text-xs ${sel ? 'text-blue-100' : 'text-amber-700'}`}>(no evaluation budget yet — opens with an empty budget)</span>}
                         </span>
                       </button>
                     );

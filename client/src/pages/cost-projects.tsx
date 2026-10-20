@@ -31,18 +31,32 @@ export default function CostProjects() {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<'rfp' | 'blank'>('rfp');
   const [rfpId, setRfpId] = useState('');
+  const [rfpSearch, setRfpSearch] = useState('');
   const [name, setName] = useState('');
   const [showClosed, setShowClosed] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ projects: ListRow[] }>({ queryKey: ['/api/cost-projects'] });
-  const { data: rfps = [] } = useQuery<any[]>({ queryKey: ['/api/rfp-requests?include_archived=true'], enabled: open });
+  const { data: rfps = [] } = useQuery<any[]>({ queryKey: ['/api/rfp-requests'], enabled: open });
 
   // Only RFPs with a budget to freeze: past evaluation, or completed.
   const eligible = useMemo(() => (rfps || [])
     .filter((r: any) => ['evaluation', 'publish'].includes(r.workflowPhase) || r.status === 'completed')
-    .filter((r: any) => r.status !== 'cancelled')
-    .sort((a: any, b: any) => String(b.rfpNumber).localeCompare(String(a.rfpNumber))), [rfps]);
+    .filter((r: any) => r.status !== 'cancelled' && !isArchivedRfp(r))
+    .sort((a: any, b: any) => String(b.rfpNumber).localeCompare(String(a.rfpNumber), undefined, { numeric: true })), [rfps]);
   const alreadyOpened = new Set((data?.projects || []).map((p) => p.rfpId).filter(Boolean));
+  const rfpLabel = (r: any) => [r.tenantName, r.projectName && r.projectName !== r.tenantName ? r.projectName : null].filter(Boolean).join(' · ');
+  // Type any part of the number, tenant or property. Every word has to match.
+  const shown = useMemo(() => {
+    const words = rfpSearch.toLowerCase().split(/\s+/).filter(Boolean);
+    return eligible
+      .filter((r: any) => {
+        const hay = `${r.rfpNumber} ${r.tenantName ?? ''} ${r.projectName ?? ''}`.toLowerCase();
+        return words.every((w) => hay.includes(w));
+      })
+      // Ones already opened go to the bottom.
+      .sort((a: any, b: any) => Number(alreadyOpened.has(a.id)) - Number(alreadyOpened.has(b.id)));
+  }, [eligible, rfpSearch, data]);
+  const chosen = eligible.find((r: any) => String(r.id) === rfpId);
 
   const create = useMutation({
     mutationFn: () => apiRequest('/api/cost-projects', 'POST',
@@ -131,7 +145,7 @@ export default function CostProjects() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -141,17 +155,32 @@ export default function CostProjects() {
             {source === 'rfp' ? (
               <div className="space-y-1.5">
                 <Label htmlFor="rfp">RFP</Label>
-                <select id="rfp" value={rfpId} onChange={(e) => setRfpId(e.target.value)}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Choose the signed deal…</option>
-                  {eligible.map((r: any) => (
-                    <option key={r.id} value={r.id} disabled={alreadyOpened.has(r.id)}>
-                      {r.rfpNumber} — {r.tenantName}{r.projectName ? ` · ${r.projectName}` : ''}
-                      {alreadyOpened.has(r.id) ? ' (already a project)' : ''}
-                      {isArchivedRfp(r) ? ' (archived)' : ''}
-                    </option>
-                  ))}
-                </select>
+                <Input id="rfp" autoFocus value={rfpSearch} onChange={(e) => setRfpSearch(e.target.value)}
+                       placeholder="Type an RFP number, tenant or property…" />
+                <div className="border rounded-md max-h-72 overflow-y-auto" role="listbox" aria-label="Signed deals">
+                  {shown.length === 0 && (
+                    <div className="px-3 py-3 text-sm text-gray-500">
+                      {eligible.length === 0 ? 'No RFPs have reached evaluation yet.' : 'Nothing matches that.'}
+                    </div>
+                  )}
+                  {shown.map((r: any) => {
+                    const taken = alreadyOpened.has(r.id);
+                    const sel = String(r.id) === rfpId;
+                    return (
+                      <button key={r.id} type="button" role="option" aria-selected={sel} disabled={taken}
+                              onClick={() => setRfpId(String(r.id))}
+                              className={`w-full text-left px-3 py-2 border-b last:border-0 text-sm flex gap-3 items-baseline
+                                ${sel ? 'bg-blue-600 text-white' : taken ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-blue-50'}`}>
+                        <span className={`font-mono text-xs whitespace-nowrap ${sel ? 'text-blue-100' : 'text-gray-500'}`}>{r.rfpNumber}</span>
+                        <span className="min-w-0">
+                          {rfpLabel(r)}
+                          {taken && <span className="ml-1 text-xs">(already a project)</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {chosen && <p className="text-xs text-gray-700">Selected: <span className="font-medium">{chosen.rfpNumber} — {rfpLabel(chosen)}</span></p>}
                 <p className="text-xs text-gray-600">
                   Its evaluation budget becomes this project's baseline, frozen as it stands today.
                   The RFP itself is not changed.

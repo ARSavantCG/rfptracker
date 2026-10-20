@@ -19,6 +19,7 @@ import { ApprovalPanel } from '@/components/cost/approval-panel';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
+import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
 import { SummaryTable } from '@/components/cost/summary-table';
 import { ContractCard, openDocument } from '@/components/cost/contract-card';
 import { AllocationDialog } from '@/components/cost/allocation-dialog';
@@ -225,6 +226,7 @@ export default function CostProject() {
 
           <TabsContent value="budget" className="mt-4 space-y-4">
             <ApprovalPanel projectId={id} baseline={p.baseline} approval={b.approval} />
+            <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} />
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Priced budget lines</div>
             <BaselineEditor projectId={id} baseline={p.baseline} sovLines={b.sovLines} rfpLinked={!!p.rfpId} />
           </TabsContent>

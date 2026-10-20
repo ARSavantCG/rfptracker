@@ -34,6 +34,7 @@ import {
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
 import { resolveContractBucket } from './budget-by-contract';
 import { backupToObjectStorage, streamFromObjectStorage } from './storage-backup';
+import { generatedByName } from './lib/report-shell';
 
 // Admins only for now (Adolfo, 2026-10-20).
 const canEdit = [requireAuth, requireAdmin] as const;
@@ -74,6 +75,8 @@ const who = (req: Request) => {
   const u: any = (req as any).user;
   return String(u?.email || u?.username || (req as any).userId || '');
 };
+/** A person's name for anything printed: "Adolfo Reutlinger", not an email address. */
+const whoName = (req: Request) => generatedByName((req as any).user) || who(req);
 
 // --------------------------------------------------------------- baseline
 
@@ -512,7 +515,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const afterTotal = discountState(baseline, next).approvedTotal;
       if (next.status === 'confirmed' && Math.abs(afterTotal - beforeTotal) >= 0.005) {
         next.revisions = [...next.revisions, {
-          at: new Date().toISOString(), by: who(req), total: afterTotal,
+          at: new Date().toISOString(), by: whoName(req), total: afterTotal,
           note: String(body.note || (body.lafTotal !== undefined ? 'LAF total changed' : 'Budget revised')),
         }];
       }
@@ -535,7 +538,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const snap = snapshotOriginal(baseline, a);
       a.status = 'confirmed';
       a.confirmedAt = new Date().toISOString();
-      a.confirmedBy = who(req);
+      a.confirmedBy = whoName(req);
       a.original = snap.lines;
       a.originalTotal = snap.total;
       a.revisions = [];

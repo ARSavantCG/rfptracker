@@ -53,6 +53,8 @@ const TABLE_CSS = `
   .t tr { page-break-inside: avoid; }
   h3.sec { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #374151; margin: 16px 0 6px; }
   .legend { margin-top: 8px; font-size: 10px; color: #6b7280; }
+  ol.notes { margin: 0; padding-left: 16px; font-size: 10px; color: #4b5563; line-height: 1.45; }
+  .t tr.deal td.neg { color: #3730a3; }
   .draft { display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; border-radius: 3px;
     padding: 1px 6px; font-weight: 700; font-size: 10px; letter-spacing: .06em; }
 `;
@@ -97,8 +99,8 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
   return `
   <h3 class="sec">CM Fee Earned to Date</h3>
   <table class="t"><thead><tr><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>CM Fee Budget</th><th>Remaining</th></tr></thead><tbody>
-    <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fee.pct}%</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
-    <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fee.pct}%</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
+    <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fee.pct.toFixed(2)}%</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
+    <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fee.pct.toFixed(2)}%</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
   </tbody></table>`;
 }
 
@@ -117,15 +119,17 @@ export function renderBudgetVsActualHtml(input: {
   const allRows = s.rows as BvaRow[];
   const info = infoRows(project, input.propertyLabel, input.rentableSf);
   const notes: string[] = [];
+  // How the budget was set — kept to the notes at the end, not the header.
+  const endNotes: string[] = [];
   if (approval?.status === "confirmed") {
-    info.push({
-      label: "Budget",
-      value: `Confirmed against the LAF (${money2(approval.lafTotal ?? approval.approvedTotal)}) on ${longDate(approval.confirmedAt)}${approval.confirmedBy ? ` by ${approval.confirmedBy}` : ""}`,
-    });
+    endNotes.push(`Budget confirmed against the LAF (${money2(approval.lafTotal ?? approval.approvedTotal)}) on ${longDate(approval.confirmedAt)}${approval.confirmedBy ? ` by ${approval.confirmedBy}` : ""}.`);
+    if (approval.originalTotal != null && Math.abs(approval.originalTotal - approval.approvedTotal) >= 0.005) {
+      endNotes.push(`Revised since confirmation: original ${money2(approval.originalTotal)}, current ${money2(approval.approvedTotal)}.`);
+    }
   } else if (approval?.lafTotal != null) {
-    info.push({ label: "Budget", value: `Draft — LAF entered (${money2(approval.lafTotal)}), not yet confirmed` });
+    endNotes.push(`Draft budget: LAF entered (${money2(approval.lafTotal)}) but not yet confirmed.`);
   } else {
-    info.push({ label: "Budget", value: "Draft — priced budget, not yet confirmed against the LAF" });
+    endNotes.push("Draft budget: priced budget, not yet confirmed against the LAF.");
   }
   if (!s.reconciles) notes.push("Lines do not add back to the contracts. Check Unallocated lines on the project page.");
 
@@ -161,10 +165,17 @@ export function renderBudgetVsActualHtml(input: {
     ${BUCKETS.map(([k, l]) => group(k, l)).join("")}
     ${sums(allRows, "Total", "total")}
   </tbody></table>
-  <div class="legend">Committed = contracts plus approved change orders. Variance = Budget less Committed (negative is over budget).
-    Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.
-    ${approval && Math.abs(approval.undistributed) >= 0.005 ? `The Deal Discount line is the part of the LAF cut not yet put on a budget line.` : ""}</div>
   ${cmFeeTable(input.cmFee)}
+  <h3 class="sec">Notes</h3>
+  <ol class="notes">
+    ${[
+      ...endNotes,
+      ...(approval && Math.abs(approval.undistributed) >= 0.005 ? ["The Deal Discount line is the part of the LAF cut not yet put on a budget line."] : []),
+      "Committed = contracts plus approved change orders. Variance = Budget less Committed; in parentheses when over budget.",
+      `Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.`,
+      ...(input.cmFee ? [`CM fee at ${input.cmFee.pct.toFixed(2)}% of work billed on every other budget line.`] : []),
+    ].map((n) => `<li>${escapeHtml(n)}</li>`).join("")}
+  </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
 }
@@ -291,7 +302,16 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderBudgetVsActualHtml({
         project: b.project, ...(await propertyFacts(b.project)),
-        summary: b.summary, approval: b.approval, cmFee: b.cmFee,
+        summary: b.summary,
+        // Confirmations made before names were stored carry an email address;
+        // when it is the reader's own, print the name.
+        approval: (() => {
+          const u: any = (req as any).user;
+          const by = b.approval.confirmedBy;
+          return by && by.includes('@') && u?.email && by.toLowerCase() === String(u.email).toLowerCase()
+            ? { ...b.approval, confirmedBy: generatedByName(u) || by } : b.approval;
+        })(),
+        cmFee: b.cmFee,
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {

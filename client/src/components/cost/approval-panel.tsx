@@ -18,7 +18,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { CheckCircle2, Lock, Wand2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { parseSovPaste } from '@shared/cost-tracking';
-import { matchLafLines, compareLaf, type LafLine } from '@shared/cost-budget-approval';
+import { matchLafLines, compareLaf, rollUp, type LafLine } from '@shared/cost-budget-approval';
 import { money, signedMoney, projectKey, shortDate, type ApprovalView } from './types';
 
 const toNum = (s: string) => {
@@ -26,6 +26,12 @@ const toNum = (s: string) => {
   return Number.isFinite(v) ? v : 0;
 };
 const r2 = (v: number) => Math.round(v * 100) / 100;
+/** "1466500" → "1,466,500.00". Leaves text it can't read alone. */
+const fmtMoneyInput = (s: string) => {
+  if (!s.trim()) return '';
+  const v = parseFloat(s.replace(/[$,\s]/g, ''));
+  return Number.isFinite(v) ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : s;
+};
 
 export function ApprovalPanel({ projectId, baseline, approval }: {
   projectId: number;
@@ -36,26 +42,34 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
   const queryClient = useQueryClient();
   const confirmed = approval.status === 'confirmed';
 
-  const [lafTotal, setLafTotal] = useState(approval.lafTotal != null ? String(approval.lafTotal) : '');
+  const serverLaf = () => (approval.lafTotal != null ? fmtMoneyInput(String(approval.lafTotal)) : '');
+  const [lafTotal, setLafTotal] = useState(serverLaf());
   const [alloc, setAlloc] = useState<Record<string, string>>({});
   const [lafLines, setLafLines] = useState<LafLine[]>(approval.lafLines);
   const [paste, setPaste] = useState('');
   const [showLaf, setShowLaf] = useState(approval.lafLines.length > 0);
+  const [showRollUp, setShowRollUp] = useState(!confirmed);
+  const rolled = useMemo(() => rollUp(baseline), [baseline]);
 
   const fromServer = () => Object.fromEntries(approval.allocations.map((a) => [a.key, String(a.amount)]));
   useEffect(() => {
-    setLafTotal(approval.lafTotal != null ? String(approval.lafTotal) : '');
+    setLafTotal(serverLaf());
     setAlloc(fromServer());
     setLafLines(approval.lafLines);
   }, [JSON.stringify(approval)]);
+  // The discount as typed, before it is saved.
+  const typedLaf = lafTotal.trim() === '' ? null : toNum(lafTotal);
+  const liveDiscount = typedLaf == null ? null : r2(approval.priced - typedLaf);
 
   const comparison = useMemo(() => (lafLines.length ? compareLaf(lafLines, baseline) : null), [lafLines, baseline]);
   const distributed = r2(Object.values(alloc).reduce((s, v) => s + toNum(v), 0));
-  const undistributed = r2(approval.discount - distributed);
+  // Follow what is typed, not only what is saved, so every figure on the panel agrees.
+  const discountNow = liveDiscount ?? (approval.lafTotal == null ? 0 : approval.discount);
+  const approvedNow = r2(approval.priced - discountNow);
+  const undistributed = r2(discountNow - distributed);
   const allocDirty = JSON.stringify(Object.fromEntries(Object.entries(alloc).filter(([, v]) => toNum(v) !== 0).map(([k, v]) => [k, toNum(v)])))
     !== JSON.stringify(Object.fromEntries(approval.allocations.map((a) => [a.key, a.amount])));
-  const lafDirty = (approval.lafTotal == null ? '' : String(approval.lafTotal)) !== lafTotal.trim()
-    && !(approval.lafTotal != null && toNum(lafTotal) === approval.lafTotal);
+  const lafDirty = approval.lafTotal == null ? typedLaf != null : typedLaf == null || r2(typedLaf) !== approval.lafTotal;
   const linesDirty = JSON.stringify(lafLines) !== JSON.stringify(approval.lafLines);
 
   const done = (title: string) => (data: any) => {
@@ -93,7 +107,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
     if (!parsed.length) { toast({ title: 'Nothing read', description: 'Each row needs a description and an amount.' }); return; }
     setLafLines(matchLafLines(parsed, baseline));
     setPaste('');
-    if (!lafTotal.trim()) setLafTotal(String(r2(parsed.reduce((s, l) => s + l.amount, 0))));
+    if (!lafTotal.trim()) setLafTotal(fmtMoneyInput(String(r2(parsed.reduce((s, l) => s + l.amount, 0)))));
   };
 
   return (
@@ -129,29 +143,81 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
           </div>
           <div>
             <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF total</label>
-            <Input id="laf-total" className="h-9 tabular-nums text-right font-semibold" inputMode="decimal" placeholder="1,466,500"
-                   value={lafTotal} onChange={(e) => setLafTotal(e.target.value)} />
+            <Input id="laf-total" className="h-9 tabular-nums text-right font-semibold" inputMode="decimal" placeholder="1,466,500.00"
+                   value={lafTotal} onChange={(e) => setLafTotal(e.target.value)} onBlur={() => setLafTotal(fmtMoneyInput(lafTotal))}
+                   onFocus={(e) => setLafTotal(e.target.value.replace(/,/g, ''))} />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wide text-gray-500">{approval.discount >= 0 ? 'Deal Discount' : 'Deal Premium'}</div>
+            <div className="text-[11px] uppercase tracking-wide text-gray-500">{(liveDiscount ?? 0) >= 0 ? 'Deal Discount' : 'Deal Premium'}</div>
             <div className="text-lg font-semibold tabular-nums text-indigo-800">
-              {approval.lafTotal == null ? '—' : money(Math.abs(approval.discount))}
+              {liveDiscount == null ? '—' : money(Math.abs(liveDiscount))}
+              {lafDirty && liveDiscount != null && <span className="ml-2 text-xs font-normal text-amber-700">not saved</span>}
             </div>
           </div>
         </div>
 
-        {/* Optional: the LAF's lines, side by side. */}
+        {/* The budget the way the LAF shows it: construction lines with the soft costs folded in. */}
+        <div className="border rounded-md">
+          <button className="w-full flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-800" onClick={() => setShowRollUp(!showRollUp)}>
+            {showRollUp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            Your budget as the tenant sees it
+          </button>
+          {showRollUp && (
+            <div className="px-3 pb-3 space-y-2">
+              <p className="text-xs text-gray-600">
+                Construction lines with design, CM fee, permits, testing and contingency ({money(rolled.soft)}) folded in
+                pro rata. Use it as a guide when filling in the LAF — the lines are only a guide, the <span className="font-medium">total</span> is what has to tie.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[520px]">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
+                      <th className="py-1 pr-2">Line</th><th className="py-1 pr-2 text-right">Priced</th>
+                      <th className="py-1 pr-2 text-right">Soft costs</th><th className="py-1 text-right">As the tenant sees it</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rolled.rows.map((x) => (
+                      <tr key={x.key} className="border-b last:border-0">
+                        <td className="py-1 pr-2">{x.description}</td>
+                        <td className="py-1 pr-2 text-right tabular-nums text-gray-600">{money(x.priced)}</td>
+                        <td className="py-1 pr-2 text-right tabular-nums text-gray-600">{money(x.softShare)}</td>
+                        <td className="py-1 text-right tabular-nums font-medium">{money(x.rolledUp)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-800 font-semibold">
+                      <td className="py-1.5 pr-2">Priced total</td><td /><td />
+                      <td className="py-1.5 text-right tabular-nums">{money(rolled.total)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-2 text-gray-700">LAF total</td><td /><td />
+                      <td className="py-1 text-right tabular-nums">{typedLaf == null ? '—' : money(typedLaf)}</td>
+                    </tr>
+                    <tr className="text-indigo-900 font-semibold">
+                      <td className="py-1 pr-2">{(liveDiscount ?? 0) >= 0 ? 'Deal Discount' : 'Deal Premium'}</td><td /><td />
+                      <td className="py-1 text-right tabular-nums">{liveDiscount == null ? '—' : money(Math.abs(liveDiscount))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Optional: the LAF's own lines, to find the one the deal moved. */}
         <div className="border rounded-md">
           <button className="w-full flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-800" onClick={() => setShowLaf(!showLaf)}>
             {showLaf ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Compare line by line with the LAF {lafLines.length > 0 && <span className="text-gray-500 font-normal">({lafLines.length} lines)</span>}
+            Find which line the deal moved <span className="text-gray-500 font-normal">(optional{lafLines.length > 0 ? ` · ${lafLines.length} LAF lines` : ''})</span>
           </button>
           {showLaf && (
             <div className="px-3 pb-3 space-y-2">
               <p className="text-xs text-gray-600">
-                Paste the LAF's TI Allowance lines (description and cost). Soft costs — design, CM fee, permits,
-                contingency — are folded into the matched lines the way the LAF builds them, so a line the deal
-                didn't touch shows no difference.
+                Only if you want to see where a cut landed: paste the LAF's TI Allowance lines and each is set beside
+                the rolled-up line it matches. Differences are a guide — if your team rolls costs up differently,
+                skip this; the total is what counts.
               </p>
               <div className="flex gap-2 items-start">
                 <Textarea rows={3} value={paste} onChange={(e) => setPaste(e.target.value)} className="font-mono text-xs"
@@ -213,13 +279,13 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
         </div>
 
         {/* Where the discount goes. */}
-        {approval.lafTotal != null && Math.abs(approval.discount) >= 0.005 && (
+        {typedLaf != null && Math.abs(discountNow) >= 0.005 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                   <th className="py-1 pr-2">Budget line</th><th className="py-1 pr-2 text-right">Priced</th>
-                  <th className="py-1 pr-2 text-right w-40">{approval.discount >= 0 ? 'Discount on this line' : 'Premium on this line'}</th>
+                  <th className="py-1 pr-2 text-right w-40">{discountNow >= 0 ? 'Discount on this line' : 'Premium on this line'}</th>
                   <th className="py-1 text-right">Budget</th>
                 </tr>
               </thead>
@@ -239,7 +305,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                   );
                 })}
                 <tr className="bg-indigo-50/60">
-                  <td className="py-1.5 pr-2 italic text-indigo-900">{approval.discount >= 0 ? 'Deal Discount' : 'Deal Premium'} — not yet on a line</td>
+                  <td className="py-1.5 pr-2 italic text-indigo-900">{discountNow >= 0 ? 'Deal Discount' : 'Deal Premium'} — not yet on a line</td>
                   <td />
                   <td className="py-1.5 pr-2 text-right tabular-nums text-indigo-900">{money(undistributed)}</td>
                   <td className="py-1.5 text-right tabular-nums text-indigo-900">{signedMoney(-undistributed)}</td>
@@ -249,12 +315,12 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                 <tr className="border-t-2 border-gray-800 font-semibold">
                   <td className="py-2 pr-2">Budget (= LAF)</td>
                   <td className="py-2 pr-2 text-right tabular-nums">{money(approval.priced)}</td>
-                  <td className="py-2 pr-2 text-right tabular-nums">{money(approval.discount)}</td>
-                  <td className="py-2 text-right tabular-nums">{money(approval.approvedTotal)}</td>
+                  <td className="py-2 pr-2 text-right tabular-nums">{money(discountNow)}</td>
+                  <td className="py-2 text-right tabular-nums">{money(approvedNow)}</td>
                 </tr>
               </tfoot>
             </table>
-            {Math.abs(undistributed) >= 0.005 && Math.sign(undistributed) !== Math.sign(approval.discount) && (
+            {Math.abs(undistributed) >= 0.005 && Math.sign(undistributed) !== Math.sign(discountNow) && (
               <p className="text-xs text-amber-800 mt-1">You've put more on lines than the discount itself; the difference shows as a premium.</p>
             )}
           </div>
@@ -263,7 +329,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
         <div className="flex gap-2 justify-end flex-wrap">
           {dirty && (
             <Button variant="ghost" size="sm" onClick={() => {
-              setLafTotal(approval.lafTotal != null ? String(approval.lafTotal) : ''); setAlloc(fromServer()); setLafLines(approval.lafLines);
+              setLafTotal(serverLaf()); setAlloc(fromServer()); setLafLines(approval.lafLines);
             }}>Discard</Button>
           )}
           <Button size="sm" variant={confirmed ? 'default' : 'outline'} disabled={!dirty || save.isPending} onClick={saveAll}>

@@ -109,7 +109,7 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
         <Stat label="Outstanding share (absorbed)" value={money(totals.committedOutstanding)}
               tone={totals.committedOutstanding > 0 ? 'text-red-800' : undefined} />
         {cmFee && (
-          <Stat label={`CM fee earned to date (${cmFee.pct}%)`} value={money(cmFee.earned)}
+          <Stat label={`CM fee earned to date (${cmFee.pct.toFixed(2)}%)`} value={money(cmFee.earned)}
                 sub={`of ${money(cmFee.budget)} · ${money(cmFee.earnedOnPaid)} on payments made`} />
         )}
       </div>

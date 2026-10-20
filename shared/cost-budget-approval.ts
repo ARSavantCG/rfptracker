@@ -254,3 +254,49 @@ export function snapshotOriginal(baseline: readonly BaselineLine[], a: BudgetApp
   const lines = effectiveBaseline(baseline, a).map((b) => ({ key: b.key, description: b.description, bucket: b.bucket, budget: r2(num(b.budget)) }));
   return { lines, total: r2(lines.reduce((s, l) => s + l.budget, 0)) };
 }
+
+// ----------------------------------------------------------------- roll-up
+
+export interface RollUpRow {
+  key: string;
+  description: string;
+  /** The line as priced. */
+  priced: number;
+  /** Its share of the soft costs. */
+  softShare: number;
+  /** Priced plus its share: the figure the tenant sees. */
+  rolledUp: number;
+}
+
+/**
+ * The budget the way the LAF shows it to the tenant: only the construction
+ * (contractor) lines, with every other line — design, CM fee, permits,
+ * testing, contingency — folded into them in proportion to their priced
+ * amounts. The rolled-up lines total the priced budget exactly; the last
+ * line takes the rounding cent.
+ *
+ * Line by line this is only a guide — the deal team may roll up differently.
+ * The total is what has to tie.
+ */
+export function rollUp(baseline: readonly BaselineLine[]): { rows: RollUpRow[]; soft: number; total: number; factor: number } {
+  const all = (baseline || []).filter((b) => b.key !== DEAL_DISCOUNT_KEY);
+  let hard = all.filter((b) => b.bucket === 'contractor');
+  if (hard.length === 0) hard = all; // nothing marked as construction — nothing to fold into
+  const hardTotal = hard.reduce((s, b) => s + num(b.budget), 0);
+  const total = r2(all.reduce((s, b) => s + num(b.budget), 0));
+  const soft = r2(total - hardTotal);
+  const factor = hardTotal > 0 ? total / hardTotal : 1;
+  const rows: RollUpRow[] = hard.map((b) => {
+    const priced = r2(num(b.budget));
+    const rolled = r2(priced * factor);
+    return { key: b.key, description: b.description, priced, softShare: r2(rolled - priced), rolledUp: rolled };
+  });
+  // Put the rounding cent on the largest line so the column adds to the total.
+  const drift = r2(total - rows.reduce((s, r) => s + r.rolledUp, 0));
+  if (rows.length && Math.abs(drift) >= 0.005) {
+    const big = rows.reduce((m, r) => (Math.abs(r.priced) > Math.abs(m.priced) ? r : m), rows[0]);
+    big.rolledUp = r2(big.rolledUp + drift);
+    big.softShare = r2(big.softShare + drift);
+  }
+  return { rows, soft, total, factor };
+}

@@ -1047,40 +1047,53 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
         </table>
       </div>
       
-      {/* Pagination - Basic implementation */}
-      {sortedOrganizedRequests.length > 0 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-              Previous
-            </button>
-            <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-              Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{sortedOrganizedRequests.length}</span> of{" "}
-                <span className="font-medium">{sortedOrganizedRequests.length}</span> results
+      {/* RECORD COUNT.
+          This used to read "Showing 1 to 35 of 35 results" beside Previous /
+          1 / Next buttons that had no click handler at all — there is no
+          pagination here, every record is already on the page. The dead
+          controls implied more pages existed, which made a number that was
+          already confusing look like a bug.
+
+          And the number only ever counted PARENT rows. Counter-offers and
+          alternates are nested inside their parent, so they were never in it:
+          35 parents could be 40 records. The breakdown is now spelled out
+          rather than left to be discovered. */}
+      {sortedOrganizedRequests.length > 0 && (() => {
+        const parents = sortedOrganizedRequests.length;
+        const counters = sortedOrganizedRequests
+          .reduce((n, p: any) => n + (p.counterOffers?.length || 0), 0);
+        const alternates = sortedOrganizedRequests
+          .reduce((n, p: any) => n + (p.options?.length || 0), 0);
+        const shown = parents + counters + alternates;
+        // A counter-offer or alternate whose PARENT is filtered out is not
+        // rendered anywhere. Saying so beats a count that quietly disagrees
+        // with the database.
+        const hidden = Math.max(rfpRequests.length - shown, 0);
+
+        const parts: string[] = [];
+        if (counters > 0) parts.push(`${counters} counter-offer${counters === 1 ? '' : 's'}`);
+        if (alternates > 0) parts.push(`${alternates} alternate${alternates === 1 ? '' : 's'}`);
+
+        return (
+          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">{parents}</span> RFP{parents === 1 ? '' : 's'}
+              {parts.length > 0 && (
+                <>
+                  , with <span className="font-medium">{parts.join(' and ')}</span> nested
+                  beneath them — <span className="font-medium">{shown}</span> records in total
+                </>
+              )}
+            </p>
+            {hidden > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {hidden} counter-offer{hidden === 1 ? '' : 's'} or alternate
+                {hidden === 1 ? '' : 's'} not shown — their parent RFP is filtered out.
               </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <i className="fas fa-chevron-left"></i>
-                </button>
-                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
-                  1
-                </button>
-                <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <i className="fas fa-chevron-right"></i>
-                </button>
-              </nav>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
       
 
     </div>

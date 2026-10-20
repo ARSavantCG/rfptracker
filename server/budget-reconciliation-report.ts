@@ -177,6 +177,12 @@ export function registerBudgetReconciliationReport(app: Express): void {
         );
         const audits = archiveFilter.rows.map((b) => auditBudget(b, rfpById.get(b.rfpId)));
         const problems = audits.filter((a) => a.verdict === 'understated' || a.verdict === 'overstated');
+        // Budgets with no line items at all. Neither reconciled nor broken —
+        // an evaluation that was opened and never filled in. They were being
+        // counted in "checked" and shown in no card, so the cards did not sum
+        // to the total. On a RECONCILIATION report of all places, the boxes
+        // have to add up.
+        const empty = audits.filter((a) => a.verdict === 'no-lines');
         const understated = problems.filter((a) => a.verdict === 'understated');
         const totalUnderstated = understated.reduce((s, a) => s + Math.abs(a.gap), 0);
         const assemblyCaused = problems.filter((a) => a.explainedByAssemblies);
@@ -189,6 +195,7 @@ export function registerBudgetReconciliationReport(app: Express): void {
               reconciled: audits.filter((a) => a.verdict === 'reconciled').length,
               understated: understated.length,
               overstated: problems.length - understated.length,
+              noLineItems: empty.length,
               explainedByAssemblies: assemblyCaused.length,
               totalUnderstatedDollars: totalUnderstated,
             },
@@ -254,8 +261,17 @@ export function registerBudgetReconciliationReport(app: Express): void {
     <div class="card"><div class="label">Reconciled</div><div class="value" style="color:#065f46">${audits.filter((a) => a.verdict === 'reconciled').length}</div></div>
     <div class="card"><div class="label">Understated</div><div class="value" style="color:${understated.length ? '#991b1b' : 'inherit'}">${understated.length}</div></div>
     <div class="card"><div class="label">Overstated</div><div class="value">${problems.length - understated.length}</div></div>
+    <div class="card"><div class="label">No line items</div><div class="value" style="color:#6b7280">${empty.length}</div></div>
     <div class="card"><div class="label">Total understated</div><div class="value" style="color:${totalUnderstated ? '#991b1b' : 'inherit'}">${money(totalUnderstated)}</div></div>
   </div>
+
+  ${(() => {
+    const parts = audits.filter((a) => a.verdict === 'reconciled').length
+      + understated.length + (problems.length - understated.length) + empty.length;
+    return parts === audits.length
+      ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Reconciled + understated + overstated + no line items = ${parts}, the number checked.</p>`
+      : `<p style="font-size:11px;color:#991b1b;font-weight:600;margin:4px 0 0;">The boxes above sum to ${parts} but ${audits.length} were checked — ${audits.length - parts} budget(s) fall into no category. This is a fault in the report itself.</p>`;
+  })()}
 
   ${problems.length === 0
     ? `<div class="ok"><strong>Every budget reconciles.</strong> Each saved grand total equals the sum of its own line items.</div>`
@@ -273,6 +289,9 @@ export function registerBudgetReconciliationReport(app: Express): void {
        </table>`}
 
   <div class="explain">
+    <strong>&ldquo;No line items&rdquo;</strong> is an evaluation budget that exists but has nothing in it —
+    opened and never filled in. Nothing to reconcile, and nothing wrong.
+    <br><br>
     <strong>What &ldquo;understated&rdquo; means.</strong> The saved total is LESS than the line
     items beneath it add up to — the published figure left money out.
     <br><br>

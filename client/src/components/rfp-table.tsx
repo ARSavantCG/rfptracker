@@ -1091,24 +1091,19 @@ export function RfpTable({ searchQuery, statusFilter, responsibleFilter = "", da
         const hidden = Math.max(rfpRequests.length - shown, 0);
 
         const parts: string[] = [];
-        if (counters > 0) parts.push(`${counters} counter-offer${counters === 1 ? '' : 's'}`);
-        if (alternates > 0) parts.push(`${alternates} alternate${alternates === 1 ? '' : 's'}`);
+        if (counters > 0) parts.push(`${counters} Counter-Offer${counters === 1 ? '' : 's'}`);
+        if (alternates > 0) parts.push(`${alternates} Alternate${alternates === 1 ? '' : 's'}`);
 
         return (
           <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            {/* "30 RFPs (6 Alternates Nested)" — Adolfo, 2026-10-20. */}
             <p className="text-sm text-gray-700">
-              <span className="font-medium">{parents}</span> RFP{parents === 1 ? '' : 's'}
-              {parts.length > 0 && (
-                <>
-                  , with <span className="font-medium">{parts.join(' and ')}</span> nested
-                  beneath them — <span className="font-medium">{shown}</span> records in total
-                </>
-              )}
+              <span className="font-medium">{shown}</span> RFP{shown === 1 ? '' : 's'}
+              {parts.length > 0 && <span className="text-gray-600"> ({parts.join(', ')} Nested)</span>}
             </p>
             {hidden > 0 && (
               <p className="text-xs text-gray-500 mt-1">
-                {hidden} counter-offer{hidden === 1 ? '' : 's'} or alternate
-                {hidden === 1 ? '' : 's'} not shown — their parent RFP is filtered out.
+                {hidden} more hidden by the filter (their parent RFP isn't shown).
               </p>
             )}
           </div>

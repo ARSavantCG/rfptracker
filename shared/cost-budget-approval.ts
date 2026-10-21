@@ -210,6 +210,8 @@ export function normalizeCO(raw: any): BudgetCO | null {
   }
   const seen = new Set<number>();
   links = links.filter((l) => (seen.has(l.contractCoId) ? false : (seen.add(l.contractCoId), true)));
+  // An older change order linked to one contractor CO was priced from it: say so on its lines.
+  const legacyFrom = !Array.isArray(raw.links) && links.length === 1 ? links[0].contractCoId : null;
   return {
     id: String(raw.id || `co-${Date.now().toString(36)}`),
     number: String(raw.number ?? '').trim() || 'CO',
@@ -221,7 +223,7 @@ export function normalizeCO(raw: any): BudgetCO | null {
       .map((l: any) => ({
         key: String(l?.key ?? ''), description: String(l?.description ?? '').trim(), amount: r2(num(l?.amount)),
         tenantPct: pct(l?.tenantPct, billable ? 100 : 0),
-        fromCoId: intOrNull(l?.fromCoId),
+        fromCoId: intOrNull(l?.fromCoId) ?? legacyFrom,
       }))
       .filter((l: BudgetCOLine) => l.key && l.amount !== 0) : [],
     cmFee: raw.cmFee !== false,

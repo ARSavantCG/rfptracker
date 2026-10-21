@@ -329,9 +329,9 @@ export interface BillableItem {
  * linked to, the tenant's share, and that change order's fee terms. Work on
  * these lines earns the Supplemental CM Fee, not the original one.
  */
-export type CoFeeLink = { pct: number; rate: number; cmFee: boolean; partnerFee: boolean; partnerRate: number; coNumber: string };
+export type CoFeeLink = { pct: number; rate: number; cmFee: boolean; partnerFee: boolean; partnerRate: number; partnerBasis?: 'all' | 'tenant'; coNumber: string };
 export function coFeeLinks(
-  budgetCos: ReadonlyArray<{ number: string; status: string; cmFee: boolean; cmFeePct: number; partnerFee: boolean; partnerFeePct: number; links: ReadonlyArray<{ contractCoId: number; pct: number }> }>,
+  budgetCos: ReadonlyArray<{ number: string; status: string; cmFee: boolean; cmFeePct: number; partnerFee: boolean; partnerFeePct: number; partnerFeeBasis?: 'all' | 'tenant'; links: ReadonlyArray<{ contractCoId: number; pct: number }> }>,
   lines: ReadonlyArray<{ id: number; changeOrderId: number | null }>,
 ): Map<number, CoFeeLink> {
   const out = new Map<number, CoFeeLink>();
@@ -339,7 +339,7 @@ export function coFeeLinks(
     if (co.status !== 'approved') continue;
     for (const l of co.links) {
       for (const sl of lines) {
-        if (sl.changeOrderId === l.contractCoId) out.set(sl.id, { pct: l.pct, rate: co.cmFeePct, cmFee: co.cmFee, partnerFee: co.partnerFee, partnerRate: co.partnerFeePct, coNumber: co.number });
+        if (sl.changeOrderId === l.contractCoId) out.set(sl.id, { pct: l.pct, rate: co.cmFeePct, cmFee: co.cmFee, partnerFee: co.partnerFee, partnerRate: co.partnerFeePct, partnerBasis: co.partnerFeeBasis ?? 'all', coNumber: co.number });
       }
     }
   }
@@ -359,7 +359,7 @@ export function supplementalCmEarned(progress: Map<number, { toDate: number }>, 
     if (!t) continue;
     const f = Math.max(0, Math.min(1, paidFraction(id)));
     // What the capital partner owes you: the partner rate on all change order work.
-    const fee = link.partnerFee ? (t * link.partnerRate) / 100 : 0;
+    const fee = link.partnerFee ? ((link.partnerBasis === 'tenant' ? (t * link.pct) / 100 : t) * link.partnerRate) / 100 : 0;
     work += t; workPaid += t * f;
     earned += fee; earnedOnPaid += fee * f;
   }
@@ -415,7 +415,7 @@ export function billableItems(input: {
         const t = (v * link.pct) / 100;
         coAmount += v; coBillable += t;
         if (link.cmFee) suppFee += (t * link.rate) / 100;
-        if (link.partnerFee) suppP += (v * link.partnerRate) / 100;
+        if (link.partnerFee) suppP += ((link.partnerBasis === 'tenant' ? t : v) * link.partnerRate) / 100;
       }
       const split = allocate(live, orig, input.validKeys);
       let amount = coAmount, billable = coBillable, origBillable = 0;

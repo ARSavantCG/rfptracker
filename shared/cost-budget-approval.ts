@@ -100,6 +100,8 @@ export interface BudgetCO {
   /** CM fee the capital partner pays on all of this change order's work (the partner rate). */
   partnerFee: boolean;
   partnerFeePct: number;
+  /** What the partner fee is on: all the work, or only the tenant's share (absorbed costs not charged). */
+  partnerFeeBasis: 'all' | 'tenant';
   /** Vendor change orders priced into this one (any contracts). */
   links: BudgetCOLink[];
   /** Credit to the tenant (a concession), absorbed by us. */
@@ -252,6 +254,7 @@ export function normalizeCO(raw: any): BudgetCO | null {
     // Older change orders had no partner fee setting; they earn it at their own rate.
     partnerFee: raw.partnerFee !== undefined ? raw.partnerFee !== false : raw.cmOnAbsorbed === true,
     partnerFeePct: Math.max(0, Math.min(100, num(raw.partnerFeePct ?? raw.cmFeePct))),
+    partnerFeeBasis: raw.partnerFeeBasis === 'tenant' ? 'tenant' : 'all',
     links,
     credit: Math.max(0, r2(num(raw.credit))),
     cmOnAbsorbed: raw.cmOnAbsorbed === true,
@@ -282,7 +285,7 @@ export function coTotals(co: BudgetCO) {
   const markups = r2(markupLines.reduce((s, m) => s + m.amount, 0));
   // Two CM fees: the tenant's (their rate, on their cost + markups) and the capital partner's (on all the work).
   const cm = co.cmFee ? r2(((tenantWork + markups) * co.cmFeePct) / 100) : 0;
-  const cmAbsorbed = co.partnerFee ? r2((work * (co.partnerFeePct ?? 0)) / 100) : 0;
+  const cmAbsorbed = co.partnerFee ? r2(((co.partnerFeeBasis === 'tenant' ? tenantWork : work) * (co.partnerFeePct ?? 0)) / 100) : 0;
   const credit = r2(co.credit || 0);
   // The budget holds the work, the markups and the partner's fee; the tenant pays their share, markups and fee.
   const total = r2(work + markups + cmAbsorbed);

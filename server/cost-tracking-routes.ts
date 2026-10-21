@@ -867,7 +867,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (i < 0) return res.status(404).json({ message: 'Change order not found' });
       const cur = a.changeOrders[i];
       const b = req.body || {};
-      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee']) })!;
+      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee', 'partnerFeeBasis']) })!;
       const keys = new Set(baseline.map((x) => x.key));
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       // The vendors' side: write the estimate onto a contract, link vendor change

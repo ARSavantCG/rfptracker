@@ -35,6 +35,11 @@ import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-tot
 import { resolveContractBucket } from './budget-by-contract';
 import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage } from './storage-backup';
 import archiver from 'archiver';
+import Anthropic from '@anthropic-ai/sdk';
+import { requireAi } from './lib/ai-switch';
+import { normalizeRead, matchRows, payAppPrompt } from '@shared/cost-payapp-read';
+
+const AI_MODEL = 'claude-sonnet-4-5';
 import { waiverChecklist, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
@@ -1265,6 +1270,70 @@ export function registerCostTrackingRoutes(app: Express): void {
       await db.delete(costSovLines).where(eq(costSovLines.id, id));
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'delete the line'); }
+  });
+
+  // ---- AI read of a G702/G703. Returns figures for the dialog; saves nothing.
+  app.post('/api/cost-contracts/:id/read-pay-app', ...canEdit, requireAi, docUpload.single('file'), async (req, res) => {
+    try {
+      const contractId = intParam(req, 'id');
+      if (contractId === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [contract] = await db.select().from(costContracts).where(eq(costContracts.id, contractId));
+      if (!contract) return res.status(404).json({ message: 'Contract not found' });
+
+      let buf: Buffer | null = null;
+      let mime = '';
+      let name = '';
+      if ((req as any).file) {
+        buf = (req as any).file.buffer; mime = (req as any).file.mimetype || ''; name = (req as any).file.originalname || '';
+      } else if (req.body?.documentId) {
+        const [d] = await db.select().from(costDocuments).where(eq(costDocuments.id, Number(req.body.documentId)));
+        if (!d) return res.status(404).json({ message: 'File not found' });
+        buf = d.storage === 'object' ? await downloadFromObjectStorage(d.storageKey)
+          : await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+        mime = d.mimeType || ''; name = d.originalName;
+      }
+      if (!buf) return res.status(400).json({ message: 'Attach the pay app PDF first.' });
+      const isPdf = /pdf/i.test(mime) || /\.pdf$/i.test(name);
+      const img = /^image\/(png|jpe?g|gif|webp)$/i.exec(mime);
+      if (!isPdf && !img) return res.status(400).json({ message: 'AI can read a PDF or a photo of the pay app. For a spreadsheet, copy the columns into the grid instead.' });
+
+      const cos = await db.select().from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
+      const voided = new Set(cos.filter((c) => c.status === 'void').map((c) => c.id));
+      const sov = (await db.select().from(costSovLines).where(eq(costSovLines.contractId, contractId))
+        .orderBy(costSovLines.sortOrder, costSovLines.id))
+        .filter((l) => l.changeOrderId == null || !voided.has(l.changeOrderId))
+        .map((l) => ({ id: l.id, itemNo: l.itemNo, description: l.description, scheduledValue: dollars(l.scheduledValueCents) }));
+
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const source = { type: 'base64' as const, data: buf.toString('base64') };
+      const response = await anthropic.messages.create({
+        model: AI_MODEL,
+        max_tokens: 16000,
+        messages: [{
+          role: 'user',
+          content: [
+            isPdf
+              ? { type: 'document' as const, source: { ...source, media_type: 'application/pdf' as const } }
+              : { type: 'image' as const, source: { ...source, media_type: img![0].toLowerCase().replace('jpg', 'jpeg') as any } },
+            { type: 'text' as const, text: payAppPrompt(contract.counterparty, sov) },
+          ],
+        }],
+      });
+      const block = response.content.find((c) => c.type === 'text');
+      const text = block && block.type === 'text' ? block.text : '';
+      const a = text.indexOf('{'), z = text.lastIndexOf('}');
+      if (a === -1 || z === -1) return res.status(502).json({ message: 'AI could not read a pay app in that file.' });
+      let parsed: any;
+      try { parsed = JSON.parse(text.slice(a, z + 1)); }
+      catch { return res.status(502).json({ message: response.stop_reason === 'max_tokens' ? 'That pay app is too long to read in one go.' : 'AI returned something that was not readable. Try again.' }); }
+      const read = normalizeRead(parsed);
+      const result = matchRows(read, sov);
+      console.log(`[ai] read pay app for contract ${contractId}: ${read.rows.length} rows, ${result.matched.length} matched, ${result.unmatched.length} unmatched (${response.usage?.input_tokens ?? '?'} in / ${response.usage?.output_tokens ?? '?'} out tokens)`);
+      res.json({ ...read, ...result, fileName: name });
+    } catch (e: any) {
+      if (e?.status === 401) return res.status(502).json({ message: 'The Anthropic API key was rejected. Check the ANTHROPIC_API_KEY secret.' });
+      fail(res, e, 'read the pay app');
+    }
   });
 
   // ---- applications

@@ -13,6 +13,7 @@ import mammoth from 'mammoth';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
+import { requireAi } from './lib/ai-switch';
 import { getFileBuffer } from './storage-backup';
 
 // Claude supports these natively as document/image blocks.
@@ -79,7 +80,7 @@ export function registerIntakeParserRoutes(app: Express): void {
 
   // Parse Step-1 intake for an RFP and produce proposals.
   // Body may include { typedText?: string } for free-typed description input.
-  app.post("/api/ai/intake-parse/:rfpId", requireAuth, checkPermission('admin.access'), async (req, res) => {
+  app.post("/api/ai/intake-parse/:rfpId", requireAuth, checkPermission('admin.access'), requireAi, async (req, res) => {
     try {
       const rfpId = parseInt(req.params.rfpId);
       if (isNaN(rfpId)) {

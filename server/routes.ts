@@ -44,6 +44,7 @@ import { resolveLiveRomItemPricing, normalizeUnit, categorizeRomLineItem, isKnow
 import { computeLineTotal } from "@shared/line-total";
 import { parsePdfBuffer, applyMapping, type MappingConfig } from "./pdf-parser";
 import { extractBidLineItemsWithAi, extractBidLineItemsFromScan, shouldUseAiFallback } from "./ai-bid-extractor";
+import { aiEnabled } from "./lib/ai-switch";
 import {
   sanitizeProjectName,
   createProjectFolderStructure,
@@ -233,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       let ai: Awaited<ReturnType<typeof extractBidLineItemsWithAi>> | null = null;
-      if (decision.use && req.query.skipAi !== '1') {
+      if (decision.use && req.query.skipAi !== '1' && await aiEnabled()) {
         console.log(`[bid-import] heuristic insufficient — ${decision.reason} Falling through to AI extraction.`);
 
         // A PDF with essentially no text layer is a scan or a photo. Text

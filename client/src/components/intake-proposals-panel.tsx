@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Check, X, Loader2 } from "lucide-react";
 import type { IntakeProposal } from "@shared/schema";
+import { useAiStatus } from "@/hooks/use-ai-status";
 
 interface IntakeProposalsPanelProps {
   rfpId: number;
@@ -19,6 +20,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const [lastMeta, setLastMeta] = useState<any>(null);
   const [commitInfo, setCommitInfo] = useState<string>("");
 
+  const ai = useAiStatus();
   const { data: proposals = [], isLoading } = useQuery<IntakeProposal[]>({
     queryKey: [`/api/intake-proposals/${rfpId}`],
     enabled: !!rfpId,
@@ -111,6 +113,10 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
   const acceptedCount = proposals.filter((p) => p.status === "accepted").length;
   const rejectedCount = proposals.filter((p) => p.status === "rejected").length;
 
+  // AI switched off in Admin: nothing to run, and nothing to show unless an
+  // earlier parse left proposals to review.
+  if (!ai.on && !proposals.length) return null;
+
   return (
     <div className="border rounded-md p-4 space-y-4 bg-purple-50/40">
       <div className="flex items-center justify-between">
@@ -118,10 +124,12 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           <Sparkles className="h-5 w-5 text-purple-700" />
           <h3 className="font-semibold text-gray-900">AI Proposed Scope</h3>
         </div>
+        {ai.on && (
         <Button size="sm" onClick={() => runParse.mutate()} disabled={runParse.isPending} className="flex items-center gap-1">
           {runParse.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {proposals.length ? "Re-run parse" : "Run AI parse"}
         </Button>
+        )}
       </div>
 
       <p className="text-xs text-gray-500">

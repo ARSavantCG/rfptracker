@@ -14,6 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { BidTaggingModal } from "./bid-tagging-modal";
 import type { PrePopulatedLineItem } from "./bid-tagging-modal";
 import { AUTH_TOKEN_KEY } from "@/lib/auth-constants";
+import { useAiStatus } from "@/hooks/use-ai-status";
 
 interface MasterCategory {
   id: number;
@@ -54,6 +55,7 @@ const KEYWORD_CATEGORY_HINTS: { keywords: RegExp; categoryName: string }[] = [
 ];
 
 export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
+  const ai = useAiStatus();
   const { toast } = useToast();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
@@ -210,6 +212,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
             Tag Prices
           </Button>
 
+          {ai.on && (
           <Button
             variant="outline"
             size="sm"
@@ -229,6 +232,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
               </>
             )}
           </Button>
+          )}
 
           <Button
             variant="outline"

@@ -96,3 +96,8 @@ and live test output are proof. The gold standard is: click the button and watch
    ("Startup schema check complete" in logs).
 4. Human verifies on production: log in, exercise the changed feature against real data.
 5. Tear down any temporary infra; rotate any exposed credentials.
+
+## AI features
+- One switch for every AI feature: Admin → AI (`app_settings.ai_enabled`, missing = on). Server: `server/lib/ai-switch.ts` — put `requireAi` on any new AI route; client: `useAiStatus().on` hides the button.
+- All AI uses the one `ANTHROPIC_API_KEY` secret. AI only fills a screen for review; it never saves.
+- Pay app reader: `POST /api/cost-contracts/:id/read-pay-app` (file or documentId). The model proposes which SOV line each G703 row is; `shared/cost-payapp-read.ts` re-checks every match (id → item # → description → value) and returns unmatched rows rather than dropping them.

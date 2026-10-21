@@ -15,7 +15,9 @@ import { MoneyInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useAiStatus } from '@/hooks/use-ai-status';
+import type { PayAppRead, MatchResult } from '@shared/cost-payapp-read';
 import { g702For, lineProgress, type Application } from '@shared/cost-tracking';
 import {
   money, projectKey,
@@ -30,6 +32,9 @@ const num = (s: string) => {
 const isoDate = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 10) : '');
 
 type Draft = { work: string; stored: string; retainage: string; toDate: string };
+type AiResult = PayAppRead & MatchResult & { fileName: string };
+type AiCell = { work: number; stored: number; retainage: number | null; previous: number | null };
+const same = (a: string | undefined, b: number | null) => b != null && Math.abs(num(a ?? '') - b) < 0.005 && (a ?? '') !== '';
 
 export function ApplicationDialog({
   open, contract, app, kind, lines, changeOrders, applications, documents, projectId, onClose,
@@ -54,6 +59,9 @@ export function ApplicationDialog({
   const [entry, setEntry] = useState<'period' | 'toDate'>('period');
   const [draft, setDraft] = useState<Record<number, Draft>>({});
   const [file, setFile] = useState<File | null>(null);
+  const ai = useAiStatus();
+  const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  const [aiCells, setAiCells] = useState<Record<number, AiCell>>({});
 
   const mine = useMemo(() => applications.filter((a) => a.contractId === contract?.id), [applications, contract?.id]);
   const thisNumber = app ? app.number : (parseInt(number, 10) || 0);
@@ -75,6 +83,8 @@ export function ApplicationDialog({
     setPeriodEnd(isoDate(app?.periodEnd ?? null));
     setEntry('period');
     setFile(null);
+    setAiResult(null);
+    setAiCells({});
     const d: Record<number, Draft> = {};
     for (const l of app?.lines ?? []) {
       d[l.sovLineId] = {
@@ -147,11 +157,71 @@ export function ApplicationDialog({
     setEntry(to);
   };
 
+  /**
+   * AI-filled cells are tinted violet. Change one and the tint goes, with a
+   * note of what AI read — so an override is always visible.
+   */
+  const aiTint = (id: number, f: 'work' | 'stored' | 'retainage') => {
+    const c = aiCells[id];
+    if (!c || entry !== 'period') return '';
+    const v = c[f];
+    if (v == null || v === 0) return '';
+    return same(draft[id]?.[f], v) ? 'bg-violet-50 border-violet-300' : '';
+  };
+  const aiNote = (id: number, f: 'work' | 'stored' | 'retainage') => {
+    const c = aiCells[id];
+    if (!c || entry !== 'period') return null;
+    const v = c[f];
+    if (v == null || v === 0 || same(draft[id]?.[f], v)) return null;
+    return <div className="text-[10px] text-right text-amber-700 tabular-nums mt-0.5">Edited · AI read {money(v)}</div>;
+  };
+
   const set = (id: number, field: keyof Draft, value: string) =>
     setDraft((d) => {
       const cur: Draft = d[id] ?? { work: '', stored: '', retainage: '', toDate: '' };
       return { ...d, [id]: { ...cur, [field]: value } };
     });
+
+  const attachedNow = app ? documents.filter((d) => d.applicationId === app.id) : [];
+  const readable = (n: string, t?: string | null) => /\.pdf$/i.test(n) || /pdf|^image\//i.test(t ?? '');
+  const readSource: { file?: File; documentId?: number; name: string } | null = file && readable(file.name, file.type)
+    ? { file, name: file.name }
+    : (() => { const d = attachedNow.find((x) => readable(x.originalName, (x as any).mimeType)); return d ? { documentId: d.id, name: d.originalName } : null; })();
+
+  /** AI reads the PDF and fills the grid. Nothing is saved until Save. */
+  const read = useMutation({
+    mutationFn: async (): Promise<AiResult> => {
+      let body: any;
+      if (readSource?.file) { body = new FormData(); body.append('file', readSource.file); }
+      else body = { documentId: readSource?.documentId };
+      return apiRequest(`/api/cost-contracts/${contract!.id}/read-pay-app`, 'POST', body, 180_000);
+    },
+    onSuccess: (r) => {
+      setEntry('period');
+      const cells: Record<number, AiCell> = {};
+      setDraft((d) => {
+        const out = { ...d };
+        for (const m of r.matched) {
+          cells[m.sovLineId] = { work: m.work, stored: m.stored, retainage: m.retainage, previous: m.previous };
+          const cur = out[m.sovLineId] ?? { work: '', stored: '', retainage: '', toDate: '' };
+          out[m.sovLineId] = {
+            ...cur,
+            work: m.work ? m.work.toFixed(2) : '',
+            stored: m.stored ? m.stored.toFixed(2) : '',
+            retainage: m.retainage != null && m.retainage !== 0 ? m.retainage.toFixed(2) : cur.retainage,
+          };
+        }
+        return out;
+      });
+      setAiCells(cells);
+      if (!app && r.applicationNumber && !mine.some((a) => a.number === r.applicationNumber)) setNumber(String(r.applicationNumber));
+      if (!invoiceNumber && r.invoiceNumber) setInvoiceNumber(r.invoiceNumber);
+      if (!periodStart && r.periodFrom) setPeriodStart(r.periodFrom);
+      if (!periodEnd && r.periodTo) setPeriodEnd(r.periodTo);
+      setAiResult(r);
+    },
+    onError: (e: any) => toast({ title: 'AI could not read it', description: e?.message, variant: 'destructive', duration: 10000 }),
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -209,6 +279,49 @@ export function ApplicationDialog({
             <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
         </div>
 
+        {ai.on && (
+          <div className="flex items-center gap-3 flex-wrap rounded-md border border-violet-200 bg-violet-50/60 px-3 py-2 text-sm">
+            <Button type="button" size="sm" variant="outline" className="h-8 border-violet-300 text-violet-800"
+                    disabled={!readSource || read.isPending} onClick={() => read.mutate()}>
+              {read.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              {read.isPending ? 'Reading…' : aiResult ? 'Read again' : 'Read with AI'}
+            </Button>
+            <span className="text-xs text-gray-700">
+              {readSource
+                ? <>Reads <span className="font-medium">{readSource.name}</span> and fills in the lines below. Check them, then save.</>
+                : 'Attach the pay app PDF (bottom of this window), then AI can fill in the lines for you.'}
+            </span>
+          </div>
+        )}
+
+        {aiResult && (() => {
+          const theirs = aiResult.g702.currentPaymentDue;
+          const ours = preview?.currentPaymentDue ?? 0;
+          const ok = theirs != null && Math.abs(theirs - ours) < 0.01;
+          return (
+            <div className={`rounded-md border px-3 py-2 text-sm space-y-1 ${ok ? 'border-green-300 bg-green-50' : 'border-amber-300 bg-amber-50'}`}>
+              <div className="flex items-center gap-2 font-medium">
+                {ok ? <CheckCircle2 className="h-4 w-4 text-green-700" /> : <AlertTriangle className="h-4 w-4 text-amber-700" />}
+                {theirs == null
+                  ? 'AI could not find line 8 (current payment due) on their G702 — compare by eye.'
+                  : ok
+                    ? `Matches their G702: current payment due ${money(theirs)}.`
+                    : `Their G702 says ${money(theirs)} due; these lines give ${money(ours)} (${money(ours - theirs)} difference).`}
+              </div>
+              <div className="text-xs text-gray-700">
+                {aiResult.matched.length} line{aiResult.matched.length === 1 ? '' : 's'} filled from {aiResult.fileName} (violet).
+                {aiResult.unmatched.length ? ` ${aiResult.unmatched.length} of their lines did not match ours.` : ''} Nothing is saved until you click Save.
+              </div>
+              {aiResult.warnings.length > 0 && (
+                <ul className="text-xs text-gray-800 list-disc pl-5">
+                  {aiResult.warnings.slice(0, 8).map((w, i) => <li key={i}>{w}</li>)}
+                  {aiResult.warnings.length > 8 && <li>…and {aiResult.warnings.length - 8} more</li>}
+                </ul>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
           Enter
           <Button type="button" size="sm" variant={entry === 'period' ? 'default' : 'outline'} className="h-7"
@@ -244,16 +357,21 @@ export function ApplicationDialog({
                     <tr key={l.id} className="border-t">
                       <td className="px-2 py-1">
                         <div className="text-gray-900">{l.itemNo ? <span className="text-gray-500 mr-1">{l.itemNo}</span> : null}{l.description}</div>
+                        {aiCells[l.id]?.previous != null && Math.abs(aiCells[l.id].previous! - previous) > 0.005 && (
+                          <div className="text-[11px] text-red-700">Their previous {money(aiCells[l.id].previous!)} — ours {money(previous)}</div>
+                        )}
                       </td>
                       <td className="px-2 py-1 text-right tabular-nums">{money(l.scheduledValue)}</td>
                       <td className="px-2 py-1 text-right tabular-nums text-gray-600">{money(previous)}</td>
                       <td className="px-2 py-1">
-                        <MoneyInput className="h-8"
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'work')}`}
                                value={entry === 'period' ? (draft[l.id]?.work ?? '') : (draft[l.id]?.toDate ?? '')}
                                onValueChange={(v) => set(l.id, entry === 'period' ? 'work' : 'toDate', v)} />
+                        {aiNote(l.id, 'work')}
                       </td>
                       <td className="px-2 py-1">
-                        <MoneyInput className="h-8" value={draft[l.id]?.stored ?? ''} onValueChange={(v) => set(l.id, 'stored', v)} />
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'stored')}`} value={draft[l.id]?.stored ?? ''} onValueChange={(v) => set(l.id, 'stored', v)} />
+                        {aiNote(l.id, 'stored')}
                       </td>
                       <td className={`px-2 py-1 text-right tabular-nums ${over ? 'text-red-700 font-semibold' : ''}`}
                           title={over ? 'More than the scheduled value' : undefined}>{money(toDate)}</td>
@@ -261,11 +379,12 @@ export function ApplicationDialog({
                         {l.scheduledValue ? `${((toDate / l.scheduledValue) * 100).toFixed(2)}%` : '—'}
                       </td>
                       <td className="px-2 py-1">
-                        <MoneyInput className="h-8" value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'retainage')}`} value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
                                     title={`Left blank: ${money(autoRetainage(l))} (${Number(contract?.retainagePct ?? 0).toFixed(2)}% of work to date)`} />
                         {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
                           <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
                         )}
+                        {aiNote(l.id, 'retainage')}
                       </td>
                     </tr>
                   );

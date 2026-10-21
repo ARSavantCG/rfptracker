@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle, BookOpen, Eye, EyeOff } from "lucide-react";
+import { Shield, Users, Settings, Edit, Trash2, CheckCircle, XCircle, User as UserIcon, KeyRound, FileText, HardDrive, Layout, Clock, Scale, ChevronDown, Hash, BarChart, ExternalLink, Mail, ClipboardCheck, Tags, Database, Wrench, CloudUpload, AlertCircle, BookOpen, Eye, EyeOff, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ import AdminResetPasswordModal from "@/components/admin-reset-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
 import { FileIntegrityAuditPanel } from "@/components/file-integrity-audit-panel";
 import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
+import { AiSettingsPanel } from "@/components/ai-settings-panel";
 import { RfpDocumentEditor } from "@/components/rfp-document-editor-fixed";
 import { EnhancedRfpCustomizer } from "@/components/enhanced-rfp-customizer";
 import { TimezoneAdminPanel } from "@/components/timezone-admin-panel";
@@ -1553,6 +1554,10 @@ export default function Admin() {
               <span className="hidden sm:inline">Email Testing</span>
               <span className="sm:hidden">Email</span>
             </TabsTrigger>
+            <TabsTrigger value="ai" className="flex items-center gap-2 flex-shrink-0">
+              <Sparkles className="h-4 w-4" />
+              <span>AI</span>
+            </TabsTrigger>
             <TabsTrigger value="data-quality" className="flex items-center gap-2 flex-shrink-0">
               <ClipboardCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Data Quality</span>
@@ -1712,6 +1717,10 @@ export default function Admin() {
           <TabsContent value="email" className="mt-6 space-y-6">
             <NotificationSettingsPanel />
             <EmailTestPanel />
+          </TabsContent>
+
+          <TabsContent value="ai" className="mt-6">
+            <AiSettingsPanel />
           </TabsContent>
 
           <TabsContent value="data-quality" className="mt-6">

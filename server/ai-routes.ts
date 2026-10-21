@@ -6,9 +6,30 @@ import type { Express } from 'express';
 import { storage } from './storage';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth, checkPermission } from './middleware';
+import { requireAi, aiStatus, setAiEnabled } from './lib/ai-switch';
 
 export function registerAiRoutes(app: Express): void {
-  app.post("/api/ai/analyze-bid/:bidCollectionId", requireAuth, checkPermission('admin.access'), async (req, res) => {
+  // Whether AI buttons should show. Any signed-in user may ask.
+  app.get("/api/ai/status", requireAuth, async (_req, res) => {
+    try { res.json(await aiStatus()); }
+    catch (e) { res.status(500).json({ message: 'Could not read the AI setting' }); }
+  });
+
+  // The one switch for every AI feature. Admin only.
+  app.post("/api/admin/ai", requireAuth, checkPermission('admin.access'), async (req, res) => {
+    try {
+      const enabled = req.body?.enabled !== false;
+      const user = (req as any).user;
+      await setAiEnabled(enabled, user?.email || user?.username || null);
+      console.log(`[ai] AI features turned ${enabled ? 'ON' : 'OFF'} by ${user?.email || 'unknown'}`);
+      res.json(await aiStatus());
+    } catch (e) {
+      console.error('[ai] switch failed:', e);
+      res.status(500).json({ message: 'Could not change the AI setting' });
+    }
+  });
+
+  app.post("/api/ai/analyze-bid/:bidCollectionId", requireAuth, checkPermission('admin.access'), requireAi, async (req, res) => {
     try {
       const bidCollectionId = parseInt(req.params.bidCollectionId);
       if (isNaN(bidCollectionId)) {

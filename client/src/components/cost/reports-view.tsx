@@ -120,7 +120,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
               <table className="w-full text-sm min-w-[1000px]">
                 <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
                   <th className="py-1 text-left align-bottom">Party</th><th className={th}>Rate</th>
-                  <th className={th} title="The original budget (before change orders) with the CM fee backed out at this rate — what the fee is figured on">Original budget<div className="normal-case font-normal">less CM fee</div></th>
+                  <th className={th} title="The original budget (before change orders) with the CM fee backed out at this rate — what the fee is figured on">Original budget</th>
                   <th className={th}>Original fee</th>
                   <th className={th} title="Approved change order amounts the fee is figured on">Approved COs<div className="normal-case font-normal">subject to fee</div></th>
                   <th className={th}>CO fees</th><th className={th}>Total anticipated</th>

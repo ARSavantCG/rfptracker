@@ -102,7 +102,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                   {g.label}
                   <div className="text-[11px] text-gray-500">
                     {g.cos.map((c) => c.number).join(', ')}
-                    {g.tenant ? ` · tenant pays ${money(g.tenant)}` : ''}{g.absorbed ? ` · we absorb ${money(g.absorbed)}` : ''}
+                    {g.tenant ? ` · tenant pays ${money(g.tenant)}` : ''}{g.absorbed ? ` · we absorb ${money(g.absorbed)}` : ''}{g.funded ? ` (${money(g.funded)} from budget lines)` : ''}
                   </div>
                 </td>
                 <td className="py-1.5 text-right tabular-nums">{signedMoney(g.total)}</td>

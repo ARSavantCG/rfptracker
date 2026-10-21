@@ -82,6 +82,8 @@ export interface BudgetCoView {
   number: string; title: string; date: string | null; status: string; billable: boolean;
   work: number; cm: number; total: number; cmFeePct: number; cmFee: boolean;
   tenant?: number; absorbed?: number; cmAbsorbed?: number; credit?: number; reason?: string; markups?: number;
+  /** Paid from other budget lines, and what the budget grows by after that. */
+  funded?: number; budgetIncrease?: number; fundedNote?: string;
 }
 
 function budgetCoTable(cos: BudgetCoView[] | undefined): string {
@@ -96,11 +98,11 @@ function budgetCoTable(cos: BudgetCoView[] | undefined): string {
   <table class="t"><thead><tr><th class="l">No.</th><th class="l">For</th><th class="l">Why</th><th class="l">Date</th>
     <th>Cost of Work</th><th>Markups</th><th>Partner CM Fee</th><th>Budget Increase</th><th>Tenant Pays</th><th>Absorbed</th><th class="l">Status</th></tr></thead><tbody>
     ${list.map((c) => `<tr><td>${escapeHtml(c.number)}</td><td>${escapeHtml(c.title)}${c.credit ? `<div class="muted" style="font-size:9px">Includes a ${money2(c.credit)} credit to the tenant</div>` : ""}</td><td>${escapeHtml(c.reason ? reasonLabel(c.reason) : "")}</td><td style="white-space:nowrap">${escapeHtml(longDate(c.date))}</td>
-      ${cell(c.work)}${c.markups ? cell(c.markups) : `<td class="num muted">—</td>`}${c.cmAbsorbed ? cell(c.cmAbsorbed) : `<td class="num muted">—</td>`}${cell(c.total)}<td class="num">${fmt(tenantOf(c))}${c.cm ? `<div class="muted" style="font-size:9px">incl. ${money2(c.cm)} CM fee (${fmtPct(c.cmFeePct)})</div>` : ""}</td>${cell(oursOf(c))}
+      ${cell(c.work)}${c.markups ? cell(c.markups) : `<td class="num muted">—</td>`}${c.cmAbsorbed ? cell(c.cmAbsorbed) : `<td class="num muted">—</td>`}<td class="num">${fmt(c.budgetIncrease ?? c.total)}${c.funded ? `<div class="muted" style="font-size:9px">${escapeHtml(c.fundedNote || `${money2(c.funded)} from budget lines`)}</div>` : ""}</td><td class="num">${fmt(tenantOf(c))}${c.cm ? `<div class="muted" style="font-size:9px">incl. ${money2(c.cm)} CM fee (${fmtPct(c.cmFeePct)})</div>` : ""}</td>${cell(oursOf(c))}
       <td>${c.status === "approved" ? "Approved" : "Pending"}</td></tr>`).join("")}
-    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.markups ?? 0))}${cell(sum(approved, (c) => c.cmAbsorbed ?? 0))}${cell(sum(approved, (c) => c.total))}${cell(sum(approved, tenantOf))}${cell(sum(approved, oursOf))}<td></td></tr>
+    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.markups ?? 0))}${cell(sum(approved, (c) => c.cmAbsorbed ?? 0))}${cell(sum(approved, (c) => c.budgetIncrease ?? c.total))}${cell(sum(approved, tenantOf))}${cell(sum(approved, oursOf))}<td></td></tr>
   </tbody></table>
-  <div class="legend">Approved: tenant-funded ${money2(sum(approved, tenantOf))} · absorbed ${money2(sum(approved, oursOf))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.total))} (not in the budget)` : ""}.</div>`;
+  <div class="legend">Approved: tenant-funded ${money2(sum(approved, tenantOf))} · absorbed ${money2(sum(approved, oursOf))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.budgetIncrease ?? c.total))} (not in the budget)` : ""}.</div>`;
 }
 
 export interface ApprovalView {
@@ -141,7 +143,7 @@ type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null;
 export type FundingView = { label: string; confirmed: boolean; original: number; revisions: number; tenant: number; absorbed: number; revised: number; projectedCost: number; projectedOverrun: number; supplemental: number; totalFunding: number; projectedVariance: number; pendingChangeOrders: number; need?: number; surplus?: number; absorbedFromSurplus?: number; contingency?: number };
 
 export type StoryView = { original: number; revised: number; revisions: number; moved: number; transferCount: number;
-  groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; cos: Array<{ number: string }> }> };
+  groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; funded?: number; cos: Array<{ number: string }> }> };
 
 /** One invoice as issued, for the CM fee report: its fee to date, so the fee on each invoice can be told apart from costs. */
 type FeeInvoice = { number: string; date: string; type?: "fee" | "reimbursable"; due: number; earned: number; suppFee?: number; billTo?: string };
@@ -192,12 +194,14 @@ export function renderCmFeeReportHtml(input: {
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>CM Fee Report</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
+    /* Section ribbons in the Kurv grey. */
+    h3.sec { background: #4b5563; color: #fff; padding: 5px 8px; margin: 16px 0 0; letter-spacing: .08em; }
     @page { size: Letter landscape; margin: 0.5in; }
   </style></head><body>
   ${reportHeaderHtml({ title: "CM Fee Report", info })}
 
   <h3 class="sec">CM Fees by Party</h3>
-  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Budget<div style="font-weight:400">less the CM fee</div></th><th>Original Fee</th>
+  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Budget</th><th>Original Fee</th>
     <th>Approved Change Orders<div style="font-weight:400">subject to fee</div></th><th>Change Order Fees</th><th>Total Anticipated Fees</th>
     <th>Earned to Date</th><th>Invoiced</th><th>Billable</th><th>Remaining to Bill</th></tr></thead><tbody>
     ${party("Capital partner", c.billTo, c)}
@@ -211,7 +215,7 @@ export function renderCmFeeReportHtml(input: {
       <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : x.partnerBasis === "absorbed" ? "difference only" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
     <tr class="total"><td colspan="2">Total</td>${cell(coSum("work"))}${cell(coSum("tenantWork"))}<td></td>${cell(coSum("tenantFee"))}<td></td>${cell(coSum("partnerFee"))}</tr>
   </tbody></table>
-  <div class="legend">The fee each change order carries when approved — earned as its work is billed. Pending and void change orders are listed for reference.</div>` : ""}
+` : ""}
 
   <h3 class="sec">CM Fee Earned to Date</h3>
   <table class="t"><thead><tr><th class="l">Party</th><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>Total Anticipated Fees</th><th>Remaining</th></tr></thead><tbody>
@@ -221,7 +225,6 @@ export function renderCmFeeReportHtml(input: {
         ${cell(e?.base ?? 0)}<td class="num">${fmtPct(s.pct)}</td>${cell(e?.fee ?? 0)}${cell(P(s).fee)}${cell(P(s).fee - (e?.fee ?? 0), negCls(P(s).fee - (e?.fee ?? 0)))}</tr>`).join("");
     }).join("")}
   </tbody></table>
-  <div class="legend">Capital partner: the base is every cost on the project (less the CM fee line). Tenant: their billable share of change order work${t.tenantCosOnly === false ? " and of the original scope" : ""}. Change orders can carry their own rates, so earned may differ slightly from base × rate.</div>
 
 
   <h3 class="sec">CM Fee Invoices Issued</h3>
@@ -283,7 +286,7 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
     </tbody></table>
     <table class="t" style="flex:1"><thead><tr><th class="l">Why the Budget Changed</th><th>Amount</th></tr></thead><tbody>
       ${r("Original budget", f.original, "", "sub")}
-      ${(st?.groups || []).map((g) => r(g.label, g.total, `${g.cos.map((c) => c.number).join(", ")}${g.tenant ? ` · tenant pays ${money2(g.tenant)}` : ""}${g.absorbed ? ` · we absorb ${money2(g.absorbed)}` : ""}`)).join("")}
+      ${(st?.groups || []).map((g) => r(g.label, g.total, `${g.cos.map((c) => c.number).join(", ")}${g.tenant ? ` · tenant pays ${money2(g.tenant)}` : ""}${g.absorbed ? ` · we absorb ${money2(g.absorbed)}` : ""}${g.funded ? ` (${money2(g.funded)} from budget lines)` : ""}`)).join("")}
       ${st && Math.abs(st.revisions) >= 0.005 ? r("Revisions", st.revisions, "Lines edited after confirmation") : ""}
       ${r("Revised budget", f.revised, st?.transferCount ? `${money2(st.moved)} moved between lines; total unchanged` : "", "sub")}
       ${r("Projected cost", f.projectedCost, "Committed plus pending change orders")}
@@ -772,7 +775,9 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         })),
         budgetCos: b.approval.changeOrders.map((c) => {
           const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
-          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, reason: c.reason, ...t };
+          const ln = (k: string) => b.project.baseline.find((l: any) => l.key === k)?.description ?? "a budget line";
+          const fundedNote = (c.fundedFrom || []).length ? `Paid from ${(c.fundedFrom || []).map((f: any) => `${ln(f.key)} ${money2(f.amount)}`).join(", ")}` : undefined;
+          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, reason: c.reason, ...t, fundedNote };
         }),
         generatedBy: generatedByName((req as any).user),
       }));

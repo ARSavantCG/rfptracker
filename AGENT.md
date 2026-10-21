@@ -170,3 +170,9 @@ and live test output are proof. The gold standard is: click the button and watch
 - fundingSources(rows, a, {committed, pending, byKey}): need = Σ lines (committed+pending if anything committed, else budget before COs; contingency lines with nothing committed = 0; deal-discount row at budget) + unplaced cost + approved COs' markups + tenant fee + partner fee + work of unlinked COs. fundsIn = original + revisions + tenant. supplemental = max(0, need − fundsIn); surplus = max(0, fundsIn − need); absorbedFromSurplus; totalFunding = fundsIn + supplemental.
 - Funding box (screen + BvA print) shows Projected cost to complete and Projected surplus / shortfall; story shows "we absorb $X" instead of the supplemental label.
 - (2026-10-21) fundingSources also returns contingency (unspent on contingency lines) and overLines (committed over revised budget, non-contingency); funding box warns 'Cover it with Move money from contingency' or that contingency is used up.
+
+## Change orders paid from inside the budget + CM Fee Report ribbons (2026-10-21)
+- BudgetCO.fundedFrom [{key, amount}]: the absorbed part paid from other budget lines (contingency etc.). coTotals → funded (≤ absorbed), budgetIncrease = total − funded. applyChangeOrders moves funded amounts off the source lines (tenant share kept in proportion). coSummary.approved/pending use budgetIncrease (+ approvedFunded); story groups total = budgetIncrease (+ funded).
+- Form: "Paid for by" block (only when we absorb > 0): rows of source line + amount, "+ Pay from a budget line", "Pay from Contingency", remainder = new money (Supplemental). CO list Budget + shows budgetIncrease and the sources. BvA print: Budget Increase + "Paid from …".
+- POST/PATCH validate fundedFrom keys against the baseline.
+- CM Fee Report: grey (#4b5563) section ribbons; removed "less the CM fee" sub-label and both legends.

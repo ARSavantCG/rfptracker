@@ -167,7 +167,7 @@ export type ApprovalView = BudgetApproval & {
   /** Priced less the deal discount: the LAF budget. */
   approvedTotal: number;
   orphaned: { key: string; amount: number }[];
-  changeOrderTotals: { id: string; work: number; tenantWork: number; ourWork: number; markups: number; markupLines: { key: string; label: string; pct: number; amount: number }[]; cm: number; cmAbsorbed: number; partnerFee: number; credit: number; tenant: number; absorbed: number; total: number }[];
+  changeOrderTotals: { id: string; work: number; tenantWork: number; ourWork: number; markups: number; markupLines: { key: string; label: string; pct: number; amount: number }[]; cm: number; cmAbsorbed: number; partnerFee: number; credit: number; tenant: number; absorbed: number; total: number; funded: number; budgetIncrease: number }[];
   coSummary: { approved: number; approvedBillable: number; approvedAbsorbed: number; pending: number };
   /** LAF budget plus approved change orders. */
   currentTotal: number;

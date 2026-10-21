@@ -108,6 +108,11 @@ export interface BudgetCO {
   partnerFeeBasis: 'all' | 'tenant' | 'absorbed';
   /** Vendor change orders priced into this one (any contracts). */
   links: BudgetCOLink[];
+  /**
+   * Where the part we absorb is paid from inside the budget (contingency, another line): moved
+   * off those lines, so the budget only grows by the rest — which is new (supplemental) money.
+   */
+  fundedFrom: Array<{ key: string; amount: number }>;
   /** Credit to the tenant (a concession), absorbed by us. */
   credit: number;
   /** Earn the CM fee on our share too, charged to the capital partner. */
@@ -269,6 +274,9 @@ export function normalizeCO(raw: any): BudgetCO | null {
     partnerFeePct: Math.max(0, Math.min(100, num(raw.partnerFeePct ?? raw.cmFeePct))),
     partnerFeeBasis: raw.partnerFeeBasis === 'tenant' ? 'tenant' : raw.partnerFeeBasis === 'absorbed' ? 'absorbed' : 'all',
     links,
+    fundedFrom: Array.isArray(raw.fundedFrom) ? raw.fundedFrom
+      .map((f: any) => ({ key: String(f?.key ?? ''), amount: Math.max(0, r2(num(f?.amount))) }))
+      .filter((f: { key: string; amount: number }) => f.key && f.amount > 0) : [],
     credit: Math.max(0, r2(num(raw.credit))),
     cmOnAbsorbed: raw.cmOnAbsorbed === true,
     estimate: raw.estimate != null && raw.estimate !== '' ? r2(num(raw.estimate)) : null,
@@ -312,7 +320,10 @@ export function coTotals(co: BudgetCO) {
   // What each fee is figured on (0 when that fee is off).
   const partnerBase = co.partnerFee ? partnerOn : 0;
   const tenantFeeBase = co.cmFee ? cmBase : 0;
-  return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total, partnerBase, tenantFeeBase };
+  // Paid from inside the budget (never more than we absorb); the budget grows only by the rest.
+  const funded = r2(Math.min(Math.max(0, absorbed), (co.fundedFrom || []).reduce((s, f) => s + f.amount, 0)));
+  const budgetIncrease = r2(total - funded);
+  return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total, partnerBase, tenantFeeBase, funded, budgetIncrease };
 }
 
 /** Approved change orders, summed. */
@@ -321,11 +332,13 @@ export function coSummary(cos: readonly BudgetCO[]) {
     .filter((c) => c.status === st)
     .reduce((s, c) => s + f(coTotals(c)), 0));
   return {
-    approved: sum('approved', (t) => t.total),
+    // What change orders add to the budget: less what's paid from other lines inside it.
+    approved: sum('approved', (t) => t.budgetIncrease),
     // A change order can be split: the tenant's part and ours are counted apart.
     approvedBillable: sum('approved', (t) => t.tenant),
     approvedAbsorbed: sum('approved', (t) => t.absorbed),
-    pending: sum('pending', (t) => t.total),
+    approvedFunded: sum('approved', (t) => t.funded),
+    pending: sum('pending', (t) => t.budgetIncrease),
   };
 }
 
@@ -577,6 +590,17 @@ export function applyChangeOrders(lines: BaselineLine[], cos: readonly BudgetCO[
     if (t.cmAbsorbed) add(cmRow(), t.cmAbsorbed, Math.min(t.cmAbsorbed, t.cm));
     // A credit with nothing billed to the tenant lands on the CM row as our cost.
     if (t.credit && !t.tenantWork) add(cmRow(), 0, -t.credit);
+    // Paid from other lines in the budget: moved off them (their tenant share kept in proportion).
+    let left = t.funded;
+    for (const f of co.fundedFrom || []) {
+      const amt = r2(Math.min(f.amount, left));
+      if (amt <= 0) break;
+      const src = out.find((x) => x.key === f.key);
+      if (!src) continue;
+      const b = num(src.budget);
+      add(src, -amt, b ? -(amt * (tenantAmt.get(src.key) ?? 0)) / b : 0);
+      left = r2(left - amt);
+    }
   }
   for (const row of out) {
     const b = num(row.budget);
@@ -734,9 +758,10 @@ export function budgetStory(a: BudgetApproval, f: { original: number; revisions:
     const cos = approved.filter((c) => c.reason === key).map((c) => ({ id: c.id, number: c.number, title: c.title, ...coTotals(c) }));
     return {
       key, label, cos,
-      total: r2(cos.reduce((s, c) => s + c.total, 0)),
+      total: r2(cos.reduce((s, c) => s + c.budgetIncrease, 0)),
       tenant: r2(cos.reduce((s, c) => s + c.tenant, 0)),
       absorbed: r2(cos.reduce((s, c) => s + c.absorbed, 0)),
+      funded: r2(cos.reduce((s, c) => s + c.funded, 0)),
     };
   }).filter((g) => g.cos.length);
   const moved = r2(a.transfers.reduce((s, t) => s + t.amount, 0));

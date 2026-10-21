@@ -41,6 +41,8 @@ type Form = {
   /** CM fee to the capital partner: on all the work, only the tenant's share, or none. */
   partnerFee: boolean;
   partnerFeeBasis: 'all' | 'tenant' | 'absorbed';
+  /** Where the part we absorb is paid from inside the budget; the rest is new (supplemental) money. */
+  fundedFrom: { key: string; amount: string }[];
 };
 
 export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
@@ -57,14 +59,14 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const [busy, setBusy] = useState(false);
   const name = useMemo(() => new Map([...baseline.map((b) => [b.key, b.description] as [string, string]), [CO_UNASSIGNED_KEY, 'Unassigned'] as [string, string]]), [baseline]);
   const totals = (id: string) => a.changeOrderTotals.find((t) => t.id === id)
-    ?? { id, work: 0, tenantWork: 0, ourWork: 0, markups: 0, markupLines: [], cm: 0, cmAbsorbed: 0, partnerFee: 0, credit: 0, tenant: 0, absorbed: 0, total: 0 };
+    ?? { id, work: 0, tenantWork: 0, ourWork: 0, markups: 0, markupLines: [], cm: 0, cmAbsorbed: 0, partnerFee: 0, credit: 0, tenant: 0, absorbed: 0, total: 0, funded: 0, budgetIncrease: 0 };
 
   const nextNumber = () => `CO-${String(cos.length + 1).padStart(2, '0')}`;
   const blank = (): Form => ({
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,
     lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant', vendorLinks: [], fallbackKey: '',
-    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: '' })), partnerFee: true, partnerFeeBasis: 'absorbed',
+    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: '' })), partnerFee: true, partnerFeeBasis: 'absorbed', fundedFrom: [],
     tenantRate: fmtPctText(String(tenantRate)), partnerRate: fmtPctText(String(rate)), cmFeeAmount: '',
   });
   const edit = (co: BudgetCO): Form => ({
@@ -73,6 +75,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: String(l.tenantPct ?? 100), fromCoId: l.fromCoId ?? null })),
     credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason, vendorLinks: [], fallbackKey: '',
     markups: (co.markups || []).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: m.amount != null ? fmtMoneyText(String(m.amount)) : '' })), partnerFee: co.partnerFee, partnerFeeBasis: co.partnerFeeBasis ?? 'all',
+    fundedFrom: (co.fundedFrom || []).map((f) => ({ key: f.key, amount: fmtMoneyText(String(f.amount)) })),
     tenantRate: fmtPctText(String(co.cmFeePct)), partnerRate: fmtPctText(String(co.partnerFeePct)), cmFeeAmount: co.cmFeeAmount != null ? fmtMoneyText(String(co.cmFeeAmount)) : '',
   });
 
@@ -292,6 +295,11 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const formBudget = r2(formWork + formMarkupTotal + formCmOurs);
   const formTenant = r2(formTenantWork + formMarkupTotal + formCm - formCredit);
   const formOurs = r2(formBudget - formTenant);
+  const formFunded = form ? r2(Math.min(Math.max(0, formOurs), form.fundedFrom.reduce((s, f) => s + num(f.amount), 0))) : 0;
+  const formNewMoney = r2(Math.max(0, formOurs) - formFunded);
+  // Budget lines money can come from (not the change order's own markup lines' increases — any line is allowed).
+  const contingencyLine = baseline.find((b) => /contingenc/i.test(b.description));
+  const lineLeft = (key: string) => bundle.breakdown?.find((r) => r.key === key)?.revised ?? 0;
   const formLinesOk = form ? form.linked || fromVendors || (form.lines.filter((l) => num(l.amount)).every((l) => l.key) && form.lines.some((l) => num(l.amount))) : false;
 
   const submit = async () => {
@@ -299,6 +307,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     const body = {
       number: form.number, title: form.title, date: form.date, status: form.status, billable: form.billable, cmFee: form.cmFee,
       credit: formCredit, cmOnAbsorbed: form.cmOnAbsorbed, reason: form.reason, partnerFee: form.partnerFee, partnerFeeBasis: form.partnerFeeBasis,
+      fundedFrom: form.fundedFrom.filter((f) => f.key && num(f.amount) > 0).map((f) => ({ key: f.key, amount: num(f.amount) })),
       markups: form.markups.filter((m) => num(m.pct) > 0 || m.amount.trim() !== '').map((m) => ({ key: m.key, label: m.label, pct: num(m.pct), amount: m.amount.trim() !== '' ? num(m.amount) : null })),
       cmFeePct: num(form.tenantRate), partnerFeePct: num(form.partnerRate), cmFeeAmount: form.cmFeeAmount.trim() !== '' ? num(form.cmFeeAmount) : null,
       // Lines priced from linked vendors are re-priced from them, not typed.
@@ -380,7 +389,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       {t.cmAbsorbed ? <div>{signedMoney(t.cmAbsorbed)} <span className="text-[10px] text-gray-500">partner {co.partnerFeePct.toFixed(2)}%{co.partnerFeeBasis === 'tenant' ? ' · tenant share' : co.partnerFeeBasis === 'absorbed' ? ' · difference only' : ''}</span></div> : null}
                       {!t.markups && !t.cmAbsorbed ? '—' : null}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold">{signedMoney(t.total)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold">{signedMoney(t.budgetIncrease ?? t.total)}
+                      {t.funded ? <div className="text-[10px] font-normal text-gray-500">{(co.fundedFrom || []).map((f) => `${money(f.amount)} from ${name.get(f.key) ?? 'a line'}`).join(' · ')}</div> : null}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-green-800">{t.tenant ? signedMoney(t.tenant) : '—'}
                       {t.cm ? <div className="text-[10px] text-gray-500">incl. {money(t.cm)} CM fee ({co.cmFeePct.toFixed(2)}%)</div> : null}
                       {t.credit ? <div className="text-[10px] text-gray-500">after {money(t.credit)} credit</div> : null}</td>
@@ -654,9 +664,51 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <td colSpan={2} />
                   <td className="px-1 py-1"><MoneyInput className="h-8" value={form.credit} aria-label="Credit to the tenant" onValueChange={(v) => setForm({ ...form, credit: v })} /></td><td />
                 </tr>
+                {formOurs > 0.005 && (
+                  <>
+                    <tr className="border-t bg-gray-50/60">
+                      <td colSpan={6} className="px-2 pt-2 pb-1 text-xs">
+                        <span className="font-semibold text-gray-800">Paid for by</span>
+                        <span className="text-gray-600"> — the {money(formOurs)} we absorb: from a line in the budget (contingency, another line), and the rest is new money ({bundle.funding?.label ?? 'Supplemental Funding'}).</span>
+                      </td>
+                    </tr>
+                    {form.fundedFrom.map((f, i) => (
+                      <tr key={`f${i}`} className="bg-gray-50/60">
+                        <td colSpan={2} className="px-2 py-1">
+                          <div className="w-80 max-w-full">
+                            <Select value={f.key || undefined} onValueChange={(v) => setForm({ ...form, fundedFrom: form.fundedFrom.map((x, j) => (j === i ? { ...x, key: v } : x)) })}>
+                              <SelectTrigger className="h-8 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="— from which line —" /></SelectTrigger>
+                              <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description} · {money(lineLeft(b.key))}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                        </td>
+                        <td className="px-1 py-1"><MoneyInput className="h-8" value={f.amount} aria-label="Amount from this line"
+                          onValueChange={(v) => setForm({ ...form, fundedFrom: form.fundedFrom.map((x, j) => (j === i ? { ...x, amount: v } : x)) })} /></td>
+                        <td colSpan={2} className="px-2 text-xs text-gray-500">moved off that line</td>
+                        <td className="px-1 text-center">
+                          <button className="p-1 text-gray-400 hover:text-red-700" title="Remove" onClick={() => setForm({ ...form, fundedFrom: form.fundedFrom.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-50/60">
+                      <td colSpan={2} className="px-2 py-1">
+                        <span className="inline-flex gap-3 flex-wrap text-xs">
+                          <button className="text-blue-700 hover:underline" onClick={() => setForm({ ...form, fundedFrom: [...form.fundedFrom, { key: '', amount: fmtMoneyText(String(formNewMoney)) }] })}>+ Pay from a budget line</button>
+                          {contingencyLine && formNewMoney > 0.005 && !form.fundedFrom.some((f) => f.key === contingencyLine.key) && (
+                            <button className="text-blue-700 hover:underline" onClick={() => setForm({ ...form, fundedFrom: [...form.fundedFrom, { key: contingencyLine.key, amount: fmtMoneyText(String(r2(Math.min(formNewMoney, Math.max(0, lineLeft(contingencyLine.key)))))) }] })}>
+                              Pay from {contingencyLine.description}
+                            </button>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1 text-right tabular-nums text-xs">{formFunded ? `− ${money(formFunded)}` : ''}</td>
+                      <td colSpan={3} className="px-2 py-1 text-xs text-gray-700">New money ({bundle.funding?.label ?? 'Supplemental Funding'}): <span className={`tabular-nums font-medium ${formNewMoney > 0.005 ? 'text-red-800' : 'text-green-800'}`}>{money(formNewMoney)}</span></td>
+                    </tr>
+                  </>
+                )}
                 <tr className="border-t-2 border-gray-800 font-semibold">
-                  <td colSpan={2} className="px-2 py-1.5">Budget increase <span className="font-normal text-gray-600">(cost + markups + partner fee) · tenant pays {money(formTenant)} · {formOurs >= 0 ? `we absorb ${money(formOurs)}` : `tenant covers ${money(-formOurs)} more than the budget rises`}</span></td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(formBudget)}</td><td />
+                  <td colSpan={2} className="px-2 py-1.5">Budget increase <span className="font-normal text-gray-600">(cost + markups + partner fee{formFunded ? ', less what comes from other lines' : ''}) · tenant pays {money(formTenant)} · {formOurs >= 0 ? `we absorb ${money(formOurs)}` : `tenant covers ${money(-formOurs)} more than the budget rises`}</span></td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(r2(formBudget - formFunded))}</td><td />
                   <td className="px-2 py-1.5 text-right tabular-nums text-green-800">{signedMoney(formTenant)}</td><td />
                 </tr>
               </tfoot>

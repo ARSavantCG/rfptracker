@@ -81,7 +81,7 @@ export interface CmFeeView {
 export interface BudgetCoView {
   number: string; title: string; date: string | null; status: string; billable: boolean;
   work: number; cm: number; total: number; cmFeePct: number; cmFee: boolean;
-  tenant?: number; absorbed?: number; cmAbsorbed?: number; credit?: number; reason?: string;
+  tenant?: number; absorbed?: number; cmAbsorbed?: number; credit?: number; reason?: string; markups?: number;
 }
 
 function budgetCoTable(cos: BudgetCoView[] | undefined): string {
@@ -94,11 +94,11 @@ function budgetCoTable(cos: BudgetCoView[] | undefined): string {
   return `
   <h3 class="sec">Budget Change Orders</h3>
   <table class="t"><thead><tr><th class="l">No.</th><th class="l">For</th><th class="l">Why</th><th class="l">Date</th>
-    <th>Cost of Work</th><th>CM Fee</th><th>Total</th><th>Tenant Pays</th><th>Absorbed</th><th class="l">Status</th></tr></thead><tbody>
+    <th>Cost of Work</th><th>Markups</th><th>Partner CM Fee</th><th>Budget Increase</th><th>Tenant Pays</th><th>Absorbed</th><th class="l">Status</th></tr></thead><tbody>
     ${list.map((c) => `<tr><td>${escapeHtml(c.number)}</td><td>${escapeHtml(c.title)}${c.credit ? `<div class="muted" style="font-size:9px">Includes a ${money2(c.credit)} credit to the tenant</div>` : ""}</td><td>${escapeHtml(c.reason ? reasonLabel(c.reason) : "")}</td><td style="white-space:nowrap">${escapeHtml(longDate(c.date))}</td>
-      ${cell(c.work)}<td class="num">${c.cm + (c.cmAbsorbed ?? 0) ? fmt(c.cm + (c.cmAbsorbed ?? 0)) : "—"}${c.cmFee ? ` <span class="muted">(${fmtPct(c.cmFeePct)})</span>` : ""}</td>${cell(c.total)}${cell(tenantOf(c))}${cell(oursOf(c))}
+      ${cell(c.work)}${c.markups ? cell(c.markups) : `<td class="num muted">—</td>`}${c.cmAbsorbed ? cell(c.cmAbsorbed) : `<td class="num muted">—</td>`}${cell(c.total)}<td class="num">${fmt(tenantOf(c))}${c.cm ? `<div class="muted" style="font-size:9px">incl. ${money2(c.cm)} CM fee (${fmtPct(c.cmFeePct)})</div>` : ""}</td>${cell(oursOf(c))}
       <td>${c.status === "approved" ? "Approved" : "Pending"}</td></tr>`).join("")}
-    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.cm + (c.cmAbsorbed ?? 0)))}${cell(sum(approved, (c) => c.total))}${cell(sum(approved, tenantOf))}${cell(sum(approved, oursOf))}<td></td></tr>
+    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.markups ?? 0))}${cell(sum(approved, (c) => c.cmAbsorbed ?? 0))}${cell(sum(approved, (c) => c.total))}${cell(sum(approved, tenantOf))}${cell(sum(approved, oursOf))}<td></td></tr>
   </tbody></table>
   <div class="legend">Approved: tenant-funded ${money2(sum(approved, tenantOf))} · absorbed ${money2(sum(approved, oursOf))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.total))} (not in the budget)` : ""}.</div>`;
 }
@@ -749,6 +749,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
           lines: co.lines.map((l) => ({ budgetLine: String(lineName.get(l.key) ?? ""), description: l.description, amount: Math.round(l.amount * (l.tenantPct ?? 100)) / 100 }))
             .filter((l) => Math.abs(l.amount) >= 0.005),
           work: t.tenantWork, cm: t.cm, credit: t.credit, total: t.tenant,
+          markups: t.markupLines.filter((m) => m.amount).map((m) => ({ label: `${m.label} (${fmtPct(m.pct)})`, amount: m.amount })),
           backup: b.documents.filter((d: any) => d.budgetCoId === co.id).map((d: any) => d.originalName),
         },
         billTo: String(((b.project as any).settings || {}).billTo || b.project.tenantName || ""),
@@ -801,7 +802,8 @@ export function renderTenantCoHtml(input: {
   propertyLabel?: string;
   rentableSf?: number;
   co: { number: string; title: string; date: string | null; status: string; cmFeePct: number;
-    lines: Array<{ budgetLine: string; description: string; amount: number }>; work: number; cm: number; credit?: number; total: number; backup: string[] };
+    lines: Array<{ budgetLine: string; description: string; amount: number }>; work: number; cm: number; credit?: number; total: number; backup: string[];
+    markups?: Array<{ label: string; amount: number }> };
   billTo: string;
   previousApproved: number;
   generatedBy?: string | null;
@@ -824,6 +826,7 @@ export function renderTenantCoHtml(input: {
   <table class="t"><thead><tr><th class="l">Description</th><th>Amount</th></tr></thead><tbody>
     ${lines}
     <tr class="sub"><td>Cost of work</td>${cell(co.work)}</tr>
+    ${(co.markups || []).map((m) => `<tr><td>${escapeHtml(m.label)}</td>${cell(m.amount)}</tr>`).join("")}
     ${co.cm ? `<tr><td>Construction management fee (${fmtPct(co.cmFeePct)})</td>${cell(co.cm)}</tr>` : ""}
     ${co.credit ? `<tr><td>Credit</td>${cell(-co.credit)}</tr>` : ""}
     <tr class="total"><td>Change order total</td>${cell(co.total)}</tr>

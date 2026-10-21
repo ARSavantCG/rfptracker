@@ -118,7 +118,7 @@ export interface ProjectBundle {
     directCosts: { date: string; amount: number }[];
   };
   cmFee: CmFee | null;
-  cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none' };
+  cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none' };
   cmInvoices: CmInvoiceRow[];
   cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }[];
     base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
@@ -156,7 +156,7 @@ export type ApprovalView = BudgetApproval & {
   /** Priced less the deal discount: the LAF budget. */
   approvedTotal: number;
   orphaned: { key: string; amount: number }[];
-  changeOrderTotals: { id: string; work: number; tenantWork: number; ourWork: number; cm: number; cmAbsorbed: number; credit: number; tenant: number; absorbed: number; total: number }[];
+  changeOrderTotals: { id: string; work: number; tenantWork: number; ourWork: number; markups: number; markupLines: { key: string; label: string; pct: number; amount: number }[]; cm: number; cmAbsorbed: number; partnerFee: number; credit: number; tenant: number; absorbed: number; total: number }[];
   coSummary: { approved: number; approvedBillable: number; approvedAbsorbed: number; pending: number };
   /** LAF budget plus approved change orders. */
   currentTotal: number;

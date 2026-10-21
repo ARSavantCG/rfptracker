@@ -310,11 +310,15 @@ export interface BillableItem {
   item: string;
   amount: number;
   billable: number;
-  /** CM fee on the original scope in this item (rate × its billable original work). */
+  /** Tenant invoice: CM fee on the original scope in this item (tenant rate × billable original work). */
   fee?: number;
-  /** Supplemental CM fee: on the tenant's share of change order work in this item. */
+  /** Tenant invoice: CM fee on the tenant's share of change order work (each change order's tenant rate). */
   suppFee?: number;
-  /** Supplemental CM fee on our share of change order work, charged to the capital partner. */
+  /** Capital partner invoice: partner rate × billable original work. */
+  feeP?: number;
+  /** Capital partner invoice: partner rate × all change order work in this item. */
+  suppP?: number;
+  /** Older records only. */
   cpFee?: number;
   /** Change order work in this item (from vendor change orders linked to tenant change orders). */
   coAmount?: number;
@@ -325,9 +329,9 @@ export interface BillableItem {
  * linked to, the tenant's share, and that change order's fee terms. Work on
  * these lines earns the Supplemental CM Fee, not the original one.
  */
-export type CoFeeLink = { pct: number; rate: number; cmFee: boolean; cmOnAbsorbed: boolean; coNumber: string };
+export type CoFeeLink = { pct: number; rate: number; cmFee: boolean; partnerFee: boolean; partnerRate: number; coNumber: string };
 export function coFeeLinks(
-  budgetCos: ReadonlyArray<{ number: string; status: string; cmFee: boolean; cmFeePct: number; cmOnAbsorbed: boolean; links: ReadonlyArray<{ contractCoId: number; pct: number }> }>,
+  budgetCos: ReadonlyArray<{ number: string; status: string; cmFee: boolean; cmFeePct: number; partnerFee: boolean; partnerFeePct: number; links: ReadonlyArray<{ contractCoId: number; pct: number }> }>,
   lines: ReadonlyArray<{ id: number; changeOrderId: number | null }>,
 ): Map<number, CoFeeLink> {
   const out = new Map<number, CoFeeLink>();
@@ -335,7 +339,7 @@ export function coFeeLinks(
     if (co.status !== 'approved') continue;
     for (const l of co.links) {
       for (const sl of lines) {
-        if (sl.changeOrderId === l.contractCoId) out.set(sl.id, { pct: l.pct, rate: co.cmFeePct, cmFee: co.cmFee, cmOnAbsorbed: co.cmOnAbsorbed, coNumber: co.number });
+        if (sl.changeOrderId === l.contractCoId) out.set(sl.id, { pct: l.pct, rate: co.cmFeePct, cmFee: co.cmFee, partnerFee: co.partnerFee, partnerRate: co.partnerFeePct, coNumber: co.number });
       }
     }
   }
@@ -354,10 +358,10 @@ export function supplementalCmEarned(progress: Map<number, { toDate: number }>, 
     const t = progress.get(id)?.toDate ?? 0;
     if (!t) continue;
     const f = Math.max(0, Math.min(1, paidFraction(id)));
-    const tenantFee = link.cmFee ? (t * link.pct / 100) * link.rate / 100 : 0;
-    const cpFee = link.cmFee && link.cmOnAbsorbed ? (t * (100 - link.pct) / 100) * link.rate / 100 : 0;
+    // What the capital partner owes you: the partner rate on all change order work.
+    const fee = link.partnerFee ? (t * link.partnerRate) / 100 : 0;
     work += t; workPaid += t * f;
-    earned += tenantFee; earnedCp += cpFee; earnedOnPaid += (tenantFee + cpFee) * f;
+    earned += fee; earnedOnPaid += fee * f;
   }
   return { work: r2(work), workPaid: r2(workPaid), earned: r2(earned), earnedCp: r2(earnedCp), earnedOnPaid: r2(earnedOnPaid) };
 }
@@ -374,13 +378,16 @@ export function billableItems(input: {
   contractName: (id: number) => string;
   /** Linked change order lines (billed at their own share, earning the Supplemental CM Fee). */
   coLinks?: Map<number, CoFeeLink>;
-  /** Original CM fee rate. */
+  /** Capital partner CM fee rate. */
   rate?: number;
+  /** The tenant's CM fee rate (on original scope). Defaults to the partner rate. */
+  tenantRate?: number;
   /** Credits to the tenant, as items (reimbursable invoices). */
   credits?: ReadonlyArray<{ id: string; date: string; number: string; amount: number }>;
 }): BillableItem[] {
   const links = input.coLinks ?? new Map<number, CoFeeLink>();
   const rate = input.rate ?? 0;
+  const tRate = input.tenantRate ?? rate;
   const cos = new Map((input.changeOrders || []).map((c) => [c.id, c]));
   const live = (input.lines || []).filter((l) => lineStatus(l, cos) !== 'void');
   const pctOf = (k: string) => input.tenantPct.get(k) ?? 0;
@@ -401,14 +408,14 @@ export function billableItems(input: {
       }
       // Change order work on linked lines is billed at its own share and earns the supplemental fee.
       const orig = new Map<number, number>();
-      let coAmount = 0, coBillable = 0, suppFee = 0, cpFee = 0;
+      let coAmount = 0, coBillable = 0, suppFee = 0, suppP = 0;
       for (const [id, v] of Array.from(amounts)) {
         const link = links.get(id);
         if (!link) { orig.set(id, v); continue; }
         const t = (v * link.pct) / 100;
         coAmount += v; coBillable += t;
         if (link.cmFee) suppFee += (t * link.rate) / 100;
-        if (link.cmFee && link.cmOnAbsorbed) cpFee += ((v - t) * link.rate) / 100;
+        if (link.partnerFee) suppP += (v * link.partnerRate) / 100;
       }
       const split = allocate(live, orig, input.validKeys);
       let amount = coAmount, billable = coBillable, origBillable = 0;
@@ -424,7 +431,7 @@ export function billableItems(input: {
         ref: `app-${a.id}`, date: a.date, vendor: input.contractName(contractId),
         item: `${label} ${a.docNumber ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
         amount: r2(amount), billable: r2(billable),
-        fee: r2((origBillable * rate) / 100), suppFee: r2(suppFee), cpFee: r2(cpFee), coAmount: r2(coAmount),
+        fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2((origBillable * rate) / 100), suppP: r2(suppP), coAmount: r2(coAmount),
       });
     }
   }
@@ -436,12 +443,12 @@ export function billableItems(input: {
     out.push({
       ref: `direct-${d.id}`, date: d.date, vendor: d.vendor,
       item: `${d.description || 'Charge'}${how ? ` (${how})` : ''}`,
-      amount: r2(d.amount), billable, fee: r2((billable * rate) / 100), suppFee: 0, cpFee: 0, coAmount: 0,
+      amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2((billable * rate) / 100), suppP: 0, coAmount: 0,
     });
   }
   for (const c of input.credits || []) {
     if (!(c.amount > 0)) continue;
-    out.push({ ref: `credit-${c.id}`, date: c.date, vendor: 'Tenant', item: `Credit — ${c.number}`, amount: 0, billable: r2(-c.amount), fee: 0, suppFee: 0, cpFee: 0, coAmount: 0 });
+    out.push({ ref: `credit-${c.id}`, date: c.date, vendor: 'Tenant', item: `Credit — ${c.number}`, amount: 0, billable: r2(-c.amount), fee: 0, suppFee: 0, feeP: 0, suppP: 0, coAmount: 0 });
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
 }
@@ -471,7 +478,7 @@ export function paidItems(billed: readonly BillableItem[], payments: ReadonlyArr
       item: `Payment — ${info?.item ?? 'pay app'}${p.reference ? ` (${p.reference})` : ''}`,
       amount: r2(p.amount), billable: share(src?.billable),
       // Only items that carry their own fees pass them on; otherwise the flat rate applies.
-      ...(src?.fee !== undefined ? { fee: share(src.fee), suppFee: share(src.suppFee), cpFee: share(src.cpFee), coAmount: share(src.coAmount) } : {}),
+      ...(src?.fee !== undefined ? { fee: share(src.fee), suppFee: share(src.suppFee), feeP: share(src.feeP), suppP: share(src.suppP), coAmount: share(src.coAmount) } : {}),
     });
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
@@ -488,13 +495,15 @@ export function paidItems(billed: readonly BillableItem[], payments: ReadonlyArr
 export function invoiceCalc(input: { type: InvoiceType; items: readonly BillableItem[]; pct: number; previouslyInvoiced: number }) {
   const costs = r2(input.items.reduce((s, i) => s + i.billable, 0));
   // Items carry their own fees (original vs supplemental); older callers get the flat rate.
+  // The tenant invoice uses the tenant's rates; the capital partner's invoice the partner rate
+  // (on all change order work). Items without their own fees use the flat rate.
   const split = input.items.some((i) => i.fee !== undefined);
-  const fee = split ? r2(input.items.reduce((s, i) => s + (i.fee ?? 0), 0)) : r2((costs * input.pct) / 100);
-  const suppFee = split ? r2(input.items.reduce((s, i) => s + (i.suppFee ?? 0), 0)) : 0;
-  // Our share's fee goes to the capital partner: on a fee invoice, never the tenant's.
-  const cpFee = split && input.type === 'fee' ? r2(input.items.reduce((s, i) => s + (i.cpFee ?? 0), 0)) : 0;
-  const allFees = r2(fee + suppFee + cpFee);
-  const toDate = input.type === 'reimbursable' ? r2(costs + fee + suppFee) : allFees;
+  const partner = input.type === 'fee';
+  const sum = (f: (i: BillableItem) => number | undefined) => r2(input.items.reduce((s, i) => s + (f(i) ?? 0), 0));
+  const fee = !split ? r2((costs * input.pct) / 100) : partner ? sum((i) => i.feeP ?? i.fee) : sum((i) => i.fee);
+  const suppFee = !split ? 0 : partner ? sum((i) => i.suppP ?? i.suppFee) : sum((i) => i.suppFee);
+  const cpFee = 0;
+  const toDate = input.type === 'reimbursable' ? r2(costs + fee + suppFee) : r2(fee + suppFee);
   const previous = r2(input.previouslyInvoiced);
   return { type: input.type, costs, pct: input.pct, fee, suppFee, cpFee, toDate, previous, due: r2(toDate - previous) };
 }

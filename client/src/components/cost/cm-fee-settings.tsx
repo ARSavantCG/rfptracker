@@ -14,17 +14,26 @@ import { apiRequest } from '@/lib/queryClient';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type CmFee } from './types';
 
-export function CmFeeSettings({ projectId, baseline, cmFee, source }: { projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null; source?: 'project' | 'line' | 'none' }) {
+export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, tenantSource }: {
+  projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null; source?: 'project' | 'line' | 'none';
+  /** The tenant's rate (can differ from the capital partner's). */
+  tenantPct?: number; tenantSource?: 'project' | 'line' | 'none';
+}) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [pct, setPct] = useState(cmFee ? cmFee.pct.toFixed(2) : '');
   const [key, setKey] = useState(cmFee?.key ?? '');
+  const tShown = tenantPct != null ? tenantPct.toFixed(2) : '';
+  const [tPct, setTPct] = useState(tShown);
   useEffect(() => { setPct(cmFee ? cmFee.pct.toFixed(2) : ''); setKey(cmFee?.key ?? ''); }, [cmFee?.pct, cmFee?.key]);
+  useEffect(() => { setTPct(tShown); }, [tShown]);
 
-  const dirty = (cmFee ? cmFee.pct.toFixed(2) : '') !== (pct.trim() === '' ? '' : (parseFloat(pct) || 0).toFixed(2)) || (cmFee?.key ?? '') !== key;
+  const norm = (v: string) => (v.trim() === '' ? '' : (parseFloat(v) || 0).toFixed(2));
+  const dirty = (cmFee ? cmFee.pct.toFixed(2) : '') !== norm(pct) || (cmFee?.key ?? '') !== key || tShown !== norm(tPct);
   const save = useMutation({
     mutationFn: () => apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', {
       cmFeePct: pct.trim() === '' ? null : Math.round(parseFloat(pct) * 100) / 100, cmFeeKey: key || '',
+      ...(tShown !== norm(tPct) ? { tenantCmFeePct: tPct.trim() === '' ? null : Math.round(parseFloat(tPct) * 100) / 100 } : {}),
     }),
     onSuccess: (data: any) => { queryClient.setQueryData([projectKey(projectId)], data); toast({ title: 'CM fee saved' }); },
     onError: (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }),
@@ -44,8 +53,14 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source }: { projectI
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs text-gray-600" htmlFor="cm-pct">Rate</label>
+        <label className="text-xs text-gray-600" htmlFor="cm-pct" title="What the capital partner pays you">Capital partner rate</label>
         <div className="w-28"><PercentInput id="cm-pct" className="h-9" value={pct} onValueChange={setPct} /></div>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs text-gray-600" htmlFor="cm-tpct" title="What the tenant pays on change orders and reimbursable invoices">
+          Tenant rate{tenantSource === 'project' ? <span className="ml-1 text-[10px] font-semibold text-amber-800">Edited</span> : tenantSource === 'line' ? <span className="ml-1 text-[10px] text-gray-500">from the LAF</span> : null}
+        </label>
+        <div className="w-28"><PercentInput id="cm-tpct" className="h-9" value={tPct} onValueChange={setTPct} /></div>
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-600" htmlFor="cm-line">On budget line</label>

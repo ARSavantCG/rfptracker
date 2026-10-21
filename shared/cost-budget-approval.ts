@@ -65,6 +65,17 @@ export interface BudgetCOLine {
   /** The vendor change order the line was priced from, if any. */
   fromCoId?: number | null;
 }
+export interface CoMarkup { key: string; label: string; pct: number }
+
+/** The LAF's % lines (other than the CM fee): "Permit Fees (3.00%)", "Contingency (5.00%)". */
+export function defaultMarkups(baseline: ReadonlyArray<{ key: string; description: string; bucket: string }>, cmKey: string | null): CoMarkup[] {
+  return baseline
+    .filter((b) => b.bucket !== 'cm' && b.key !== cmKey && b.key !== DEAL_DISCOUNT_KEY && b.key !== CO_CM_KEY)
+    .map((b) => ({ b, m: String(b.description).match(/\((\d+(?:\.\d+)?)\s*%\)/) }))
+    .filter((x) => x.m)
+    .map((x) => ({ key: x.b.key, label: String(x.b.description).replace(/\s*\((\d+(?:\.\d+)?)\s*%\)\s*$/, '').trim() || x.b.description, pct: Number(x.m![1]) }));
+}
+
 /** A vendor (contract) change order behind a tenant change order, and the tenant's share of it. */
 export interface BudgetCOLink {
   contractCoId: number;
@@ -80,8 +91,15 @@ export interface BudgetCO {
   /** Default tenant share for typed lines: billable = 100%, not = 0%. */
   billable: boolean;
   lines: BudgetCOLine[];
+  /** CM fee the tenant pays (at the tenant rate, on their cost plus markups). */
   cmFee: boolean;
+  /** The tenant's CM fee rate, fixed when the change order was written. */
   cmFeePct: number;
+  /** Markups on the tenant's share — the LAF's % lines (permit, contingency…). Each raises its budget line. */
+  markups: CoMarkup[];
+  /** CM fee the capital partner pays on all of this change order's work (the partner rate). */
+  partnerFee: boolean;
+  partnerFeePct: number;
   /** Vendor change orders priced into this one (any contracts). */
   links: BudgetCOLink[];
   /** Credit to the tenant (a concession), absorbed by us. */
@@ -228,6 +246,12 @@ export function normalizeCO(raw: any): BudgetCO | null {
       .filter((l: BudgetCOLine) => l.key && l.amount !== 0) : [],
     cmFee: raw.cmFee !== false,
     cmFeePct: Math.max(0, Math.min(100, num(raw.cmFeePct))),
+    markups: Array.isArray(raw.markups) ? raw.markups
+      .map((m: any) => ({ key: String(m?.key ?? ''), label: String(m?.label ?? '').trim(), pct: Math.max(0, Math.min(100, Math.round(num(m?.pct) * 100) / 100)) }))
+      .filter((m: CoMarkup) => m.key && m.pct > 0) : [],
+    // Older change orders had no partner fee setting; they earn it at their own rate.
+    partnerFee: raw.partnerFee !== undefined ? raw.partnerFee !== false : raw.cmOnAbsorbed === true,
+    partnerFeePct: Math.max(0, Math.min(100, num(raw.partnerFeePct ?? raw.cmFeePct))),
     links,
     credit: Math.max(0, r2(num(raw.credit))),
     cmOnAbsorbed: raw.cmOnAbsorbed === true,
@@ -253,12 +277,18 @@ export function coTotals(co: BudgetCO) {
   const work = r2(co.lines.reduce((s, l) => s + l.amount, 0));
   const tenantWork = r2(co.lines.reduce((s, l) => s + (l.amount * (l.tenantPct ?? 100)) / 100, 0));
   const ourWork = r2(work - tenantWork);
-  const cm = co.cmFee ? r2((tenantWork * co.cmFeePct) / 100) : 0;
-  const cmAbsorbed = co.cmFee && co.cmOnAbsorbed ? r2((ourWork * co.cmFeePct) / 100) : 0;
+  // The tenant's markups, on their share of the cost.
+  const markupLines = (co.markups || []).map((m) => ({ ...m, amount: r2((tenantWork * m.pct) / 100) }));
+  const markups = r2(markupLines.reduce((s, m) => s + m.amount, 0));
+  // Two CM fees: the tenant's (their rate, on their cost + markups) and the capital partner's (on all the work).
+  const cm = co.cmFee ? r2(((tenantWork + markups) * co.cmFeePct) / 100) : 0;
+  const cmAbsorbed = co.partnerFee ? r2((work * (co.partnerFeePct ?? 0)) / 100) : 0;
   const credit = r2(co.credit || 0);
-  const tenant = r2(tenantWork + cm - credit);
-  const absorbed = r2(ourWork + credit + cmAbsorbed);
-  return { work, tenantWork, ourWork, cm, cmAbsorbed, credit, tenant, absorbed, total: r2(work + cm + cmAbsorbed) };
+  // The budget holds the work, the markups and the partner's fee; the tenant pays their share, markups and fee.
+  const total = r2(work + markups + cmAbsorbed);
+  const tenant = r2(tenantWork + markups + cm - credit);
+  const absorbed = r2(total - tenant);
+  return { work, tenantWork, ourWork, markups, markupLines, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total };
 }
 
 /** Approved change orders, summed. */
@@ -509,8 +539,14 @@ export function applyChangeOrders(lines: BaselineLine[], cos: readonly BudgetCO[
     // Change order CM fees never touch the original CM fee line: they collect on
     // their own Supplemental CM Fee line, and only from change orders that ask for it.
     const cmRow = () => ensure(CO_CM_KEY, SUPPLEMENTAL_CM_LABEL, 'cm');
-    if (t.cm) add(cmRow(), t.cm, t.cm);
-    if (t.cmAbsorbed) add(cmRow(), t.cmAbsorbed, 0);
+    // Markups raise their own budget lines; the tenant pays them.
+    for (const m of t.markupLines) {
+      if (!m.amount) continue;
+      const row = out.find((x) => x.key === m.key) ?? ensure(`__co_line_${m.key}`, `${m.label || 'Markup'} (line removed)`, 'misc');
+      add(row, m.amount, m.amount);
+    }
+    // The capital partner's fee is the budget's; the tenant's fee offsets it.
+    if (t.cmAbsorbed) add(cmRow(), t.cmAbsorbed, Math.min(t.cmAbsorbed, t.cm));
     // A credit with nothing billed to the tenant lands on the CM row as our cost.
     if (t.credit && !t.tenantWork) add(cmRow(), 0, -t.credit);
   }

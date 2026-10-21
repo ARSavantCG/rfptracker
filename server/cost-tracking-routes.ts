@@ -22,7 +22,7 @@ import {
   costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts, costWaivers,
 } from '@shared/schema';
 import {
-  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
+  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, defaultMarkups, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
@@ -379,7 +379,7 @@ export async function loadProjectBundle(projectId: number) {
         validKeys: new Set(effective.map((b) => b.key)),
         cmKey: cmSettings.key,
         contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
-        coLinks, rate: cmSettings.pct,
+        coLinks, rate: cmSettings.pct, tenantRate: cmSettings.tenantPct,
         credits: settings.invoiceType === 'reimbursable'
           ? approval.changeOrders.filter((c) => c.status === 'approved' && c.credit > 0).map((c) => ({ id: c.id, date: c.date ?? todayEastern(), number: c.number, amount: c.credit }))
           : [],
@@ -411,12 +411,14 @@ export async function loadProjectBundle(projectId: number) {
           item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(row.id)}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
         };
       });
-      const inv = invoiceCalc({ type, items: chosen, pct: cmSettings.pct, previouslyInvoiced: calc.previous });
+      // The tenant is invoiced at the tenant rate; the capital partner at the partner rate.
+      const invPct = type === 'reimbursable' ? cmSettings.tenantPct : cmSettings.pct;
+      const inv = invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous });
       return {
         ...calc, type, basis, billTo,
         // base/earned/due follow the chosen type and basis.
-        base: inv.costs, earned: inv.fee, suppFee: inv.suppFee, cpFee: inv.cpFee, toDate: inv.toDate, due: inv.due,
-        supplementalCos: Array.from(new Set(Array.from(coLinks.values()).filter((l) => l.cmFee).map((l) => l.coNumber))),
+        base: inv.costs, earned: inv.fee, suppFee: inv.suppFee, cpFee: inv.cpFee, toDate: inv.toDate, due: inv.due, pct: invPct,
+        supplementalCos: Array.from(new Set(Array.from(coLinks.values()).filter((l) => (type === 'fee' ? l.partnerFee : l.cmFee)).map((l) => l.coNumber))),
         items: chosen.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
         // The by-line table ties to the items only when no change order work is billed at its own share.
         lines: basis === 'billed' && !coLinks.size ? calc.lines : [],
@@ -483,6 +485,13 @@ export function cmSettingsFor(project: { settings?: any }, baseline: readonly Ba
     key: settings.cmFeeKey !== undefined ? (settings.cmFeeKey || null) : (detected?.key ?? null) as string | null,
     /** Where the rate came from: typed for this project, or read off the CM line's name. */
     source: (settings.cmFeePct != null ? 'project' : detected ? 'line' : 'none') as 'project' | 'line' | 'none',
+    /**
+     * The tenant's rate, which can differ from the capital partner's: set for the
+     * project, else the CM line's name (the LAF's rate), else the partner rate.
+     */
+    tenantPct: settings.tenantCmFeePct != null && Number.isFinite(Number(settings.tenantCmFeePct)) ? Number(settings.tenantCmFeePct)
+      : detected?.pct ?? (settings.cmFeePct != null ? Number(settings.cmFeePct) : 0),
+    tenantSource: (settings.tenantCmFeePct != null ? 'project' : detected ? 'line' : 'none') as 'project' | 'line' | 'none',
   };
 }
 
@@ -792,9 +801,13 @@ export function registerCostTrackingRoutes(app: Express): void {
       const baseline = (project.baseline || []) as BaselineLine[];
       const a = normalizeApproval(project.budgetApproval);
       const b = req.body || {};
+      const cms = cmSettingsFor(project, baseline);
       const co = normalizeCO({
         ...b, id: `co-${nanoid(8)}`,
-        cmFeePct: cmSettingsFor(project, baseline).pct,
+        // Rates are fixed when the change order is written: the tenant's, and the capital partner's.
+        cmFeePct: cms.tenantPct, partnerFeePct: cms.pct,
+        partnerFee: b.partnerFee !== false,
+        markups: Array.isArray(b.markups) ? b.markups : defaultMarkups(baseline, cms.key),
         contractId: null, contractCoId: null, links: [],
       })!;
       const keys = new Set(baseline.map((x) => x.key));
@@ -854,7 +867,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (i < 0) return res.status(404).json({ message: 'Change order not found' });
       const cur = a.changeOrders[i];
       const b = req.body || {};
-      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason']) })!;
+      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee']) })!;
       const keys = new Set(baseline.map((x) => x.key));
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       // The vendors' side: write the estimate onto a contract, link vendor change
@@ -1081,6 +1094,12 @@ export function registerCostTrackingRoutes(app: Express): void {
         else return res.status(400).json({ message: 'CM fee must be a percentage between 0 and 100.' });
       }
       if (b.cmFeeKey !== undefined) next.cmFeeKey = b.cmFeeKey ? String(b.cmFeeKey) : '';
+      if (b.tenantCmFeePct !== undefined) {
+        const v = parseFloat(String(b.tenantCmFeePct));
+        if (b.tenantCmFeePct === null || b.tenantCmFeePct === '') delete next.tenantCmFeePct;
+        else if (Number.isFinite(v) && v >= 0 && v <= 100) next.tenantCmFeePct = v;
+        else return res.status(400).json({ message: 'The tenant CM fee must be a percentage between 0 and 100.' });
+      }
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);

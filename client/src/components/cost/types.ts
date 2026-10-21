@@ -120,7 +120,8 @@ export interface ProjectBundle {
   cmFee: CmFee | null;
   cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none' };
   cmInvoices: CmInvoiceRow[];
-  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }[];
+  cmInvoiceDrafts: { capital: CmInvoiceDraft; tenant: CmInvoiceDraft };
+  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }[];
     base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
   waivers: Array<import('@shared/cost-waivers').Waiver & { notes: string | null }>;
@@ -130,7 +131,14 @@ export interface ProjectBundle {
 export interface CmInvoiceRow {
   number: string; date: string; base: number; pct: number; earned: number; previous: number; due: number;
   issuedBy: string | null; issuedAt: string;
+  /** fee = the capital partner's invoice; reimbursable = the tenant's. Older ones: fee unless set. */
+  type?: 'fee' | 'reimbursable';
 }
+
+export type CmInvoiceDraft = ProjectBundle['cmInvoiceDraft'] & {
+  stream: 'capital' | 'tenant';
+  incurred: number; paidToDate: number; invoicedToDate: number; invoices: number;
+};
 
 export interface DirectCostRow {
   id: number;

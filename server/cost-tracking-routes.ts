@@ -355,8 +355,12 @@ export async function loadProjectBundle(projectId: number) {
     })(),
     cmSettings,
     cmInvoices: ((settings.cmInvoices || []) as CmInvoiceRecord[]),
-    cmInvoiceDraft: (() => {
-      const issued = (settings.cmInvoices || []) as CmInvoiceRecord[];
+    // Two invoices, side by side: the tenant's (costs + their CM fee) and the capital
+    // partner's (the CM fee only, with the costs incurred and paid shown as backup).
+    // Each has its own numbers and its own "previously invoiced".
+    ...(() => {
+    const draftFor = (type: 'fee' | 'reimbursable') => {
+      const issued = ((settings.cmInvoices || []) as CmInvoiceRecord[]).filter((i) => streamOf(i) === type);
       const calc = cmInvoiceCalc({
         rows: summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
         cmKey: cmSettings.key, pct: cmSettings.pct,
@@ -380,7 +384,7 @@ export async function loadProjectBundle(projectId: number) {
         cmKey: cmSettings.key,
         contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
         coLinks, rate: cmSettings.pct, tenantRate: cmSettings.tenantPct,
-        credits: settings.invoiceType === 'reimbursable'
+        credits: type === 'reimbursable'
           ? approval.changeOrders.filter((c) => c.status === 'approved' && c.credit > 0).map((c) => ({ id: c.id, date: c.date ?? todayEastern(), number: c.number, amount: c.credit }))
           : [],
       });
@@ -399,10 +403,16 @@ export async function loadProjectBundle(projectId: number) {
         const big = items.reduce((m, i) => (Math.abs(i.amount) > Math.abs(m.amount) ? i : m), items[0]);
         big.amount = Math.round((big.amount + drift2) * 100) / 100;
       }
-      // How this project invoices (set on the Reports tab).
-      const type = settings.invoiceType === 'reimbursable' ? 'reimbursable' as const : 'fee' as const;
-      const basis = settings.invoiceBasis === 'billed' ? 'billed' as const : 'paid' as const;
-      const billTo = String(settings.billTo || project.tenantName || '');
+      // How each invoice counts costs and who it goes to (set on the Reports tab).
+      const legacy = settings.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
+      const basisRaw = (type === 'reimbursable' ? settings.invoiceBasisTenant : settings.invoiceBasisCapital) ?? settings.invoiceBasis;
+      const basis = basisRaw === 'billed' ? 'billed' as const : 'paid' as const;
+      const billTo = String((type === 'reimbursable' ? settings.billToTenant : settings.billToCapital)
+        ?? (legacy === type ? settings.billTo : null)
+        ?? (type === 'reimbursable' ? project.tenantName : '') ?? '');
+      // Paid to date on each item: payments on its pay app; a direct charge is paid when entered.
+      const paidOn = new Map<string, number>();
+      for (const p of payments) if (p.applicationId != null) paidOn.set(`app-${p.applicationId}`, (paidOn.get(`app-${p.applicationId}`) ?? 0) + p.amount);
       const chosen = basis === 'billed' ? items : paidItems(items, payments, (aid) => {
         const row = apps.find((x) => x.id === aid);
         if (!row) return null;
@@ -414,15 +424,30 @@ export async function loadProjectBundle(projectId: number) {
       // The tenant is invoiced at the tenant rate; the capital partner at the partner rate.
       const invPct = type === 'reimbursable' ? cmSettings.tenantPct : cmSettings.pct;
       const inv = invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous });
+      const withPaid = (it: typeof items[number]) => ({ ...it, paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
+      // The capital partner sees every cost incurred (with what's been paid), whatever the fee is counted on.
+      const shown = type === 'fee' ? items.map(withPaid) : chosen.map(withPaid);
       return {
-        ...calc, type, basis, billTo,
+        ...calc, type, basis, billTo, stream: type === 'fee' ? 'capital' as const : 'tenant' as const,
+        incurred: r2c(items.reduce((t, i) => t + i.amount, 0)),
+        paidToDate: r2c(items.reduce((t, i) => t + withPaid(i).paid, 0)),
+        invoicedToDate: r2c(issued.reduce((t, i) => t + (Number(i.due) || 0), 0)),
+        invoices: issued.length,
         // base/earned/due follow the chosen type and basis.
         base: inv.costs, earned: inv.fee, suppFee: inv.suppFee, cpFee: inv.cpFee, toDate: inv.toDate, due: inv.due, pct: invPct,
         supplementalCos: Array.from(new Set(Array.from(coLinks.values()).filter((l) => (type === 'fee' ? l.partnerFee : l.cmFee)).map((l) => l.coNumber))),
-        items: chosen.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
+        items: shown.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
         // The by-line table ties to the items only when no change order work is billed at its own share.
         lines: basis === 'billed' && !coLinks.size ? calc.lines : [],
       };
+    };
+    const capital = draftFor('fee');
+    const tenant = draftFor('reimbursable');
+    return {
+      cmInvoiceDrafts: { capital, tenant },
+      // The one the project used before there were two (older screens and tests).
+      cmInvoiceDraft: settings.invoiceType === 'reimbursable' ? tenant : capital,
+    };
     })(),
     payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
     position,
@@ -495,6 +520,9 @@ export function cmSettingsFor(project: { settings?: any }, baseline: readonly Ba
   };
 }
 
+const r2c = (v: number) => Math.round(v * 100) / 100;
+/** Which invoice stream an issued invoice belongs to. Older ones carry the type the project used then. */
+export const streamOf = (i: { type?: 'fee' | 'reimbursable' }) => (i.type === 'reimbursable' ? 'reimbursable' : 'fee');
 const isoDay = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : '');
 /** Today in Eastern time, where the team works: "2026-10-20". */
 export function todayEastern(): string {
@@ -986,7 +1014,8 @@ export function registerCostTrackingRoutes(app: Express): void {
       const settings: any = { ...(project.settings || {}) };
       const list: CmInvoiceRecord[] = settings.cmInvoices || [];
       if (list.some((i) => i.number.toLowerCase() === number.toLowerCase())) return res.status(400).json({ message: `Invoice ${number} already exists.` });
-      const d = b.cmInvoiceDraft;
+      // Which invoice: the tenant's or the capital partner's.
+      const d = req.body?.stream === 'tenant' ? b.cmInvoiceDrafts.tenant : req.body?.stream === 'capital' ? b.cmInvoiceDrafts.capital : b.cmInvoiceDraft;
       if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — everything to date has been invoiced.' });
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
         lines: d.lines, payApps: payAppsFor(b), items: d.items, type: d.type, basis: d.basis, billTo: d.billTo, toDate: d.toDate,
@@ -1007,9 +1036,11 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (!project) return res.status(404).json({ message: 'Project not found' });
       const settings: any = { ...(project.settings || {}) };
       const list: CmInvoiceRecord[] = settings.cmInvoices || [];
-      const last = list[list.length - 1];
-      if (!last || last.number !== req.params.number) return res.status(400).json({ message: 'Only the most recent invoice can be withdrawn.' });
-      settings.cmInvoices = list.slice(0, -1);
+      // The latest of its own stream (tenant or capital partner), so that stream's chain stays true.
+      const me = list.find((i) => i.number === req.params.number);
+      const mine = me ? list.filter((i) => streamOf(i) === streamOf(me)) : [];
+      if (!me || mine[mine.length - 1] !== me) return res.status(400).json({ message: 'Only the most recent invoice to the same party can be withdrawn.' });
+      settings.cmInvoices = list.filter((i) => i !== me);
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'withdraw the invoice'); }
@@ -1109,6 +1140,10 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
+      if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
+      if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';
+      if (b.invoiceBasisCapital !== undefined) next.invoiceBasisCapital = b.invoiceBasisCapital === 'billed' ? 'billed' : 'paid';
       if (b.supplementalLabel !== undefined) next.supplementalLabel = String(b.supplementalLabel ?? '').trim().slice(0, 60);
       await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));

@@ -131,3 +131,11 @@ and live test output are proof. The gold standard is: click the button and watch
 ## Direct costs spelled out (2026-10-21)
 - positionAsOf: `direct.rows` (id, date, vendor, description, method, reference, key, amount). positionInput.directCosts carries those fields.
 - Pay App Status (screen + print): summary row "Direct costs — no contract (n, listed below)" + a "Direct Costs (No Contract)" table: Date | Paid To | Description | Budget Line | Paid By | Amount.
+
+## Two invoice streams: capital partner vs tenant (2026-10-21)
+- Bundle has `cmInvoiceDrafts: { capital, tenant }` (capital = type 'fee', tenant = 'reimbursable'); `cmInvoiceDraft` kept = the legacy `invoiceType` one.
+- Each stream: own previous/covered (issued filtered by `streamOf(rec)`; legacy records without type = fee), own basis (`invoiceBasisCapital/Tenant`, fallback `invoiceBasis`), own bill-to (`billToCapital/Tenant`, fallback legacy `billTo` for the legacy type; tenant defaults to tenantName, capital blank).
+- Drafts add `stream, incurred, paidToDate, invoicedToDate, invoices`; items carry `paid`. Capital items = every cost incurred (billed items) with paid, whatever the fee basis.
+- POST cm-invoices `{stream}`; DELETE allows the latest of its own stream. Report `?stream=capital|tenant` for drafts.
+- Capital invoice prints "Costs Incurred and Paid to Date" (reference only). BvA print has `billingTable` (Billing Summary — Capital Partner vs Tenant). Reports tab: summary card + two InvoiceCards (CAP-nn / TEN-nn).
+- Capital partner is funded the LAF amount up front, so the capital invoice is the CM fee only (Adolfo, 2026-10-21).

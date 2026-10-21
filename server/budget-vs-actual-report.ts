@@ -144,6 +144,32 @@ export type StoryView = { original: number; revised: number; revisions: number; 
   groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; cos: Array<{ number: string }> }> };
 
 /** Sources of funds (who pays) and why the budget changed, side by side. */
+/** One invoice stream's figures to date: what's billable to the capital partner, or to the tenant. */
+export type BillingStream = {
+  billTo: string; basis: 'paid' | 'billed'; pct: number;
+  incurred: number; paidToDate: number; base: number; earned: number; suppFee: number;
+  toDate: number; invoicedToDate: number; invoices: number; due: number;
+};
+
+/** Billable to the capital partner vs billable to the tenant, side by side. */
+export function billingTable(b?: { capital: BillingStream; tenant: BillingStream } | null): string {
+  if (!b) return "";
+  const { capital: c, tenant: t } = b;
+  const r = (label: string, cv: string, tv: string, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><td>${label}</td><td class="num">${cv}</td><td class="num">${tv}</td></tr>`;
+  const dash = '<span style="color:#9ca3af">—</span>';
+  return `<h3 class="sec">Billing Summary — Capital Partner vs Tenant</h3>
+  <div style="font-size:10.5px;margin-bottom:6px">Project costs incurred to date <strong>${money2(c.incurred)}</strong> · paid <strong>${money2(c.paidToDate)}</strong> (excluding the CM fee line).</div>
+  <table class="t" style="width:70%"><thead><tr><th class="l"></th><th>Capital Partner${c.billTo ? `<div style="font-weight:400">${escapeHtml(c.billTo)}</div>` : ""}</th><th>Tenant${t.billTo ? `<div style="font-weight:400">${escapeHtml(t.billTo)}</div>` : ""}</th></tr></thead><tbody>
+    ${r(`Billable costs`, dash, `${fmt(t.base)}<div style="font-size:9px;color:#6b7280">${t.basis} to date</div>`)}
+    ${r("CM fee — original scope", `${fmt(c.earned)}<div style="font-size:9px;color:#6b7280">${fmtPct(c.pct)} on costs ${c.basis}</div>`, `${fmt(t.earned)}<div style="font-size:9px;color:#6b7280">${fmtPct(t.pct)}</div>`)}
+    ${c.suppFee || t.suppFee ? r("Supplemental CM fee — change orders", fmt(c.suppFee), fmt(t.suppFee)) : ""}
+    ${r("Billable to date", fmt(c.toDate), fmt(t.toDate), "sub")}
+    ${r("Invoiced to date", `${fmt(c.invoicedToDate)}<div style="font-size:9px;color:#6b7280">${c.invoices} invoice${c.invoices === 1 ? "" : "s"}</div>`, `${fmt(t.invoicedToDate)}<div style="font-size:9px;color:#6b7280">${t.invoices} invoice${t.invoices === 1 ? "" : "s"}</div>`)}
+    ${r("Not yet invoiced", fmt(c.due), fmt(t.due), "total")}
+  </tbody></table>
+  <div class="legend">Capital partner: the CM fee only (the project is funded by the approved budget up front); costs shown for reference. Tenant: their share of costs, markups and CM fee, less credits.</div>`;
+}
+
 function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
   if (!f) return "";
   const r = (name: string, v: number, sub = "", cls = "") => `<tr class="${cls}"><td>${escapeHtml(name)}${sub ? `<div class="muted" style="font-size:9px">${escapeHtml(sub)}</div>` : ""}</td>${cell(v)}</tr>`;
@@ -177,6 +203,7 @@ export function renderBudgetVsActualHtml(input: {
   transfers?: Array<{ date: string; amount: number; from: string; to: string; note: string }>;
   funding?: FundingView | null;
   story?: StoryView | null;
+  billing?: { capital: BillingStream; tenant: BillingStream } | null;
   generatedBy?: string | null;
 }): string {
   const { summary: s, project, approval } = input;
@@ -238,6 +265,7 @@ export function renderBudgetVsActualHtml(input: {
   </tbody></table>
   ${budgetCoTable(input.budgetCos)}
   ${cmFeeTable(input.cmFee)}
+  ${billingTable(input.billing)}
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     ${[
@@ -395,7 +423,7 @@ export interface CmInvoiceView {
   base: number; pct: number; earned: number; previous: number; due: number;
   lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
-  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
+  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }>;
   /** fee: the CM fee only. reimbursable: the billable costs plus the CM fee. */
   type?: 'fee' | 'reimbursable';
   basis?: 'paid' | 'billed';
@@ -442,7 +470,14 @@ export function renderCmInvoiceHtml(input: {
   ${reportHeaderHtml({ title, eyebrow: "Invoice", info,
     notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
-  ${inv.items && inv.items.length ? `<h3 class="sec">Costs ${paid ? "Paid" : "Billed"} to Date</h3>
+  ${!reimb && inv.items && inv.items.length && inv.items.some((i) => i.paid !== undefined) ? `<h3 class="sec">Costs Incurred and Paid to Date</h3>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Cost Incurred</th><th>Paid</th><th class="l"></th></tr></thead><tbody>
+    ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
+      <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${cell(it.paid ?? 0)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
+    <tr class="total"><td colspan="3">Total</td>${cell(inv.items.reduce((s, i) => s + i.amount, 0))}${cell(inv.items.reduce((s, i) => s + (i.paid ?? 0), 0))}<td></td></tr>
+  </tbody></table>
+  <div class="legend">Shown for reference: this invoice is for the construction management fee only. The fee is figured on the costs ${paid ? "paid" : "billed"} to date.</div>`
+  : inv.items && inv.items.length ? `<h3 class="sec">Costs ${paid ? "Paid" : "Billed"} to Date</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Amount</th><th>Billable to Tenant</th><th class="l"></th></tr></thead><tbody>
     ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
       <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${cell(it.billable)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
@@ -456,7 +491,7 @@ export function renderCmInvoiceHtml(input: {
   </tbody></table>` : ""}
 
   <table class="due"><tbody>
-    <tr><td>Billable costs ${costWord} to date</td><td class="num">${fmt(inv.base)}</td></tr>
+    <tr><td>${reimb ? "Billable costs" : "Costs the fee is figured on —"} ${costWord} to date</td><td class="num">${fmt(inv.base)}</td></tr>
     <tr><td>Construction management fee at ${fmtPct(inv.pct)}${inv.suppFee || inv.cpFee ? " — original scope" : ""}</td><td class="num">${fmt(inv.earned)}</td></tr>
     ${inv.suppFee ? `<tr><td>Supplemental CM fee — change orders${inv.supplementalCos?.length ? ` (${escapeHtml(inv.supplementalCos.join(", "))})` : ""}</td><td class="num">${fmt(inv.suppFee)}</td></tr>` : ""}
     ${inv.cpFee ? `<tr><td>Supplemental CM fee — change order work funded by the owner</td><td class="num">${fmt(inv.cpFee)}</td></tr>` : ""}
@@ -473,7 +508,8 @@ export function renderCmInvoiceHtml(input: {
 
   <h3 class="sec">Notes</h3>
   <ol class="notes">
-    <li>${escapeHtml(`${reimb ? "Reimbursement of the billable costs listed, plus a" : "A"} construction management fee of ${fmtPct(inv.pct)} on them. Billable means the tenant's share of each budget line.`)}</li>
+    <li>${escapeHtml(reimb ? `Reimbursement of the billable costs listed, plus a construction management fee of ${fmtPct(inv.pct)} on them. Billable means the tenant's share of each budget line.`
+      : `A construction management fee of ${fmtPct(inv.pct)}. The project's costs are funded by the approved budget; they are listed for reference only.`)}</li>
     ${inv.suppFee || inv.cpFee ? `<li>${escapeHtml("Change order work is shown at the tenant's share of each change order; its CM fee is the supplemental fee, kept apart from the fee on the original scope.")}</li>` : ""}
     <li>${paid ? "Costs are amounts paid to date: payments against the contractors' pay applications and invoices listed, and direct charges at cost." : "Costs are work completed and stored to date, before retainage, as certified on the pay applications and invoices listed. Direct charges are at cost."}</li>
     ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Items shaded and marked "This invoice" are new since the last CM invoice.</li>` : ""}
@@ -620,6 +656,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         summary: b.summary,
         funding: b.funding.confirmed || b.approval.changeOrders.length ? b.funding : null,
         story: b.story,
+        billing: b.cmInvoiceDrafts,
         // Confirmations made before names were stored carry an email address;
         // when it is the reader's own, print the name.
         approval: (() => {
@@ -731,7 +768,8 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         if (!rec) return res.status(404).json({ message: "Invoice not found" });
         invoice = rec;
       } else {
-        const d = b.cmInvoiceDraft;
+        const stream = String(req.query.stream || "");
+        const d = stream === "tenant" ? b.cmInvoiceDrafts.tenant : stream === "capital" ? b.cmInvoiceDrafts.capital : b.cmInvoiceDraft;
         invoice = { number: null, date: todayEastern(), ...d,
           payApps: b.contracts.map((c) => {
             const apps = b.positionInput.applications.filter((a) => a.contractId === c.id);

@@ -13,7 +13,7 @@ import { Printer, FileText, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
 import { FundingSummary } from './funding-summary';
-import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle } from './types';
+import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle, type CmInvoiceDraft } from './types';
 
 export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBudget }: {
   bundle: ProjectBundle;
@@ -27,11 +27,6 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   const [scope, setScope] = useState('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const nextInv = `CM-${String(b.cmInvoices.length + 1).padStart(2, '0')}`;
-  const [invNo, setInvNo] = useState(nextInv);
-  const [invDate, setInvDate] = useState(todayIso());
-  const [busy, setBusy] = useState(false);
-  const [billTo, setBillTo] = useState(b.cmInvoiceDraft.billTo);
   const saveSetting = async (patch: Record<string, string>, ok: string) => {
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', patch);
@@ -41,28 +36,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   };
 
   const open = async (url: string) => { if (!(await openReport(url))) toast({ title: 'Report failed', variant: 'destructive' }); };
-  const d = b.cmInvoiceDraft;
-
-  const issue = async () => {
-    if (!window.confirm(`Issue ${invNo} for ${money(d.due)}? The figures are fixed once issued.`)) return;
-    setBusy(true);
-    try {
-      const data: any = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices`, 'POST', { number: invNo, date: invDate });
-      queryClient.setQueryData([projectKey(projectId)], data);
-      toast({ title: `${invNo} issued` });
-      open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(invNo)}`);
-      setInvNo(`CM-${String(data.cmInvoices.length + 1).padStart(2, '0')}`);
-    } catch (e: any) { toast({ title: 'Not issued', description: e?.message, variant: 'destructive' }); }
-    finally { setBusy(false); }
-  };
-  const withdraw = async (n: string) => {
-    if (!window.confirm(`Withdraw ${n}? Only do this if it was never sent.`)) return;
-    try {
-      const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(n)}`, 'DELETE');
-      queryClient.setQueryData([projectKey(projectId)], data);
-      toast({ title: `${n} withdrawn` });
-    } catch (e: any) { toast({ title: 'Not withdrawn', description: e?.message, variant: 'destructive' }); }
-  };
+  const cap = b.cmInvoiceDrafts.capital, ten = b.cmInvoiceDrafts.tenant;
 
   return (
     <div className="space-y-4">
@@ -107,75 +81,28 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         </p>
       </Card>
 
-      <Card title={d.type === 'reimbursable' ? 'Reimbursement & CM Fee Invoice' : 'CM Fee Invoice'}
-            what={d.type === 'reimbursable'
-              ? `For accounting to send ${d.billTo || 'the tenant'}: the billable costs ${d.basis} to date plus the CM fee at ${d.pct.toFixed(2)}%, less what's been invoiced. Every pay app, invoice and charge itemized.`
-              : `For accounting to send ${d.billTo || 'the tenant'}: the CM fee at ${d.pct.toFixed(2)}% on billable costs ${d.basis} to date, less what's been invoiced. Every pay app, invoice and charge itemized as backup.`}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 pb-2 border-b">
-          <Labeled label="Invoice type">
-            <Select value={d.type} onValueChange={(v) => saveSetting({ invoiceType: v }, 'Invoice type saved')}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent className="pm-scope">
-                <SelectItem value="fee">CM fee only — e.g. to the capital partner</SelectItem>
-                <SelectItem value="reimbursable">Costs + CM fee — reimbursed by the tenant</SelectItem>
-              </SelectContent>
-            </Select>
-          </Labeled>
-          <Labeled label="Costs counted">
-            <Select value={d.basis} onValueChange={(v) => saveSetting({ invoiceBasis: v }, 'Saved')}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent className="pm-scope">
-                <SelectItem value="paid">What we've paid</SelectItem>
-                <SelectItem value="billed">What's been billed (completed & stored)</SelectItem>
-              </SelectContent>
-            </Select>
-          </Labeled>
-          <Labeled label="Bill to">
-            <div className="flex gap-2">
-              <Input className="h-9" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
-              {billTo !== d.billTo && <Button className="h-9" variant="outline" onClick={() => saveSetting({ billTo }, 'Bill to saved')}>Save</Button>}
-            </div>
-          </Labeled>
-        </div>
-        <div className={`grid grid-cols-2 ${['lg:grid-cols-4', 'lg:grid-cols-5', 'lg:grid-cols-6'][(d.type === 'reimbursable' ? 1 : 0) + (d.suppFee || d.cpFee ? 1 : 0)]} gap-3 text-sm`}>
-          <Fig label={`Billable costs ${d.basis}`} value={money(d.base)} />
-          <Fig label={`CM fee (${d.pct.toFixed(2)}%)${d.suppFee || d.cpFee ? ' — original' : ''}`} value={money(d.earned)} />
-          {(d.suppFee || d.cpFee) ? <Fig label={`Supplemental CM fee${d.cpFee ? ' (incl. owner share)' : ''}`} value={money(d.suppFee + d.cpFee)} /> : null}
-          {d.type === 'reimbursable' && <Fig label="Costs + fee to date" value={money(d.toDate)} />}
-          <Fig label="Previously invoiced" value={money(d.previous)} />
-          <Fig label="Due now" value={money(d.due)} strong />
-        </div>
-        <p className="text-xs text-gray-600">{d.items.length} item{d.items.length === 1 ? '' : 's'} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
-        <div className="flex items-end gap-2 flex-wrap mt-3">
-          <Labeled label="Invoice no."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
-          <Labeled label="Date"><Input type="date" className="h-9 w-44" value={invDate} onChange={(e) => setInvDate(e.target.value)} /></Labeled>
-          <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-invoice/${projectId}`)}><FileText className="h-4 w-4 mr-1" /> Preview</Button>
-          <Button className="h-9" disabled={busy || Math.abs(d.due) < 0.005 || !invNo.trim()} onClick={issue}><Printer className="h-4 w-4 mr-1" /> Issue invoice</Button>
-        </div>
-        {b.cmInvoices.length > 0 && (
-          <table className="w-full text-sm mt-3">
-            <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-              <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1">Issued by</th><th className="w-28" />
-            </tr></thead>
-            <tbody>
-              {b.cmInvoices.map((inv, i) => (
-                <tr key={inv.number} className="border-b last:border-0">
-                  <td className="py-1.5 font-medium">{inv.number}</td>
-                  <td className="py-1.5">{shortDate(inv.date)}</td>
-                  <td className="py-1.5 text-right tabular-nums">{money(inv.due)}</td>
-                  <td className="py-1.5 text-gray-600">{inv.issuedBy || ''}</td>
-                  <td className="py-1.5 text-right whitespace-nowrap">
-                    <button className="text-blue-700 hover:underline text-xs mr-2" onClick={() => open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(inv.number)}`)}>Reprint</button>
-                    {i === b.cmInvoices.length - 1 && (
-                      <button className="text-gray-400 hover:text-red-700 align-middle" title="Withdraw (only if never sent)" onClick={() => withdraw(inv.number)}><Trash2 className="h-3.5 w-3.5 inline" /></button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <Card title="Billable to Capital Partner vs Tenant" what="What each party owes to date, side by side — the capital partner's CM fee, and the tenant's costs, markups and CM fee. Prints on the Budget vs Actual report.">
+        <p className="text-sm text-gray-700">Project costs incurred to date <strong className="tabular-nums">{money(cap.incurred)}</strong> · paid <strong className="tabular-nums">{money(cap.paidToDate)}</strong> <span className="text-xs text-gray-500">(excluding the CM fee line)</span></p>
+        <table className="w-full max-w-2xl text-sm">
+          <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
+            <th className="py-1 text-left" /><th className="py-1 text-right">Capital partner{cap.billTo ? <div className="normal-case font-normal">{cap.billTo}</div> : null}</th>
+            <th className="py-1 text-right">Tenant{ten.billTo ? <div className="normal-case font-normal">{ten.billTo}</div> : null}</th>
+          </tr></thead>
+          <tbody className="tabular-nums">
+            <SumRow label="Billable costs" a="—" b={money(ten.base)} />
+            <SumRow label="CM fee — original scope" a={money(cap.earned)} b={money(ten.earned)} subA={`${cap.pct.toFixed(2)}% on costs ${cap.basis}`} subB={`${ten.pct.toFixed(2)}%`} />
+            {(cap.suppFee || ten.suppFee) ? <SumRow label="Supplemental CM fee — change orders" a={money(cap.suppFee)} b={money(ten.suppFee)} /> : null}
+            <SumRow label="Billable to date" a={money(cap.toDate)} b={money(ten.toDate)} strong />
+            <SumRow label="Invoiced to date" a={money(cap.invoicedToDate)} b={money(ten.invoicedToDate)} subA={`${cap.invoices} invoice${cap.invoices === 1 ? '' : 's'}`} subB={`${ten.invoices} invoice${ten.invoices === 1 ? '' : 's'}`} />
+            <SumRow label="Not yet invoiced" a={money(cap.due)} b={money(ten.due)} strong />
+          </tbody>
+        </table>
       </Card>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <InvoiceCard key={`cap-${b.cmInvoices.length}`} d={cap} bundle={b} projectId={projectId} open={open} saveSetting={saveSetting} />
+        <InvoiceCard key={`ten-${b.cmInvoices.length}`} d={ten} bundle={b} projectId={projectId} open={open} saveSetting={saveSetting} />
+      </div>
 
       <Card title="Budget Log" what="Why the budget is what it is: the confirmation, then every transfer, change order and edit since, oldest first, with the budget after each."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-log/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
@@ -201,6 +128,115 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         )}
       </Card>
     </div>
+  );
+}
+
+/** One party's invoice: the capital partner's (CM fee only) or the tenant's (costs + CM fee). Own numbers, own "previously invoiced". */
+function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
+  d: CmInvoiceDraft; bundle: ProjectBundle; projectId: number;
+  open: (url: string) => void; saveSetting: (patch: Record<string, string>, ok: string) => Promise<void>;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const tenant = d.stream === 'tenant';
+  const mine = b.cmInvoices.filter((i) => (i.type === 'reimbursable') === tenant);
+  const nextNo = (n: number) => `${tenant ? 'TEN' : 'CAP'}-${String(n + 1).padStart(2, '0')}`;
+  const [invNo, setInvNo] = useState(nextNo(mine.length));
+  const [invDate, setInvDate] = useState(todayIso());
+  const [billTo, setBillTo] = useState(d.billTo);
+  const [busy, setBusy] = useState(false);
+  const who = tenant ? 'the tenant' : 'the capital partner';
+  const issue = async () => {
+    if (!window.confirm(`Issue ${invNo} to ${d.billTo || who} for ${money(d.due)}? The figures are fixed once issued.`)) return;
+    setBusy(true);
+    try {
+      const data: any = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices`, 'POST', { number: invNo, date: invDate, stream: d.stream });
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: `${invNo} issued` });
+      open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(invNo)}`);
+    } catch (e: any) { toast({ title: 'Not issued', description: e?.message, variant: 'destructive' }); }
+    finally { setBusy(false); }
+  };
+  const withdraw = async (n: string) => {
+    if (!window.confirm(`Withdraw ${n}? Only do this if it was never sent.`)) return;
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(n)}`, 'DELETE');
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: `${n} withdrawn` });
+    } catch (e: any) { toast({ title: 'Not withdrawn', description: e?.message, variant: 'destructive' }); }
+  };
+  const basisKey = tenant ? 'invoiceBasisTenant' : 'invoiceBasisCapital';
+  const billKey = tenant ? 'billToTenant' : 'billToCapital';
+  return (
+    <Card title={tenant ? 'Tenant Invoice — Costs + CM Fee' : 'Capital Partner Invoice — CM Fee'}
+          what={tenant
+            ? `The tenant's share of costs ${d.basis} to date, markups and their CM fee at ${d.pct.toFixed(2)}%, less credits and what's been invoiced. Every pay app, invoice and charge itemized.`
+            : `The CM fee at ${d.pct.toFixed(2)}% on costs ${d.basis} to date, less what's been invoiced. Costs incurred and paid listed as backup.`}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pb-2 border-b">
+        <Labeled label={tenant ? 'Costs counted' : 'Fee figured on'}>
+          <Select value={d.basis} onValueChange={(v) => saveSetting({ [basisKey]: v }, 'Saved')}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent className="pm-scope">
+              <SelectItem value="paid">What we've paid</SelectItem>
+              <SelectItem value="billed">What's been billed (completed & stored)</SelectItem>
+            </SelectContent>
+          </Select>
+        </Labeled>
+        <Labeled label="Bill to">
+          <div className="flex gap-2">
+            <Input className="h-9" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
+            {billTo !== d.billTo && <Button className="h-9" variant="outline" onClick={() => saveSetting({ [billKey]: billTo }, 'Bill to saved')}>Save</Button>}
+          </div>
+        </Labeled>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+        {tenant ? <Fig label={`Billable costs ${d.basis}`} value={money(d.base)} /> : <Fig label="Costs incurred · paid" value={`${money(d.incurred)} · ${money(d.paidToDate)}`} />}
+        <Fig label={`CM fee (${d.pct.toFixed(2)}%)${d.suppFee ? ' — original' : ''}`} value={money(d.earned)} />
+        {d.suppFee ? <Fig label="Supplemental CM fee" value={money(d.suppFee)} /> : null}
+        <Fig label={tenant ? 'Costs + fee to date' : 'CM fees to date'} value={money(d.toDate)} />
+        <Fig label="Previously invoiced" value={money(d.previous)} />
+        <Fig label="Due now" value={money(d.due)} strong />
+      </div>
+      <p className="text-xs text-gray-600">{d.items.length} item{d.items.length === 1 ? '' : 's'} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
+      <div className="flex items-end gap-2 flex-wrap">
+        <Labeled label="Invoice no."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
+        <Labeled label="Date"><Input type="date" className="h-9 w-44" value={invDate} onChange={(e) => setInvDate(e.target.value)} /></Labeled>
+        <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-invoice/${projectId}?stream=${d.stream}`)}><FileText className="h-4 w-4 mr-1" /> Preview</Button>
+        <Button className="h-9" disabled={busy || Math.abs(d.due) < 0.005 || !invNo.trim()} onClick={issue}><Printer className="h-4 w-4 mr-1" /> Issue</Button>
+      </div>
+      {mine.length > 0 && (
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
+            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued by</th><th className="w-28" />
+          </tr></thead>
+          <tbody>
+            {mine.map((inv, i) => (
+              <tr key={inv.number} className="border-b last:border-0">
+                <td className="py-1.5 font-medium">{inv.number}</td>
+                <td className="py-1.5">{shortDate(inv.date)}</td>
+                <td className="py-1.5 text-right tabular-nums">{money(inv.due)}</td>
+                <td className="py-1.5 pl-4 text-gray-600">{inv.issuedBy || ''}</td>
+                <td className="py-1.5 text-right whitespace-nowrap">
+                  <button className="text-blue-700 hover:underline text-xs mr-2" onClick={() => open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(inv.number)}`)}>Reprint</button>
+                  {i === mine.length - 1 && (
+                    <button className="text-gray-400 hover:text-red-700 align-middle" title="Withdraw (only if never sent)" onClick={() => withdraw(inv.number)}><Trash2 className="h-3.5 w-3.5 inline" /></button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Card>
+  );
+}
+function SumRow({ label, a, b, subA, subB, strong }: { label: string; a: string; b: string; subA?: string; subB?: string; strong?: boolean }) {
+  return (
+    <tr className={`border-b last:border-0 ${strong ? 'font-semibold' : ''}`}>
+      <td className="py-1.5 text-gray-700">{label}</td>
+      <td className="py-1.5 text-right">{a}{subA && <div className="text-[11px] text-gray-500 font-normal">{subA}</div>}</td>
+      <td className="py-1.5 text-right">{b}{subB && <div className="text-[11px] text-gray-500 font-normal">{subB}</div>}</td>
+    </tr>
   );
 }
 

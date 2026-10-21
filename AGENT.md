@@ -120,3 +120,10 @@ and live test output are proof. The gold standard is: click the button and watch
 - Tenant rate (`cmFeePct`) and partner rate (`partnerFeePct`) are editable per change order (POST/PATCH); defaults come from project settings.
 - `cmFeeAmount` overrides the figured tenant fee (shown amber "Edited"); clear it to go back to figured.
 - `CoMarkup.amount` = fixed-amount markup (e.g. permit fees); % ignored when set. Tenant sheet omits % for fixed lines.
+
+## Unassigned change order lines (2026-10-21)
+- A budget CO line may use UNALLOCATED_KEY (`CO_UNASSIGNED_KEY`): approved, it raises the Unallocated row (same row unmapped vendor cost lands on), so budget and cost wait together.
+- Vendor CO lines not mapped → the form's fallback, else Unassigned (no more 400).
+- Each linked vendor CO row has "Assign budget lines": a per-line select that PATCHes the vendor SOV line's allocation (so cost follows) then resyncs the tenant CO. Lines can go to different budget lines.
+- linesFromVendors fallback ignores keys a vendor line has since been mapped to.
+- budgetVsActual doesn't add a second Unallocated row when the effective baseline already has one.

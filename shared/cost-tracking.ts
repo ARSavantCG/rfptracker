@@ -360,7 +360,7 @@ export function budgetVsActual(input: {
 
   const rows = baseline.map((b) => row(b.key, b.description, b.bucket, n(b.budget), n(b.tenantSharePct ?? 100)));
   const unplaced = [committed, pending, toDate, retainage].some((m) => Math.abs(m.get(UNALLOCATED_KEY) ?? 0) >= 0.005);
-  if (unplaced) {
+  if (unplaced && !rows.some((r) => r.key === UNALLOCATED_KEY)) {
     // Nothing budgeted here, and the tenant has agreed to pay none of it until
     // someone says where it belongs. So it counts as outstanding, not as cost
     // that can be billed back.

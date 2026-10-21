@@ -21,7 +21,7 @@
  *
  * Pure: no database import, tested on its own.
  */
-import type { BaselineLine } from './cost-tracking';
+import { UNALLOCATED_KEY, type BaselineLine } from './cost-tracking';
 
 export const DEAL_DISCOUNT_KEY = '__deal_discount__';
 
@@ -134,6 +134,9 @@ export const reasonLabel = (r: string) => CO_REASONS.find(([k]) => k === r)?.[1]
 
 export const CO_CM_KEY = '__co_cm_fee__';
 export const SUPPLEMENTAL_CM_LABEL = 'Supplemental CM Fee';
+export const UNASSIGNED_LABEL = 'Unallocated — not yet assigned to a budget line';
+/** A change order line can wait unassigned while you work out where it belongs. */
+export { UNALLOCATED_KEY as CO_UNASSIGNED_KEY };
 
 export interface BudgetApproval {
   status: 'draft' | 'confirmed';
@@ -545,7 +548,11 @@ export function applyChangeOrders(lines: BaselineLine[], cos: readonly BudgetCO[
   for (const co of approved) {
     const t = coTotals(co);
     for (const l of co.lines) {
-      const row = out.find((x) => x.key === l.key) ?? ensure(`__co_line_${l.key}`, `${l.description || 'Change order work'} (line removed)`, 'misc');
+      // Not yet assigned: it waits on the Unallocated row, where the vendors' unmapped cost lands too.
+      const row = out.find((x) => x.key === l.key)
+        ?? (l.key === UNALLOCATED_KEY
+          ? ensure(UNALLOCATED_KEY, UNASSIGNED_LABEL, 'misc')
+          : ensure(`__co_line_${l.key}`, `${l.description || 'Change order work'} (line removed)`, 'misc'));
       const tenantPart = (l.amount * (l.tenantPct ?? 100)) / 100;
       // A credit to the tenant comes off their share, spread over the lines they pay for.
       const creditPart = t.tenantWork ? (t.credit * tenantPart) / t.tenantWork : 0;

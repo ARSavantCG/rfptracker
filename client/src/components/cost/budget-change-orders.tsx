@@ -14,10 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink } from 'lucide-react';
 import { openDocument } from './contract-card';
-import { CO_REASONS, reasonLabel, defaultMarkups, type BudgetCO } from '@shared/cost-budget-approval';
+import { CO_REASONS, CO_UNASSIGNED_KEY, reasonLabel, defaultMarkups, type BudgetCO } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
 import { MoneyInput, PercentInput } from './inputs';
-import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle } from './types';
+import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle, type SovLineRow } from './types';
 
 const num = (s: string | number) => {
   const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
@@ -53,7 +53,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const tenantRate = bundle.cmSettings.tenantPct ?? rate;
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
-  const name = useMemo(() => new Map(baseline.map((b) => [b.key, b.description])), [baseline]);
+  const name = useMemo(() => new Map([...baseline.map((b) => [b.key, b.description] as [string, string]), [CO_UNASSIGNED_KEY, 'Unassigned'] as [string, string]]), [baseline]);
   const totals = (id: string) => a.changeOrderTotals.find((t) => t.id === id)
     ?? { id, work: 0, tenantWork: 0, ourWork: 0, markups: 0, markupLines: [], cm: 0, cmAbsorbed: 0, partnerFee: 0, credit: 0, tenant: 0, absorbed: 0, total: 0 };
 
@@ -91,6 +91,19 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const [linking, setLinking] = useState<string | null>(null);
   const [linkTo, setLinkTo] = useState('');
   const [pctDraft, setPctDraft] = useState<Record<string, string>>({});
+  const [mapOpen, setMapOpen] = useState<Record<string, boolean>>({});
+  // Assign a vendor's change order line to a budget line. Saved on the vendor's line itself, so its
+  // cost lands on the same budget line the change order raises; then this change order is re-priced.
+  const assignLine = (co: BudgetCO, sovLineId: number, key: string) => {
+    if (key === '__split__' || key === '__spread__') return;
+    const label = key === CO_UNASSIGNED_KEY ? 'unassigned' : `on ${name.get(key) ?? 'the budget line'}`;
+    run(async () => {
+      await apiRequest(`/api/cost-sov-lines/${sovLineId}`, 'PATCH', key === CO_UNASSIGNED_KEY
+        ? { allocationMode: 'unallocated', allocations: [] }
+        : { allocationMode: 'direct', allocations: [{ baselineKey: key, pct: 100 }] });
+      return apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true });
+    }, `${co.number}: line ${label}`);
+  };
   const coLines = (ccoId: number) => r2(bundle.sovLines.filter((l) => l.changeOrderId === ccoId).reduce((s, l) => s + l.scheduledValue, 0));
   const linkedIds = new Set(cos.flatMap((c) => c.links.map((l) => l.contractCoId)));
   const contractName = (id: number | null) => bundle.contracts.find((c) => c.id === id)?.counterparty ?? 'a contract';
@@ -135,8 +148,14 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   const cco = bundle.changeOrders.find((c) => c.id === l.contractCoId);
                   const amt = priced(l.contractCoId);
                   const live = coLines(l.contractCoId);
+                  const vls = bundle.sovLines.filter((x) => x.changeOrderId === l.contractCoId);
+                  const keyOf = (x: SovLineRow) => (x.allocationMode === 'direct' && x.allocations.length === 1 ? x.allocations[0].baselineKey
+                    : x.allocationMode === 'direct' && x.allocations.length > 1 ? '__split__' : x.allocationMode === 'spread' ? '__spread__' : CO_UNASSIGNED_KEY);
+                  const unassigned = vls.filter((x) => keyOf(x) === CO_UNASSIGNED_KEY).length;
+                  const mapKey = `${co.id}:${l.contractCoId}`;
                   return (
-                    <tr key={l.contractCoId}>
+                    <Fragment key={l.contractCoId}>
+                    <tr>
                       <td className="pr-3 py-0.5 text-gray-800">{contractName(l.contractId)} {cco?.number ?? '(removed)'}{cco?.title ? <span className="text-gray-500"> — {cco.title}</span> : null}</td>
                       <td className="pr-3 py-0.5 text-right tabular-nums">{money(amt)}
                         {Math.abs(live - amt) >= 0.005 && <span className="text-amber-800" title="The vendor's change order has changed since it was priced in"> → now {money(live)}</span>}</td>
@@ -153,7 +172,36 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                           <Unlink className="h-3.5 w-3.5" />
                         </button>
                       </td>
+                      <td className="pl-3 py-0.5">
+                        {vls.length > 0 && (
+                          <button className={`hover:underline whitespace-nowrap ${unassigned ? 'text-amber-800' : 'text-blue-700'}`}
+                                  onClick={() => setMapOpen((m) => ({ ...m, [mapKey]: !m[mapKey] }))}>
+                            {mapOpen[mapKey] ? 'Hide budget lines' : unassigned ? `Assign budget lines (${unassigned} unassigned)` : 'Budget lines'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
+                    {mapOpen[mapKey] && vls.map((x) => (
+                      <tr key={`m${x.id}`} className="text-gray-700">
+                        <td className="pr-3 py-0.5 pl-4">{x.itemNo ? `${x.itemNo} · ` : ''}{x.description}</td>
+                        <td className="pr-3 py-0.5 text-right tabular-nums">{money(x.scheduledValue)}</td>
+                        <td className="pr-1 py-0.5 text-gray-500">Budget line</td>
+                        <td colSpan={4} className="pr-3 py-0.5">
+                          <div className="w-72">
+                            <Select value={keyOf(x)} onValueChange={(v) => assignLine(co, x.id, v)}>
+                              <SelectTrigger className={`h-6 text-xs ${keyOf(x) === CO_UNASSIGNED_KEY ? 'border-amber-400 bg-amber-50' : ''}`}><SelectValue /></SelectTrigger>
+                              <SelectContent className="pm-scope">
+                                <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now</SelectItem>
+                                {keyOf(x) === '__split__' && <SelectItem value="__split__" disabled>Split over several lines (Contracts tab)</SelectItem>}
+                                {keyOf(x) === '__spread__' && <SelectItem value="__spread__" disabled>Spread with the contract (Contracts tab)</SelectItem>}
+                                {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -253,7 +301,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
       () => (form.id
         ? apiRequest(`/api/cost-projects/${projectId}/budget-cos/${form.id}`, 'PATCH', body)
         : apiRequest(`/api/cost-projects/${projectId}/budget-cos`, 'POST', body)),
-      form.id ? `${form.number} saved` : `${form.number} added${form.contractId !== NO_CONTRACT ? ' — and to the contract' : ''}`,
+      form.id ? `${form.number} saved` : `${form.number} added${!fromVendors && form.contractId !== NO_CONTRACT ? ' — and to the contract' : ''}`,
     );
     if (ok) setForm(null);
   };
@@ -405,9 +453,12 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               <div className="px-2 py-1.5 text-xs bg-violet-50 border-b text-violet-900 flex items-center gap-2 flex-wrap">
                 Priced from the vendor change orders. Any vendor line not yet mapped to a budget line goes on:
                 <div className="w-64">
-                  <Select value={form.fallbackKey || undefined} onValueChange={(v) => setForm({ ...form, fallbackKey: v })}>
-                    <SelectTrigger className="h-7 text-xs bg-white data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
-                    <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                  <Select value={form.fallbackKey || CO_UNASSIGNED_KEY} onValueChange={(v) => setForm({ ...form, fallbackKey: v === CO_UNASSIGNED_KEY ? '' : v })}>
+                    <SelectTrigger className="h-7 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="pm-scope">
+                      <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now — map it later</SelectItem>
+                      {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -450,7 +501,10 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     <td className="px-1 py-1">
                       <Select value={l.key || undefined} onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, key: v } : x)) })}>
                         <SelectTrigger className={`h-8 text-xs data-[placeholder]:text-gray-900 ${!l.key && num(l.amount) ? 'border-red-400' : ''}`}><SelectValue placeholder="— choose —" /></SelectTrigger>
-                        <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                        <SelectContent className="pm-scope">
+                          <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now</SelectItem>
+                          {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                        </SelectContent>
                       </Select>
                     </td>
                     <td className="px-1 py-1"><Input className="h-8" value={l.description} aria-label="Description"

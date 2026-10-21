@@ -28,7 +28,7 @@ import {
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
-  budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
+  budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
@@ -759,17 +759,21 @@ export function registerCostTrackingRoutes(app: Express): void {
       const vlines = await db.select().from(costSovLines).where(eq(costSovLines.changeOrderId, cco.id));
       const label = `${k.counterparty} ${cco.number}`;
       if (!vlines.length) throw new UserError(`${label} has no amounts yet. Enter its lines on the Contracts tab first.`);
-      const fallback = current.find((l) => l.fromCoId === cco.id)?.key ?? current[0]?.key ?? null;
+      // Where this vendor's unmapped lines sat before (not a line one of its lines has since been mapped to).
+      const mappedKeys = new Set(vlines.filter((v) => v.allocationMode === 'direct')
+        .flatMap((v) => ((v.allocations || []) as Array<{ baselineKey: string }>).map((x) => x.baselineKey)));
+      const fallback = current.find((l) => l.fromCoId === cco.id && !mappedKeys.has(l.key))?.key
+        ?? current.find((l) => l.fromCoId == null)?.key ?? null;
       const byKey = new Map<string, number>();
       for (const v of vlines) {
         const amt = dollars(v.scheduledValueCents);
         const alloc = ((v.allocations || []) as Array<{ baselineKey: string; pct: number }>).filter((x) => keys.has(x.baselineKey) && Number(x.pct) > 0);
         if (v.allocationMode === 'direct' && alloc.length) {
           for (const x of alloc) byKey.set(x.baselineKey, (byKey.get(x.baselineKey) ?? 0) + (amt * Number(x.pct)) / 100);
-        } else if (fallback) {
-          byKey.set(fallback, (byKey.get(fallback) ?? 0) + amt);
         } else {
-          throw new UserError(`Map ${label}'s lines to budget lines first (Contracts tab), so its cost lands on the right line.`);
+          // Not mapped yet: the line chosen in the form, else Unallocated until it is mapped (then Re-price).
+          const k2 = fallback ?? UNALLOCATED_KEY;
+          byKey.set(k2, (byKey.get(k2) ?? 0) + amt);
         }
       }
       for (const [key, amount] of Array.from(byKey)) {
@@ -812,7 +816,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         markups: Array.isArray(b.markups) ? b.markups : defaultMarkups(baseline, cms.key),
         contractId: null, contractCoId: null, links: [],
       })!;
-      const keys = new Set(baseline.map((x) => x.key));
+      const keys = new Set([...baseline.map((x) => x.key), UNALLOCATED_KEY]);
       // Vendor change orders picked in the form: the lines are priced from them.
       const vendor = (Array.isArray(b.vendorLinks) ? b.vendorLinks : [])
         .map((l: any) => ({ contractCoId: Number(l?.contractCoId), pct: Math.max(0, Math.min(100, Math.round(Number(l?.pct ?? 100) * 100) / 100)) }))
@@ -870,7 +874,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const cur = a.changeOrders[i];
       const b = req.body || {};
       const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee', 'partnerFeeBasis', 'cmFeePct', 'partnerFeePct', 'cmFeeAmount']) })!;
-      const keys = new Set(baseline.map((x) => x.key));
+      const keys = new Set([...baseline.map((x) => x.key), UNALLOCATED_KEY]);
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       // The vendors' side: write the estimate onto a contract, link vendor change
       // orders (any contracts, each with the tenant's share), set shares, re-price

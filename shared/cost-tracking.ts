@@ -611,3 +611,48 @@ export function spreadCents(items: ReadonlyArray<{ id: number; exact: number }>,
   for (const p of parts) out.set(p.id, (sign * p.fl) / 100);
   return out;
 }
+
+/** The G702 lines worth checking against the contractor's, in order. */
+export const G702_CHECK_LINES = [
+  ['contractSumToDate', '3', 'Contract sum to date', 'a change order'],
+  ['completedAndStored', '4', 'Completed and stored to date', 'the work or stored material'],
+  ['retainage', '5', 'Retainage', 'retainage'],
+  ['previousCertificates', '7', 'Less previous certificates', 'an earlier pay app'],
+  ['currentPaymentDue', '8', 'Current payment due', ''],
+] as const;
+export type G702CheckKey = typeof G702_CHECK_LINES[number][0];
+export type ContractorG702 = Partial<Record<G702CheckKey, number | null>>;
+
+/** Clean typed or read figures: numbers or null, nothing else. */
+export function normalizeContractorG702(raw: any): ContractorG702 | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const out: ContractorG702 = {};
+  let any = false;
+  for (const [k] of G702_CHECK_LINES) {
+    const v = raw[k];
+    if (v === null || v === undefined || v === '') continue;
+    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[$,\s]/g, ''));
+    if (Number.isFinite(n)) { out[k] = Math.round(n * 100) / 100; any = true; }
+  }
+  return any ? out : null;
+}
+
+/**
+ * Ours against theirs, line by line. "match" needs line 8 entered and every
+ * entered line within half a cent; the first line that is off says where to look.
+ */
+export function g702Check(ours: G702, theirs: ContractorG702 | null | undefined) {
+  const lines = G702_CHECK_LINES.map(([key, no, label, hint]) => {
+    const t = theirs?.[key];
+    const o = ours[key];
+    const diff = t == null ? null : Math.round((o - t) * 100) / 100;
+    return { key, no, label, hint, ours: o, theirs: t ?? null, diff, ok: diff == null ? null : Math.abs(diff) < 0.005 };
+  });
+  const entered = lines.filter((l) => l.theirs != null);
+  const due = lines.find((l) => l.key === 'currentPaymentDue')!;
+  const off = entered.filter((l) => l.ok === false);
+  const status: 'none' | 'match' | 'off' = !entered.length ? 'none' : off.length ? 'off' : due.theirs != null ? 'match' : 'none';
+  // The first line off, in G702 order (line 8 only when nothing earlier explains it).
+  const first = off.find((l) => l.key !== 'currentPaymentDue') ?? off[0] ?? null;
+  return { lines, status, dueDiff: due.diff, first };
+}

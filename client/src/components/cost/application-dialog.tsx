@@ -19,7 +19,8 @@ import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucid
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
-import { g702For, lineProgress, newAppNumbers, spreadCents, type Application } from '@shared/cost-tracking';
+import { g702For, lineProgress, newAppNumbers, spreadCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
+import { fmtMoneyText } from '@shared/format';
 import {
   money, projectKey,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow,
@@ -64,6 +65,8 @@ export function ApplicationDialog({
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   /** The contractor's G702 line 5, typed to match their retainage to the cent. */
   const [retTarget, setRetTarget] = useState('');
+  /** The contractor's G702 figures for this pay app (typed or read by AI). */
+  const [theirs, setTheirs] = useState<Record<string, string>>({});
   const [aiCells, setAiCells] = useState<Record<number, AiCell>>({});
   const [setupDone, setSetupDone] = useState(false);
   const [added, setAdded] = useState(0);
@@ -96,6 +99,7 @@ export function ApplicationDialog({
     setAiResult(null);
     setAiCells({});
     setRetTarget('');
+    setTheirs(Object.fromEntries(Object.entries(app?.contractorG702 ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, fmtMoneyText(String(v))])));
     setSetupDone(false);
     setPick({ lines: true, opening: true, paid: true, retainage: true });
     const d: Record<number, Draft> = {};
@@ -244,6 +248,15 @@ export function ApplicationDialog({
       if (!periodStart && r.periodFrom) setPeriodStart(r.periodFrom);
       if (!periodEnd && r.periodTo) setPeriodEnd(r.periodTo);
       setAiResult(r);
+      // Their G702 figures go in the Theirs column (anything typed there already stays).
+      setTheirs((t) => {
+        const out = { ...t };
+        for (const [k] of G702_CHECK_LINES) {
+          const v = (r.g702 as any)?.[k];
+          if (v != null && !(out[k] ?? '').trim()) out[k] = fmtMoneyText(String(v));
+        }
+        return out;
+      });
       setSetupDone(false);
       setPick({ lines: true, opening: true, paid: true, retainage: true });
     },
@@ -291,7 +304,8 @@ export function ApplicationDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const body = { docNumber: typedDoc, kind, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
+      const contractorG702 = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
+      const body = { docNumber: typedDoc, kind, contractorG702, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
       const saved = app
         ? (await apiRequest(`/api/cost-applications/${app.id}`, 'PUT', body), { id: app.id })
         : await apiRequest(`/api/cost-contracts/${contract!.id}/applications`, 'POST', body);
@@ -556,37 +570,71 @@ export function ApplicationDialog({
 
         {preview && (
           <div className="border rounded-md p-3 bg-gray-50">
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">G702 — compare with the contractor's</div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm">
-              {([
-                ['1  Original contract sum', preview.originalContractSum],
-                ['2  Net change by change orders', preview.netChangeOrders],
-                ['3  Contract sum to date', preview.contractSumToDate],
-                ['4  Completed and stored to date', preview.completedAndStored],
-                ['5  Retainage', preview.retainage],
-                ['6  Earned less retainage', preview.earnedLessRetainage],
-                ['7  Less previous certificates', preview.previousCertificates],
-                ['8  Current payment due', preview.currentPaymentDue],
-                ['9  Balance to finish', preview.balanceToFinish],
-              ] as [string, number][]).map(([k, v]) => (
-                <div key={k} className={`flex justify-between gap-3 ${k.startsWith('8') ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                  <span>{k}</span><span className={`tabular-nums ${k.startsWith('5') && retTarget.trim() ? 'text-amber-800' : ''}`}>{money(v)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 pt-2 border-t flex items-center gap-2 flex-wrap text-xs text-gray-700">
-              <span>Off by a cent? Type their line 5 retainage and the blank retainage boxes are spread to match it:</span>
-              <div className="w-36"><MoneyInput className={`h-7 text-xs ${retTarget.trim() ? 'border-amber-400 bg-amber-50' : ''}`} value={retTarget} onValueChange={setRetTarget} aria-label="Their line 5 retainage" /></div>
-              {retTarget.trim() && (
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">G702 — ours against the contractor's</div>
+            {(() => {
+              const theirsNum = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
+              const ck = g702Check(preview, theirsNum as any);
+              const byKey = new Map(ck.lines.map((l) => [l.key as string, l]));
+              const rows: [string, string, number][] = [
+                ['1', 'Original contract sum', preview.originalContractSum],
+                ['2', 'Net change by change orders', preview.netChangeOrders],
+                ['3', 'Contract sum to date', preview.contractSumToDate],
+                ['4', 'Completed and stored to date', preview.completedAndStored],
+                ['5', 'Retainage', preview.retainage],
+                ['6', 'Earned less retainage', preview.earnedLessRetainage],
+                ['7', 'Less previous certificates', preview.previousCertificates],
+                ['8', 'Current payment due', preview.currentPaymentDue],
+                ['9', 'Balance to finish', preview.balanceToFinish],
+              ];
+              const keyOf = (no: string) => G702_CHECK_LINES.find((l) => l[1] === no)?.[0];
+              const ret = byKey.get('retainage');
+              const canSpread = ret && ret.ok === false && contractLines.some((l) => !(draft[l.id]?.retainage ?? '').trim() && toDateOf(l));
+              return (
                 <>
-                  <span className="text-amber-800 font-medium">Edited · ours would be {money(Math.round(contractLines.reduce((s, l) => s + toDateOf(l) * rate, 0) * 100) / 100)}</span>
-                  <button className="text-blue-700 hover:underline" onClick={() => setRetTarget('')}>Clear</button>
+                  <table className="text-sm w-full max-w-3xl">
+                    <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500">
+                      <th className="text-left font-medium pb-1">Line</th><th className="text-right font-medium pb-1 pr-3">Ours</th>
+                      <th className="text-right font-medium pb-1 w-40">Theirs</th><th className="text-left font-medium pb-1 pl-3">Check</th>
+                    </tr></thead>
+                    <tbody>
+                      {rows.map(([no, label, v]) => {
+                        const k = keyOf(no);
+                        const c = k ? byKey.get(k) : null;
+                        return (
+                          <tr key={no} className={no === '8' ? 'font-semibold text-gray-900' : 'text-gray-700'}>
+                            <td className="py-0.5 pr-3">{no}  {label}</td>
+                            <td className={`py-0.5 pr-3 text-right tabular-nums ${no === '5' && retTarget.trim() ? 'text-amber-800' : ''}`}>{money(v)}</td>
+                            <td className="py-0.5">
+                              {k ? <MoneyInput className={`h-7 text-xs ${c?.ok === false ? 'border-red-400' : c?.ok ? 'border-green-400' : ''}`}
+                                               value={theirs[k] ?? ''} aria-label={`Their line ${no}`}
+                                               onValueChange={(val) => setTheirs((t) => ({ ...t, [k]: val }))} /> : null}
+                            </td>
+                            <td className="py-0.5 pl-3 text-xs font-normal">
+                              {c?.ok === true && <span className="text-green-700">✓ matches</span>}
+                              {c?.ok === false && <span className="text-red-700">⚠ off {money(Math.abs(c.diff!))}{c.diff! > 0 ? ' (ours higher)' : ' (theirs higher)'}{c.hint ? ` — check ${c.hint}` : ''}</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="mt-2 pt-2 border-t flex items-center gap-3 flex-wrap text-xs">
+                    {ck.status === 'match' && <span className="text-green-800 font-medium">✓ Matches the contractor's G702 — current payment due {money(preview.currentPaymentDue)}.</span>}
+                    {ck.status === 'off' && <span className="text-red-800 font-medium">⚠ Doesn't match the contractor's G702{ck.dueDiff != null ? ` — payment due off ${money(Math.abs(ck.dueDiff))}` : ''}{ck.first && ck.first.key !== 'currentPaymentDue' ? `. Start with line ${ck.first.no}.` : '.'}</span>}
+                    {ck.status === 'none' && <span className="text-gray-600">Type their line 8 (and 3, 4, 5, 7 if you like) to check this pay app against theirs. It's saved with the pay app.</span>}
+                    {canSpread && (
+                      <button className="text-blue-700 hover:underline" onClick={() => setRetTarget(theirs.retainage)}>
+                        Spread the blank retainage boxes to match their line 5
+                      </button>
+                    )}
+                    {retTarget.trim() && (
+                      <span className="text-amber-800">Retainage spread to {money(num(retTarget))} · ours would be {money(Math.round(contractLines.reduce((s2, l) => s2 + toDateOf(l) * rate, 0) * 100) / 100)}
+                        {' '}<button className="text-blue-700 hover:underline" onClick={() => setRetTarget('')}>Undo</button></span>
+                    )}
+                  </div>
                 </>
-              )}
-              {retTarget.trim() && Math.abs(num(retTarget) - (preview?.retainage ?? 0)) >= 0.005 && (
-                <span className="text-red-700">Every retainage box is typed in, so there is nothing to spread. Clear one to let it absorb the difference.</span>
-              )}
-            </div>
+              );
+            })()}
             {(() => {
               const cs = preview.changeOrderSummary;
               const any = cs.previous.additions || cs.previous.deductions || cs.thisPeriod.additions || cs.thisPeriod.deductions;

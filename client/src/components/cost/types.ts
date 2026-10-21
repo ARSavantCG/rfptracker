@@ -2,7 +2,7 @@
  * The shapes the cost-tracking API returns, and the money formatting every
  * cost screen uses. Amounts arrive in DOLLARS; the API converts from cents.
  */
-import type { BudgetVsActual, G702, BaselineLine, SovLine, ChangeOrder } from '@shared/cost-tracking';
+import type { BudgetVsActual, G702, BaselineLine, SovLine, ChangeOrder, ContractorG702, g702Check } from '@shared/cost-tracking';
 import type { BudgetApproval } from '@shared/cost-budget-approval';
 import type { positionAsOf, DatedApplication, Payment, LedgerEntry } from '@shared/cost-position';
 
@@ -71,6 +71,10 @@ export interface ApplicationRow {
   notes: string | null;
   lines: { id: number; sovLineId: number; workThisPeriod: number; storedToDate: number; retainageToDate: number }[];
   g702: G702;
+  /** The contractor's own G702 figures, typed or read. */
+  contractorG702: ContractorG702 | null;
+  /** Ours against theirs. */
+  check: ReturnType<typeof g702Check>;
 }
 
 export interface DocumentRow {
@@ -181,6 +185,15 @@ export interface CmFee {
   remaining: number;
   /** The Supplemental CM Fee (change orders), kept apart from the original. */
   supplemental: { work: number; earned: number; earnedCp: number; earnedOnPaid: number; budget: number; remaining: number } | null;
+}
+
+/** ✓ / ⚠ next to a pay app: does our G702 match the contractor's? */
+export function checkBadge(app: { check?: { status: string; dueDiff: number | null; first: { no: string; hint: string } | null } }) {
+  const c = app.check;
+  if (!c || c.status === 'none') return null;
+  if (c.status === 'match') return { tone: 'text-green-700', text: '✓', title: "Matches the contractor's G702" };
+  const due = c.dueDiff != null ? `payment due off ${money(Math.abs(c.dueDiff))}` : 'G702 off';
+  return { tone: 'text-red-700', text: '⚠', title: `Doesn't match the contractor's G702: ${due}${c.first ? ` (line ${c.first.no}${c.first.hint ? `, check ${c.first.hint}` : ''})` : ''}` };
 }
 
 /** "Oct 20, 2026" from an ISO date or timestamp. */

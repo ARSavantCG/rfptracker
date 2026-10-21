@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Printer } from 'lucide-react';
-import { positionAsOf } from '@shared/cost-position';
-import { money, signedMoney, shortDate, todayIso, openReport, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
+import { positionAsOf, filterPositionInput } from '@shared/cost-position';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { money, signedMoney, shortDate, todayIso, openReport, checkBadge, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
 
 export function PositionView({ bundle, projectId, onPay, onPackage }: {
   bundle: ProjectBundle;
@@ -18,7 +19,9 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
 }) {
   const { toast } = useToast();
   const [asOf, setAsOf] = useState(todayIso());
-  const p = useMemo(() => positionAsOf(asOf || todayIso(), bundle.positionInput), [asOf, bundle.positionInput]);
+  /** All, one contract (its id), or "direct". The printout follows the same choice. */
+  const [scope, setScope] = useState('all');
+  const p = useMemo(() => positionAsOf(asOf || todayIso(), filterPositionInput(bundle.positionInput, scope)), [asOf, scope, bundle.positionInput]);
   const contractName = new Map(bundle.contracts.map((c) => [c.id, c.counterparty]));
   const t = p.totals;
 
@@ -41,8 +44,21 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
             {asOf !== todayIso() && <Button variant="ghost" size="sm" onClick={() => setAsOf(todayIso())}>Today</Button>}
           </div>
         </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-600">Contract</label>
+            <div className="w-72">
+              <Select value={scope} onValueChange={setScope}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">
+                  <SelectItem value="all">All contracts and direct costs</SelectItem>
+                  {bundle.contracts.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
+                  {bundle.directCosts.length > 0 && <SelectItem value="direct">Direct costs only</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         <Button variant="outline" onClick={async () => {
-          if (!(await openReport(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}`))) toast({ title: 'Report failed', variant: 'destructive' });
+          if (!(await openReport(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}&contract=${scope}`))) toast({ title: 'Report failed', variant: 'destructive' });
         }}>
           <Printer className="h-4 w-4 mr-1" /> Print Pay App Status
         </Button>
@@ -122,7 +138,8 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
               return (
                 <tr key={a.applicationId} className="border-b last:border-0">
                   <td className="px-3 py-1.5">{contractName.get(a.contractId)}</td>
-                  <td className="px-3 py-1.5">{app?.kind === 'invoice' ? 'Inv' : 'App'} {app?.docNumber ?? a.number}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">{app?.kind === 'invoice' ? 'Inv' : 'App'} {app?.docNumber ?? a.number}
+                    {(() => { const bdg = app ? checkBadge(app) : null; return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}</span> : null; })()}</td>
                   <td className="px-3 py-1.5 text-gray-600">{app?.periodEnd ? shortDate(a.date) : <span className="text-amber-700" title="No period end entered — dated the day it was entered">{shortDate(a.date)}*</span>}</td>
                   <D v={a.due} /><D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
                   <td className="px-2 text-right">

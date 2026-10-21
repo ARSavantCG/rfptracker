@@ -21,7 +21,7 @@ import {
 } from "./lib/report-shell";
 import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
-import { positionAsOf, buildLedger, type LedgerEntry } from "@shared/cost-position";
+import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
 import { waiverLog, type WaiverLogRow } from "@shared/cost-waivers";
 
@@ -262,11 +262,22 @@ export function renderCostPositionHtml(input: {
   position: ReturnType<typeof positionAsOf>;
   contracts: Array<{ id: number; counterparty: string; contractNumber?: string | null }>;
   cmFee?: CmFeeView | null;
+  /** "Nova Construction #300088" or "Direct costs only" when filtered; empty for everything. */
+  scope?: string;
+  /** Each pay app checked against the contractor's G702. */
+  checks?: Map<number, { status: string; dueDiff: number | null } | undefined>;
   generatedBy?: string | null;
 }): string {
   const { position: p } = input;
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  if (input.scope) info.push({ label: "Contract", value: input.scope });
   info.push({ label: "As Of", value: longDate(p.asOf) });
+  const checkCell = (id: number) => {
+    const c = input.checks?.get(id);
+    if (!c || c.status === "none") return `<td class="muted">Not checked</td>`;
+    if (c.status === "match") return `<td style="color:#15803d">✓ Matches</td>`;
+    return `<td class="neg">⚠ Off${c.dueDiff != null ? ` ${money2(Math.abs(c.dueDiff))}` : ""}</td>`;
+  };
   const name = new Map(input.contracts.map((c) => [c.id, c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : "")]));
   const t = p.totals;
 
@@ -277,9 +288,9 @@ export function renderCostPositionHtml(input: {
     ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.00%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
 
   const appRows = p.applications.length === 0
-    ? `<tr><td colspan="6" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
+    ? `<tr><td colspan="7" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
     : p.applications.map((a) => `<tr><td>${escapeHtml(name.get(a.contractId) || "")}</td><td>${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}</td>
-      <td>${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}</tr>`).join("");
+      <td>${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}${checkCell(a.applicationId)}</tr>`).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Pay App Status</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
@@ -296,7 +307,7 @@ export function renderCostPositionHtml(input: {
     Left to Pay = contract sum less paid (owed + retainage + work not yet billed). Approved change orders only.</div>
 
   <h3 class="sec">Pay Apps &amp; Invoices</h3>
-  <table class="t"><thead><tr><th>Contract</th><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th>Contract</th><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">vs Contractor G702</th></tr></thead><tbody>
     ${appRows}
   </tbody></table>
   ${cmFeeTable(input.cmFee)}
@@ -760,13 +771,21 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : todayEastern();
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
+      // One contract, direct costs only, or everything.
+      const want = String(req.query.contract || "all");
+      const one = /^\d+$/.test(want) ? b.contracts.find((c) => c.id === Number(want)) : null;
+      if (/^\d+$/.test(want) && !one) return res.status(404).json({ message: "Contract not found" });
+      const input = filterPositionInput(b.positionInput, want);
+      const checks = new Map(b.applications.map((a: any) => [a.id, a.check]));
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCostPositionHtml({
         project: b.project, ...(await propertyFacts(b.project)),
-        position: positionAsOf(asOf, b.positionInput),
+        position: positionAsOf(asOf, input),
         contracts: b.contracts,
-        // The fee is earned on what has been billed so far — today's figure.
-        cmFee: asOf === todayEastern() ? b.cmFee : null,
+        // The fee is earned on what has been billed so far — today's figure, and only for the whole project.
+        cmFee: asOf === todayEastern() && !one && want !== "direct" ? b.cmFee : null,
+        scope: one ? one.counterparty + (one.contractNumber ? ` #${one.contractNumber}` : "") : want === "direct" ? "Direct costs only" : "",
+        checks,
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {

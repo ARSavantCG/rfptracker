@@ -24,6 +24,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [asOf, setAsOf] = useState(todayIso());
+  const [scope, setScope] = useState('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const nextInv = `CM-${String(b.cmInvoices.length + 1).padStart(2, '0')}`;
@@ -69,7 +70,19 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         <Card title="Pay App Status" what="Billed, retainage, paid and owed on every contract, and each pay app's due, paid and open — as of a date. The one for the lender or a refinance.">
           <div className="flex items-end gap-2 flex-wrap">
             <Labeled label="As of"><Input type="date" className="h-9 w-44" value={asOf} max={todayIso()} onChange={(e) => setAsOf(e.target.value)} /></Labeled>
-            <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>
+            <Labeled label="Contract">
+              <div className="w-60">
+                <Select value={scope} onValueChange={setScope}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent className="pm-scope">
+                    <SelectItem value="all">All</SelectItem>
+                    {b.contracts.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
+                    {b.directCosts.length > 0 && <SelectItem value="direct">Direct costs only</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+            </Labeled>
+            <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}&contract=${scope}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>
           </div>
         </Card>
         <Card title="Job Cost Ledger" what="Every dollar out in date order — contractor payments and direct charges — with a running total and totals by payee.">

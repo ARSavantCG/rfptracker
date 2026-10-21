@@ -498,3 +498,16 @@ export function invoiceCalc(input: { type: InvoiceType; items: readonly Billable
   const previous = r2(input.previouslyInvoiced);
   return { type: input.type, costs, pct: input.pct, fee, suppFee, cpFee, toDate, previous, due: r2(toDate - previous) };
 }
+
+/**
+ * The position for one contract, direct costs only, or everything ("all").
+ * Screen and printed report filter the same way, so they agree.
+ */
+export function filterPositionInput<T extends { contractIds: number[]; applications: ReadonlyArray<{ contractId: number }>; payments: ReadonlyArray<{ contractId: number }>; directCosts: ReadonlyArray<any> }>(input: T, want: string): T {
+  if (/^\d+$/.test(want)) {
+    const id = Number(want);
+    return { ...input, contractIds: input.contractIds.filter((c) => c === id), applications: input.applications.filter((a) => a.contractId === id), payments: input.payments.filter((p) => p.contractId === id), directCosts: [] };
+  }
+  if (want === 'direct') return { ...input, contractIds: [], applications: [], payments: [], directCosts: input.directCosts };
+  return input;
+}

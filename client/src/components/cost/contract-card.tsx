@@ -18,7 +18,7 @@ import { fmtPctText } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
-  money, pct, projectKey, BUCKET_LABEL,
+  money, pct, projectKey, BUCKET_LABEL, checkBadge,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow, type PaymentRow,
 } from './types';
 
@@ -390,7 +390,8 @@ export function ContractCard({
                 {[...applications].sort((a, b) => b.number - a.number).map((a) => (
                   <tr key={a.id} className="border-b last:border-0 hover:bg-blue-50/40 cursor-pointer"
                       onClick={() => onOpenApplication(contract, a, a.kind)}>
-                    <td className="py-1.5 pr-2">{a.kind === 'invoice' ? 'Inv' : 'App'} {a.docNumber}</td>
+                    <td className="py-1.5 pr-2 whitespace-nowrap">{a.kind === 'invoice' ? 'Inv' : 'App'} {a.docNumber}
+                      {(() => { const bdg = checkBadge(a); return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}{a.check.status === 'off' && a.check.dueDiff != null ? ` ${money(Math.abs(a.check.dueDiff))}` : ''}</span> : null; })()}</td>
                     <td className="py-1.5 pr-2 text-gray-700">{a.invoiceNumber || '—'}</td>
                     <td className="py-1.5 pr-2 text-gray-700 text-xs">
                       {a.periodEnd ? new Date(a.periodEnd).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '—'}

@@ -2343,6 +2343,8 @@ export const costApplications = pgTable("cost_applications", {
   number: integer("number").notNull(),       // order within the contract (drives the G702 math)
   /** The number printed on it: Pay App 7, Invoice 2. Pay apps and invoices count separately. Null = worked out. */
   docNumber: integer("doc_number"),
+  /** The contractor's own G702 lines 3, 4, 5, 7, 8 — what ours is checked against. */
+  contractorG702: json("contractor_g702").$type<Record<string, number | null>>(),
   kind: text("kind").notNull().default("pay_app"), // pay_app | invoice
   invoiceNumber: text("invoice_number"),
   periodStart: timestamp("period_start"),

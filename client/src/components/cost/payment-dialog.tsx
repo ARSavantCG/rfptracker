@@ -75,6 +75,14 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
             Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {app?.docNumber}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
           </DialogTitle>
         </DialogHeader>
+        {app?.check?.status === 'off' && (
+          <div className="text-sm bg-red-50 border border-red-300 text-red-900 rounded-md px-3 py-2">
+            ⚠ This pay app doesn't match the contractor's G702{app.check.dueDiff != null ? ` — payment due is off ${money(Math.abs(app.check.dueDiff))}` : ''}. Open the pay app to see which line before paying.
+          </div>
+        )}
+        {app?.check?.status === 'none' && app.kind === 'pay_app' && (
+          <div className="text-xs text-gray-600">Not checked against the contractor's G702 yet — type their line 8 in the pay app to check it.</div>
+        )}
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div><div className="text-[11px] uppercase text-gray-500">Payment due</div><div className="font-semibold tabular-nums">{money(due)}</div></div>
           <div><div className="text-[11px] uppercase text-gray-500">Paid</div><div className="font-semibold tabular-nums">{money(paid)}</div></div>

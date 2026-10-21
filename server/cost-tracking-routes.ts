@@ -28,7 +28,7 @@ import {
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
-  budgetVsActual, g702For, lineProgress, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
+  budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
@@ -336,7 +336,7 @@ export async function loadProjectBundle(projectId: number) {
         retainageToDate: dollars(l.retainageToDateCents),
       })),
       g702: g702For(a.contractId, a.number, { lines, changeOrders, applications }),
-    })),
+    })).map((a) => ({ ...a, check: g702Check(a.g702, a.contractorG702 as any) })),
     documents,
     summary,
     breakdown,
@@ -1651,6 +1651,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       }
       const [row] = await db.insert(costApplications).values({
         contractId, number, docNumber: doc,
+        contractorG702: normalizeContractorG702(b.contractorG702),
         kind,
         invoiceNumber: b.invoiceNumber ? String(b.invoiceNumber) : null,
         periodStart: b.periodStart ? new Date(b.periodStart) : null,
@@ -1676,6 +1677,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.periodStart !== undefined) patch.periodStart = b.periodStart ? new Date(b.periodStart) : null;
       if (b.periodEnd !== undefined) patch.periodEnd = b.periodEnd ? new Date(b.periodEnd) : null;
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
+      if (b.contractorG702 !== undefined) patch.contractorG702 = normalizeContractorG702(b.contractorG702);
       if (b.docNumber !== undefined && b.docNumber !== null && b.docNumber !== '') {
         const doc = Math.floor(Number(b.docNumber));
         if (!(doc >= 1)) return res.status(400).json({ message: 'Enter a number.' });

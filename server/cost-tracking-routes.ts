@@ -22,7 +22,7 @@ import {
   costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts, costWaivers,
 } from '@shared/schema';
 import {
-  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, defaultMarkups, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
+  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, defaultMarkups, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary, CO_CM_KEY,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
@@ -359,6 +359,31 @@ export async function loadProjectBundle(projectId: number) {
     // partner's (the CM fee only, with the costs incurred and paid shown as backup).
     // Each has its own numbers and its own "previously invoiced".
     ...(() => {
+    // What the tenant pays for: change orders only (the original scope is in the capital
+    // partner's budget), or their LAF share of the original scope too. Projects that
+    // already invoiced the tenant for costs keep that until changed.
+    const tenantCosOnly = (settings.tenantBills ?? (settings.invoiceType === 'reimbursable' ? 'all' : 'cos')) !== 'all';
+    // Projected at completion, so the team sees what's still to come, not only what's billable now.
+    const cosApproved = approval.changeOrders.filter((c) => c.status === 'approved');
+    const cosPending = approval.changeOrders.filter((c) => c.status === 'pending');
+    const linkedWork = sov.filter((l) => coLinks.has(l.id) && (!l.changeOrderId || changeOrders.find((c) => c.id === l.changeOrderId)?.status === 'approved'))
+      .reduce((t, l) => t + dollars(l.scheduledValueCents), 0);
+    const committedNonCm = summary.rows.filter((r) => r.key !== cmSettings.key && r.key !== CO_CM_KEY).reduce((t, r) => t + r.committed, 0);
+    const origBase = r2c(Math.max(0, committedNonCm - linkedWork));
+    const budgetOf = (k: string | null) => (k ? summary.rows.find((r) => r.key === k)?.budget ?? 0 : 0);
+    const sumCo = (cs: typeof cosApproved, f: (t: ReturnType<typeof coTotals>) => number) => r2c(cs.reduce((t, c) => t + f(coTotals(c)), 0));
+    const projection = {
+      fee: {
+        original: r2c((origBase * cmSettings.pct) / 100), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
+        pending: sumCo(cosPending, (t) => t.cmAbsorbed), budget: r2c(budgetOf(cmSettings.key) + budgetOf(CO_CM_KEY)), base: origBase,
+      },
+      reimbursable: {
+        original: tenantCosOnly ? 0 : r2c(summary.rows.filter((r) => r.key !== cmSettings.key && r.key !== CO_CM_KEY).reduce((t, r) => t + r.committedTenant, 0) * cmSettings.tenantPct / 100),
+        changeOrders: sumCo(cosApproved, (t) => t.cm), pending: sumCo(cosPending, (t) => t.cm), budget: 0, base: 0,
+        // Everything the tenant will owe on approved change orders: their share, markups and fee, less credits.
+        total: sumCo(cosApproved, (t) => t.tenant), pendingTotal: sumCo(cosPending, (t) => t.tenant),
+      },
+    };
     const draftFor = (type: 'fee' | 'reimbursable') => {
       const issued = ((settings.cmInvoices || []) as CmInvoiceRecord[]).filter((i) => streamOf(i) === type);
       const calc = cmInvoiceCalc({
@@ -376,7 +401,12 @@ export async function loadProjectBundle(projectId: number) {
         directCosts,
         // Linked change order work is billed at its own share; other work at the
         // line's share with only unlinked change orders (estimates) folded in.
-        tenantPct: coLinks.size
+        // The tenant's invoice, when the tenant pays for change orders only: the original
+        // scope is the capital partner's, so only change order shares are billable.
+        tenantPct: type === 'reimbursable' && tenantCosOnly
+          ? new Map(effectiveBaseline(baseline.map((x) => ({ ...x, tenantSharePct: 0 })), { ...approval, changeOrders: approval.changeOrders.filter((c) => !c.links.length) }, cmSettings.key)
+            .map((x) => [x.key, Number(x.tenantSharePct ?? 0)] as [string, number]))
+          : coLinks.size
           ? new Map(effectiveBaseline(baseline, { ...approval, changeOrders: approval.changeOrders.filter((c) => !c.links.length) }, cmSettings.key)
             .map((b) => [b.key, Number(b.tenantSharePct ?? 100)] as [string, number]))
           : new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number])),
@@ -432,7 +462,14 @@ export async function loadProjectBundle(projectId: number) {
         incurred: r2c(items.reduce((t, i) => t + i.amount, 0)),
         paidToDate: r2c(items.reduce((t, i) => t + withPaid(i).paid, 0)),
         invoicedToDate: r2c(issued.reduce((t, i) => t + (Number(i.due) || 0), 0)),
+        // The fee part of it: the latest invoice's fee to date (each one carries its running fee).
+        feeInvoiced: issued.length ? r2c((Number(issued[issued.length - 1].earned) || 0) + (Number(issued[issued.length - 1].suppFee) || 0)) : 0,
         invoices: issued.length,
+        tenantCosOnly,
+        projected: (() => {
+          const pr = projection[type] as { original: number; changeOrders: number; pending: number; budget: number; base: number; total?: number; pendingTotal?: number };
+          return { ...pr, fee: r2c(pr.original + pr.changeOrders) };
+        })(),
         // base/earned/due follow the chosen type and basis.
         base: inv.costs, earned: inv.fee, suppFee: inv.suppFee, cpFee: inv.cpFee, toDate: inv.toDate, due: inv.due, pct: invPct,
         supplementalCos: Array.from(new Set(Array.from(coLinks.values()).filter((l) => (type === 'fee' ? l.partnerFee : l.cmFee)).map((l) => l.coNumber))),
@@ -1140,6 +1177,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
       if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';

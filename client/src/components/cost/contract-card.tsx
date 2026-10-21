@@ -378,7 +378,22 @@ export function ContractCard({
       {/* Pay apps and invoices on this contract. */}
       <div className="border-t px-4 py-3 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Pay apps &amp; invoices</div>
+          {/* Rolls up to one line: count, latest, and what's still open. Remembered per contract. */}
+          <button className="flex items-center gap-1.5 text-left" onClick={() => toggleRoll('__apps')} aria-expanded={!rolled.has('__apps')}>
+            {rolled.has('__apps') ? <ChevronRight className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Pay apps &amp; invoices</span>
+            {rolled.has('__apps') && applications.length > 0 && (() => {
+              const latest = [...applications].sort((a, b) => b.number - a.number)[0];
+              const paidOf = (id: number) => payments.filter((p) => p.applicationId === id).reduce((t, p) => t + p.amount, 0);
+              const open = Math.round(applications.reduce((t, a) => t + a.g702.currentPaymentDue - paidOf(a.id), 0) * 100) / 100;
+              return (
+                <span className="text-xs text-gray-600 ml-1">
+                  {applications.length} · latest {latest.kind === 'invoice' ? 'Inv' : 'App'} {latest.docNumber}
+                  {' · '}<span className={open > 0.005 ? 'text-red-700 font-medium' : 'text-green-700'}>{open > 0.005 ? `${money(open)} open` : 'all paid ✓'}</span>
+                </span>
+              );
+            })()}
+          </button>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="h-8" disabled={lines.length === 0 && !ai.on}
                     onClick={() => onOpenApplication(contract, null, 'invoice')}>
@@ -393,7 +408,7 @@ export function ContractCard({
         {lines.length === 0 && <p className="text-xs text-gray-500">
           {ai.on ? 'No schedule of values yet: enter it above, or start a pay app, attach the G703 and let AI set the contract up from it.' : 'Add the schedule of values first.'}
         </p>}
-        {applications.length > 0 && (
+        {applications.length > 0 && !rolled.has('__apps') && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[720px]">
               <thead>

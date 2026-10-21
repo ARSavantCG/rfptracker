@@ -130,10 +130,10 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
     <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
     <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
   </tbody></table>
-  ${fee.supplemental ? `<table class="t" style="margin-top:6px"><thead><tr><th class="l">Supplemental CM Fee (change orders)</th><th>Change Order Work</th><th>Earned — Tenant</th><th>Earned — Owner</th><th>Budget</th><th>Remaining</th></tr></thead><tbody>
-    <tr><td>On work billed to date</td>${cell(fee.supplemental.work)}${cell(fee.supplemental.earned)}${cell(fee.supplemental.earnedCp)}${cell(fee.supplemental.budget)}${cell(fee.supplemental.remaining, negCls(fee.supplemental.remaining))}</tr>
+  ${fee.supplemental ? `<table class="t" style="margin-top:6px"><thead><tr><th class="l">Supplemental CM Fee (change orders)</th><th>Change Order Work</th><th>Earned — Capital Partner</th><th>Budget</th><th>Remaining</th></tr></thead><tbody>
+    <tr><td>On work billed to date</td>${cell(fee.supplemental.work)}${cell(fee.supplemental.earned + fee.supplemental.earnedCp)}${cell(fee.supplemental.budget)}${cell(fee.supplemental.remaining, negCls(fee.supplemental.remaining))}</tr>
   </tbody></table>
-  <div class="legend">The original CM fee is earned on the original scope only; change order work linked to tenant change orders earns the supplemental fee at each change order's tenant share.</div>` : ""}`;
+  <div class="legend">The capital partner's fee: the original CM fee on the original scope, and the supplemental fee on change order work linked to tenant change orders, at each change order's partner rate. The tenant's fee on change orders is billed on the tenant invoice.</div>` : ""}`;
 }
 
 type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null; original?: number; revisions?: number; transfers?: number; changeOrders?: number };
@@ -143,12 +143,90 @@ export type FundingView = { label: string; confirmed: boolean; original: number;
 export type StoryView = { original: number; revised: number; revisions: number; moved: number; transferCount: number;
   groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; cos: Array<{ number: string }> }> };
 
+/** One invoice as issued, for the CM fee report: its fee to date, so the fee on each invoice can be told apart from costs. */
+type FeeInvoice = { number: string; date: string; type?: "fee" | "reimbursable"; due: number; earned: number; suppFee?: number; billTo?: string };
+
+/**
+ * Every CM fee on the project, for the team: the two rates, what each party
+ * owes to date (original scope and change orders), each change order's fees,
+ * the invoices that asked for them, and the CM fee budget lines.
+ */
+export function renderCmFeeReportHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  rates: { partner: number; tenant: number; line: string | null };
+  billing: { capital: BillingStream; tenant: BillingStream };
+  changeOrders: Array<{ number: string; title: string; status: string; tenantWork: number; work: number; tenantRate: number; tenantFee: number; partnerRate: number; partnerBasis: string; partnerFee: number }>;
+  invoices: FeeInvoice[];
+  cmFee?: CmFeeView | null;
+  generatedBy?: string | null;
+}): string {
+  const { billing: { capital: c, tenant: t } } = input;
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  info.push({ label: "As Of", value: longDate(todayEastern()) });
+  const sub = (v: string) => `<div style="font-size:9px;color:#6b7280">${v}</div>`;
+  const proj = (s: BillingStream) => s.projected?.fee ?? s.earned + s.suppFee;
+  const party = (label: string, who: string, s: BillingStream, note: string) => `<tr><td>${escapeHtml(label)}${who ? sub(escapeHtml(who)) : ""}</td>
+    <td class="num">${fmtPct(s.pct)}${sub(note)}</td>${cell(s.earned)}${cell(s.suppFee)}${cell(s.earned + s.suppFee)}${cell(s.feeInvoiced ?? 0)}${cell(s.earned + s.suppFee - (s.feeInvoiced ?? 0))}
+    <td class="num">${fmt(proj(s))}${s.projected?.pending ? sub(`+ ${money2(s.projected.pending)} pending COs`) : ""}</td>${cell(proj(s) - (s.feeInvoiced ?? 0))}</tr>`;
+  const tot = (k: (s: BillingStream) => number) => cell(k(c) + k(t));
+
+  // Fee on each invoice: its fee to date less the previous one's in the same stream.
+  const last: Record<string, number> = { fee: 0, reimbursable: 0 };
+  const invRows = input.invoices.map((i) => {
+    const stream = i.type === "reimbursable" ? "reimbursable" : "fee";
+    const feeToDate = (Number(i.earned) || 0) + (Number(i.suppFee) || 0);
+    const fee = feeToDate - last[stream];
+    last[stream] = feeToDate;
+    return `<tr><td>${escapeHtml(i.number)}</td><td>${stream === "fee" ? "Capital partner" : "Tenant"}${i.billTo ? sub(escapeHtml(i.billTo)) : ""}</td><td>${escapeHtml(longDate(i.date))}</td>
+      ${cell(i.due)}${cell(fee)}${cell(i.due - (stream === "fee" ? i.due : fee))}</tr>`;
+  });
+  const cos = input.changeOrders;
+  const coSum = (k: keyof (typeof cos)[number]) => cos.reduce((s, x) => s + (Number(x[k]) || 0), 0);
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>CM Fee Report</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+  </style></head><body>
+  ${reportHeaderHtml({ title: "CM Fee Report", eyebrow: "Cost Report", info })}
+
+  <h3 class="sec">CM Fees by Party — Earned to Date</h3>
+  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Scope</th><th>Change Orders</th><th>Earned to Date</th><th>Invoiced</th><th>Billable Now</th><th>Projected at Completion</th><th>Still to Bill</th></tr></thead><tbody>
+    ${party("Capital partner", c.billTo, c, `on costs ${c.basis}`)}
+    ${party("Tenant", t.billTo, t, `on costs ${t.basis}`)}
+    <tr class="total"><td>Total CM fees</td><td></td>${tot((s) => s.earned)}${tot((s) => s.suppFee)}${tot((s) => s.earned + s.suppFee)}${tot((s) => s.feeInvoiced ?? 0)}${tot((s) => s.earned + s.suppFee - (s.feeInvoiced ?? 0))}${tot(proj)}${tot((s) => proj(s) - (s.feeInvoiced ?? 0))}</tr>
+  </tbody></table>
+  <div class="legend">Projected at completion — capital partner: ${fmtPct(input.rates.partner)} on ${money2(c.projected?.base ?? 0)} of committed original-scope cost, plus each approved change order's partner fee${c.projected?.budget ? ` (CM fee budget ${money2(c.projected.budget)})` : ""}; tenant: the CM fee on their approved change orders${t.tenantCosOnly === false ? " and their share of the original scope" : ""}. Pending change orders are shown apart.</div>
+  <div class="legend">Capital partner: ${fmtPct(input.rates.partner)} on the project's costs (the CM fee is all it is invoiced). Tenant: ${fmtPct(input.rates.tenant)} on ${t.tenantCosOnly === false ? "their share of costs and markups" : "their change orders (their share of the work and markups)"}${input.rates.line ? `, per the LAF's ${escapeHtml(input.rates.line)} line` : ""}; each change order can carry its own rate. Costs to date: incurred ${money2(c.incurred)}, paid ${money2(c.paidToDate)}.</div>
+
+  ${cos.length ? `<h3 class="sec">CM Fees on Change Orders</h3>
+  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Status</th><th>Cost of Work</th><th>Tenant Share</th><th>Tenant Rate</th><th>Tenant CM Fee</th><th>Partner Rate</th><th>Partner CM Fee</th></tr></thead><tbody>
+    ${cos.map((x) => `<tr><td>${escapeHtml(x.number)}${x.title ? ` — ${escapeHtml(x.title)}` : ""}</td><td>${escapeHtml(x.status[0].toUpperCase() + x.status.slice(1))}</td>${cell(x.work)}${cell(x.tenantWork)}
+      <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
+    <tr class="total"><td colspan="2">Total</td>${cell(coSum("work"))}${cell(coSum("tenantWork"))}<td></td>${cell(coSum("tenantFee"))}<td></td>${cell(coSum("partnerFee"))}</tr>
+  </tbody></table>
+  <div class="legend">The fee each change order carries when approved — earned as its work is billed. Pending and void change orders are listed for reference.</div>` : ""}
+
+  ${cmFeeTable(input.cmFee)}
+
+  <h3 class="sec">CM Fee Invoices Issued</h3>
+  <table class="t"><thead><tr><th class="l">Invoice</th><th class="l">To</th><th class="l">Date</th><th>Amount</th><th>CM Fee</th><th>Costs</th></tr></thead><tbody>
+    ${invRows.length ? invRows.join("") : `<tr><td colspan="6" class="muted">No invoices issued yet.</td></tr>`}
+  </tbody></table>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
 /** Sources of funds (who pays) and why the budget changed, side by side. */
 /** One invoice stream's figures to date: what's billable to the capital partner, or to the tenant. */
 export type BillingStream = {
   billTo: string; basis: 'paid' | 'billed'; pct: number;
   incurred: number; paidToDate: number; base: number; earned: number; suppFee: number;
   toDate: number; invoicedToDate: number; invoices: number; due: number;
+  /** The CM fee part of what has been invoiced (the rest of a tenant invoice is costs). */
+  feeInvoiced?: number;
+  tenantCosOnly?: boolean;
+  projected?: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; total?: number; pendingTotal?: number };
 };
 
 /** Billable to the capital partner vs billable to the tenant, side by side. */
@@ -166,8 +244,10 @@ export function billingTable(b?: { capital: BillingStream; tenant: BillingStream
     ${r("Billable to date", fmt(c.toDate), fmt(t.toDate), "sub")}
     ${r("Invoiced to date", `${fmt(c.invoicedToDate)}<div style="font-size:9px;color:#6b7280">${c.invoices} invoice${c.invoices === 1 ? "" : "s"}</div>`, `${fmt(t.invoicedToDate)}<div style="font-size:9px;color:#6b7280">${t.invoices} invoice${t.invoices === 1 ? "" : "s"}</div>`)}
     ${r("Not yet invoiced", fmt(c.due), fmt(t.due), "total")}
+    ${c.projected && t.projected ? r("Projected at completion", `${fmt(c.projected.fee)}${c.projected.pending ? `<div style="font-size:9px;color:#b45309">+ ${money2(c.projected.pending)} pending</div>` : ""}`,
+      `${fmt(t.projected.total ?? t.projected.fee)}${t.projected.pendingTotal ? `<div style="font-size:9px;color:#b45309">+ ${money2(t.projected.pendingTotal)} pending</div>` : ""}`) : ""}
   </tbody></table>
-  <div class="legend">Capital partner: the CM fee only (the project is funded by the approved budget up front); costs shown for reference. Tenant: their share of costs, markups and CM fee, less credits.</div>`;
+  <div class="legend">Capital partner: the CM fee only (the project is funded by the approved budget up front); costs shown for reference. Tenant: ${t.tenantCosOnly === false ? "their share of costs (original scope and change orders)" : "their change orders only"}, markups and CM fee, less credits.</div>`;
 }
 
 function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
@@ -751,6 +831,34 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Lien waiver log error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  // Every CM fee on the project — capital partner and tenant — for the team.
+  app.get("/api/reports/cm-fees/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const lineName = b.cmSettings.key ? b.project.baseline.find((l: any) => l.key === b.cmSettings.key)?.description ?? null : null;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderCmFeeReportHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        rates: { partner: b.cmSettings.pct, tenant: b.cmSettings.tenantPct, line: lineName },
+        billing: b.cmInvoiceDrafts,
+        changeOrders: b.approval.changeOrders.filter((c) => c.status !== "void").map((c) => {
+          const t = coTotals(c);
+          return { number: c.number, title: c.title, status: c.status, work: t.work, tenantWork: t.tenantWork,
+            tenantRate: c.cmFeePct, tenantFee: t.cm, partnerRate: c.partnerFeePct ?? 0, partnerBasis: c.partnerFeeBasis ?? "all", partnerFee: t.cmAbsorbed };
+        }),
+        invoices: b.cmInvoices,
+        cmFee: b.cmFee,
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("CM fee report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

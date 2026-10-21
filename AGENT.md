@@ -139,3 +139,10 @@ and live test output are proof. The gold standard is: click the button and watch
 - POST cm-invoices `{stream}`; DELETE allows the latest of its own stream. Report `?stream=capital|tenant` for drafts.
 - Capital invoice prints "Costs Incurred and Paid to Date" (reference only). BvA print has `billingTable` (Billing Summary — Capital Partner vs Tenant). Reports tab: summary card + two InvoiceCards (CAP-nn / TEN-nn).
 - Capital partner is funded the LAF amount up front, so the capital invoice is the CM fee only (Adolfo, 2026-10-21).
+
+## Reports tab rolled up, CM Fee Report, projections, tenant bills change orders only (2026-10-21)
+- Reports tab: every report is a collapsible `Card id=…` (open state in localStorage `pm-report-open-<id>`), grouped "Cost reports" / "CM fees & billing"; collapsed rows show a one-line summary.
+- New `/api/reports/cm-fees/:id` (renderCmFeeReportHtml): by party (earned, invoiced, billable now, projected, still to bill), CO fees, cmFeeTable, invoices with fee part split from costs.
+- Drafts carry `feeInvoiced` (latest issued record's earned+suppFee), `projected` {original, changeOrders, pending, budget, base, fee, total?, pendingTotal?}. Capital projected = partner rate × (committed non-CM cost − approved linked CO SOV work) + Σ approved CO cmAbsorbed. Tenant projected = Σ approved CO cm (fee) and Σ t.tenant (total).
+- Setting `tenantBills: 'cos' | 'all'` (default 'cos'; legacy invoiceType 'reimbursable' → 'all'). 'cos': tenant stream tenantPct map = zero-base effectiveBaseline with unlinked COs only, so only CO shares bill.
+- Contract card: "Pay apps & invoices" rolls up (rolled key '__apps') to count · latest · open.

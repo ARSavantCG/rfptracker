@@ -79,6 +79,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
                 {f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}
                 {f.contingency > 0.005 && <> · contingency unspent {money(f.contingency)}</>}
+                {f.unmapped > 0.005 && <div className="text-amber-700">{money(f.unmapped)} of committed cost isn't mapped to budget lines yet — map it on the Contracts tab for a sharper projection.</div>}
               </div></td>
               <td className={`py-1.5 text-right tabular-nums font-semibold ${f.surplus > 0.005 ? 'text-green-700' : 'text-red-700'}`}>{money(f.surplus > 0.005 ? f.surplus : f.supplemental)}</td>
             </tr>

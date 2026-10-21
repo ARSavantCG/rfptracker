@@ -706,26 +706,34 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   // Contingency still unspent: the first place to move money from when a line runs over.
   let contingency = 0;
   const overLines: Array<{ key: string; description: string; over: number }> = [];
+  let unmapped = 0;
   if (cost.byKey) {
-    const linesNeed = rows.filter((r) => r.key !== CO_CM_KEY).reduce((t, r) => {
+    // Lines bought out (anything committed): what's committed, under or over. Lines not yet: their budget.
+    let committedLines = 0, openBudget = 0;
+    for (const r of rows) {
+      if (r.key === CO_CM_KEY || r.key === UNALLOCATED_KEY) continue;
       const pre = r.revised - r.changeOrders;
-      if (r.key === DEAL_DISCOUNT_KEY) return t + pre;
-      // Bought out (anything committed on it): what's committed, under or over. Not yet: its budget.
-      const c = cost.byKey!.get(r.key);
+      if (r.key === DEAL_DISCOUNT_KEY) { committedLines += pre; continue; }
+      const c = cost.byKey.get(r.key);
       const committed = (c?.committed ?? 0) + (c?.pending ?? 0);
+      const isCont = /contingenc/i.test(r.description);
       // Contingency is the reserve itself: it's surplus to draw on, not a cost to complete.
-      if (/contingenc/i.test(r.description)) contingency += Math.max(0, r.revised - committed);
-      if (Math.abs(committed) < 0.005 && /contingenc/i.test(r.description)) return t;
-      if (committed - r.revised >= 0.005 && !/contingenc/i.test(r.description)) overLines.push({ key: r.key, description: r.description, over: r2(committed - r.revised) });
-      return t + (Math.abs(committed) >= 0.005 ? committed : pre);
-    }, 0);
-    // Unallocated cost (not on any line yet) is cost too.
-    const unplaced = Array.from(cost.byKey).filter(([k]) => !rows.some((r) => r.key === k)).reduce((t, [, c]) => t + c.committed + c.pending, 0);
+      if (isCont) contingency += Math.max(0, r.revised - committed);
+      if (Math.abs(committed) >= 0.005) {
+        committedLines += committed;
+        if (!isCont && committed - r.revised >= 0.005) overLines.push({ key: r.key, description: r.description, over: r2(committed - r.revised) });
+      } else if (!isCont) openBudget += pre;
+    }
+    // Cost not mapped to a budget line yet (Unallocated) belongs to lines that look un-bought: count
+    // whichever is larger, so the same dollars aren't counted twice.
+    const unplaced = r2(Array.from(cost.byKey).filter(([k]) => k === UNALLOCATED_KEY || !rows.some((r) => r.key === k))
+      .reduce((t, [, c]) => t + c.committed + c.pending, 0));
+    unmapped = unplaced;
     const coExtras = approved.reduce((t, c) => {
       const x = coTotals(c);
       return t + x.markups + x.cm + x.cmAbsorbed + (c.links.length ? 0 : x.work);
     }, 0);
-    need = r2(linesNeed + unplaced + coExtras);
+    need = r2(committedLines + Math.max(openBudget, unplaced) + coExtras);
   } else {
     need = r2(Math.max(revised, projectedCost));
   }
@@ -737,6 +745,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     /** What the project needs to finish, and the surplus left in the budget after it. */
     need, surplus: r2(Math.max(0, fundsIn - need)),
     contingency: r2(contingency), overLines,
+    /** Committed cost not mapped to a budget line yet — the projection is rougher until it is. */
+    unmapped,
     /** Only the shortfall: absorbed costs the budget surplus can't cover. */
     supplemental,
     /** Absorbed change orders paid from the budget's surplus. */

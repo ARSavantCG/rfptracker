@@ -306,7 +306,10 @@ export function coTotals(co: BudgetCO) {
   const total = r2(work + markups + cmAbsorbed);
   const tenant = r2(tenantWork + markups + cm - credit);
   const absorbed = r2(total - tenant);
-  return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total };
+  // What each fee is figured on (0 when that fee is off).
+  const partnerBase = co.partnerFee ? (co.partnerFeeBasis === 'tenant' ? tenantWork : work) : 0;
+  const tenantFeeBase = co.cmFee ? cmBase : 0;
+  return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total, partnerBase, tenantFeeBase };
 }
 
 /** Approved change orders, summed. */

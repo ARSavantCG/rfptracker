@@ -166,10 +166,15 @@ export function renderCmFeeReportHtml(input: {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
   info.push({ label: "As Of", value: longDate(todayEastern()) });
   const sub = (v: string) => `<div style="font-size:9px;color:#6b7280">${v}</div>`;
-  const proj = (s: BillingStream) => s.projected?.fee ?? s.earned + s.suppFee;
-  const party = (label: string, who: string, s: BillingStream, note: string) => `<tr><td>${escapeHtml(label)}${who ? sub(escapeHtml(who)) : ""}</td>
-    <td class="num">${fmtPct(s.pct)}${sub(note)}</td>${cell(s.earned)}${cell(s.suppFee)}${cell(s.earned + s.suppFee)}${cell(s.feeInvoiced ?? 0)}${cell(s.earned + s.suppFee - (s.feeInvoiced ?? 0))}
-    <td class="num">${fmt(proj(s))}${s.projected?.pending ? sub(`+ ${money2(s.projected.pending)} pending COs`) : ""}</td>${cell(proj(s) - (s.feeInvoiced ?? 0))}</tr>`;
+  // Anticipated = original fee + approved change order fees; earned so far on the chosen basis; the rest still to bill.
+  const P = (s: BillingStream) => s.projected ?? { original: 0, changeOrders: 0, pending: 0, budget: 0, base: 0, fee: 0, coBase: 0, pendingBase: 0 };
+  const earned = (s: BillingStream) => s.earned + s.suppFee;
+  const inv = (s: BillingStream) => s.feeInvoiced ?? 0;
+  const pend = (v: number) => (v > 0.005 ? sub(`<span style="color:#b45309">+ ${money2(v)} pending</span>`) : "");
+  const party = (label: string, who: string, s: BillingStream) => `<tr><td>${escapeHtml(label)}${who ? sub(escapeHtml(who)) : ""}</td>
+    <td class="num">${fmtPct(s.pct)}</td>${cell(P(s).base)}${cell(P(s).original)}
+    <td class="num">${fmt(P(s).coBase ?? 0)}${pend(P(s).pendingBase ?? 0)}</td><td class="num">${fmt(P(s).changeOrders)}${pend(P(s).pending)}</td>
+    ${cell(P(s).fee)}${cell(earned(s))}${cell(inv(s))}${cell(earned(s) - inv(s))}${cell(P(s).fee - inv(s))}</tr>`;
   const tot = (k: (s: BillingStream) => number) => cell(k(c) + k(t));
 
   // Fee on each invoice: its fee to date less the previous one's in the same stream.
@@ -187,17 +192,18 @@ export function renderCmFeeReportHtml(input: {
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>CM Fee Report</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
+    @page { size: Letter landscape; margin: 0.5in; }
   </style></head><body>
-  ${reportHeaderHtml({ title: "CM Fee Report", eyebrow: "Cost Report", info })}
+  ${reportHeaderHtml({ title: "CM Fee Report", info })}
 
-  <h3 class="sec">CM Fees by Party — Earned to Date</h3>
-  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Scope</th><th>Change Orders</th><th>Earned to Date</th><th>Invoiced</th><th>Billable Now</th><th>Projected at Completion</th><th>Still to Bill</th></tr></thead><tbody>
-    ${party("Capital partner", c.billTo, c, `on costs ${c.basis}`)}
-    ${party("Tenant", t.billTo, t, `on costs ${t.basis}`)}
-    <tr class="total"><td>Total CM fees</td><td></td>${tot((s) => s.earned)}${tot((s) => s.suppFee)}${tot((s) => s.earned + s.suppFee)}${tot((s) => s.feeInvoiced ?? 0)}${tot((s) => s.earned + s.suppFee - (s.feeInvoiced ?? 0))}${tot(proj)}${tot((s) => proj(s) - (s.feeInvoiced ?? 0))}</tr>
+  <h3 class="sec">CM Fees by Party</h3>
+  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Budget<div style="font-weight:400">fee figured on</div></th><th>Original Fee</th>
+    <th>Approved Change Orders<div style="font-weight:400">subject to fee</div></th><th>Change Order Fees</th><th>Total Anticipated Fees</th>
+    <th>Earned to Date</th><th>Invoiced</th><th>Billable</th><th>Remaining to Bill</th></tr></thead><tbody>
+    ${party("Capital partner", c.billTo, c)}
+    ${party("Tenant", t.billTo, t)}
+    <tr class="total"><td>Total CM fees</td><td></td><td></td>${tot((s) => P(s).original)}<td></td>${tot((s) => P(s).changeOrders)}${tot((s) => P(s).fee)}${tot(earned)}${tot(inv)}${tot((s) => earned(s) - inv(s))}${tot((s) => P(s).fee - inv(s))}</tr>
   </tbody></table>
-  <div class="legend">Projected at completion — capital partner: ${fmtPct(input.rates.partner)} on ${money2(c.projected?.base ?? 0)} of committed original-scope cost, plus each approved change order's partner fee${c.projected?.budget ? ` (CM fee budget ${money2(c.projected.budget)})` : ""}; tenant: the CM fee on their approved change orders${t.tenantCosOnly === false ? " and their share of the original scope" : ""}. Pending change orders are shown apart.</div>
-  <div class="legend">Capital partner: ${fmtPct(input.rates.partner)} on the project's costs (the CM fee is all it is invoiced). Tenant: ${fmtPct(input.rates.tenant)} on ${t.tenantCosOnly === false ? "their share of costs and markups" : "their change orders (their share of the work and markups)"}${input.rates.line ? `, per the LAF's ${escapeHtml(input.rates.line)} line` : ""}; each change order can carry its own rate. Costs to date: incurred ${money2(c.incurred)}, paid ${money2(c.paidToDate)}.</div>
 
   ${cos.length ? `<h3 class="sec">CM Fees on Change Orders</h3>
   <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Status</th><th>Cost of Work</th><th>Tenant Share</th><th>Tenant Rate</th><th>Tenant CM Fee</th><th>Partner Rate</th><th>Partner CM Fee</th></tr></thead><tbody>
@@ -226,7 +232,7 @@ export type BillingStream = {
   /** The CM fee part of what has been invoiced (the rest of a tenant invoice is costs). */
   feeInvoiced?: number;
   tenantCosOnly?: boolean;
-  projected?: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; total?: number; pendingTotal?: number };
+  projected?: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; coBase?: number; pendingBase?: number; total?: number; pendingTotal?: number };
 };
 
 /** Billable to the capital partner vs billable to the tenant, side by side. */

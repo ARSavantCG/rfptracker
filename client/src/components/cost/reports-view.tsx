@@ -106,43 +106,57 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <div className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">CM fees &amp; billing</h3>
       <Card id="cm-fees" title="CM Fee Report" what="Every CM fee on the project — capital partner and tenant: rates, earned to date, projected at completion, each change order's fees, invoices issued, and the CM fee budget. For the team."
-            summary={`Earned ${money(cap.earned + cap.suppFee + ten.earned + ten.suppFee)} · projected ${money(cap.projected.fee + ten.projected.fee)}`}
+            summary={`Anticipated ${money(cap.projected.fee + ten.projected.fee)} · earned ${money(cap.earned + cap.suppFee + ten.earned + ten.suppFee)}`}
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-fees/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
-        <table className="w-full text-sm">
-          <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1 text-left">Party</th><th className="py-1 pl-4 text-right">Rate</th><th className="py-1 pl-4 text-right">Earned to date</th>
-            <th className="py-1 pl-4 text-right">Invoiced</th><th className="py-1 pl-4 text-right">Billable now</th>
-            <th className="py-1 pl-4 text-right" title="Fee on committed costs plus each approved change order's fee">Projected at completion</th>
-            <th className="py-1 pl-4 text-right">Still to bill</th>
-          </tr></thead>
-          <tbody className="tabular-nums">
-            {([['Capital partner', cap], ['Tenant', ten]] as const).map(([label, d]) => (
-              <tr key={label} className="border-b">
-                <td className="py-1.5">{label}{d.billTo ? <div className="text-[11px] text-gray-500">{d.billTo}</div> : null}</td>
-                <td className="py-1.5 pl-4 text-right">{d.pct.toFixed(2)}%</td>
-                <td className="py-1.5 pl-4 text-right">{money(d.earned + d.suppFee)}</td>
-                <td className="py-1.5 pl-4 text-right">{money(d.feeInvoiced)}</td>
-                <td className="py-1.5 pl-4 text-right font-semibold">{money(d.earned + d.suppFee - d.feeInvoiced)}</td>
-                <td className="py-1.5 pl-4 text-right">{money(d.projected.fee)}
-                  {d.projected.pending > 0.005 && <div className="text-[11px] text-amber-700">+ {money(d.projected.pending)} pending COs</div>}</td>
-                <td className="py-1.5 pl-4 text-right">{money(d.projected.fee - d.feeInvoiced)}</td>
-              </tr>
-            ))}
-            <tr className="font-semibold">
-              <td className="py-1.5">Total</td><td />
-              <td className="py-1.5 pl-4 text-right">{money(cap.earned + cap.suppFee + ten.earned + ten.suppFee)}</td>
-              <td className="py-1.5 pl-4 text-right">{money(cap.feeInvoiced + ten.feeInvoiced)}</td>
-              <td className="py-1.5 pl-4 text-right">{money(cap.earned + cap.suppFee - cap.feeInvoiced + ten.earned + ten.suppFee - ten.feeInvoiced)}</td>
-              <td className="py-1.5 pl-4 text-right">{money(cap.projected.fee + ten.projected.fee)}</td>
-              <td className="py-1.5 pl-4 text-right">{money(cap.projected.fee - cap.feeInvoiced + ten.projected.fee - ten.feeInvoiced)}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="text-xs text-gray-600">
-          Capital partner projected: {cap.pct.toFixed(2)}% on {money(cap.projected.base)} of committed original-scope cost ({money(cap.projected.original)}) plus {money(cap.projected.changeOrders)} on approved change orders.
-          {cap.projected.budget > 0.005 && ` CM fee budget ${money(cap.projected.budget)}.`}
-          {' '}Tenant projected: the CM fee on their approved change orders{ten.tenantCosOnly ? '' : ' and their share of the original scope'}.
-        </p>
+        {(() => {
+          const earned = (d: CmInvoiceDraft) => d.earned + d.suppFee;
+          const rows = [['Capital partner', cap], ['Tenant', ten]] as const;
+          const sum = (f: (d: CmInvoiceDraft) => number) => money(f(cap) + f(ten));
+          const pend = (v: number) => (v > 0.005 ? <div className="text-[11px] text-amber-700">+ {money(v)} pending</div> : null);
+          const th = 'py-1 pl-3 text-right align-bottom';
+          const td = 'py-1.5 pl-3 text-right';
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[1000px]">
+                <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
+                  <th className="py-1 text-left align-bottom">Party</th><th className={th}>Rate</th>
+                  <th className={th} title="The original budget the fee is figured on (before change orders, less the CM fee lines)">Original budget</th>
+                  <th className={th}>Original fee</th>
+                  <th className={th} title="Approved change order amounts the fee is figured on">Approved COs<div className="normal-case font-normal">subject to fee</div></th>
+                  <th className={th}>CO fees</th><th className={th}>Total anticipated</th>
+                  <th className={th}>Earned to date</th><th className={th}>Invoiced</th><th className={th}>Billable</th><th className={th}>Remaining to bill</th>
+                </tr></thead>
+                <tbody className="tabular-nums">
+                  {rows.map(([label, d]) => (
+                    <tr key={label} className="border-b">
+                      <td className="py-1.5">{label}{d.billTo ? <div className="text-[11px] text-gray-500">{d.billTo}</div> : null}</td>
+                      <td className={td}>{d.pct.toFixed(2)}%</td>
+                      <td className={td}>{money(d.projected.base)}</td>
+                      <td className={td}>{money(d.projected.original)}</td>
+                      <td className={td}>{money(d.projected.coBase)}{pend(d.projected.pendingBase)}</td>
+                      <td className={td}>{money(d.projected.changeOrders)}{pend(d.projected.pending)}</td>
+                      <td className={`${td} font-semibold`}>{money(d.projected.fee)}</td>
+                      <td className={td}>{money(earned(d))}</td>
+                      <td className={td}>{money(d.feeInvoiced)}</td>
+                      <td className={`${td} font-semibold`}>{money(earned(d) - d.feeInvoiced)}</td>
+                      <td className={td}>{money(d.projected.fee - d.feeInvoiced)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-semibold">
+                    <td className="py-1.5">Total CM fees</td><td /><td />
+                    <td className={td}>{sum((d) => d.projected.original)}</td><td />
+                    <td className={td}>{sum((d) => d.projected.changeOrders)}</td>
+                    <td className={td}>{sum((d) => d.projected.fee)}</td>
+                    <td className={td}>{sum(earned)}</td>
+                    <td className={td}>{sum((d) => d.feeInvoiced)}</td>
+                    <td className={td}>{sum((d) => earned(d) - d.feeInvoiced)}</td>
+                    <td className={td}>{sum((d) => d.projected.fee - d.feeInvoiced)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </Card>
       <Card id="billing" title="Billable to Capital Partner vs Tenant" what="What each party owes to date, side by side. Prints on the Budget vs Actual report."
             summary={`Not yet invoiced: capital ${money(cap.due)} · tenant ${money(ten.due)}`}>

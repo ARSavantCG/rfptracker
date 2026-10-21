@@ -140,7 +140,7 @@ export type CmInvoiceDraft = ProjectBundle['cmInvoiceDraft'] & {
   incurred: number; paidToDate: number; invoicedToDate: number; invoices: number; feeInvoiced: number;
   tenantCosOnly: boolean;
   /** At completion: fee on committed original scope + each approved change order's fee; pending shown apart. */
-  projected: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; total?: number; pendingTotal?: number };
+  projected: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; coBase: number; pendingBase: number; total?: number; pendingTotal?: number };
 };
 
 export interface DirectCostRow {

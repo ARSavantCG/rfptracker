@@ -366,20 +366,29 @@ export async function loadProjectBundle(projectId: number) {
     // Projected at completion, so the team sees what's still to come, not only what's billable now.
     const cosApproved = approval.changeOrders.filter((c) => c.status === 'approved');
     const cosPending = approval.changeOrders.filter((c) => c.status === 'pending');
-    const linkedWork = sov.filter((l) => coLinks.has(l.id) && (!l.changeOrderId || changeOrders.find((c) => c.id === l.changeOrderId)?.status === 'approved'))
-      .reduce((t, l) => t + dollars(l.scheduledValueCents), 0);
-    const committedNonCm = summary.rows.filter((r) => r.key !== cmSettings.key && r.key !== CO_CM_KEY).reduce((t, r) => t + r.committed, 0);
-    const origBase = r2c(Math.max(0, committedNonCm - linkedWork));
+    // The original fee is figured on the budget before change orders (less the CM fee lines themselves):
+    // the full amount the fee was calculated on.
+    const notCm = (k: string) => k !== cmSettings.key && k !== CO_CM_KEY;
+    const origBase = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => t + r.revised - r.changeOrders, 0));
+    const origTenantBase = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => {
+      const share = Number(baseline.find((x) => x.key === r.key)?.tenantSharePct ?? 100);
+      return t + ((r.revised - r.changeOrders) * share) / 100;
+    }, 0));
     const budgetOf = (k: string | null) => (k ? summary.rows.find((r) => r.key === k)?.budget ?? 0 : 0);
     const sumCo = (cs: typeof cosApproved, f: (t: ReturnType<typeof coTotals>) => number) => r2c(cs.reduce((t, c) => t + f(coTotals(c)), 0));
     const projection = {
       fee: {
         original: r2c((origBase * cmSettings.pct) / 100), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
         pending: sumCo(cosPending, (t) => t.cmAbsorbed), budget: r2c(budgetOf(cmSettings.key) + budgetOf(CO_CM_KEY)), base: origBase,
+        // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.
+        // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.
+        coBase: sumCo(cosApproved, (t) => t.partnerBase), pendingBase: sumCo(cosPending, (t) => t.partnerBase),
       },
       reimbursable: {
-        original: tenantCosOnly ? 0 : r2c(summary.rows.filter((r) => r.key !== cmSettings.key && r.key !== CO_CM_KEY).reduce((t, r) => t + r.committedTenant, 0) * cmSettings.tenantPct / 100),
-        changeOrders: sumCo(cosApproved, (t) => t.cm), pending: sumCo(cosPending, (t) => t.cm), budget: 0, base: 0,
+        original: tenantCosOnly ? 0 : r2c((origTenantBase * cmSettings.tenantPct) / 100),
+        changeOrders: sumCo(cosApproved, (t) => t.cm), pending: sumCo(cosPending, (t) => t.cm), budget: 0, base: tenantCosOnly ? 0 : origTenantBase,
+        // The tenant's fee on each change order is on their share of the work and markups, less credits.
+        coBase: sumCo(cosApproved, (t) => t.tenantFeeBase), pendingBase: sumCo(cosPending, (t) => t.tenantFeeBase),
         // Everything the tenant will owe on approved change orders: their share, markups and fee, less credits.
         total: sumCo(cosApproved, (t) => t.tenant), pendingTotal: sumCo(cosPending, (t) => t.tenant),
       },
@@ -467,7 +476,7 @@ export async function loadProjectBundle(projectId: number) {
         invoices: issued.length,
         tenantCosOnly,
         projected: (() => {
-          const pr = projection[type] as { original: number; changeOrders: number; pending: number; budget: number; base: number; total?: number; pendingTotal?: number };
+          const pr = projection[type] as { original: number; changeOrders: number; pending: number; budget: number; base: number; coBase: number; pendingBase: number; total?: number; pendingTotal?: number };
           return { ...pr, fee: r2c(pr.original + pr.changeOrders) };
         })(),
         // base/earned/due follow the chosen type and basis.

@@ -146,3 +146,8 @@ and live test output are proof. The gold standard is: click the button and watch
 - Drafts carry `feeInvoiced` (latest issued record's earned+suppFee), `projected` {original, changeOrders, pending, budget, base, fee, total?, pendingTotal?}. Capital projected = partner rate × (committed non-CM cost − approved linked CO SOV work) + Σ approved CO cmAbsorbed. Tenant projected = Σ approved CO cm (fee) and Σ t.tenant (total).
 - Setting `tenantBills: 'cos' | 'all'` (default 'cos'; legacy invoiceType 'reimbursable' → 'all'). 'cos': tenant stream tenantPct map = zero-base effectiveBaseline with unlinked COs only, so only CO shares bill.
 - Contract card: "Pay apps & invoices" rolls up (rolled key '__apps') to count · latest · open.
+
+## CM Fee Report layout per Adolfo's markup (2026-10-21)
+- No eyebrow, "CM Fees by Party" (no "— Earned to Date"), no notes under the party table. Landscape.
+- Columns: Party | Rate | Original Budget (fee figured on) | Original Fee | Approved Change Orders (subject to fee, + pending) | Change Order Fees (+ pending) | Total Anticipated Fees | Earned to Date | Invoiced | Billable | Remaining to Bill (= anticipated − invoiced).
+- Original budget = Σ breakdown (revised − changeOrders) excluding CM lines (was committed). coTotals now returns partnerBase/tenantFeeBase; projection carries coBase/pendingBase. Same columns on the Reports tab.

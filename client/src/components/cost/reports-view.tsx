@@ -124,9 +124,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
             </div>
           </Labeled>
         </div>
-        <div className={`grid grid-cols-2 ${d.type === 'reimbursable' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 text-sm`}>
+        <div className={`grid grid-cols-2 ${['lg:grid-cols-4', 'lg:grid-cols-5', 'lg:grid-cols-6'][(d.type === 'reimbursable' ? 1 : 0) + (d.suppFee || d.cpFee ? 1 : 0)]} gap-3 text-sm`}>
           <Fig label={`Billable costs ${d.basis}`} value={money(d.base)} />
-          <Fig label={`CM fee (${d.pct.toFixed(2)}%)`} value={money(d.earned)} />
+          <Fig label={`CM fee (${d.pct.toFixed(2)}%)${d.suppFee || d.cpFee ? ' — original' : ''}`} value={money(d.earned)} />
+          {(d.suppFee || d.cpFee) ? <Fig label={`Supplemental CM fee${d.cpFee ? ' (incl. owner share)' : ''}`} value={money(d.suppFee + d.cpFee)} /> : null}
           {d.type === 'reimbursable' && <Fig label="Costs + fee to date" value={money(d.toDate)} />}
           <Fig label="Previously invoiced" value={money(d.previous)} />
           <Fig label="Due now" value={money(d.due)} strong />

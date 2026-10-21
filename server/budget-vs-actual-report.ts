@@ -75,6 +75,7 @@ export interface CmFeeView {
   earnedOnPaid: number;
   budget: number;
   remaining: number;
+  supplemental?: { work: number; earned: number; earnedCp: number; earnedOnPaid: number; budget: number; remaining: number } | null;
 }
 
 export interface BudgetCoView {
@@ -128,7 +129,11 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
   <table class="t"><thead><tr><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>CM Fee Budget</th><th>Remaining</th></tr></thead><tbody>
     <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
     <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
-  </tbody></table>`;
+  </tbody></table>
+  ${fee.supplemental ? `<table class="t" style="margin-top:6px"><thead><tr><th class="l">Supplemental CM Fee (change orders)</th><th>Change Order Work</th><th>Earned — Tenant</th><th>Earned — Owner</th><th>Budget</th><th>Remaining</th></tr></thead><tbody>
+    <tr><td>On work billed to date</td>${cell(fee.supplemental.work)}${cell(fee.supplemental.earned)}${cell(fee.supplemental.earnedCp)}${cell(fee.supplemental.budget)}${cell(fee.supplemental.remaining, negCls(fee.supplemental.remaining))}</tr>
+  </tbody></table>
+  <div class="legend">The original CM fee is earned on the original scope only; change order work linked to tenant change orders earns the supplemental fee at each change order's tenant share.</div>` : ""}`;
 }
 
 type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null; original?: number; revisions?: number; transfers?: number; changeOrders?: number };
@@ -365,6 +370,9 @@ export interface CmInvoiceView {
   basis?: 'paid' | 'billed';
   billTo?: string;
   toDate?: number;
+  suppFee?: number;
+  cpFee?: number;
+  supplementalCos?: string[];
 }
 
 /**
@@ -418,8 +426,11 @@ export function renderCmInvoiceHtml(input: {
 
   <table class="due"><tbody>
     <tr><td>Billable costs ${costWord} to date</td><td class="num">${fmt(inv.base)}</td></tr>
-    <tr><td>Construction management fee at ${fmtPct(inv.pct)}</td><td class="num">${fmt(inv.earned)}</td></tr>
-    ${reimb ? `<tr><td><strong>Total costs and fee to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.base + inv.earned)}</strong></td></tr>` : ""}
+    <tr><td>Construction management fee at ${fmtPct(inv.pct)}${inv.suppFee || inv.cpFee ? " — original scope" : ""}</td><td class="num">${fmt(inv.earned)}</td></tr>
+    ${inv.suppFee ? `<tr><td>Supplemental CM fee — change orders${inv.supplementalCos?.length ? ` (${escapeHtml(inv.supplementalCos.join(", "))})` : ""}</td><td class="num">${fmt(inv.suppFee)}</td></tr>` : ""}
+    ${inv.cpFee ? `<tr><td>Supplemental CM fee — change order work funded by the owner</td><td class="num">${fmt(inv.cpFee)}</td></tr>` : ""}
+    ${reimb ? `<tr><td><strong>Total costs and fee to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.base + inv.earned)}</strong></td></tr>`
+      : inv.suppFee || inv.cpFee ? `<tr><td><strong>Total CM fees to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.earned)}</strong></td></tr>` : ""}
     <tr><td>Less previously invoiced</td><td class="num">${inv.previous ? `(${money2(inv.previous)})` : money2(0)}</td></tr>
     <tr class="big"><td>Amount Due This Invoice</td><td class="num">${fmt(inv.due)}</td></tr>
   </tbody></table>
@@ -432,6 +443,7 @@ export function renderCmInvoiceHtml(input: {
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     <li>${escapeHtml(`${reimb ? "Reimbursement of the billable costs listed, plus a" : "A"} construction management fee of ${fmtPct(inv.pct)} on them. Billable means the tenant's share of each budget line.`)}</li>
+    ${inv.suppFee || inv.cpFee ? `<li>${escapeHtml("Change order work is shown at the tenant's share of each change order; its CM fee is the supplemental fee, kept apart from the fee on the original scope.")}</li>` : ""}
     <li>${paid ? "Costs are amounts paid to date: payments against the contractors' pay applications and invoices listed, and direct charges at cost." : "Costs are work completed and stored to date, before retainage, as certified on the pay applications and invoices listed. Direct charges are at cost."}</li>
     ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Items shaded and marked "This invoice" are new since the last CM invoice.</li>` : ""}
     ${inv.previous ? `<li>${escapeHtml(`Previously invoiced CM fees of ${money2(inv.previous)} are deducted.`)}</li>` : ""}

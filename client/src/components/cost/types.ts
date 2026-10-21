@@ -116,7 +116,7 @@ export interface ProjectBundle {
   cmFee: CmFee | null;
   cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none' };
   cmInvoices: CmInvoiceRow[];
-  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }[];
+  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }[];
     base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
   waivers: Array<import('@shared/cost-waivers').Waiver & { notes: string | null }>;
@@ -179,6 +179,8 @@ export interface CmFee {
   earnedOnPaid: number;
   budget: number;
   remaining: number;
+  /** The Supplemental CM Fee (change orders), kept apart from the original. */
+  supplemental: { work: number; earned: number; earnedCp: number; earnedOnPaid: number; budget: number; remaining: number } | null;
 }
 
 /** "Oct 20, 2026" from an ISO date or timestamp. */

@@ -25,10 +25,10 @@ import {
   normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
-import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
+import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
-  budgetVsActual, g702For, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
+  budgetVsActual, g702For, lineProgress, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
@@ -298,11 +298,22 @@ export async function loadProjectBundle(projectId: number) {
   const settings = (project.settings || {}) as any;
   // The CM's own contract (if there is one) is not part of its base.
   const cmContractIds = new Set(contracts.filter((c) => c.bucket === 'cm').map((c) => c.id));
+  // Change order work on vendor COs linked to tenant change orders earns the
+  // Supplemental CM Fee; everything else earns the original fee.
+  const coLinks = coFeeLinks(approval.changeOrders, sov.map((l) => ({ id: l.id, changeOrderId: l.changeOrderId ?? null })));
+  const progress = lineProgress(applications);
+  const contractOfLine = new Map(sov.map((l) => [l.id, l.contractId]));
+  const paidFrac = (lineId: number) => {
+    const c = position.contracts.find((x) => x.contractId === contractOfLine.get(lineId));
+    return c && c.netBilled > 0.005 ? c.paid / c.netBilled : 0;
+  };
+  const supplemental = { ...supplementalCmEarned(progress, coLinks, paidFrac), budget: bk.get('__co_cm_fee__')?.revised ?? 0 };
   const cmFee = cmSettings.key || settings.cmFeePct != null
     ? cmFeeEarned(cmSettings, {
       rows: summary.rows.map((r) => ({ key: r.key, budget: r.budget, toDate: r.toDate })),
       paidBase: payments.filter((p) => !cmContractIds.has(p.contractId)).reduce((s, p) => s + p.amount, 0)
         + directCosts.filter((d) => d.key !== cmSettings.key).reduce((s, d) => s + d.amount, 0),
+      supplemental,
     })
     : null;
   const g702 = Object.fromEntries(contracts.map((c) => {
@@ -359,18 +370,28 @@ export async function loadProjectBundle(projectId: number) {
           return { ...a, kind: row.kind, invoiceNumber: row.invoiceNumber, docNumber: docs.get(a.id) };
         }),
         directCosts,
-        tenantPct: new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number])),
+        // Linked change order work is billed at its own share; other work at the
+        // line's share with only unlinked change orders (estimates) folded in.
+        tenantPct: coLinks.size
+          ? new Map(effectiveBaseline(baseline, { ...approval, changeOrders: approval.changeOrders.filter((c) => !c.links.length) }, cmSettings.key)
+            .map((b) => [b.key, Number(b.tenantSharePct ?? 100)] as [string, number]))
+          : new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number])),
         validKeys: new Set(effective.map((b) => b.key)),
         cmKey: cmSettings.key,
         contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
+        coLinks, rate: cmSettings.pct,
+        credits: settings.invoiceType === 'reimbursable'
+          ? approval.changeOrders.filter((c) => c.status === 'approved' && c.credit > 0).map((c) => ({ id: c.id, date: c.date ?? todayEastern(), number: c.number, amount: c.credit }))
+          : [],
       });
       const items = billed;
       // Each item is rounded to the cent; put the rounding difference on the
       // largest item so the column ties to the base the fee is figured on.
       const drift = Math.round((calc.base - items.reduce((t, i) => t + i.billable, 0)) * 100) / 100;
-      if (items.length && Math.abs(drift) >= 0.005 && Math.abs(drift) < 1) {
+      if (!coLinks.size && items.length && Math.abs(drift) >= 0.005 && Math.abs(drift) < 1) {
         const big = items.reduce((m, i) => (Math.abs(i.billable) > Math.abs(m.billable) ? i : m), items[0]);
         big.billable = Math.round((big.billable + drift) * 100) / 100;
+        big.fee = Math.round(big.billable * cmSettings.pct) / 100;
       }
       const spent = Math.round(calc.lines.reduce((t, l) => t + l.spent, 0) * 100) / 100;
       const drift2 = Math.round((spent - items.reduce((t, i) => t + i.amount, 0)) * 100) / 100;
@@ -394,9 +415,11 @@ export async function loadProjectBundle(projectId: number) {
       return {
         ...calc, type, basis, billTo,
         // base/earned/due follow the chosen type and basis.
-        base: inv.costs, earned: inv.fee, toDate: inv.toDate, due: inv.due,
+        base: inv.costs, earned: inv.fee, suppFee: inv.suppFee, cpFee: inv.cpFee, toDate: inv.toDate, due: inv.due,
+        supplementalCos: Array.from(new Set(Array.from(coLinks.values()).filter((l) => l.cmFee).map((l) => l.coNumber))),
         items: chosen.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
-        lines: basis === 'billed' ? calc.lines : [],
+        // The by-line table ties to the items only when no change order work is billed at its own share.
+        lines: basis === 'billed' && !coLinks.size ? calc.lines : [],
       };
     })(),
     payments: payRows.map((p) => ({ ...p, amount: dollars(p.amountCents) })),
@@ -433,6 +456,10 @@ export interface CmInvoiceRecord {
   base: number;
   pct: number;
   earned: number;
+  /** Supplemental CM fee (change orders), and the part charged to the capital partner. */
+  suppFee?: number;
+  cpFee?: number;
+  supplementalCos?: string[];
   previous: number;
   due: number;
   lines: Array<{ key: string; description: string; spent: number; tenantSharePct: number; billable: number }>;
@@ -918,6 +945,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — everything to date has been invoiced.' });
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
         lines: d.lines, payApps: payAppsFor(b), items: d.items, type: d.type, basis: d.basis, billTo: d.billTo, toDate: d.toDate,
+        suppFee: d.suppFee, cpFee: d.cpFee, supplementalCos: d.supplementalCos,
         issuedBy: whoName(req), issuedAt: new Date().toISOString() });
       settings.cmInvoices = list;
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));

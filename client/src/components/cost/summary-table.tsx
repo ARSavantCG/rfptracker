@@ -124,14 +124,18 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
       </div>
 
       {/* Who pays. Committed cost split the way each budget line is split. */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${cmFee ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${cmFee?.supplemental ? 'lg:grid-cols-5' : cmFee ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2`}>
         <Stat label="Retainage held" value={money(totals.retainageHeld)} />
         <Stat label="Tenant share of committed" value={money(totals.committedTenant)} />
         <Stat label="Outstanding share (absorbed)" value={money(totals.committedOutstanding)}
               tone={totals.committedOutstanding > 0 ? 'text-red-800' : undefined} />
         {cmFee && (
-          <Stat label={`CM fee earned to date (${cmFee.pct.toFixed(2)}%)`} value={money(cmFee.earned)}
+          <Stat label={`${cmFee.supplemental ? 'Original ' : ''}CM fee earned (${cmFee.pct.toFixed(2)}%)`} value={money(cmFee.earned)}
                 sub={`of ${money(cmFee.budget)} · ${money(cmFee.earnedOnPaid)} on payments made`} />
+        )}
+        {cmFee?.supplemental && (
+          <Stat label="Supplemental CM fee earned" value={money(cmFee.supplemental.earned + cmFee.supplemental.earnedCp)}
+                sub={`of ${money(cmFee.supplemental.budget)} · on ${money(cmFee.supplemental.work)} change order work${cmFee.supplemental.earnedCp ? ` · ${money(cmFee.supplemental.earnedCp)} from the owner` : ''}`} />
         )}
       </div>
     </div>

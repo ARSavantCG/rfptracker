@@ -13,7 +13,7 @@ type Props = Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange' | 'pl
   onValueChange: (raw: string) => void;
 };
 
-function makeNumberInput(format: (s: string) => string, suffix?: string) {
+function makeNumberInput(format: (s: string) => string, suffix?: string, keepTyped = false) {
   return forwardRef<HTMLInputElement, Props>(function NumberInput({ value, onValueChange, className, onFocus, onBlur, ...rest }, ref) {
     const [editing, setEditing] = useState(false);
     const shown = editing ? String(value ?? '').replace(/,/g, '') : format(String(value ?? ''));
@@ -22,7 +22,7 @@ function makeNumberInput(format: (s: string) => string, suffix?: string) {
         <Input ref={ref} {...rest} inputMode="decimal" value={shown}
                className={`text-right tabular-nums ${suffix ? 'pr-6' : ''} ${className || ''}`}
                onFocus={(e) => { setEditing(true); onFocus?.(e); }}
-               onBlur={(e) => { setEditing(false); onValueChange(format(e.target.value)); onBlur?.(e); }}
+               onBlur={(e) => { setEditing(false); onValueChange(keepTyped ? e.target.value.replace(/[,%\s]/g, '') : format(e.target.value)); onBlur?.(e); }}
                onChange={(e) => onValueChange(e.target.value)} />
         {suffix && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">{suffix}</span>}
       </div>
@@ -32,3 +32,5 @@ function makeNumberInput(format: (s: string) => string, suffix?: string) {
 
 export const MoneyInput = makeNumberInput(fmtMoneyText);
 export const PercentInput = makeNumberInput(fmtPctText, '%');
+/** A percentage that keeps every digit typed (56.929894) — shown to two decimals, stored as typed. For tenant shares. */
+export const SharePercentInput = makeNumberInput(fmtPctText, '%', true);

@@ -16,7 +16,7 @@ import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink } from 'lucide-
 import { openDocument } from './contract-card';
 import { CO_REASONS, CO_UNASSIGNED_KEY, reasonLabel, defaultMarkups, type BudgetCO } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
-import { MoneyInput, PercentInput } from './inputs';
+import { MoneyInput, PercentInput, SharePercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle, type SovLineRow } from './types';
 
 const num = (s: string | number) => {
@@ -68,7 +68,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const edit = (co: BudgetCO): Form => ({
     id: co.id, number: co.number, title: co.title, date: co.date ?? todayIso(), status: co.status, billable: co.billable,
     cmFee: co.cmFee, contractId: NO_CONTRACT,
-    lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: fmtPctText(String(l.tenantPct ?? 100)) })),
+    lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: String(l.tenantPct ?? 100) })),
     credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason, vendorLinks: [], fallbackKey: '',
     markups: (co.markups || []).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: m.amount != null ? fmtMoneyText(String(m.amount)) : '' })), partnerFee: co.partnerFee, partnerFeeBasis: co.partnerFeeBasis ?? 'all',
     tenantRate: fmtPctText(String(co.cmFeePct)), partnerRate: fmtPctText(String(co.partnerFeePct)), cmFeeAmount: co.cmFeeAmount != null ? fmtMoneyText(String(co.cmFeeAmount)) : '',
@@ -160,11 +160,19 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       <td className="pr-3 py-0.5 text-right tabular-nums">{money(amt)}
                         {Math.abs(live - amt) >= 0.005 && <span className="text-amber-800" title="The vendor's change order has changed since it was priced in"> → now {money(live)}</span>}</td>
                       <td className="pr-1 py-0.5 text-gray-500">Tenant pays</td>
-                      <td className="pr-3 py-0.5"><PercentInput className="h-6 text-xs w-28" aria-label="Tenant pays"
-                        value={pctDraft[`${co.id}:${l.contractCoId}`] ?? fmtPctText(String(l.pct))}
+                      <td className="pr-3 py-0.5" title="Type any precision (e.g. 56.929894) — shown to two decimals"><SharePercentInput className="h-6 text-xs w-28" aria-label="Tenant pays"
+                        value={pctDraft[`${co.id}:${l.contractCoId}`] ?? String(l.pct)}
                         onValueChange={(v) => setPctDraft((d) => ({ ...d, [`${co.id}:${l.contractCoId}`]: v }))}
                         onBlur={(e) => { setPct(l.contractCoId, e.target.value); setPctDraft((d) => { const n = { ...d }; delete n[`${co.id}:${l.contractCoId}`]; return n; }); }} /></td>
-                      <td className="pr-3 py-0.5 tabular-nums text-green-800">{money((amt * l.pct) / 100)}</td>
+                      {/* Or type the dollars the tenant pays; the share is worked out exactly from it. */}
+                      <td className="pr-3 py-0.5" title="Type what the tenant pays — the % is worked out exactly"><MoneyInput className="h-6 text-xs w-32 text-green-800" aria-label="Tenant pays (dollars)"
+                        value={pctDraft[`$${co.id}:${l.contractCoId}`] ?? fmtMoneyText(String(r2((amt * l.pct) / 100)))}
+                        onValueChange={(v) => setPctDraft((d) => ({ ...d, [`$${co.id}:${l.contractCoId}`]: v }))}
+                        onBlur={(e) => {
+                          const dollars = num(e.target.value);
+                          if (amt > 0 && Math.abs(dollars - r2((amt * l.pct) / 100)) >= 0.005) setPct(l.contractCoId, String(Math.max(0, Math.min(100, (dollars / amt) * 100))));
+                          setPctDraft((d) => { const n = { ...d }; delete n[`$${co.id}:${l.contractCoId}`]; return n; });
+                        }} /></td>
                       <td className="pr-3 py-0.5 tabular-nums text-red-800">{l.pct < 100 ? `absorbed ${money(amt - (amt * l.pct) / 100)}` : ''}</td>
                       <td className="py-0.5">
                         <button className="text-gray-400 hover:text-red-700 inline-flex items-center" title="Unlink (the vendor's change order stays on its contract)"
@@ -485,9 +493,16 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       <td className="px-2 py-1.5 text-gray-900">{contractName(cco?.contractId ?? null)} {cco?.number}</td>
                       <td className="px-2 py-1.5 text-gray-600">{cco?.title || ''}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{money(amt)}</td>
-                      <td className="px-1 py-1"><PercentInput className="h-8" value={v.pct} aria-label="Tenant %"
+                      <td className="px-1 py-1" title="Type any precision — shown to two decimals"><SharePercentInput className="h-8" value={v.pct} aria-label="Tenant %"
                         onValueChange={(val) => setForm({ ...form, vendorLinks: form.vendorLinks.map((x, j) => (j === i ? { ...x, pct: val } : x)) })} /></td>
-                      <td className="px-2 py-1 text-right tabular-nums text-green-800">{money(r2((amt * num(v.pct)) / 100))}</td>
+                      <td className="px-1 py-1" title="Or type what the tenant pays — the % is worked out exactly"><MoneyInput className="h-8 text-green-800" aria-label="Tenant pays (dollars)"
+                        value={pctDraft[`f$${v.contractCoId}`] ?? fmtMoneyText(String(r2((amt * num(v.pct)) / 100)))}
+                        onValueChange={(val) => setPctDraft((d) => ({ ...d, [`f$${v.contractCoId}`]: val }))}
+                        onBlur={(e) => {
+                          const dollars = num(e.target.value);
+                          if (amt > 0 && Math.abs(dollars - r2((amt * num(v.pct)) / 100)) >= 0.005) setForm({ ...form, vendorLinks: form.vendorLinks.map((x, j) => (j === i ? { ...x, pct: String(Math.max(0, Math.min(100, (dollars / amt) * 100))) } : x)) });
+                          setPctDraft((d) => { const n = { ...d }; delete n[`f$${v.contractCoId}`]; return n; });
+                        }} /></td>
                       <td className="px-1 text-center">
                         <button className="p-1 text-gray-400 hover:text-red-700" title="Remove" onClick={() => setForm({ ...form, vendorLinks: form.vendorLinks.filter((_, j) => j !== i) })}>
                           <Trash2 className="h-4 w-4" />
@@ -511,7 +526,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                                                      onChange={(e) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)) })} /></td>
                     <td className="px-1 py-1"><MoneyInput className="h-8" value={l.amount} aria-label="Amount" disabled={form.linked}
                                                           onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, amount: v } : x)) })} /></td>
-                    <td className="px-1 py-1"><PercentInput className="h-8" value={l.tenantPct} aria-label="Tenant %" disabled={form.linked}
+                    <td className="px-1 py-1"><SharePercentInput className="h-8" value={l.tenantPct} aria-label="Tenant %" disabled={form.linked}
                                                             onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, tenantPct: v } : x)) })} /></td>
                     <td className="px-2 py-1 text-right tabular-nums text-green-800">{money(r2((num(l.amount) * num(l.tenantPct)) / 100))}</td>
                     <td className="px-1 text-center">

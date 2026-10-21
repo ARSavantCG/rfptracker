@@ -911,7 +911,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const keys = new Set([...baseline.map((x) => x.key), UNALLOCATED_KEY]);
       // Vendor change orders picked in the form: the lines are priced from them.
       const vendor = (Array.isArray(b.vendorLinks) ? b.vendorLinks : [])
-        .map((l: any) => ({ contractCoId: Number(l?.contractCoId), pct: Math.max(0, Math.min(100, Math.round(Number(l?.pct ?? 100) * 100) / 100)) }))
+        .map((l: any) => ({ contractCoId: Number(l?.contractCoId), pct: Math.max(0, Math.min(100, Math.round(Number(l?.pct ?? 100) * 1e10) / 1e10)) }))
         .filter((l: any) => Number.isFinite(l.contractCoId) && l.contractCoId > 0);
       if (vendor.length) {
         const links: BudgetCO['links'] = [];
@@ -997,7 +997,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       }
       if (Array.isArray(b.links)) {
         // Shares set on existing links (and links dropped if left out).
-        const want = new Map<number, number>(b.links.map((l: any): [number, number] => [Number(l.contractCoId), Math.max(0, Math.min(100, Math.round(Number(l.pct) * 100) / 100))]));
+        const want = new Map<number, number>(b.links.map((l: any): [number, number] => [Number(l.contractCoId), Math.max(0, Math.min(100, Math.round(Number(l.pct) * 1e10) / 1e10))]));
         links = links.filter((l) => want.has(l.contractCoId)).map((l) => ({ ...l, pct: Number.isFinite(want.get(l.contractCoId)!) ? want.get(l.contractCoId)! : l.pct }));
         linkNote = linkNote || ' — tenant shares updated';
         derive = true;

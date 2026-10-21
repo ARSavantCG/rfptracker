@@ -158,3 +158,7 @@ and live test output are proof. The gold standard is: click the button and watch
 - partnerFeeBasis adds 'absorbed' (work − tenant share). New COs from the form default to 'absorbed'; API/legacy default stays 'all'. Wired through coTotals (partnerOn), coFeeLinks/supplementalCmEarned/billableItems (v − t).
 - Drafts carry earnedBilled / earnedPaid {base, fee} regardless of basis. CM Fee Report "CM Fee Earned to Date" is by party × basis (billed, paid) with Total Anticipated and Remaining; replaces cmFeeTable there.
 - Local test token expires after 24h: `UPDATE auth_tokens SET expires_at = now() + interval '7 days' WHERE token=…` in rfpt_verify.
+
+## Precise tenant shares (2026-10-21)
+- Tenant shares (link pct, line tenantPct) keep up to 10 decimals (normalizeCO pct helper, POST vendorLinks, PATCH links). `SharePercentInput` stores the typed value, shows 2 decimals.
+- Vendor rows (new form and the row under each tenant CO) have a "Tenant pays" dollars box: typing dollars sets pct = dollars ÷ cost × 100 exactly.

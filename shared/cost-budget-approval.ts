@@ -226,7 +226,8 @@ export function normalizeCO(raw: any): BudgetCO | null {
   if (!raw || typeof raw !== 'object') return null;
   const status = ['pending', 'approved', 'void'].includes(raw.status) ? raw.status : 'pending';
   const billable = raw.billable !== false;
-  const pct = (v: any, dflt: number) => (v === undefined || v === null || v === '' ? dflt : Math.max(0, Math.min(100, Math.round(num(v) * 100) / 100)));
+  // Tenant shares keep the precision typed (e.g. 56.929894%), so the dollars land exactly; shown to two decimals.
+  const pct = (v: any, dflt: number) => (v === undefined || v === null || v === '' ? dflt : Math.max(0, Math.min(100, Math.round(num(v) * 1e10) / 1e10)));
   const intOrNull = (v: any) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
   // Older change orders carry one contractor link and an all-or-nothing billable flag.
   let links: BudgetCOLink[] = Array.isArray(raw.links) ? raw.links

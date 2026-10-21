@@ -74,7 +74,8 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <td className={`py-1.5 text-right tabular-nums ${f.supplemental > 0.005 ? 'text-red-800 font-medium' : ''}`}>{signedMoney(f.supplemental)}</td>
             </tr>
             <Row name="Total funding" value={f.totalFunding} strong />
-            <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order fees and markups" value={f.need} />
+            <Row name="CM fees — set aside" sub="The original CM fee and the CM fees on change orders: ours, not available to spend" value={f.cmReserved} />
+            <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups" value={f.projectCost} />
             <tr>
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
                 {f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}

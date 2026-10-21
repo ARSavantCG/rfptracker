@@ -707,11 +707,19 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   let contingency = 0;
   const overLines: Array<{ key: string; description: string; over: number }> = [];
   let unmapped = 0;
+  // Split: the project's cost to complete, and the CM fees (original, partner's and tenant's on change orders) set aside.
+  let cmReserved = 0, projectCost = 0;
   if (cost.byKey) {
     // Lines bought out (anything committed): what's committed, under or over. Lines not yet: their budget.
     let committedLines = 0, openBudget = 0;
     for (const r of rows) {
       if (r.key === CO_CM_KEY || r.key === UNALLOCATED_KEY) continue;
+      // The CM fee is ours: set aside whole (budget, or what's committed if more), never counted as surplus.
+      if (r.bucket === 'cm') {
+        const c = cost.byKey.get(r.key);
+        cmReserved += Math.max(r.revised - r.changeOrders, (c?.committed ?? 0) + (c?.pending ?? 0));
+        continue;
+      }
       const pre = r.revised - r.changeOrders;
       if (r.key === DEAL_DISCOUNT_KEY) { committedLines += pre; continue; }
       const c = cost.byKey.get(r.key);
@@ -731,9 +739,12 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     unmapped = unplaced;
     const coExtras = approved.reduce((t, c) => {
       const x = coTotals(c);
-      return t + x.markups + x.cm + x.cmAbsorbed + (c.links.length ? 0 : x.work);
+      cmReserved += x.cm + x.cmAbsorbed;
+      return t + x.markups + (c.links.length ? 0 : x.work);
     }, 0);
-    need = r2(committedLines + Math.max(openBudget, unplaced) + coExtras);
+    projectCost = r2(committedLines + Math.max(openBudget, unplaced) + coExtras);
+    cmReserved = r2(cmReserved);
+    need = r2(projectCost + cmReserved);
   } else {
     need = r2(Math.max(revised, projectedCost));
   }
@@ -744,6 +755,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     projectedCost, projectedOverrun,
     /** What the project needs to finish, and the surplus left in the budget after it. */
     need, surplus: r2(Math.max(0, fundsIn - need)),
+    /** The CM fees set aside (not available to spend) and the project's own cost to complete. */
+    cmReserved: r2(cmReserved), projectCost: r2(projectCost || need),
     contingency: r2(contingency), overLines,
     /** Committed cost not mapped to a budget line yet — the projection is rougher until it is. */
     unmapped,

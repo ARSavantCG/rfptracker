@@ -140,7 +140,7 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
 
 type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null; original?: number; revisions?: number; transfers?: number; changeOrders?: number };
 
-export type FundingView = { label: string; confirmed: boolean; original: number; revisions: number; tenant: number; absorbed: number; revised: number; projectedCost: number; projectedOverrun: number; supplemental: number; totalFunding: number; projectedVariance: number; pendingChangeOrders: number; need?: number; surplus?: number; absorbedFromSurplus?: number; contingency?: number };
+export type FundingView = { label: string; confirmed: boolean; original: number; revisions: number; tenant: number; absorbed: number; revised: number; projectedCost: number; projectedOverrun: number; supplemental: number; totalFunding: number; projectedVariance: number; pendingChangeOrders: number; need?: number; surplus?: number; absorbedFromSurplus?: number; contingency?: number; cmReserved?: number; projectCost?: number };
 
 export type StoryView = { original: number; revised: number; revisions: number; moved: number; transferCount: number;
   groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; funded?: number; cos: Array<{ number: string }> }> };
@@ -283,7 +283,8 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
       ${r("Tenant-funded change orders", f.tenant, "Billable to the tenant, CM fee included")}
       ${r(f.label, f.supplemental, f.supplemental > 0.005 ? "Needed beyond the budget and the tenant's share" : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money2(f.absorbed)} paid from the budget surplus` : "None needed")}
       ${r("Total funding", f.totalFunding, "", "total")}
-      ${f.need != null ? r("Projected cost to complete", f.need, "Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order fees and markups") : ""}
+      ${f.cmReserved != null ? r("CM fees — set aside", f.cmReserved, "Original CM fee and CM fees on change orders: not available to spend") : ""}
+      ${f.projectCost != null ? r("Projected cost to complete", f.projectCost, "Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups") : ""}
       ${f.surplus != null && f.surplus > 0.005 ? r("Projected surplus", f.surplus, `Left in the budget after everything above${f.contingency ? ` · contingency unspent ${money2(f.contingency)}` : ""}`) : ""}
     </tbody></table>
     <table class="t" style="flex:1"><thead><tr><th class="l">Why the Budget Changed</th><th>Amount</th></tr></thead><tbody>

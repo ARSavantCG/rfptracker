@@ -105,6 +105,7 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_payments', column: 'method', type: 'text' },
   { table: 'cost_payments', column: 'reconciled', type: 'boolean NOT NULL DEFAULT false' },
   { table: 'cost_documents', column: 'direct_cost_id', type: 'integer' },
+  { table: 'cost_documents', column: 'budget_co_id', type: 'text' },
   // Pay app packages (2026-10-20).
   { table: 'cost_documents', column: 'doc_type', type: 'text' },
   // Contract dates (2026-10-20).

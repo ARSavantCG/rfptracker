@@ -11,15 +11,24 @@ import { UNALLOCATED_KEY } from '@shared/cost-tracking';
 import { DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
 import { money, signedMoney, pct, BUCKET_LABEL, type CmFee } from './types';
 
+type Row = BudgetVsActual['rows'][number] & { original?: number; revisions?: number; transfers?: number; changeOrders?: number };
+
 export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: {
-  summary: BudgetVsActual;
+  summary: BudgetVsActual & { rows: Row[] };
   onShowUnallocated?: () => void;
   cmFee?: CmFee | null;
   /** "Draft" or "Confirmed against the LAF …", shown above the table. */
   budgetNote?: React.ReactNode;
 }) {
-  const { rows, totals } = summary;
+  const totals = summary.totals;
+  const rows = summary.rows as Row[];
   const hasPending = Math.abs(totals.pending) >= 0.005;
+  // Original → revised columns, shown once anything has moved a line.
+  const sumOf = (k: 'original' | 'revisions' | 'transfers' | 'changeOrders') => Math.round(rows.reduce((t, r) => t + (r[k] ?? 0), 0) * 100) / 100;
+  const any = (k: 'revisions' | 'transfers' | 'changeOrders') => rows.some((r) => Math.abs(r[k] ?? 0) >= 0.005);
+  const showRev = any('revisions'), showTx = any('transfers'), showCo = any('changeOrders');
+  const showOrig = showRev || showTx || showCo;
+  const mv = (v: number | undefined) => (v && Math.abs(v) >= 0.005 ? signedMoney(v) : '');
   const unallocated = rows.find((r) => r.key === UNALLOCATED_KEY);
 
   return (
@@ -48,11 +57,15 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
 
       {budgetNote}
       <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="w-full text-sm min-w-[720px]">
+        <table className={`w-full text-sm ${showOrig ? 'min-w-[1080px]' : 'min-w-[720px]'}`}>
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-gray-600 border-b">
               <th className="px-3 py-2">Budget line</th>
-              <th className="px-3 py-2 text-right">Budget</th>
+              {showOrig && <th className="px-3 py-2 text-right">Original</th>}
+              {showRev && <th className="px-3 py-2 text-right">Revisions</th>}
+              {showTx && <th className="px-3 py-2 text-right">Transfers</th>}
+              {showCo && <th className="px-3 py-2 text-right">Approved COs</th>}
+              <th className="px-3 py-2 text-right">{showOrig ? 'Revised budget' : 'Budget'}</th>
               <th className="px-3 py-2 text-right">Committed</th>
               {hasPending && <th className="px-3 py-2 text-right" title="Change orders not yet approved">Pending COs</th>}
               <th className="px-3 py-2 text-right">Spent to date</th>
@@ -76,7 +89,11 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{isUnallocated ? '—' : signedMoney(r.budget)}</td>
+                  {showOrig && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{isUnallocated ? '—' : signedMoney(r.original ?? 0)}</td>}
+                  {showRev && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.revisions)}</td>}
+                  {showTx && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.transfers)}</td>}
+                  {showCo && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.changeOrders)}</td>}
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${showOrig ? 'font-medium' : ''}`}>{isUnallocated ? '—' : signedMoney(r.budget)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums">{money(r.committed)}</td>
                   {hasPending && <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{r.pending ? money(r.pending) : ''}</td>}
                   <td className="px-3 py-1.5 text-right tabular-nums">{money(r.toDate)}</td>
@@ -91,6 +108,10 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
           <tfoot>
             <tr className="border-t-2 border-gray-800 font-semibold">
               <td className="px-3 py-2">Total</td>
+              {showOrig && <td className="px-3 py-2 text-right tabular-nums">{money(sumOf('original'))}</td>}
+              {showRev && <td className="px-3 py-2 text-right tabular-nums">{signedMoney(sumOf('revisions'))}</td>}
+              {showTx && <td className="px-3 py-2 text-right tabular-nums">{signedMoney(sumOf('transfers'))}</td>}
+              {showCo && <td className="px-3 py-2 text-right tabular-nums">{signedMoney(sumOf('changeOrders'))}</td>}
               <td className="px-3 py-2 text-right tabular-nums">{money(totals.budget)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{money(totals.committed)}</td>
               {hasPending && <td className="px-3 py-2 text-right tabular-nums">{money(totals.pending)}</td>}

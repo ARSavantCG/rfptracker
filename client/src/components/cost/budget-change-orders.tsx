@@ -5,18 +5,19 @@
  * shown as exposure. Optionally writes the matching change order on a
  * contract, so the contractor side and the budget side start in step.
  */
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink } from 'lucide-react';
+import { openDocument } from './contract-card';
 import type { BudgetCO } from '@shared/cost-budget-approval';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
-import { money, signedMoney, projectKey, shortDate, todayIso, type ProjectBundle } from './types';
+import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle } from './types';
 
 const num = (s: string | number) => {
   const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
@@ -67,6 +68,101 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     } finally { setBusy(false); }
   };
 
+  // ---- the contractor's side and the backup, under each change order
+  const [linking, setLinking] = useState<string | null>(null);
+  const [linkTo, setLinkTo] = useState('');
+  const coLines = (ccoId: number) => r2(bundle.sovLines.filter((l) => l.changeOrderId === ccoId).reduce((s, l) => s + l.scheduledValue, 0));
+  const linkedIds = new Set(cos.map((c) => c.contractCoId).filter(Boolean) as number[]);
+  const contractName = (id: number | null) => bundle.contracts.find((c) => c.id === id)?.counterparty ?? 'a contract';
+  const upload = async (coId: string, files: FileList | File[]) => {
+    for (const f of Array.from(files)) {
+      const fd = new FormData();
+      fd.append('file', f);
+      fd.append('budgetCoId', coId);
+      try { await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000); }
+      catch (e: any) { toast({ title: `${f.name} not attached`, description: e?.message, variant: 'destructive' }); }
+    }
+    queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
+  };
+  const removeDoc = async (id: number, name: string) => {
+    if (!window.confirm(`Remove ${name} from this change order?`)) return;
+    try { await apiRequest(`/api/cost-documents/${id}`, 'DELETE'); queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); }
+    catch (e: any) { toast({ title: 'Not removed', description: e?.message, variant: 'destructive' }); }
+  };
+  // Called as a function, not a component, so the row keeps its state across re-renders.
+  const coExtras = (co: BudgetCO, work: number) => {
+    const docs = bundle.documents.filter((d) => d.budgetCoId === co.id);
+    const pco = co.contractCoId ? bundle.changeOrders.find((c) => c.id === co.contractCoId) : null;
+    const pcoAmt = co.contractCoId ? coLines(co.contractCoId) : 0;
+    const diff = r2(pcoAmt - work);
+    const free = bundle.changeOrders.filter((c) => !linkedIds.has(c.id) && c.status !== 'void');
+    return (
+      <tr className={`border-b last:border-0 ${co.status === 'void' ? 'opacity-50' : ''}`}>
+        <td />
+        <td colSpan={8} className="px-3 pb-2 pt-0 text-xs">
+          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap"
+               onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) upload(co.id, e.dataTransfer.files); }}>
+            <span className="text-gray-500">Contractor:</span>
+            {co.contractCoId ? (
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium text-gray-800">{contractName(co.contractId)} {pco?.number ?? ''}</span>
+                <span className="tabular-nums">{money(pcoAmt)}</span>
+                {Math.abs(diff) >= 0.005 && (
+                  <span className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5" title="The budget change order is your estimate; edit its lines to match the contractor's price if you want the budget to follow.">
+                    Estimate {money(work)} → contractor {money(pcoAmt)} ({signedMoney(diff)})
+                  </span>
+                )}
+                <button className="text-gray-400 hover:text-red-700 inline-flex items-center" title="Unlink (the contractor's change order stays on the contract)"
+                        onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { unlink: true }), `${co.number} unlinked`)}>
+                  <Unlink className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ) : linking === co.id ? (
+              <span className="inline-flex items-center gap-1.5">
+                <div className="w-80">
+                  <Select value={linkTo || undefined} onValueChange={setLinkTo}>
+                    <SelectTrigger className="h-7 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
+                    <SelectContent className="pm-scope">
+                      {bundle.contracts.map((c) => <SelectItem key={`w${c.id}`} value={`w:${c.id}`}>Write it onto {c.counterparty} (same amounts)</SelectItem>)}
+                      {free.map((c) => <SelectItem key={`l${c.id}`} value={`l:${c.id}`}>Link {contractName(c.contractId)} {c.number}{c.title ? ` — ${c.title}` : ''} ({money(coLines(c.id))})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button size="sm" className="h-7" disabled={!linkTo} onClick={async () => {
+                  const [k, v] = linkTo.split(':');
+                  const ok = await run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', k === 'w' ? { writeContractId: Number(v) } : { linkContractCoId: Number(v) }), `${co.number} linked`);
+                  if (ok) { setLinking(null); setLinkTo(''); }
+                }}>Link</Button>
+                <Button size="sm" variant="ghost" className="h-7" onClick={() => { setLinking(null); setLinkTo(''); }}>Cancel</Button>
+              </span>
+            ) : (
+              <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => { setLinking(co.id); setLinkTo(''); }}>
+                <Link2 className="h-3.5 w-3.5" /> {bundle.contracts.length ? 'Add the contractor\'s price' : 'Not on a contract yet'}
+              </button>
+            )}
+            <span className="text-gray-500">Backup:</span>
+            {docs.map((d) => (
+              <span key={d.id} className="inline-flex items-center gap-1">
+                <button className="text-blue-700 hover:underline" onClick={() => openDocument(d.id)}>{d.originalName}</button>
+                <button className="text-gray-400 hover:text-red-700" title="Remove" onClick={() => removeDoc(d.id, d.originalName)}><Trash2 className="h-3 w-3" /></button>
+              </span>
+            ))}
+            <label className="inline-flex items-center gap-1 text-blue-700 hover:underline cursor-pointer" title="Attach the PCO, a quote or an email — or drop files on this row">
+              <Paperclip className="h-3.5 w-3.5" /> Attach
+              <input type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(co.id, e.target.files); e.target.value = ''; }} />
+            </label>
+            {co.billable && (
+              <button className="text-blue-700 hover:underline inline-flex items-center gap-1 ml-auto"
+                      onClick={async () => { if (!(await openReport(`/api/reports/tenant-co/${projectId}?co=${encodeURIComponent(co.id)}`))) toast({ title: 'Report failed', variant: 'destructive' }); }}>
+                <Printer className="h-3.5 w-3.5" /> Tenant change order
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   const formWork = form ? r2(form.lines.reduce((s, l) => s + num(l.amount), 0)) : 0;
   const formRate = form?.id ? (cos.find((c) => c.id === form.id)?.cmFeePct ?? rate) : rate;
   const formCm = form?.cmFee ? r2((formWork * formRate) / 100) : 0;
@@ -115,7 +211,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               {cos.map((co) => {
                 const t = totals(co.id);
                 return (
-                  <tr key={co.id} className={`border-b last:border-0 align-top ${co.status === 'void' ? 'opacity-50' : ''}`}>
+                  <Fragment key={co.id}>
+                  <tr className={`align-top ${co.status === 'void' ? 'opacity-50' : ''}`}>
                     <td className="px-3 py-2 font-medium whitespace-nowrap">{co.number}</td>
                     <td className="px-3 py-2">
                       <div>{co.title || '—'}</div>
@@ -154,6 +251,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       </button>
                     </td>
                   </tr>
+                  {coExtras(co, t.work)}
+                  </Fragment>
                 );
               })}
             </tbody>

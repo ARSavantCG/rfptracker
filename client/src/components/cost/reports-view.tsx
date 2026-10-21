@@ -12,6 +12,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Printer, FileText, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
+import { FundingSummary } from './funding-summary';
 import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle } from './types';
 
 export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBudget }: {
@@ -171,13 +172,13 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         </p>
       </Card>
 
-      <Card title="Budget vs Actual" what="Each budget line: budget, committed, pending change orders, spent, variance — and the tenant and outstanding share."
+      <Card title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (
           <p className="text-sm text-gray-600">Nothing committed yet — add the contracts first.</p>
         ) : (
           <SummaryTable summary={b.summary} cmFee={b.cmFee} onShowUnallocated={onShowUnallocated}
-            budgetNote={b.approval.status === 'confirmed' ? null : (
+            budgetNote={b.approval.status === 'confirmed' ? <FundingSummary bundle={b} projectId={projectId} /> : (
               <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-2.5">
                 Draft budget — {b.approval.lafTotal == null ? 'not yet checked against the LAF.' : `LAF entered (${money(b.approval.lafTotal)}), not yet confirmed.`}{' '}
                 <button className="underline font-medium" onClick={onShowBudget}>Confirm it on the Budget tab</button>

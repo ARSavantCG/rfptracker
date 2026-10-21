@@ -22,7 +22,7 @@ import {
   costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts, costWaivers,
 } from '@shared/schema';
 import {
-  normalizeApproval, effectiveBaseline, discountState, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
+  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
@@ -257,13 +257,25 @@ export async function loadProjectBundle(projectId: number) {
   });
   const originalBy = new Map((approval.original || []).map((o) => [o.key, o.budget]));
   const priced = new Map(baseline.map((b) => [b.key, Number(b.budget) || 0]));
+  // Original → revised, line by line, and where the money comes from.
+  const breakdown = budgetBreakdown(baseline, approval, cmSettings.key);
+  const bk = new Map(breakdown.map((r) => [r.key, r]));
   const summary = {
     ...summary0,
     rows: summary0.rows.map((r) => ({
       ...r,
       priced: priced.has(r.key) ? Math.round(priced.get(r.key)! * 100) / 100 : null,
       originalBudget: approval.status === 'confirmed' ? (originalBy.get(r.key) ?? 0) : null,
+      original: bk.get(r.key)?.original ?? 0,
+      revisions: bk.get(r.key)?.revisions ?? 0,
+      transfers: bk.get(r.key)?.transfers ?? 0,
+      changeOrders: bk.get(r.key)?.changeOrders ?? 0,
     })),
+  };
+  const funding = {
+    ...fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending }),
+    label: String(((project.settings || {}) as any).supplementalLabel || SUPPLEMENTAL_DEFAULT),
+    confirmed: approval.status === 'confirmed',
   };
 
   const docs = docNumbers(apps);
@@ -314,6 +326,8 @@ export async function loadProjectBundle(projectId: number) {
     })),
     documents,
     summary,
+    breakdown,
+    funding,
     g702ByContract: g702,
     approval: (() => {
       const ds = discountState(baseline, approval);
@@ -750,14 +764,38 @@ export function registerCostTrackingRoutes(app: Express): void {
       const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee']) })!;
       const keys = new Set(baseline.map((x) => x.key));
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
+      // The contractor's side, added later: write it onto a contract, link one
+      // already there (a PCO typed in or read off a pay app), or let go of it.
+      let linkNote = '';
+      if (b.writeContractId != null && b.writeContractId !== '') {
+        if (cur.contractCoId) throw new UserError('This change order is already linked to the contractor\'s. Unlink it first.');
+        next.contractCoId = await writeContractCo(Number(b.writeContractId), next, baseline);
+        next.contractId = Number(b.writeContractId);
+        linkNote = ' — written onto the contract';
+      } else if (b.linkContractCoId != null && b.linkContractCoId !== '') {
+        const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, Number(b.linkContractCoId)));
+        const [k] = cco ? await db.select().from(costContracts).where(eq(costContracts.id, cco.contractId)) : [];
+        if (!cco || !k || k.projectId !== id) throw new UserError('That change order is not on a contract in this project.');
+        if (a.changeOrders.some((c, j) => j !== i && c.contractCoId === cco.id)) throw new UserError(`${cco.number} is already linked to another budget change order.`);
+        next.contractCoId = cco.id;
+        next.contractId = cco.contractId;
+        linkNote = ` — linked to ${k.counterparty} ${cco.number}`;
+      } else if (b.unlink === true) {
+        next.contractCoId = null;
+        next.contractId = null;
+        linkNote = ' — unlinked from the contractor\'s change order';
+      }
       a.changeOrders[i] = next;
       // Keep the contractor's change order in step on status.
       if (next.contractCoId && next.status !== cur.status) {
         await db.update(costChangeOrders).set({ status: next.status }).where(eq(costChangeOrders.id, next.contractCoId));
       }
-      await saveCos(id, project, a, req, `${next.number} ${next.status !== cur.status ? next.status : 'changed'}`);
+      await saveCos(id, project, a, req, `${next.number} ${next.status !== cur.status ? next.status : 'changed'}${linkNote}`);
       res.json(await loadProjectBundle(id));
-    } catch (e) { fail(res, e, 'update the change order'); }
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'update the change order');
+    }
   });
 
   app.delete('/api/cost-projects/:id/budget-cos/:coId', ...canEdit, async (req, res) => {
@@ -914,6 +952,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.supplementalLabel !== undefined) next.supplementalLabel = String(b.supplementalLabel ?? '').trim().slice(0, 60);
       await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'save the settings'); }
@@ -1774,6 +1813,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         contractId: num(req.body?.contractId),
         changeOrderId: num(req.body?.changeOrderId),
         directCostId: num(req.body?.directCostId),
+        budgetCoId: req.body?.budgetCoId ? String(req.body.budgetCoId).slice(0, 40) : null,
         docType: DOC_TYPES.some(([k]) => k === req.body?.docType) ? String(req.body.docType) : null,
         originalName: file.originalname,
         mimeType: file.mimetype,

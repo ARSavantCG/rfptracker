@@ -2370,6 +2370,8 @@ export const costDocuments = pgTable("cost_documents", {
   contractId: integer("contract_id"),
   changeOrderId: integer("change_order_id"),
   directCostId: integer("direct_cost_id"),
+  /** A budget change order's backup (PCO, quote, email). Budget COs live in JSON, so their id is text. */
+  budgetCoId: text("budget_co_id"),
   // What it is in a pay app package: g702 | conditional | unconditional | invoice | other.
   docType: text("doc_type"),
   originalName: text("original_name").notNull(),

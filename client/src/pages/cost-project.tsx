@@ -18,6 +18,7 @@ import { ArrowLeft, Printer, Plus, Paperclip, AlertTriangle, Trash2 } from 'luci
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BudgetPanel, TeamRollUp } from '@/components/cost/budget-panel';
 import { BudgetChangeOrders } from '@/components/cost/budget-change-orders';
+import { FundingSummary } from '@/components/cost/funding-summary';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
@@ -224,6 +225,7 @@ export default function CostProject() {
           </TabsContent>
 
           <TabsContent value="budget" className="mt-4 space-y-4">
+            <FundingSummary bundle={b} projectId={id} />
             <BudgetPanel bundle={b} projectId={id} />
             <BudgetChangeOrders bundle={b} projectId={id} />
             <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} source={b.cmSettings.source} />

@@ -80,12 +80,15 @@ export interface DocumentRow {
   contractId: number | null;
   changeOrderId: number | null;
   directCostId: number | null;
+  budgetCoId?: string | null;
   docType: string | null;
   originalName: string;
   sizeBytes: number | null;
   storage: 'object' | 'local';
   createdAt: string;
 }
+
+import type { BudgetBreakdownRow, fundingSources } from '@shared/cost-budget-approval';
 
 export interface ProjectBundle {
   project: CostProjectRow;
@@ -94,7 +97,12 @@ export interface ProjectBundle {
   sovLines: SovLineRow[];
   applications: ApplicationRow[];
   documents: DocumentRow[];
-  summary: BudgetVsActual & { rows: Array<BudgetVsActual['rows'][number] & { priced: number | null; originalBudget: number | null }> };
+  summary: BudgetVsActual & { rows: Array<BudgetVsActual['rows'][number] & {
+    priced: number | null; originalBudget: number | null;
+    original: number; revisions: number; transfers: number; changeOrders: number;
+  }> };
+  breakdown: BudgetBreakdownRow[];
+  funding: ReturnType<typeof fundingSources> & { label: string; confirmed: boolean };
   g702ByContract: Record<number, G702>;
   approval: ApprovalView;
   payments: PaymentRow[];

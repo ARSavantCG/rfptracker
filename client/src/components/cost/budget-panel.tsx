@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
-import { rollUp, transferNet } from '@shared/cost-budget-approval';
+import { rollUp, transferNet, DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
 import { MoneyInput, PercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, BUCKET_LABEL, type ProjectBundle } from './types';
@@ -95,7 +95,13 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
   const unplaced = r2(discount - placed);
   const lafBudget = r2(priced - discount);
   const current = r2(lafBudget + a.coSummary.approved);
-  const showDiscount = typedLaf != null || placed !== 0;
+  // A discount column only earns its place when there is a discount (or premium) to put on lines.
+  const showDiscount = (typedLaf != null && (!confirmed || Math.abs(discount) >= 0.005)) || placed !== 0;
+  // Once confirmed: the original per line, and anything edited since as a revision.
+  const origBy = useMemo(() => new Map(bundle.breakdown.map((r) => [r.key, r.original])), [bundle.breakdown]);
+  const lineBudget = (r: Row) => r2(num(r.priced) - num(r.discount) + (xfer.get(r.key) ?? 0) + (coByKey.get(r.key) ?? 0));
+  const revisionOf = (r: Row) => confirmed ? r2(lineBudget(r) - (origBy.get(r.key) ?? 0) - (xfer.get(r.key) ?? 0) - (coByKey.get(r.key) ?? 0)) : 0;
+  const hasRev = confirmed && rows.some((r) => Math.abs(revisionOf(r)) >= 0.005);
 
   const dirty = JSON.stringify(rows) !== JSON.stringify(fromServer()) || laf !== serverLaf();
   const update = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -172,21 +178,23 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             <MoneyInput id="laf-total" className="h-9 font-semibold" value={laf} onValueChange={setLaf} />
           </div>
           <Stat label={discount >= 0 ? 'Deal discount' : 'Deal premium'} value={typedLaf == null ? '—' : money(Math.abs(discount))} tone="text-indigo-800" />
-          {hasCos && <Stat label="Change orders" value={signedMoney(a.coSummary.approved)} />}
-          {hasCos && <Stat label="Current budget" value={money(current)} />}
+          {hasCos && <Stat label="Approved COs" value={signedMoney(a.coSummary.approved)} />}
+          {hasCos && <Stat label={confirmed ? 'Revised budget' : 'Budget with COs'} value={money(current)} />}
         </div>
 
         <div className="overflow-x-auto border rounded-md">
-          <table className="w-full text-sm min-w-[900px]">
+          <table className={`w-full text-sm ${confirmed ? 'min-w-[1180px]' : 'min-w-[900px]'}`}>
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
-                <th className="px-2 py-1.5">Budget line</th>
+                <th className="px-2 py-1.5 min-w-[220px]">Budget line</th>
                 <th className="px-2 py-1.5 w-40">Contract</th>
                 <th className="px-2 py-1.5 w-36 text-right">Priced</th>
                 {showDiscount && <th className="px-2 py-1.5 w-36 text-right">Discount</th>}
+                {confirmed && <th className="px-2 py-1.5 w-32 text-right" title="As confirmed">Original</th>}
+                {hasRev && <th className="px-2 py-1.5 w-28 text-right" title="Lines edited after the budget was confirmed">Revisions</th>}
                 {hasXfer && <th className="px-2 py-1.5 w-32 text-right">Transfers</th>}
-                {hasCos && <th className="px-2 py-1.5 w-32 text-right">Change orders</th>}
-                <th className="px-2 py-1.5 w-36 text-right">Budget</th>
+                {hasCos && <th className="px-2 py-1.5 w-32 text-right">Approved COs</th>}
+                <th className="px-2 py-1.5 w-36 text-right">{confirmed ? 'Revised budget' : 'Budget'}</th>
                 <th className="px-2 py-1.5 w-28 text-right">Tenant pays</th>
                 <th className="w-9" />
               </tr>
@@ -207,6 +215,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                     </td>
                     <td className="px-1 py-1"><MoneyInput className="h-8" value={r.priced} aria-label="Priced" onValueChange={(v) => update(i, { priced: v })} /></td>
                     {showDiscount && <td className="px-1 py-1"><MoneyInput className="h-8" value={r.discount} aria-label="Discount" onValueChange={(v) => update(i, { discount: v })} /></td>}
+                    {confirmed && <td className="px-2 py-1 text-right tabular-nums text-gray-700">{signedMoney(origBy.get(r.key) ?? 0)}</td>}
+                    {hasRev && <td className="px-2 py-1 text-right tabular-nums text-gray-700">{revisionOf(r) ? signedMoney(revisionOf(r)) : ''}</td>}
                     {hasXfer && <td className={`px-2 py-1 text-right tabular-nums ${tx < 0 ? 'text-red-700' : 'text-green-700'}`}>{tx ? signedMoney(tx) : ''}</td>}
                     {hasCos && <td className="px-2 py-1 text-right tabular-nums text-gray-700">{co ? signedMoney(co) : ''}</td>}
                     <td className="px-2 py-1 text-right tabular-nums font-medium">{signedMoney(budget)}</td>
@@ -228,6 +238,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 <tr className="bg-indigo-50/60 border-t">
                   <td className="px-2 py-1.5 italic text-indigo-900" colSpan={3}>{unplaced >= 0 ? 'Deal discount' : 'Deal premium'} — not on a line yet</td>
                   <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{money(unplaced)}</td>
+                  {confirmed && <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{signedMoney(origBy.get(DEAL_DISCOUNT_KEY) ?? 0)}</td>}
+                  {hasRev && <td />}
                   {hasXfer && <td />}
                   {hasCos && <td />}
                   <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{signedMoney(-unplaced)}</td>
@@ -236,7 +248,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
               )}
               {Math.abs(coOther) >= 0.005 && (
                 <tr className="border-t">
-                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0)}>CM fee on change orders (no CM line in this budget)</td>
+                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>CM fee on change orders (no CM line in this budget)</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td colSpan={2} />
@@ -248,6 +260,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 <td className="px-2 py-2" colSpan={2}>Total{typedLaf != null && !hasCos ? ' (= LAF)' : ''}</td>
                 <td className="px-2 py-2 text-right tabular-nums">{money(priced)}</td>
                 {showDiscount && <td className="px-2 py-2 text-right tabular-nums">{money(discount)}</td>}
+                {confirmed && <td className="px-2 py-2 text-right tabular-nums">{money(a.originalTotal ?? 0)}</td>}
+                {hasRev && <td className="px-2 py-2 text-right tabular-nums">{signedMoney(r2(rows.reduce((t, r) => t + revisionOf(r), 0)))}</td>}
                 {hasXfer && <td className="px-2 py-2 text-right tabular-nums text-gray-500">{money(0)}</td>}
                 {hasCos && <td className="px-2 py-2 text-right tabular-nums">{signedMoney(a.coSummary.approved)}</td>}
                 <td className="px-2 py-2 text-right tabular-nums">{money(current)}</td>

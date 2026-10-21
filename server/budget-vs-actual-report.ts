@@ -128,7 +128,29 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
   </tbody></table>`;
 }
 
-type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null };
+type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null; original?: number; revisions?: number; transfers?: number; changeOrders?: number };
+
+export type FundingView = { label: string; confirmed: boolean; original: number; revisions: number; tenant: number; absorbed: number; revised: number; projectedCost: number; projectedOverrun: number; supplemental: number; totalFunding: number; projectedVariance: number; pendingChangeOrders: number };
+
+/** Sources of funds and where the budget stands, side by side. */
+function fundingBox(f?: FundingView | null): string {
+  if (!f) return "";
+  const r = (name: string, v: number, sub = "", cls = "") => `<tr class="${cls}"><td>${escapeHtml(name)}${sub ? `<div class="muted" style="font-size:9px">${escapeHtml(sub)}</div>` : ""}</td>${cell(v)}</tr>`;
+  const over = f.projectedVariance < -0.005;
+  return `<div style="display:flex;gap:18px;margin:0 0 12px">
+    <table class="t" style="flex:1"><thead><tr><th class="l">Sources of Funds</th><th>Amount</th></tr></thead><tbody>
+      ${r(f.confirmed ? "Approved budget (capital partner)" : "Budget (draft)", f.original)}
+      ${Math.abs(f.revisions) >= 0.005 ? r("Budget revisions", f.revisions, "Lines edited after confirmation") : ""}
+      ${r("Tenant-funded change orders", f.tenant, "Billable to the tenant, CM fee included")}
+      ${r(f.label, f.supplemental, `Absorbed change orders ${money2(f.absorbed)}${f.projectedOverrun > 0.005 ? ` + projected beyond budget ${money2(f.projectedOverrun)}` : ""}`)}
+      ${r("Total funding", f.totalFunding, "", "total")}
+    </tbody></table>
+    <table class="t" style="flex:1"><thead><tr><th class="l">Budget Position</th><th>Amount</th></tr></thead><tbody>
+      ${r("Original budget", f.original)}${r("Revised budget", f.revised)}
+      ${r("Projected cost", f.projectedCost, "Committed plus pending change orders")}
+      <tr class="total"><td>${over ? "Projected over revised budget" : "Projected under revised budget"}</td><td class="num${over ? " neg" : ""}">${money2(Math.abs(f.projectedVariance))}</td></tr>
+    </tbody></table></div>`;
+}
 
 export function renderBudgetVsActualHtml(input: {
   project: CostReportProject;
@@ -139,6 +161,7 @@ export function renderBudgetVsActualHtml(input: {
   cmFee?: CmFeeView | null;
   budgetCos?: BudgetCoView[];
   transfers?: Array<{ date: string; amount: number; from: string; to: string; note: string }>;
+  funding?: FundingView | null;
   generatedBy?: string | null;
 }): string {
   const { summary: s, project, approval } = input;
@@ -159,20 +182,25 @@ export function renderBudgetVsActualHtml(input: {
   }
   if (!s.reconciles) notes.push("Lines do not add back to the contracts. Check Unallocated lines on the project page.");
 
-  // The Original column earns its width only once the budget has moved since it was confirmed.
-  const showOriginal = approval?.status === "confirmed"
-    && allRows.some((r) => Math.abs((r.originalBudget ?? 0) - r.budget) >= 0.005);
-  const cols = showOriginal ? 9 : 8;
+  // Original → revised columns earn their width once something has moved a line.
+  const anyMv = (k: "revisions" | "transfers" | "changeOrders") => allRows.some((r) => Math.abs(r[k] ?? 0) >= 0.005);
+  const showRev = anyMv("revisions"), showTx = anyMv("transfers"), showCo = anyMv("changeOrders");
+  const showOriginal = showRev || showTx || showCo;
+  const cols = 8 + (showOriginal ? 1 : 0) + (showRev ? 1 : 0) + (showTx ? 1 : 0) + (showCo ? 1 : 0);
+  const mv = (v: number | undefined) => (v && Math.abs(v) >= 0.005 ? cell(v, "muted") : `<td class="num muted"></td>`);
+  const moves = (r: BvaRow) => (showOriginal ? cell(r.original ?? 0, "muted") : "") + (showRev ? mv(r.revisions) : "") + (showTx ? mv(r.transfers) : "") + (showCo ? mv(r.changeOrders) : "");
 
   const row = (r: BvaRow) => {
     const cls = r.key === UNALLOCATED_KEY ? ' class="unalloc"' : r.key === DEAL_DISCOUNT_KEY ? ' class="deal"' : "";
-    return `<tr${cls}><td>${escapeHtml(r.description)}</td>${showOriginal ? cell(r.originalBudget ?? 0, "muted") : ""}${cell(r.budget)}${cell(r.committed)}${cell(r.pending)}${cell(r.toDate)}
+    return `<tr${cls}><td>${escapeHtml(r.description)}</td>${moves(r)}${cell(r.budget)}${cell(r.committed)}${cell(r.pending)}${cell(r.toDate)}
       ${cell(r.variance, negCls(r.variance))}${cell(r.committedTenant)}${cell(r.committedOutstanding)}</tr>`;
   };
   const sums = (rows: BvaRow[], label: string, cls: string) => {
     const sum = (f: (r: BvaRow) => number) => rows.reduce((a, r) => a + f(r), 0);
     const v = sum((r) => r.variance);
-    return `<tr class="${cls}"><td>${escapeHtml(label)}</td>${showOriginal ? cell(sum((r) => r.originalBudget ?? 0)) : ""}${cell(sum((r) => r.budget))}${cell(sum((r) => r.committed))}${cell(sum((r) => r.pending))}
+    const m = (showOriginal ? cell(sum((r) => r.original ?? 0)) : "") + (showRev ? cell(sum((r) => r.revisions ?? 0)) : "")
+      + (showTx ? cell(sum((r) => r.transfers ?? 0)) : "") + (showCo ? cell(sum((r) => r.changeOrders ?? 0)) : "");
+    return `<tr class="${cls}"><td>${escapeHtml(label)}</td>${m}${cell(sum((r) => r.budget))}${cell(sum((r) => r.committed))}${cell(sum((r) => r.pending))}
       ${cell(sum((r) => r.toDate))}${cell(v, negCls(v))}${cell(sum((r) => r.committedTenant))}${cell(sum((r) => r.committedOutstanding))}</tr>`;
   };
   const group = (key: string, label: string) => {
@@ -183,10 +211,12 @@ export function renderBudgetVsActualHtml(input: {
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Budget vs Actual</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
+    ${showOriginal ? "@page { size: Letter landscape; margin: 0.5in; }" : ""}
   </style></head><body>
   ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes })}
+  ${fundingBox(input.funding)}
   <table class="t"><thead><tr>
-    <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}<th>${showOriginal ? "Current Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
+    <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}${showRev ? "<th>Revisions</th>" : ""}${showTx ? "<th>Transfers</th>" : ""}${showCo ? "<th>Approved COs</th>" : ""}<th>${showOriginal ? "Revised Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
     <th>Variance</th><th>Tenant Share</th><th>Outstanding Share</th></tr></thead><tbody>
     ${BUCKETS.map(([k, l]) => group(k, l)).join("")}
     ${sums(allRows, "Total", "total")}
@@ -198,7 +228,9 @@ export function renderBudgetVsActualHtml(input: {
     ${[
       ...endNotes,
       ...(approval && Math.abs(approval.undistributed) >= 0.005 ? ["The Deal Discount line is the part of the LAF cut not yet put on a budget line."] : []),
-      "Committed = contracts plus approved change orders. Variance = Budget less Committed; in parentheses when over budget.",
+      showOriginal
+        ? "Revised Budget = Original + Revisions + Transfers + Approved COs. Committed = contracts plus approved change orders. Variance = Revised Budget less Committed; in parentheses when over budget."
+        : "Committed = contracts plus approved change orders. Variance = Budget less Committed; in parentheses when over budget.",
       `Spent to Date is work completed and stored to date, before retainage. Retainage held: ${money2(s.totals.retainageHeld)}.`,
       ...(input.cmFee ? [`CM fee at ${fmtPct(input.cmFee.pct)} of work billed on every other budget line.`] : []),
       ...(input.transfers || []).map((t) => `Transfer ${longDate(t.date)}: ${money2(t.amount)} from ${t.from} to ${t.to}${t.note ? ` — ${t.note}` : ""}. The total is unchanged.`),
@@ -533,6 +565,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.send(renderBudgetVsActualHtml({
         project: b.project, ...(await propertyFacts(b.project)),
         summary: b.summary,
+        funding: b.funding.confirmed || b.approval.changeOrders.length ? b.funding : null,
         // Confirmations made before names were stored carry an email address;
         // when it is the reader's own, print the name.
         approval: (() => {
@@ -650,7 +683,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
             const apps = b.positionInput.applications.filter((a) => a.contractId === c.id);
             if (!apps.length) return null;
             const last = apps.reduce((m, a) => (a.number > m.number ? a : m), apps[0]);
-            return { contract: c.counterparty, number: last.number, date: last.date, billedToDate: b.g702ByContract[c.id]?.completedAndStored ?? 0 };
+            return { contract: c.counterparty, number: last.docNumber ?? last.number, date: last.date, billedToDate: b.g702ByContract[c.id]?.completedAndStored ?? 0 };
           }).filter(Boolean) as CmInvoiceView["payApps"] };
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -658,6 +691,37 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
     } catch (e: any) {
       console.error("CM invoice report error:", e);
       res.status(500).json({ message: "Failed to generate the invoice", error: e?.message });
+    }
+  });
+
+  // One billable budget change order, laid out to send the tenant for signature.
+  app.get("/api/reports/tenant-co/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const co = b.approval.changeOrders.find((c) => c.id === String(req.query.co || ""));
+      if (!co) return res.status(404).json({ message: "Change order not found" });
+      const t = b.approval.changeOrderTotals.find((x) => x.id === co.id) ?? { work: 0, cm: 0, total: 0 };
+      const lineName = new Map(b.project.baseline.map((l: any) => [l.key, l.description]));
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderTenantCoHtml({
+        project: b.project, ...(await propertyFacts(b.project)),
+        co: {
+          number: co.number, title: co.title, date: co.date, status: co.status, cmFeePct: co.cmFee ? co.cmFeePct : 0,
+          lines: co.lines.map((l) => ({ budgetLine: String(lineName.get(l.key) ?? ""), description: l.description, amount: l.amount })),
+          work: t.work, cm: t.cm, total: t.total,
+          backup: b.documents.filter((d: any) => d.budgetCoId === co.id).map((d: any) => d.originalName),
+        },
+        billTo: String(((b.project as any).settings || {}).billTo || b.project.tenantName || ""),
+        previousApproved: b.approval.changeOrders.filter((c) => c.billable && c.status === "approved" && c.id !== co.id)
+          .reduce((s2, c) => s2 + (b.approval.changeOrderTotals.find((x) => x.id === c.id)?.total ?? 0), 0),
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Tenant CO report error:", e);
+      res.status(500).json({ message: "Failed to generate the change order", error: e?.message });
     }
   });
 
@@ -684,4 +748,48 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });
+}
+
+/** A tenant change order: scope, cost of work, CM fee, total, signatures. */
+export function renderTenantCoHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  co: { number: string; title: string; date: string | null; status: string; cmFeePct: number;
+    lines: Array<{ budgetLine: string; description: string; amount: number }>; work: number; cm: number; total: number; backup: string[] };
+  billTo: string;
+  previousApproved: number;
+  generatedBy?: string | null;
+}): string {
+  const { co } = input;
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  info.push({ label: "Change Order", value: co.number });
+  info.push({ label: "Date", value: longDate(co.date) });
+  if (input.billTo && input.billTo.trim().toLowerCase() !== String(input.project.tenantName ?? "").trim().toLowerCase()) info.push({ label: "To", value: input.billTo });
+  const lines = co.lines.map((l) => `<tr><td>${escapeHtml(l.description || l.budgetLine)}${l.description && l.budgetLine ? `<div class="muted" style="font-size:9.5px">${escapeHtml(l.budgetLine)}</div>` : ""}</td>${cell(l.amount)}</tr>`).join("");
+  const sig = (who: string) => `<div style="flex:1"><div style="font-weight:700;font-size:11px;margin-bottom:28px">${escapeHtml(who)}</div>
+    <div style="border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Signature</div>
+    <div style="display:flex;gap:12px;margin-top:22px"><div style="flex:2;border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Name / Title</div>
+    <div style="flex:1;border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Date</div></div></div>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Change Order ${escapeHtml(co.number)}</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+  </style></head><body>
+  ${reportHeaderHtml({ title: `Change Order ${co.number}`, eyebrow: "Tenant Change Order", info })}
+  ${co.title ? `<p style="font-size:13px;margin:0 0 10px"><strong>Scope:</strong> ${escapeHtml(co.title)}</p>` : ""}
+  <table class="t"><thead><tr><th class="l">Description</th><th>Amount</th></tr></thead><tbody>
+    ${lines}
+    <tr class="sub"><td>Cost of work</td>${cell(co.work)}</tr>
+    ${co.cm ? `<tr><td>Construction management fee (${fmtPct(co.cmFeePct)})</td>${cell(co.cm)}</tr>` : ""}
+    <tr class="total"><td>Change order total</td>${cell(co.total)}</tr>
+  </tbody></table>
+  <table class="t" style="margin-top:12px;width:60%"><tbody>
+    <tr><td>Change orders previously approved</td>${cell(input.previousApproved)}</tr>
+    <tr><td>This change order</td>${cell(co.total)}</tr>
+    <tr class="total"><td>Total approved change orders with this one</td>${cell(input.previousApproved + co.total)}</tr>
+  </tbody></table>
+  ${co.backup.length ? `<h3 class="sec">Backup attached</h3><ol class="notes">${co.backup.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ol>` : ""}
+  <p style="font-size:11px;margin:16px 0 22px">Signing below approves this change order and the amount above, to be billed with the project's costs.</p>
+  <div style="display:flex;gap:40px">${sig("Approved by (Tenant)")}${sig("Submitted by")}</div>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
 }

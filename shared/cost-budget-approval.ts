@@ -454,3 +454,75 @@ export function applyTransfers(lines: BaselineLine[], transfers: readonly Budget
   const net = transferNet(transfers.filter((t) => keys.has(t.fromKey) && keys.has(t.toKey)));
   return lines.map((l) => (net.has(l.key) ? { ...l, budget: r2(num(l.budget) + (net.get(l.key) ?? 0)) } : l));
 }
+
+// ------------------------------------------------------- revised budget
+
+export type BudgetBreakdownRow = {
+  key: string; description: string; bucket: string;
+  /** As confirmed. Draft: priced less discount. */
+  original: number;
+  /** Edits made to the line after it was confirmed. */
+  revisions: number;
+  transfers: number;
+  /** Approved budget change orders on the line (CM fee onto the CM line). */
+  changeOrders: number;
+  revised: number;
+};
+
+/**
+ * Original → revised, line by line: what moved each line, so "why is this
+ * line at $260k" reads off the row. Revised is the budget everything is
+ * measured against; the four movements add back to it exactly.
+ */
+export function budgetBreakdown(baseline: readonly BaselineLine[], a: BudgetApproval, cmKey: string | null = null): BudgetBreakdownRow[] {
+  const all = effectiveBaseline(baseline, a, cmKey);
+  const noCo = effectiveBaseline(baseline, { ...a, changeOrders: [] }, cmKey);
+  const bare = effectiveBaseline(baseline, { ...a, changeOrders: [], transfers: [] }, cmKey);
+  const val = (rows: BaselineLine[], k: string) => num(rows.find((r) => r.key === k)?.budget);
+  const confirmed = a.status === 'confirmed' && a.original != null;
+  const orig = new Map((a.original || []).map((o) => [o.key, o]));
+  const keys: string[] = all.map((r) => r.key);
+  if (confirmed) for (const o of a.original!) if (!keys.includes(o.key)) keys.push(o.key);
+  return keys.map((k) => {
+    const row = all.find((r) => r.key === k);
+    const o = orig.get(k);
+    const revised = r2(val(all, k));
+    const changeOrders = r2(val(all, k) - val(noCo, k));
+    const transfers = r2(val(noCo, k) - val(bare, k));
+    const original = confirmed ? r2(o?.budget ?? 0) : r2(val(bare, k));
+    return {
+      key: k, description: row?.description ?? o?.description ?? 'Removed line', bucket: row?.bucket ?? o?.bucket ?? 'misc',
+      original, transfers, changeOrders, revised,
+      revisions: r2(revised - original - transfers - changeOrders),
+    };
+  });
+}
+
+export const SUPPLEMENTAL_DEFAULT = 'Supplemental Funding';
+
+/**
+ * Where the revised budget's money comes from. The capital partner's
+ * approved budget; the tenant, for change orders billed to them; and
+ * supplemental funding for what is absorbed — approved absorbed change
+ * orders now, and any projected cost beyond the revised budget.
+ */
+export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApproval, cost: { committed: number; pending: number }) {
+  const s = coSummary(a.changeOrders);
+  const original = r2(rows.reduce((t, r) => t + r.original, 0));
+  const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
+  const transfers = r2(rows.reduce((t, r) => t + r.transfers, 0));
+  const revised = r2(rows.reduce((t, r) => t + r.revised, 0));
+  const tenant = s.approvedBillable;
+  const absorbed = s.approvedAbsorbed;
+  const projectedCost = r2(cost.committed + cost.pending);
+  const projectedOverrun = r2(Math.max(0, projectedCost - revised));
+  return {
+    original, revisions, transfers, tenant, absorbed, revised,
+    projectedCost, projectedOverrun,
+    supplemental: r2(absorbed + projectedOverrun),
+    /** Revised budget plus anything projected beyond it. */
+    totalFunding: r2(revised + projectedOverrun),
+    projectedVariance: r2(revised - projectedCost),
+    pendingChangeOrders: s.pending,
+  };
+}

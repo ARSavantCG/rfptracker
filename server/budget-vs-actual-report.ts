@@ -997,15 +997,16 @@ export function renderTenantCoHtml(input: {
   info.push({ label: "Change Order", value: co.number });
   info.push({ label: "Date", value: longDate(co.date) });
   if (input.billTo && input.billTo.trim().toLowerCase() !== String(input.project.tenantName ?? "").trim().toLowerCase()) info.push({ label: "To", value: input.billTo });
-  const lines = co.lines.map((l) => `<tr><td>${escapeHtml(l.description || l.budgetLine)}${l.description && l.budgetLine ? `<div class="muted" style="font-size:9.5px">${escapeHtml(l.budgetLine)}</div>` : ""}</td>${cell(l.amount)}</tr>`).join("");
+  // The tenant sees what the work is, not how it maps to our budget lines.
+  const lines = co.lines.map((l) => `<tr><td>${escapeHtml(l.description || l.budgetLine)}</td>${cell(l.amount)}</tr>`).join("");
   const sig = (who: string) => `<div style="flex:1"><div style="font-weight:700;font-size:11px;margin-bottom:28px">${escapeHtml(who)}</div>
     <div style="border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Signature</div>
     <div style="display:flex;gap:12px;margin-top:22px"><div style="flex:2;border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Name / Title</div>
     <div style="flex:1;border-top:1px solid #111827;padding-top:3px;font-size:10px;color:#6b7280">Date</div></div></div>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Change Order ${escapeHtml(co.number)}</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Tenant Change Order ${escapeHtml(co.number)}</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
-  ${reportHeaderHtml({ title: `Change Order ${co.number}`, eyebrow: "Tenant Change Order", info })}
+  ${reportHeaderHtml({ title: "Tenant Change Order", info })}
   ${co.title ? `<p style="font-size:13px;margin:0 0 10px"><strong>Scope:</strong> ${escapeHtml(co.title)}</p>` : ""}
   <table class="t"><thead><tr><th class="l">Description</th><th>Amount</th></tr></thead><tbody>
     ${lines}

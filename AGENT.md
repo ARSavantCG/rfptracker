@@ -162,3 +162,4 @@ and live test output are proof. The gold standard is: click the button and watch
 ## Precise tenant shares (2026-10-21)
 - Tenant shares (link pct, line tenantPct) keep up to 10 decimals (normalizeCO pct helper, POST vendorLinks, PATCH links). `SharePercentInput` stores the typed value, shows 2 decimals.
 - Vendor rows (new form and the row under each tenant CO) have a "Tenant pays" dollars box: typing dollars sets pct = dollars ÷ cost × 100 exactly.
+- (2026-10-21) Tenant CO print: banner 'Tenant Change Order' (number stays in the info rows), no eyebrow, no budget-line mapping under each line.

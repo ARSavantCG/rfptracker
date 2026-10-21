@@ -151,3 +151,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - No eyebrow, "CM Fees by Party" (no "— Earned to Date"), no notes under the party table. Landscape.
 - Columns: Party | Rate | Original Budget (fee figured on) | Original Fee | Approved Change Orders (subject to fee, + pending) | Change Order Fees (+ pending) | Total Anticipated Fees | Earned to Date | Invoiced | Billable | Remaining to Bill (= anticipated − invoiced).
 - Original budget = Σ breakdown (revised − changeOrders) excluding CM lines (was committed). coTotals now returns partnerBase/tenantFeeBase; projection carries coBase/pendingBase. Same columns on the Reports tab.
+- (2026-10-21) Original budget INCLUDES the CM fee: origTotal = Σ(revised − changeOrders) incl. CM line (excl. Supplemental CM line); base = origTotal ÷ (1 + partner rate); original fee = origTotal − base. Accordia: $1,466,500 → $1,427,250.61 + $39,249.39.

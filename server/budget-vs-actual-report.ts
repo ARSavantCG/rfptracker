@@ -197,7 +197,7 @@ export function renderCmFeeReportHtml(input: {
   ${reportHeaderHtml({ title: "CM Fee Report", info })}
 
   <h3 class="sec">CM Fees by Party</h3>
-  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Budget<div style="font-weight:400">fee figured on</div></th><th>Original Fee</th>
+  <table class="t"><thead><tr><th class="l">Party</th><th>Rate</th><th>Original Budget<div style="font-weight:400">less the CM fee</div></th><th>Original Fee</th>
     <th>Approved Change Orders<div style="font-weight:400">subject to fee</div></th><th>Change Order Fees</th><th>Total Anticipated Fees</th>
     <th>Earned to Date</th><th>Invoiced</th><th>Billable</th><th>Remaining to Bill</th></tr></thead><tbody>
     ${party("Capital partner", c.billTo, c)}

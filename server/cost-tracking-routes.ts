@@ -366,10 +366,11 @@ export async function loadProjectBundle(projectId: number) {
     // Projected at completion, so the team sees what's still to come, not only what's billable now.
     const cosApproved = approval.changeOrders.filter((c) => c.status === 'approved');
     const cosPending = approval.changeOrders.filter((c) => c.status === 'pending');
-    // The original fee is figured on the budget before change orders (less the CM fee lines themselves):
-    // the full amount the fee was calculated on.
+    // The original budget (before change orders) includes the CM fee, so the fee is backed out of it at
+    // the partner's rate: base = budget ÷ (1 + rate), fee = budget − base. E.g. $1,466,500 at 2.75%.
     const notCm = (k: string) => k !== cmSettings.key && k !== CO_CM_KEY;
-    const origBase = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => t + r.revised - r.changeOrders, 0));
+    const origTotal = r2c(breakdown.filter((r) => r.key !== CO_CM_KEY).reduce((t, r) => t + r.revised - r.changeOrders, 0));
+    const origBase = r2c(origTotal / (1 + cmSettings.pct / 100));
     const origTenantBase = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => {
       const share = Number(baseline.find((x) => x.key === r.key)?.tenantSharePct ?? 100);
       return t + ((r.revised - r.changeOrders) * share) / 100;
@@ -378,7 +379,7 @@ export async function loadProjectBundle(projectId: number) {
     const sumCo = (cs: typeof cosApproved, f: (t: ReturnType<typeof coTotals>) => number) => r2c(cs.reduce((t, c) => t + f(coTotals(c)), 0));
     const projection = {
       fee: {
-        original: r2c((origBase * cmSettings.pct) / 100), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
+        original: r2c(origTotal - origBase), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
         pending: sumCo(cosPending, (t) => t.cmAbsorbed), budget: r2c(budgetOf(cmSettings.key) + budgetOf(CO_CM_KEY)), base: origBase,
         // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.
         // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.

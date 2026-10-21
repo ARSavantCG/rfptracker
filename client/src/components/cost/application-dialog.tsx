@@ -19,7 +19,7 @@ import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucid
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
-import { g702For, lineProgress, newAppNumbers, type Application } from '@shared/cost-tracking';
+import { g702For, lineProgress, newAppNumbers, spreadCents, type Application } from '@shared/cost-tracking';
 import {
   money, projectKey,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow,
@@ -62,6 +62,8 @@ export function ApplicationDialog({
   const [file, setFile] = useState<File | null>(null);
   const ai = useAiStatus();
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  /** The contractor's G702 line 5, typed to match their retainage to the cent. */
+  const [retTarget, setRetTarget] = useState('');
   const [aiCells, setAiCells] = useState<Record<number, AiCell>>({});
   const [setupDone, setSetupDone] = useState(false);
   const [added, setAdded] = useState(0);
@@ -93,6 +95,7 @@ export function ApplicationDialog({
     setFile(null);
     setAiResult(null);
     setAiCells({});
+    setRetTarget('');
     setSetupDone(false);
     setPick({ lines: true, opening: true, paid: true, retainage: true });
     const d: Record<number, Draft> = {};
@@ -117,8 +120,20 @@ export function ApplicationDialog({
     }
     return num(d.work);
   };
-  const autoRetainage = (l: SovLineRow) =>
-    Math.round(((prior.get(l.id)?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '')) * rate * 100) / 100;
+  // Retainage left blank: the contract rate on work to date, figured on the total
+  // and spread to the cent (as a G703 is), so the lines add to the total exactly.
+  // Their G702 line 5, when typed, is the total instead.
+  const toDateOf = (l: SovLineRow) => (prior.get(l.id)?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');
+  const autoMap = useMemo(() => {
+    const auto = contractLines.filter((l) => !(draft[l.id]?.retainage ?? '').trim());
+    const items = auto.map((l) => ({ id: l.id, exact: toDateOf(l) * rate })).filter((x) => Math.abs(x.exact) >= 0.0001);
+    const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
+    const target = retTarget.trim()
+      ? Math.round((num(retTarget) - typed) * 100) / 100
+      : Math.round(items.reduce((s, x) => s + x.exact, 0) * 100) / 100;
+    return spreadCents(items, target);
+  }, [contractLines, draft, rate, retTarget, entry, prior]);
+  const autoRetainage = (l: SovLineRow) => autoMap.get(l.id) ?? 0;
   const retainageOf = (l: SovLineRow) => {
     const typed = draft[l.id]?.retainage;
     return typed === undefined || typed === '' ? autoRetainage(l) : num(typed);
@@ -301,6 +316,29 @@ export function ApplicationDialog({
     onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
   });
 
+  /** Subtotal across a set of lines, for every column of the grid. */
+  const totalsRow = (label: string, ls: SovLineRow[], cls: string) => {
+    const sum = (f: (l: SovLineRow) => number) => Math.round(ls.reduce((s, l) => s + f(l), 0) * 100) / 100;
+    const sched = sum((l) => l.scheduledValue);
+    const prev = sum((l) => (prior.get(l.id)?.completed ?? 0) + (prior.get(l.id)?.stored ?? 0));
+    const entered = sum((l) => (entry === 'period' ? workOf(l) : (draft[l.id]?.toDate ? num(draft[l.id].toDate) : 0)));
+    const stored = sum((l) => num(draft[l.id]?.stored ?? ''));
+    const td = sum(toDateOf);
+    const ret = sum(retainageOf);
+    return (
+      <tr className={cls}>
+        <td className="px-2 py-1.5">{label}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(sched)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(prev)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(entered)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(stored)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(td)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{sched ? `${((td / sched) * 100).toFixed(2)}%` : '—'}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{money(ret)}</td>
+      </tr>
+    );
+  };
+
   if (!contract) return null;
   const groups = [
     { label: 'Base contract', lines: contractLines.filter((l) => l.changeOrderId == null) },
@@ -449,9 +487,9 @@ export function ApplicationDialog({
           <span>— whichever column is easier to copy off the G703. Retainage left blank is {Number(contract.retainagePct).toFixed(2)}% of work to date.</span>
         </div>
 
-        <div className="overflow-x-auto border rounded-md">
+        <div className="overflow-auto border rounded-md max-h-[60vh]">
           <table className="w-full text-sm min-w-[860px]">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10 shadow-[0_1px_0_#e5e7eb]">
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-600">
                 <th className="px-2 py-1.5">Description</th>
                 <th className="px-2 py-1.5 text-right">Scheduled</th>
@@ -507,8 +545,12 @@ export function ApplicationDialog({
                     </tr>
                   );
                 })}
+                {totalsRow(`${g.label.split(' — ')[0]} subtotal`, g.lines, 'bg-gray-50 border-t font-medium')}
               </tbody>
             ))}
+            <tfoot className="sticky bottom-0 z-10 bg-white shadow-[0_-1px_0_#374151]">
+              {totalsRow('Total', groups.flatMap((g) => g.lines), 'font-semibold')}
+            </tfoot>
           </table>
         </div>
 
@@ -528,9 +570,22 @@ export function ApplicationDialog({
                 ['9  Balance to finish', preview.balanceToFinish],
               ] as [string, number][]).map(([k, v]) => (
                 <div key={k} className={`flex justify-between gap-3 ${k.startsWith('8') ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                  <span>{k}</span><span className="tabular-nums">{money(v)}</span>
+                  <span>{k}</span><span className={`tabular-nums ${k.startsWith('5') && retTarget.trim() ? 'text-amber-800' : ''}`}>{money(v)}</span>
                 </div>
               ))}
+            </div>
+            <div className="mt-2 pt-2 border-t flex items-center gap-2 flex-wrap text-xs text-gray-700">
+              <span>Off by a cent? Type their line 5 retainage and the blank retainage boxes are spread to match it:</span>
+              <div className="w-36"><MoneyInput className={`h-7 text-xs ${retTarget.trim() ? 'border-amber-400 bg-amber-50' : ''}`} value={retTarget} onValueChange={setRetTarget} aria-label="Their line 5 retainage" /></div>
+              {retTarget.trim() && (
+                <>
+                  <span className="text-amber-800 font-medium">Edited · ours would be {money(Math.round(contractLines.reduce((s, l) => s + toDateOf(l) * rate, 0) * 100) / 100)}</span>
+                  <button className="text-blue-700 hover:underline" onClick={() => setRetTarget('')}>Clear</button>
+                </>
+              )}
+              {retTarget.trim() && Math.abs(num(retTarget) - (preview?.retainage ?? 0)) >= 0.005 && (
+                <span className="text-red-700">Every retainage box is typed in, so there is nothing to spread. Clear one to let it absorb the difference.</span>
+              )}
             </div>
             {(() => {
               const cs = preview.changeOrderSummary;

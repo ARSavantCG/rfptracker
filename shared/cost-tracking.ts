@@ -582,3 +582,32 @@ export function parseSovPaste(text: string): { lines: PastedSovLine[]; skipped: 
   }
   return { lines, skipped };
 }
+
+/**
+ * Spread a total across lines to the cent, the way a G703 does: each line
+ * gets its exact share rounded down, and the leftover cents go to the lines
+ * with the largest remainders. The lines then add to the total exactly, where
+ * rounding each line on its own can be a cent or two off.
+ */
+export function spreadCents(items: ReadonlyArray<{ id: number; exact: number }>, total: number): Map<number, number> {
+  const out = new Map<number, number>();
+  if (!items.length) return out;
+  const targetC = Math.round(total * 100);
+  const sign = targetC < 0 ? -1 : 1;
+  const parts = items.map((it) => {
+    const c = Math.abs(it.exact * 100);
+    const fl = Math.floor(c + 1e-7);
+    return { id: it.id, fl, rem: c - fl };
+  });
+  let left = Math.abs(targetC) - parts.reduce((s, p) => s + p.fl, 0);
+  // Largest remainder first; ties to the larger line.
+  const order = [...parts].sort((a, b) => b.rem - a.rem || b.fl - a.fl);
+  if (left >= 0) {
+    for (let i = 0; left > 0 && order.length; i = (i + 1) % order.length) { order[i].fl += 1; left -= 1; }
+  } else {
+    const desc = [...parts].sort((a, b) => b.fl - a.fl);
+    for (let i = 0; left < 0 && desc.length; i = (i + 1) % desc.length) { if (desc[i].fl > 0) { desc[i].fl -= 1; left += 1; } else if (desc.every((d) => d.fl === 0)) break; }
+  }
+  for (const p of parts) out.set(p.id, (sign * p.fl) / 100);
+  return out;
+}

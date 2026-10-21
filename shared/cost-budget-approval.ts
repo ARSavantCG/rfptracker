@@ -58,7 +58,18 @@ export interface OriginalLine {
 export interface BudgetCOLine {
   key: string;
   description: string;
+  /** Full cost on the budget line. */
   amount: number;
+  /** Share of the cost the tenant pays, 0–100. */
+  tenantPct: number;
+  /** The vendor change order the line was priced from, if any. */
+  fromCoId?: number | null;
+}
+/** A vendor (contract) change order behind a tenant change order, and the tenant's share of it. */
+export interface BudgetCOLink {
+  contractCoId: number;
+  contractId: number;
+  pct: number;
 }
 export interface BudgetCO {
   id: string;
@@ -66,16 +77,40 @@ export interface BudgetCO {
   title: string;
   date: string | null;
   status: 'pending' | 'approved' | 'void';
+  /** Default tenant share for typed lines: billable = 100%, not = 0%. */
   billable: boolean;
   lines: BudgetCOLine[];
   cmFee: boolean;
   cmFeePct: number;
-  /** The contractor's change order written from this one, if any. */
+  /** Vendor change orders priced into this one (any contracts). */
+  links: BudgetCOLink[];
+  /** Credit to the tenant (a concession), absorbed by us. */
+  credit: number;
+  /** Earn the CM fee on our share too, charged to the capital partner. */
+  cmOnAbsorbed: boolean;
+  /** Cost of work as first estimated, kept when vendor prices replace it. */
+  estimate: number | null;
+  /** Why the budget changed — the story told against the original. */
+  reason: CoReason;
+  /** First link, kept for older code paths. */
   contractId: number | null;
   contractCoId: number | null;
 }
 
+export const CO_REASONS = [
+  ['tenant', 'Tenant request'],
+  ['scope', 'Missed scope'],
+  ['unforeseen', 'Unforeseen condition'],
+  ['design', 'Design error / omission'],
+  ['code', 'Code / permit requirement'],
+  ['owner', 'Owner request'],
+  ['other', 'Other'],
+] as const;
+export type CoReason = typeof CO_REASONS[number][0];
+export const reasonLabel = (r: string) => CO_REASONS.find(([k]) => k === r)?.[1] ?? 'Other';
+
 export const CO_CM_KEY = '__co_cm_fee__';
+export const SUPPLEMENTAL_CM_LABEL = 'Supplemental CM Fee';
 
 export interface BudgetApproval {
   status: 'draft' | 'confirmed';
@@ -163,39 +198,77 @@ export function normalizeApproval(raw: any): BudgetApproval {
 export function normalizeCO(raw: any): BudgetCO | null {
   if (!raw || typeof raw !== 'object') return null;
   const status = ['pending', 'approved', 'void'].includes(raw.status) ? raw.status : 'pending';
+  const billable = raw.billable !== false;
+  const pct = (v: any, dflt: number) => (v === undefined || v === null || v === '' ? dflt : Math.max(0, Math.min(100, Math.round(num(v) * 100) / 100)));
+  const intOrNull = (v: any) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+  // Older change orders carry one contractor link and an all-or-nothing billable flag.
+  let links: BudgetCOLink[] = Array.isArray(raw.links) ? raw.links
+    .map((l: any) => ({ contractCoId: intOrNull(l?.contractCoId), contractId: intOrNull(l?.contractId), pct: pct(l?.pct, 100) }))
+    .filter((l: any) => l.contractCoId != null && l.contractId != null) : [];
+  if (!Array.isArray(raw.links) && intOrNull(raw.contractCoId) != null) {
+    links = [{ contractCoId: intOrNull(raw.contractCoId)!, contractId: intOrNull(raw.contractId) ?? 0, pct: billable ? 100 : 0 }];
+  }
+  const seen = new Set<number>();
+  links = links.filter((l) => (seen.has(l.contractCoId) ? false : (seen.add(l.contractCoId), true)));
   return {
     id: String(raw.id || `co-${Date.now().toString(36)}`),
     number: String(raw.number ?? '').trim() || 'CO',
     title: String(raw.title ?? '').trim(),
     date: raw.date ? String(raw.date).slice(0, 10) : null,
     status,
-    billable: raw.billable !== false,
+    billable,
     lines: Array.isArray(raw.lines) ? raw.lines
-      .map((l: any) => ({ key: String(l?.key ?? ''), description: String(l?.description ?? '').trim(), amount: r2(num(l?.amount)) }))
+      .map((l: any) => ({
+        key: String(l?.key ?? ''), description: String(l?.description ?? '').trim(), amount: r2(num(l?.amount)),
+        tenantPct: pct(l?.tenantPct, billable ? 100 : 0),
+        fromCoId: intOrNull(l?.fromCoId),
+      }))
       .filter((l: BudgetCOLine) => l.key && l.amount !== 0) : [],
     cmFee: raw.cmFee !== false,
     cmFeePct: Math.max(0, Math.min(100, num(raw.cmFeePct))),
-    contractId: raw.contractId != null && Number.isFinite(Number(raw.contractId)) ? Number(raw.contractId) : null,
-    contractCoId: raw.contractCoId != null && Number.isFinite(Number(raw.contractCoId)) ? Number(raw.contractCoId) : null,
+    links,
+    credit: Math.max(0, r2(num(raw.credit))),
+    cmOnAbsorbed: raw.cmOnAbsorbed === true,
+    estimate: raw.estimate != null && raw.estimate !== '' ? r2(num(raw.estimate)) : null,
+    reason: (CO_REASONS.some(([k]) => k === raw.reason) ? raw.reason : billable ? 'tenant' : 'other') as CoReason,
+    contractId: links[0]?.contractId ?? null,
+    contractCoId: links[0]?.contractCoId ?? null,
   };
 }
 
 /** A change order's cost of work, its CM fee, and the total. */
+/**
+ * A change order's money, split between the tenant and us.
+ *   work         full cost of work (what the budget rises by, before fees)
+ *   tenantWork   the tenant's share of it (each line × its tenant %)
+ *   cm           CM fee on the tenant's share only
+ *   cmAbsorbed   CM fee on our share, when it is charged to the capital partner
+ *   tenant       what the tenant pays: tenantWork + cm − credit
+ *   absorbed     what we fund: our share of the work + credit + cmAbsorbed
+ *   total        budget increase: work + cm + cmAbsorbed  (= tenant + absorbed)
+ */
 export function coTotals(co: BudgetCO) {
   const work = r2(co.lines.reduce((s, l) => s + l.amount, 0));
-  const cm = co.cmFee ? r2((work * co.cmFeePct) / 100) : 0;
-  return { work, cm, total: r2(work + cm) };
+  const tenantWork = r2(co.lines.reduce((s, l) => s + (l.amount * (l.tenantPct ?? 100)) / 100, 0));
+  const ourWork = r2(work - tenantWork);
+  const cm = co.cmFee ? r2((tenantWork * co.cmFeePct) / 100) : 0;
+  const cmAbsorbed = co.cmFee && co.cmOnAbsorbed ? r2((ourWork * co.cmFeePct) / 100) : 0;
+  const credit = r2(co.credit || 0);
+  const tenant = r2(tenantWork + cm - credit);
+  const absorbed = r2(ourWork + credit + cmAbsorbed);
+  return { work, tenantWork, ourWork, cm, cmAbsorbed, credit, tenant, absorbed, total: r2(work + cm + cmAbsorbed) };
 }
 
 /** Approved change orders, summed. */
 export function coSummary(cos: readonly BudgetCO[]) {
-  const sum = (st: string, f: (t: ReturnType<typeof coTotals>) => number, billable?: boolean) => r2(cos
-    .filter((c) => c.status === st && (billable === undefined || c.billable === billable))
+  const sum = (st: string, f: (t: ReturnType<typeof coTotals>) => number) => r2(cos
+    .filter((c) => c.status === st)
     .reduce((s, c) => s + f(coTotals(c)), 0));
   return {
     approved: sum('approved', (t) => t.total),
-    approvedBillable: sum('approved', (t) => t.total, true),
-    approvedAbsorbed: sum('approved', (t) => t.total, false),
+    // A change order can be split: the tenant's part and ours are counted apart.
+    approvedBillable: sum('approved', (t) => t.tenant),
+    approvedAbsorbed: sum('approved', (t) => t.absorbed),
     pending: sum('pending', (t) => t.total),
   };
 }
@@ -418,17 +491,26 @@ export function applyChangeOrders(lines: BaselineLine[], cos: readonly BudgetCO[
     }
     return row;
   };
-  const add = (row: BaselineLine, amount: number, billable: boolean) => {
+  const add = (row: BaselineLine, amount: number, tenant: number) => {
     row.budget = r2(num(row.budget) + amount);
-    tenantAmt.set(row.key, (tenantAmt.get(row.key) ?? 0) + (billable ? amount : 0));
+    tenantAmt.set(row.key, (tenantAmt.get(row.key) ?? 0) + tenant);
   };
   for (const co of approved) {
+    const t = coTotals(co);
     for (const l of co.lines) {
       const row = out.find((x) => x.key === l.key) ?? ensure(`__co_line_${l.key}`, `${l.description || 'Change order work'} (line removed)`, 'misc');
-      add(row, l.amount, co.billable);
+      const tenantPart = (l.amount * (l.tenantPct ?? 100)) / 100;
+      // A credit to the tenant comes off their share, spread over the lines they pay for.
+      const creditPart = t.tenantWork ? (t.credit * tenantPart) / t.tenantWork : 0;
+      add(row, l.amount, tenantPart - creditPart);
     }
-    const { cm } = coTotals(co);
-    if (cm) add(cmKey && out.some((x) => x.key === cmKey) ? out.find((x) => x.key === cmKey)! : ensure(CO_CM_KEY, 'CM Fee on Change Orders', 'cm'), cm, co.billable);
+    // Change order CM fees never touch the original CM fee line: they collect on
+    // their own Supplemental CM Fee line, and only from change orders that ask for it.
+    const cmRow = () => ensure(CO_CM_KEY, SUPPLEMENTAL_CM_LABEL, 'cm');
+    if (t.cm) add(cmRow(), t.cm, t.cm);
+    if (t.cmAbsorbed) add(cmRow(), t.cmAbsorbed, 0);
+    // A credit with nothing billed to the tenant lands on the CM row as our cost.
+    if (t.credit && !t.tenantWork) add(cmRow(), 0, -t.credit);
   }
   for (const row of out) {
     const b = num(row.budget);
@@ -525,4 +607,24 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     projectedVariance: r2(revised - projectedCost),
     pendingChangeOrders: s.pending,
   };
+}
+
+/**
+ * The story of the budget, told against the original: each approved change
+ * order grouped by why it happened, then revisions, adding up to the revised
+ * budget. Transfers are noted but change nothing in total.
+ */
+export function budgetStory(a: BudgetApproval, f: { original: number; revisions: number; transfers?: number; revised: number }) {
+  const approved = a.changeOrders.filter((c) => c.status === 'approved');
+  const groups = CO_REASONS.map(([key, label]) => {
+    const cos = approved.filter((c) => c.reason === key).map((c) => ({ id: c.id, number: c.number, title: c.title, ...coTotals(c) }));
+    return {
+      key, label, cos,
+      total: r2(cos.reduce((s, c) => s + c.total, 0)),
+      tenant: r2(cos.reduce((s, c) => s + c.tenant, 0)),
+      absorbed: r2(cos.reduce((s, c) => s + c.absorbed, 0)),
+    };
+  }).filter((g) => g.cos.length);
+  const moved = r2(a.transfers.reduce((s, t) => s + t.amount, 0));
+  return { original: f.original, groups, revisions: f.revisions, moved, transferCount: a.transfers.length, revised: f.revised };
 }

@@ -22,7 +22,7 @@ import {
   costApplications, costApplicationLines, costDocuments, costPayments, costDirectCosts, costWaivers,
 } from '@shared/schema';
 import {
-  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
+  normalizeApproval, effectiveBaseline, discountState, budgetBreakdown, fundingSources, budgetStory, SUPPLEMENTAL_DEFAULT, snapshotOriginal, pricedTotal, normalizeCO, coTotals, coSummary,
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
@@ -272,8 +272,10 @@ export async function loadProjectBundle(projectId: number) {
       changeOrders: bk.get(r.key)?.changeOrders ?? 0,
     })),
   };
+  const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending });
+  const story = budgetStory(approval, funding0);
   const funding = {
-    ...fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending }),
+    ...funding0,
     label: String(((project.settings || {}) as any).supplementalLabel || SUPPLEMENTAL_DEFAULT),
     confirmed: approval.status === 'confirmed',
   };
@@ -328,6 +330,7 @@ export async function loadProjectBundle(projectId: number) {
     summary,
     breakdown,
     funding,
+    story,
     g702ByContract: g702,
     approval: (() => {
       const ds = discountState(baseline, approval);
@@ -705,6 +708,41 @@ export function registerCostTrackingRoutes(app: Express): void {
     return row.id;
   };
 
+  /**
+   * Budget lines priced from vendor change orders: each vendor line's amount on
+   * the budget line(s) it is mapped to, at that vendor's tenant share. A vendor
+   * line not mapped yet falls back to the budget line this change order used.
+   */
+  const linesFromVendors = async (projectId: number, links: BudgetCO['links'], current: BudgetCO['lines'], baseline: BaselineLine[]) => {
+    const keys = new Set(baseline.map((b) => b.key));
+    const out: BudgetCO['lines'] = [];
+    for (const link of links) {
+      const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, link.contractCoId));
+      const [k] = cco ? await db.select().from(costContracts).where(eq(costContracts.id, cco.contractId)) : [];
+      if (!cco || !k || k.projectId !== projectId) throw new UserError('A linked vendor change order no longer exists. Unlink it.');
+      const vlines = await db.select().from(costSovLines).where(eq(costSovLines.changeOrderId, cco.id));
+      const label = `${k.counterparty} ${cco.number}`;
+      if (!vlines.length) throw new UserError(`${label} has no amounts yet. Enter its lines on the Contracts tab first.`);
+      const fallback = current.find((l) => l.fromCoId === cco.id)?.key ?? current[0]?.key ?? null;
+      const byKey = new Map<string, number>();
+      for (const v of vlines) {
+        const amt = dollars(v.scheduledValueCents);
+        const alloc = ((v.allocations || []) as Array<{ baselineKey: string; pct: number }>).filter((x) => keys.has(x.baselineKey) && Number(x.pct) > 0);
+        if (v.allocationMode === 'direct' && alloc.length) {
+          for (const x of alloc) byKey.set(x.baselineKey, (byKey.get(x.baselineKey) ?? 0) + (amt * Number(x.pct)) / 100);
+        } else if (fallback) {
+          byKey.set(fallback, (byKey.get(fallback) ?? 0) + amt);
+        } else {
+          throw new UserError(`Map ${label}'s lines to budget lines first (Contracts tab), so its cost lands on the right line.`);
+        }
+      }
+      for (const [key, amount] of Array.from(byKey)) {
+        if (Math.abs(amount) >= 0.005) out.push({ key, description: label, amount: Math.round(amount * 100) / 100, tenantPct: link.pct, fromCoId: cco.id });
+      }
+    }
+    return out;
+  };
+
   const saveCos = async (id: number, project: any, a: BudgetApproval, req: Request, note: string) => {
     const baseline = (project.baseline || []) as BaselineLine[];
     const before = normalizeApproval(project.budgetApproval);
@@ -737,7 +775,10 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (co.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       const contractId = b.contractId != null && b.contractId !== '' ? Number(b.contractId) : null;
       if (contractId) {
-        co.contractCoId = await writeContractCo(contractId, co, baseline);
+        const ccoId = await writeContractCo(contractId, co, baseline);
+        co.links = [{ contractCoId: ccoId, contractId, pct: co.billable ? 100 : 0 }];
+        co.lines = co.lines.map((l) => ({ ...l, fromCoId: ccoId }));
+        co.contractCoId = ccoId;
         co.contractId = contractId;
       }
       a.changeOrders = [...a.changeOrders, co];
@@ -761,34 +802,71 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (i < 0) return res.status(404).json({ message: 'Change order not found' });
       const cur = a.changeOrders[i];
       const b = req.body || {};
-      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee']) })!;
+      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason']) })!;
       const keys = new Set(baseline.map((x) => x.key));
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
-      // The contractor's side, added later: write it onto a contract, link one
-      // already there (a PCO typed in or read off a pay app), or let go of it.
+      // The vendors' side: write the estimate onto a contract, link vendor change
+      // orders (any contracts, each with the tenant's share), set shares, re-price
+      // from the vendors, or unlink. Linked lines are priced from the vendors.
       let linkNote = '';
+      let links = [...next.links];
+      let derive = false;
       if (b.writeContractId != null && b.writeContractId !== '') {
-        if (cur.contractCoId) throw new UserError('This change order is already linked to the contractor\'s. Unlink it first.');
-        next.contractCoId = await writeContractCo(Number(b.writeContractId), next, baseline);
-        next.contractId = Number(b.writeContractId);
+        // Writing the estimate as a new vendor change order would count the cost twice once vendors are linked.
+        if (links.length) throw new UserError('Vendor change orders are already linked. Link another one instead of writing the estimate.');
+        const cid = Number(b.writeContractId);
+        const ccoId = await writeContractCo(cid, next, baseline);
+        const pcts = Array.from(new Set(next.lines.map((l) => l.tenantPct)));
+        links.push({ contractCoId: ccoId, contractId: cid, pct: pcts.length === 1 ? pcts[0] : 100 });
         linkNote = ' — written onto the contract';
-      } else if (b.linkContractCoId != null && b.linkContractCoId !== '') {
-        const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, Number(b.linkContractCoId)));
+        derive = true;
+      }
+      if (b.linkContractCoId != null && b.linkContractCoId !== '') {
+        const ccoId = Number(b.linkContractCoId);
+        if (links.some((l) => l.contractCoId === ccoId)) throw new UserError('That vendor change order is already linked here.');
+        const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, ccoId));
         const [k] = cco ? await db.select().from(costContracts).where(eq(costContracts.id, cco.contractId)) : [];
         if (!cco || !k || k.projectId !== id) throw new UserError('That change order is not on a contract in this project.');
-        if (a.changeOrders.some((c, j) => j !== i && c.contractCoId === cco.id)) throw new UserError(`${cco.number} is already linked to another budget change order.`);
-        next.contractCoId = cco.id;
-        next.contractId = cco.contractId;
-        linkNote = ` — linked to ${k.counterparty} ${cco.number}`;
-      } else if (b.unlink === true) {
-        next.contractCoId = null;
-        next.contractId = null;
-        linkNote = ' — unlinked from the contractor\'s change order';
+        const pct = b.pct != null && b.pct !== '' ? Math.max(0, Math.min(100, Number(b.pct))) : 100;
+        links.push({ contractCoId: ccoId, contractId: cco.contractId, pct });
+        linkNote = ` — linked ${k.counterparty} ${cco.number}`;
+        derive = true;
       }
+      if (Array.isArray(b.links)) {
+        // Shares set on existing links (and links dropped if left out).
+        const want = new Map<number, number>(b.links.map((l: any): [number, number] => [Number(l.contractCoId), Math.max(0, Math.min(100, Math.round(Number(l.pct) * 100) / 100))]));
+        links = links.filter((l) => want.has(l.contractCoId)).map((l) => ({ ...l, pct: Number.isFinite(want.get(l.contractCoId)!) ? want.get(l.contractCoId)! : l.pct }));
+        linkNote = linkNote || ' — tenant shares updated';
+        derive = true;
+      }
+      if (b.unlinkCoId != null) {
+        const u = Number(b.unlinkCoId);
+        links = links.filter((l) => l.contractCoId !== u);
+        linkNote = ' — vendor change order unlinked';
+        derive = links.length > 0;
+        if (!links.length) next.lines = next.lines.map((l) => ({ ...l, fromCoId: null }));
+      } else if (b.unlink === true) {
+        links = [];
+        next.lines = next.lines.map((l) => ({ ...l, fromCoId: null }));
+        linkNote = ' — unlinked from the vendors';
+      }
+      if (b.resync === true && links.length) { derive = true; linkNote = ' — re-priced from the vendors'; }
+      if (links.some((l) => a.changeOrders.some((c, j) => j !== i && c.links.some((x) => x.contractCoId === l.contractCoId)))) {
+        throw new UserError('One of those vendor change orders is already linked to another tenant change order.');
+      }
+      if (derive && links.length) {
+        // The first time vendor prices replace a typed estimate, keep the estimate.
+        if (next.estimate == null && !cur.links.length && next.lines.length) next.estimate = coTotals(cur).work;
+        next.lines = await linesFromVendors(id, links, next.lines, baseline);
+      }
+      next.links = links;
+      next.contractCoId = links[0]?.contractCoId ?? null;
+      next.contractId = links[0]?.contractId ?? null;
       a.changeOrders[i] = next;
-      // Keep the contractor's change order in step on status.
-      if (next.contractCoId && next.status !== cur.status) {
-        await db.update(costChangeOrders).set({ status: next.status }).where(eq(costChangeOrders.id, next.contractCoId));
+      // Keep the vendors' change orders in step on status.
+      if (next.links.length && next.status !== cur.status) {
+        await db.update(costChangeOrders).set({ status: next.status, ...(next.status === 'approved' ? { approvedDate: new Date() } : {}) })
+          .where(inArray(costChangeOrders.id, next.links.map((l) => l.contractCoId)));
       }
       await saveCos(id, project, a, req, `${next.number} ${next.status !== cur.status ? next.status : 'changed'}${linkNote}`);
       res.json(await loadProjectBundle(id));

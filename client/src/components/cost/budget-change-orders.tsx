@@ -14,9 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink } from 'lucide-react';
 import { openDocument } from './contract-card';
-import type { BudgetCO } from '@shared/cost-budget-approval';
-import { fmtMoneyText } from '@shared/format';
-import { MoneyInput } from './inputs';
+import { CO_REASONS, reasonLabel, type BudgetCO } from '@shared/cost-budget-approval';
+import { fmtMoneyText, fmtPctText } from '@shared/format';
+import { MoneyInput, PercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle } from './types';
 
 const num = (s: string | number) => {
@@ -26,10 +26,11 @@ const num = (s: string | number) => {
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const NO_CONTRACT = '__none__';
 
-type FormLine = { key: string; description: string; amount: string };
+type FormLine = { key: string; description: string; amount: string; tenantPct: string };
 type Form = {
   id: string | null; number: string; title: string; date: string; status: BudgetCO['status'];
   billable: boolean; cmFee: boolean; contractId: string; lines: FormLine[];
+  credit: string; cmOnAbsorbed: boolean; linked: boolean; reason: string;
 };
 
 export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
@@ -42,17 +43,20 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
   const name = useMemo(() => new Map(baseline.map((b) => [b.key, b.description])), [baseline]);
-  const totals = (id: string) => a.changeOrderTotals.find((t) => t.id === id) ?? { work: 0, cm: 0, total: 0 };
+  const totals = (id: string) => a.changeOrderTotals.find((t) => t.id === id)
+    ?? { work: 0, tenantWork: 0, ourWork: 0, cm: 0, cmAbsorbed: 0, credit: 0, tenant: 0, absorbed: 0, total: 0 };
 
   const nextNumber = () => `CO-${String(cos.length + 1).padStart(2, '0')}`;
   const blank = (): Form => ({
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,
-    lines: [{ key: '', description: '', amount: '' }],
+    lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant',
   });
   const edit = (co: BudgetCO): Form => ({
     id: co.id, number: co.number, title: co.title, date: co.date ?? todayIso(), status: co.status, billable: co.billable,
-    cmFee: co.cmFee, contractId: NO_CONTRACT, lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)) })),
+    cmFee: co.cmFee, contractId: NO_CONTRACT,
+    lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: fmtPctText(String(l.tenantPct ?? 100)) })),
+    credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason,
   });
 
   const run = async (fn: () => Promise<any>, ok: string) => {
@@ -71,8 +75,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   // ---- the contractor's side and the backup, under each change order
   const [linking, setLinking] = useState<string | null>(null);
   const [linkTo, setLinkTo] = useState('');
+  const [pctDraft, setPctDraft] = useState<Record<string, string>>({});
   const coLines = (ccoId: number) => r2(bundle.sovLines.filter((l) => l.changeOrderId === ccoId).reduce((s, l) => s + l.scheduledValue, 0));
-  const linkedIds = new Set(cos.map((c) => c.contractCoId).filter(Boolean) as number[]);
+  const linkedIds = new Set(cos.flatMap((c) => c.links.map((l) => l.contractCoId)));
   const contractName = (id: number | null) => bundle.contracts.find((c) => c.id === id)?.counterparty ?? 'a contract';
   const upload = async (coId: string, files: FileList | File[]) => {
     for (const f of Array.from(files)) {
@@ -92,39 +97,71 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   // Called as a function, not a component, so the row keeps its state across re-renders.
   const coExtras = (co: BudgetCO, work: number) => {
     const docs = bundle.documents.filter((d) => d.budgetCoId === co.id);
-    const pco = co.contractCoId ? bundle.changeOrders.find((c) => c.id === co.contractCoId) : null;
-    const pcoAmt = co.contractCoId ? coLines(co.contractCoId) : 0;
-    const diff = r2(pcoAmt - work);
     const free = bundle.changeOrders.filter((c) => !linkedIds.has(c.id) && c.status !== 'void');
+    // What each linked vendor change order put on this one (as priced), and what it is now.
+    const priced = (ccoId: number) => r2(co.lines.filter((l) => l.fromCoId === ccoId).reduce((s, l) => s + l.amount, 0));
+    const drift = co.links.some((l) => Math.abs(coLines(l.contractCoId) - priced(l.contractCoId)) >= 0.005);
+    const setPct = (ccoId: number, v: string) => {
+      const pct = num(v);
+      if (co.links.find((l) => l.contractCoId === ccoId)?.pct === pct) return;
+      run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', {
+        links: co.links.map((l) => ({ contractCoId: l.contractCoId, pct: l.contractCoId === ccoId ? pct : l.pct })),
+      }), `${co.number}: tenant share ${pct.toFixed(2)}%`);
+    };
     return (
       <tr className={`border-b last:border-0 ${co.status === 'void' ? 'opacity-50' : ''}`}>
         <td />
-        <td colSpan={8} className="px-3 pb-2 pt-0 text-xs">
-          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap"
-               onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) upload(co.id, e.dataTransfer.files); }}>
-            <span className="text-gray-500">Contractor:</span>
-            {co.contractCoId ? (
-              <span className="inline-flex items-center gap-1.5 flex-wrap">
-                <span className="font-medium text-gray-800">{contractName(co.contractId)} {pco?.number ?? ''}</span>
-                <span className="tabular-nums">{money(pcoAmt)}</span>
-                {Math.abs(diff) >= 0.005 && (
-                  <span className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5" title="The budget change order is your estimate; edit its lines to match the contractor's price if you want the budget to follow.">
-                    Estimate {money(work)} → contractor {money(pcoAmt)} ({signedMoney(diff)})
-                  </span>
-                )}
-                <button className="text-gray-400 hover:text-red-700 inline-flex items-center" title="Unlink (the contractor's change order stays on the contract)"
-                        onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { unlink: true }), `${co.number} unlinked`)}>
-                  <Unlink className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            ) : linking === co.id ? (
+        <td colSpan={9} className="px-3 pb-2 pt-0 text-xs space-y-1"
+            onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) upload(co.id, e.dataTransfer.files); }}>
+          {co.links.length > 0 && (
+            <table className="text-xs">
+              <tbody>
+                {co.links.map((l) => {
+                  const cco = bundle.changeOrders.find((c) => c.id === l.contractCoId);
+                  const amt = priced(l.contractCoId);
+                  const live = coLines(l.contractCoId);
+                  return (
+                    <tr key={l.contractCoId}>
+                      <td className="pr-3 py-0.5 text-gray-800">{contractName(l.contractId)} {cco?.number ?? '(removed)'}{cco?.title ? <span className="text-gray-500"> — {cco.title}</span> : null}</td>
+                      <td className="pr-3 py-0.5 text-right tabular-nums">{money(amt)}
+                        {Math.abs(live - amt) >= 0.005 && <span className="text-amber-800" title="The vendor's change order has changed since it was priced in"> → now {money(live)}</span>}</td>
+                      <td className="pr-1 py-0.5 text-gray-500">Tenant pays</td>
+                      <td className="pr-3 py-0.5"><PercentInput className="h-6 text-xs w-28" aria-label="Tenant pays"
+                        value={pctDraft[`${co.id}:${l.contractCoId}`] ?? fmtPctText(String(l.pct))}
+                        onValueChange={(v) => setPctDraft((d) => ({ ...d, [`${co.id}:${l.contractCoId}`]: v }))}
+                        onBlur={(e) => { setPct(l.contractCoId, e.target.value); setPctDraft((d) => { const n = { ...d }; delete n[`${co.id}:${l.contractCoId}`]; return n; }); }} /></td>
+                      <td className="pr-3 py-0.5 tabular-nums text-green-800">{money((amt * l.pct) / 100)}</td>
+                      <td className="pr-3 py-0.5 tabular-nums text-red-800">{l.pct < 100 ? `absorbed ${money(amt - (amt * l.pct) / 100)}` : ''}</td>
+                      <td className="py-0.5">
+                        <button className="text-gray-400 hover:text-red-700 inline-flex items-center" title="Unlink (the vendor's change order stays on its contract)"
+                                onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { unlinkCoId: l.contractCoId }), `${co.number}: unlinked`)}>
+                          <Unlink className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+          <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+            {co.estimate != null && co.links.length > 0 && Math.abs(co.estimate - work) >= 0.005 && (
+              <span className="text-gray-600">Estimate was {money(co.estimate)} ({signedMoney(r2(work - co.estimate))} with vendor prices)</span>
+            )}
+            {drift && (
+              <button className="text-amber-800 hover:underline" title="Update this change order to the vendors' current amounts"
+                      onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true }), `${co.number} re-priced`)}>
+                Use the vendors' current prices
+              </button>
+            )}
+            {linking === co.id ? (
               <span className="inline-flex items-center gap-1.5">
-                <div className="w-80">
+                <div className="w-96">
                   <Select value={linkTo || undefined} onValueChange={setLinkTo}>
                     <SelectTrigger className="h-7 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
                     <SelectContent className="pm-scope">
-                      {bundle.contracts.map((c) => <SelectItem key={`w${c.id}`} value={`w:${c.id}`}>Write it onto {c.counterparty} (same amounts)</SelectItem>)}
                       {free.map((c) => <SelectItem key={`l${c.id}`} value={`l:${c.id}`}>Link {contractName(c.contractId)} {c.number}{c.title ? ` — ${c.title}` : ''} ({money(coLines(c.id))})</SelectItem>)}
+                      {co.links.length === 0 && bundle.contracts.map((c) => <SelectItem key={`w${c.id}`} value={`w:${c.id}`}>Write this estimate onto {c.counterparty}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -137,7 +174,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               </span>
             ) : (
               <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => { setLinking(co.id); setLinkTo(''); }}>
-                <Link2 className="h-3.5 w-3.5" /> {bundle.contracts.length ? 'Add the contractor\'s price' : 'Not on a contract yet'}
+                <Link2 className="h-3.5 w-3.5" /> {co.links.length ? 'Link another vendor change order' : 'Link a vendor change order'}
               </button>
             )}
             <span className="text-gray-500">Backup:</span>
@@ -151,7 +188,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               <Paperclip className="h-3.5 w-3.5" /> Attach
               <input type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(co.id, e.target.files); e.target.value = ''; }} />
             </label>
-            {co.billable && (
+            {totals(co.id).tenantWork > 0.005 && (
               <button className="text-blue-700 hover:underline inline-flex items-center gap-1 ml-auto"
                       onClick={async () => { if (!(await openReport(`/api/reports/tenant-co/${projectId}?co=${encodeURIComponent(co.id)}`))) toast({ title: 'Report failed', variant: 'destructive' }); }}>
                 <Printer className="h-3.5 w-3.5" /> Tenant change order
@@ -164,15 +201,22 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   };
 
   const formWork = form ? r2(form.lines.reduce((s, l) => s + num(l.amount), 0)) : 0;
+  const formTenantWork = form ? r2(form.lines.reduce((s, l) => s + (num(l.amount) * num(l.tenantPct)) / 100, 0)) : 0;
   const formRate = form?.id ? (cos.find((c) => c.id === form.id)?.cmFeePct ?? rate) : rate;
-  const formCm = form?.cmFee ? r2((formWork * formRate) / 100) : 0;
-  const formLinesOk = form ? form.lines.filter((l) => num(l.amount)).every((l) => l.key) && form.lines.some((l) => num(l.amount)) : false;
+  const formCm = form?.cmFee ? r2((formTenantWork * formRate) / 100) : 0;
+  const formCmOurs = form?.cmFee && form.cmOnAbsorbed ? r2(((formWork - formTenantWork) * formRate) / 100) : 0;
+  const formCredit = form ? num(form.credit) : 0;
+  const formTenant = r2(formTenantWork + formCm - formCredit);
+  const formOurs = r2(formWork - formTenantWork + formCredit + formCmOurs);
+  const formLinesOk = form ? form.linked || (form.lines.filter((l) => num(l.amount)).every((l) => l.key) && form.lines.some((l) => num(l.amount))) : false;
 
   const submit = async () => {
     if (!form) return;
     const body = {
       number: form.number, title: form.title, date: form.date, status: form.status, billable: form.billable, cmFee: form.cmFee,
-      lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount) })),
+      credit: formCredit, cmOnAbsorbed: form.cmOnAbsorbed, reason: form.reason,
+      // Lines priced from linked vendors are re-priced from them, not typed.
+      ...(form.linked ? {} : { lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount), tenantPct: num(l.tenantPct) })) }),
       ...(form.id ? {} : { contractId: form.contractId === NO_CONTRACT ? null : Number(form.contractId) }),
     };
     const ok = await run(
@@ -190,8 +234,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
         <div>
           <h2 className="font-semibold text-gray-900">Budget change orders</h2>
           <p className="text-xs text-gray-600 mt-0.5">
-            Scope added after the budget is set. Billable ones are what you send the tenant (CM fee at {rate.toFixed(2)}% on top);
-            ones the tenant can't be billed for still raise the budget, as outstanding share.
+            Every change to the budget after it was set: why it happened, the vendors' change orders behind it, and who pays —
+            the tenant (CM fee at {rate.toFixed(2)}% on their share) or {bundle.funding?.label ?? 'Supplemental Funding'}.
           </p>
         </div>
         {!form && <Button size="sm" onClick={() => setForm(blank())}><Plus className="h-3.5 w-3.5 mr-1" /> Change order</Button>}
@@ -199,12 +243,14 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
 
       {cos.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[860px]">
+          <table className="w-full text-sm min-w-[1000px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                 <th className="px-3 py-1.5">No.</th><th className="px-3 py-1.5">For</th><th className="px-3 py-1.5">Date</th>
-                <th className="px-3 py-1.5">Tenant</th><th className="px-3 py-1.5 text-right">Work</th><th className="px-3 py-1.5 text-right">CM fee</th>
-                <th className="px-3 py-1.5 text-right">Total</th><th className="px-3 py-1.5 w-36">Status</th><th className="w-16" />
+                <th className="px-3 py-1.5 text-right">Cost of work</th><th className="px-3 py-1.5 text-right">CM fee</th>
+                <th className="px-3 py-1.5 text-right" title="Budget increase">Total</th>
+                <th className="px-3 py-1.5 text-right">Tenant pays</th><th className="px-3 py-1.5 text-right">Absorbed</th>
+                <th className="px-3 py-1.5 w-36">Status</th><th className="w-16" />
               </tr>
             </thead>
             <tbody>
@@ -215,21 +261,18 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <tr className={`align-top ${co.status === 'void' ? 'opacity-50' : ''}`}>
                     <td className="px-3 py-2 font-medium whitespace-nowrap">{co.number}</td>
                     <td className="px-3 py-2">
-                      <div>{co.title || '—'}</div>
+                      <div>{co.title || '—'} <span className="ml-1 text-[11px] font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">{reasonLabel(co.reason)}</span></div>
                       <div className="text-[11px] text-gray-600">
-                        {co.lines.map((l) => `${name.get(l.key) ?? 'Removed line'} ${money(l.amount)}`).join(' · ')}
-                        {co.contractCoId ? ` · on ${bundle.contracts.find((c) => c.id === co.contractId)?.counterparty ?? 'a contract'}` : ''}
+                        {co.lines.map((l) => `${name.get(l.key) ?? 'Removed line'} ${money(l.amount)}${(l.tenantPct ?? 100) !== 100 ? ` (tenant ${Number(l.tenantPct).toFixed(2)}%)` : ''}`).join(' · ')}
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-gray-700">{shortDate(co.date)}</td>
-                    <td className="px-3 py-2">
-                      {co.billable
-                        ? <span className="text-xs font-medium text-green-800 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">Billable</span>
-                        : <span className="text-xs font-medium text-red-800 bg-red-50 border border-red-200 rounded px-1.5 py-0.5">Not billable</span>}
-                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{signedMoney(t.work)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{t.cm ? `${signedMoney(t.cm)}` : '—'}<div className="text-[10px] text-gray-500">{co.cmFee ? `${co.cmFeePct.toFixed(2)}%` : ''}</div></td>
+                    <td className="px-3 py-2 text-right tabular-nums text-gray-700">{t.cm + t.cmAbsorbed ? signedMoney(t.cm + t.cmAbsorbed) : '—'}<div className="text-[10px] text-gray-500">{co.cmFee ? `${co.cmFeePct.toFixed(2)}%${t.cmAbsorbed ? ' · ours to capital partner' : ''}` : ''}</div></td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">{signedMoney(t.total)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-green-800">{t.tenant ? signedMoney(t.tenant) : '—'}
+                      {t.credit ? <div className="text-[10px] text-gray-500">after {money(t.credit)} credit</div> : null}</td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${t.absorbed ? 'text-red-800' : ''}`}>{t.absorbed ? signedMoney(t.absorbed) : '—'}</td>
                     <td className="px-3 py-2">
                       <Select value={co.status} onValueChange={(v) => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { status: v }), `${co.number} ${v}`)}>
                         <SelectTrigger className={`h-8 text-xs ${co.status === 'approved' ? 'text-green-800' : co.status === 'pending' ? 'text-amber-800' : 'text-gray-500'}`}><SelectValue /></SelectTrigger>
@@ -258,9 +301,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-800 text-sm">
-                <td colSpan={9} className="px-3 py-2">
+                <td colSpan={10} className="px-3 py-2">
                   <span className="font-semibold">Approved {signedMoney(a.coSummary.approved)}</span>
-                  <span className="text-gray-600"> — billable {signedMoney(a.coSummary.approvedBillable)} · not billable {signedMoney(a.coSummary.approvedAbsorbed)}</span>
+                  <span className="text-gray-600"> — tenant-funded {signedMoney(a.coSummary.approvedBillable)} · absorbed {signedMoney(a.coSummary.approvedAbsorbed)}</span>
                   {a.coSummary.pending !== 0 && <span className="text-amber-800"> · pending {signedMoney(a.coSummary.pending)}</span>}
                 </td>
               </tr>
@@ -272,7 +315,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
 
       {form && (
         <div className="p-4 space-y-3 bg-blue-50/30 border-t">
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-7 gap-2">
             <Field label="No."><Input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} /></Field>
             <Field label="For" wide><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
             <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
@@ -282,20 +325,33 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                 <SelectContent className="pm-scope"><SelectItem value="pending">Pending</SelectItem><SelectItem value="approved">Approved</SelectItem><SelectItem value="void">Void</SelectItem></SelectContent>
               </Select>
             </Field>
-            <Field label="Tenant">
-              <Select value={form.billable ? 'yes' : 'no'} onValueChange={(v) => setForm({ ...form, billable: v === 'yes' })}>
+            <Field label="Why">
+              <Select value={form.reason} onValueChange={(v) => setForm({ ...form, reason: v })}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent className="pm-scope"><SelectItem value="yes">Billable to tenant</SelectItem><SelectItem value="no">Not billable — we absorb it</SelectItem></SelectContent>
+                <SelectContent className="pm-scope">{CO_REASONS.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Tenant">
+              <Select value={form.billable ? 'yes' : 'no'} disabled={form.linked}
+                      onValueChange={(v) => setForm({ ...form, billable: v === 'yes', lines: form.lines.map((l) => ({ ...l, tenantPct: v === 'yes' ? '100.00' : '0.00' })) })}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope"><SelectItem value="yes">Billable to tenant (100.00%)</SelectItem><SelectItem value="no">Not billable — we absorb it (0.00%)</SelectItem></SelectContent>
               </Select>
             </Field>
           </div>
 
           <div className="bg-white border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            {form.linked && (
+              <div className="px-2 py-1.5 text-xs bg-violet-50 border-b text-violet-900">
+                Priced from the linked vendor change orders. Set each vendor's tenant share in the row under this change order; amounts follow the vendors.
+              </div>
+            )}
+            <table className="w-full text-sm min-w-[860px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
                   <th className="px-2 py-1.5 w-72">Budget line</th><th className="px-2 py-1.5">Description</th>
-                  <th className="px-2 py-1.5 w-40 text-right">Amount</th><th className="w-9" />
+                  <th className="px-2 py-1.5 w-40 text-right">Cost</th><th className="px-2 py-1.5 w-28 text-right" title="Share of this cost the tenant pays">Tenant %</th>
+                  <th className="px-2 py-1.5 w-36 text-right">Tenant pays</th><th className="w-9" />
                 </tr>
               </thead>
               <tbody>
@@ -309,10 +365,13 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     </td>
                     <td className="px-1 py-1"><Input className="h-8" value={l.description} aria-label="Description"
                                                      onChange={(e) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)) })} /></td>
-                    <td className="px-1 py-1"><MoneyInput className="h-8" value={l.amount} aria-label="Amount"
+                    <td className="px-1 py-1"><MoneyInput className="h-8" value={l.amount} aria-label="Amount" disabled={form.linked}
                                                           onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, amount: v } : x)) })} /></td>
+                    <td className="px-1 py-1"><PercentInput className="h-8" value={l.tenantPct} aria-label="Tenant %" disabled={form.linked}
+                                                            onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, tenantPct: v } : x)) })} /></td>
+                    <td className="px-2 py-1 text-right tabular-nums text-green-800">{money(r2((num(l.amount) * num(l.tenantPct)) / 100))}</td>
                     <td className="px-1 text-center">
-                      <button className="p-1 text-gray-400 hover:text-red-700" title="Remove" onClick={() => setForm({ ...form, lines: form.lines.filter((_, j) => j !== i) })}>
+                      <button className="p-1 text-gray-400 hover:text-red-700 disabled:opacity-30" disabled={form.linked} title="Remove" onClick={() => setForm({ ...form, lines: form.lines.filter((_, j) => j !== i) })}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -320,19 +379,40 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                 ))}
               </tbody>
               <tfoot className="text-sm">
-                <tr className="border-t"><td colSpan={2} className="px-2 py-1">Cost of work</td><td className="px-2 py-1 text-right tabular-nums">{signedMoney(formWork)}</td><td /></tr>
+                <tr className="border-t"><td colSpan={2} className="px-2 py-1">Cost of work</td>
+                  <td className="px-2 py-1 text-right tabular-nums">{signedMoney(formWork)}</td><td />
+                  <td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(formTenantWork)}</td><td /></tr>
                 <tr>
                   <td colSpan={2} className="px-2 py-1">
                     <label className="inline-flex items-center gap-2">
                       <input type="checkbox" checked={form.cmFee} onChange={(e) => setForm({ ...form, cmFee: e.target.checked })} />
-                      CM fee at {formRate.toFixed(2)}%
+                      CM fee at {formRate.toFixed(2)}% on the tenant's share
                     </label>
                   </td>
-                  <td className="px-2 py-1 text-right tabular-nums">{signedMoney(formCm)}</td><td />
+                  <td colSpan={2} /><td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(formCm)}</td><td />
+                </tr>
+                {form.cmFee && formWork - formTenantWork > 0.005 && (
+                  <tr>
+                    <td colSpan={2} className="px-2 py-1">
+                      <span className="inline-flex items-center gap-2">CM fee on our share
+                        <Select value={form.cmOnAbsorbed ? 'cp' : 'none'} onValueChange={(v) => setForm({ ...form, cmOnAbsorbed: v === 'cp' })}>
+                          <SelectTrigger className="h-7 w-56 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent className="pm-scope"><SelectItem value="none">Not charged</SelectItem><SelectItem value="cp">Charged to capital partner</SelectItem></SelectContent>
+                        </Select>
+                      </span>
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">{formCmOurs ? signedMoney(formCmOurs) : '—'}</td><td colSpan={3} />
+                  </tr>
+                )}
+                <tr>
+                  <td colSpan={2} className="px-2 py-1">Credit to the tenant <span className="text-[11px] text-gray-500">a concession we absorb</span></td>
+                  <td colSpan={2} />
+                  <td className="px-1 py-1"><MoneyInput className="h-8" value={form.credit} aria-label="Credit to the tenant" onValueChange={(v) => setForm({ ...form, credit: v })} /></td><td />
                 </tr>
                 <tr className="border-t-2 border-gray-800 font-semibold">
-                  <td colSpan={2} className="px-2 py-1.5">Change order total {form.billable ? '(to the tenant)' : '(absorbed)'}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(r2(formWork + formCm))}</td><td />
+                  <td colSpan={2} className="px-2 py-1.5">Budget increase <span className="font-normal text-gray-600">· tenant pays {money(formTenant)} · we absorb {money(formOurs)}</span></td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(r2(formWork + formCm + formCmOurs))}</td><td />
+                  <td className="px-2 py-1.5 text-right tabular-nums text-green-800">{signedMoney(formTenant)}</td><td />
                 </tr>
               </tfoot>
             </table>
@@ -340,7 +420,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
 
           <div className="flex items-end justify-between gap-3 flex-wrap">
             <div className="flex items-end gap-3 flex-wrap">
-              <Button size="sm" variant="outline" className="h-9" onClick={() => setForm({ ...form, lines: [...form.lines, { key: '', description: '', amount: '' }] })}>
+              <Button size="sm" variant="outline" className="h-9" disabled={form.linked} onClick={() => setForm({ ...form, lines: [...form.lines, { key: '', description: '', amount: '', tenantPct: form.billable ? '100.00' : '0.00' }] })}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Line
               </Button>
               {!form.id && bundle.contracts.length > 0 && (

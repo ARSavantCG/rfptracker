@@ -17,6 +17,7 @@ import { money, signedMoney, projectKey, type ProjectBundle } from './types';
 
 export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
   const f = bundle.funding;
+  const st = bundle.story;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [label, setLabel] = useState<string | null>(null);
@@ -76,23 +77,35 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
         </table>
       </div>
       <div className="text-sm space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Where the budget stands</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Why the budget changed</div>
         <table className="w-full">
           <tbody>
-            <tr className="border-b"><td className="py-1.5">Original budget</td><td className="py-1.5 text-right tabular-nums">{money(f.original)}</td></tr>
-            <tr className="border-b"><td className="py-1.5 font-medium">Revised budget</td><td className="py-1.5 text-right tabular-nums font-medium">{money(f.revised)}</td></tr>
+            <tr className="border-b font-medium"><td className="py-1.5">Original budget</td><td className="py-1.5 text-right tabular-nums">{money(st.original)}</td></tr>
+            {st.groups.map((g) => (
+              <tr key={g.key} className="border-b align-top">
+                <td className="py-1.5 pl-3">
+                  {g.label}
+                  <div className="text-[11px] text-gray-500">
+                    {g.cos.map((c) => c.number).join(', ')}
+                    {g.tenant ? ` · tenant pays ${money(g.tenant)}` : ''}{g.absorbed ? ` · ${f.label.toLowerCase()} ${money(g.absorbed)}` : ''}
+                  </div>
+                </td>
+                <td className="py-1.5 text-right tabular-nums">{signedMoney(g.total)}</td>
+              </tr>
+            ))}
+            {Math.abs(st.revisions) >= 0.005 && (
+              <tr className="border-b"><td className="py-1.5 pl-3">Revisions<div className="text-[11px] text-gray-500">Lines edited after the budget was confirmed</div></td>
+                <td className="py-1.5 text-right tabular-nums">{signedMoney(st.revisions)}</td></tr>
+            )}
+            <tr className="border-t-2 border-gray-800 font-semibold"><td className="py-1.5">Revised budget</td><td className="py-1.5 text-right tabular-nums">{money(st.revised)}</td></tr>
             <tr className="border-b"><td className="py-1.5">Projected cost <span className="text-[11px] text-gray-500">committed + pending change orders</span></td><td className="py-1.5 text-right tabular-nums">{money(f.projectedCost)}</td></tr>
             <tr><td className="py-1.5 font-medium">{over ? 'Projected over revised budget' : 'Projected under revised budget'}</td>
               <td className={`py-1.5 text-right tabular-nums font-semibold ${over ? 'text-red-700' : 'text-green-700'}`}>{money(Math.abs(f.projectedVariance))}</td></tr>
           </tbody>
         </table>
         <p className="text-xs text-gray-600">
-          {money(f.original)} original
-          {Math.abs(f.revisions) >= 0.005 ? ` ${f.revisions >= 0 ? '+' : '−'} ${money(Math.abs(f.revisions))} revisions` : ''}
-          {f.tenant ? ` ${f.tenant >= 0 ? '+' : '−'} ${money(Math.abs(f.tenant))} tenant-approved change orders` : ''}
-          {f.absorbed ? ` ${f.absorbed >= 0 ? '+' : '−'} ${money(Math.abs(f.absorbed))} absorbed` : ''}
-          {' '}= {money(f.revised)} revised.
-          {f.pendingChangeOrders ? ` ${money(f.pendingChangeOrders)} more in budget change orders is pending.` : ''}
+          {st.transferCount ? `${money(st.moved)} moved between lines (${st.transferCount} transfer${st.transferCount === 1 ? '' : 's'}); the total is unchanged. ` : ''}
+          {f.pendingChangeOrders ? `${money(f.pendingChangeOrders)} more in change orders is pending and not in the budget.` : ''}
         </p>
       </div>
     </div>

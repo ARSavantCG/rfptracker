@@ -88,7 +88,7 @@ export interface DocumentRow {
   createdAt: string;
 }
 
-import type { BudgetBreakdownRow, fundingSources } from '@shared/cost-budget-approval';
+import type { BudgetBreakdownRow, fundingSources, budgetStory } from '@shared/cost-budget-approval';
 
 export interface ProjectBundle {
   project: CostProjectRow;
@@ -103,6 +103,7 @@ export interface ProjectBundle {
   }> };
   breakdown: BudgetBreakdownRow[];
   funding: ReturnType<typeof fundingSources> & { label: string; confirmed: boolean };
+  story: ReturnType<typeof budgetStory>;
   g702ByContract: Record<number, G702>;
   approval: ApprovalView;
   payments: PaymentRow[];
@@ -151,7 +152,7 @@ export type ApprovalView = BudgetApproval & {
   /** Priced less the deal discount: the LAF budget. */
   approvedTotal: number;
   orphaned: { key: string; amount: number }[];
-  changeOrderTotals: { id: string; work: number; cm: number; total: number }[];
+  changeOrderTotals: { id: string; work: number; tenantWork: number; ourWork: number; cm: number; cmAbsorbed: number; credit: number; tenant: number; absorbed: number; total: number }[];
   coSummary: { approved: number; approvedBillable: number; approvedAbsorbed: number; pending: number };
   /** LAF budget plus approved change orders. */
   currentTotal: number;

@@ -20,7 +20,7 @@ import {
   rfpPropertyLabel, rfpRentableSf, type ReportInfoRow,
 } from "./lib/report-shell";
 import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
-import { DEAL_DISCOUNT_KEY } from "@shared/cost-budget-approval";
+import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
 import { waiverLog, type WaiverLogRow } from "@shared/cost-waivers";
@@ -80,6 +80,7 @@ export interface CmFeeView {
 export interface BudgetCoView {
   number: string; title: string; date: string | null; status: string; billable: boolean;
   work: number; cm: number; total: number; cmFeePct: number; cmFee: boolean;
+  tenant?: number; absorbed?: number; cmAbsorbed?: number; credit?: number; reason?: string;
 }
 
 function budgetCoTable(cos: BudgetCoView[] | undefined): string {
@@ -87,16 +88,18 @@ function budgetCoTable(cos: BudgetCoView[] | undefined): string {
   if (!list.length) return "";
   const approved = list.filter((c) => c.status === 'approved');
   const sum = (xs: BudgetCoView[], f: (c: BudgetCoView) => number) => xs.reduce((s, c) => s + f(c), 0);
+  const tenantOf = (c: BudgetCoView) => c.tenant ?? (c.billable ? c.total : 0);
+  const oursOf = (c: BudgetCoView) => c.absorbed ?? (c.billable ? 0 : c.total);
   return `
   <h3 class="sec">Budget Change Orders</h3>
-  <table class="t"><thead><tr><th class="l">No.</th><th class="l">For</th><th class="l">Date</th><th class="l">Tenant</th>
-    <th>Cost of Work</th><th>CM Fee</th><th>Total</th><th class="l">Status</th></tr></thead><tbody>
-    ${list.map((c) => `<tr><td>${escapeHtml(c.number)}</td><td>${escapeHtml(c.title)}</td><td style="white-space:nowrap">${escapeHtml(longDate(c.date))}</td>
-      <td>${c.billable ? "Billable" : "Not billable"}</td>${cell(c.work)}<td class="num">${c.cm ? fmt(c.cm) : "—"}${c.cmFee ? ` <span class="muted">(${fmtPct(c.cmFeePct)})</span>` : ""}</td>${cell(c.total)}
+  <table class="t"><thead><tr><th class="l">No.</th><th class="l">For</th><th class="l">Why</th><th class="l">Date</th>
+    <th>Cost of Work</th><th>CM Fee</th><th>Total</th><th>Tenant Pays</th><th>Absorbed</th><th class="l">Status</th></tr></thead><tbody>
+    ${list.map((c) => `<tr><td>${escapeHtml(c.number)}</td><td>${escapeHtml(c.title)}${c.credit ? `<div class="muted" style="font-size:9px">Includes a ${money2(c.credit)} credit to the tenant</div>` : ""}</td><td>${escapeHtml(c.reason ? reasonLabel(c.reason) : "")}</td><td style="white-space:nowrap">${escapeHtml(longDate(c.date))}</td>
+      ${cell(c.work)}<td class="num">${c.cm + (c.cmAbsorbed ?? 0) ? fmt(c.cm + (c.cmAbsorbed ?? 0)) : "—"}${c.cmFee ? ` <span class="muted">(${fmtPct(c.cmFeePct)})</span>` : ""}</td>${cell(c.total)}${cell(tenantOf(c))}${cell(oursOf(c))}
       <td>${c.status === "approved" ? "Approved" : "Pending"}</td></tr>`).join("")}
-    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.cm))}${cell(sum(approved, (c) => c.total))}<td></td></tr>
+    <tr class="total"><td colspan="4">Approved</td>${cell(sum(approved, (c) => c.work))}${cell(sum(approved, (c) => c.cm + (c.cmAbsorbed ?? 0)))}${cell(sum(approved, (c) => c.total))}${cell(sum(approved, tenantOf))}${cell(sum(approved, oursOf))}<td></td></tr>
   </tbody></table>
-  <div class="legend">Approved: billable ${money2(sum(approved.filter((c) => c.billable), (c) => c.total))} · not billable ${money2(sum(approved.filter((c) => !c.billable), (c) => c.total))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.total))} (not in the budget)` : ""}.</div>`;
+  <div class="legend">Approved: tenant-funded ${money2(sum(approved, tenantOf))} · absorbed ${money2(sum(approved, oursOf))}${list.some((c) => c.status === "pending") ? ` · pending ${money2(sum(list.filter((c) => c.status === "pending"), (c) => c.total))} (not in the budget)` : ""}.</div>`;
 }
 
 export interface ApprovalView {
@@ -132,8 +135,11 @@ type BvaRow = BudgetVsActual["rows"][number] & { originalBudget?: number | null;
 
 export type FundingView = { label: string; confirmed: boolean; original: number; revisions: number; tenant: number; absorbed: number; revised: number; projectedCost: number; projectedOverrun: number; supplemental: number; totalFunding: number; projectedVariance: number; pendingChangeOrders: number };
 
-/** Sources of funds and where the budget stands, side by side. */
-function fundingBox(f?: FundingView | null): string {
+export type StoryView = { original: number; revised: number; revisions: number; moved: number; transferCount: number;
+  groups: Array<{ key: string; label: string; total: number; tenant: number; absorbed: number; cos: Array<{ number: string }> }> };
+
+/** Sources of funds (who pays) and why the budget changed, side by side. */
+function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
   if (!f) return "";
   const r = (name: string, v: number, sub = "", cls = "") => `<tr class="${cls}"><td>${escapeHtml(name)}${sub ? `<div class="muted" style="font-size:9px">${escapeHtml(sub)}</div>` : ""}</td>${cell(v)}</tr>`;
   const over = f.projectedVariance < -0.005;
@@ -145,8 +151,11 @@ function fundingBox(f?: FundingView | null): string {
       ${r(f.label, f.supplemental, `Absorbed change orders ${money2(f.absorbed)}${f.projectedOverrun > 0.005 ? ` + projected beyond budget ${money2(f.projectedOverrun)}` : ""}`)}
       ${r("Total funding", f.totalFunding, "", "total")}
     </tbody></table>
-    <table class="t" style="flex:1"><thead><tr><th class="l">Budget Position</th><th>Amount</th></tr></thead><tbody>
-      ${r("Original budget", f.original)}${r("Revised budget", f.revised)}
+    <table class="t" style="flex:1"><thead><tr><th class="l">Why the Budget Changed</th><th>Amount</th></tr></thead><tbody>
+      ${r("Original budget", f.original, "", "sub")}
+      ${(st?.groups || []).map((g) => r(g.label, g.total, `${g.cos.map((c) => c.number).join(", ")}${g.tenant ? ` · tenant pays ${money2(g.tenant)}` : ""}${g.absorbed ? ` · ${f.label.toLowerCase()} ${money2(g.absorbed)}` : ""}`)).join("")}
+      ${st && Math.abs(st.revisions) >= 0.005 ? r("Revisions", st.revisions, "Lines edited after confirmation") : ""}
+      ${r("Revised budget", f.revised, st?.transferCount ? `${money2(st.moved)} moved between lines; total unchanged` : "", "sub")}
       ${r("Projected cost", f.projectedCost, "Committed plus pending change orders")}
       <tr class="total"><td>${over ? "Projected over revised budget" : "Projected under revised budget"}</td><td class="num${over ? " neg" : ""}">${money2(Math.abs(f.projectedVariance))}</td></tr>
     </tbody></table></div>`;
@@ -162,6 +171,7 @@ export function renderBudgetVsActualHtml(input: {
   budgetCos?: BudgetCoView[];
   transfers?: Array<{ date: string; amount: number; from: string; to: string; note: string }>;
   funding?: FundingView | null;
+  story?: StoryView | null;
   generatedBy?: string | null;
 }): string {
   const { summary: s, project, approval } = input;
@@ -214,7 +224,7 @@ export function renderBudgetVsActualHtml(input: {
     ${showOriginal ? "@page { size: Letter landscape; margin: 0.5in; }" : ""}
   </style></head><body>
   ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes })}
-  ${fundingBox(input.funding)}
+  ${fundingBox(input.funding, input.story)}
   <table class="t"><thead><tr>
     <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}${showRev ? "<th>Revisions</th>" : ""}${showTx ? "<th>Transfers</th>" : ""}${showCo ? "<th>Approved COs</th>" : ""}<th>${showOriginal ? "Revised Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
     <th>Variance</th><th>Tenant Share</th><th>Outstanding Share</th></tr></thead><tbody>
@@ -566,6 +576,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         project: b.project, ...(await propertyFacts(b.project)),
         summary: b.summary,
         funding: b.funding.confirmed || b.approval.changeOrders.length ? b.funding : null,
+        story: b.story,
         // Confirmations made before names were stored carry an email address;
         // when it is the reader's own, print the name.
         approval: (() => {
@@ -582,7 +593,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         })),
         budgetCos: b.approval.changeOrders.map((c) => {
           const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
-          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, ...t };
+          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, reason: c.reason, ...t };
         }),
         generatedBy: generatedByName((req as any).user),
       }));
@@ -634,7 +645,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         transfers: b.approval.transfers.map((t) => ({ date: t.date, amount: t.amount, note: t.note, by: nameFor(t.by), from: lineName(t.fromKey), to: lineName(t.toKey) })),
         budgetCos: b.approval.changeOrders.map((c) => {
           const t = b.approval.changeOrderTotals.find((x) => x.id === c.id) ?? { work: 0, cm: 0, total: 0 };
-          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, ...t };
+          return { number: c.number, title: c.title, date: c.date, status: c.status, billable: c.billable, cmFee: c.cmFee, cmFeePct: c.cmFeePct, reason: c.reason, ...t };
         }),
         generatedBy: generatedByName(u),
       }));
@@ -703,20 +714,23 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       const co = b.approval.changeOrders.find((c) => c.id === String(req.query.co || ""));
       if (!co) return res.status(404).json({ message: "Change order not found" });
-      const t = b.approval.changeOrderTotals.find((x) => x.id === co.id) ?? { work: 0, cm: 0, total: 0 };
+      const t = coTotals(co);
+      if (t.tenant <= 0.005 && t.tenantWork <= 0.005) return res.status(400).json({ message: "The tenant pays none of this change order." });
       const lineName = new Map(b.project.baseline.map((l: any) => [l.key, l.description]));
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderTenantCoHtml({
         project: b.project, ...(await propertyFacts(b.project)),
         co: {
           number: co.number, title: co.title, date: co.date, status: co.status, cmFeePct: co.cmFee ? co.cmFeePct : 0,
-          lines: co.lines.map((l) => ({ budgetLine: String(lineName.get(l.key) ?? ""), description: l.description, amount: l.amount })),
-          work: t.work, cm: t.cm, total: t.total,
+          // Only what the tenant pays: each line at the tenant's share.
+          lines: co.lines.map((l) => ({ budgetLine: String(lineName.get(l.key) ?? ""), description: l.description, amount: Math.round(l.amount * (l.tenantPct ?? 100)) / 100 }))
+            .filter((l) => Math.abs(l.amount) >= 0.005),
+          work: t.tenantWork, cm: t.cm, credit: t.credit, total: t.tenant,
           backup: b.documents.filter((d: any) => d.budgetCoId === co.id).map((d: any) => d.originalName),
         },
         billTo: String(((b.project as any).settings || {}).billTo || b.project.tenantName || ""),
-        previousApproved: b.approval.changeOrders.filter((c) => c.billable && c.status === "approved" && c.id !== co.id)
-          .reduce((s2, c) => s2 + (b.approval.changeOrderTotals.find((x) => x.id === c.id)?.total ?? 0), 0),
+        previousApproved: b.approval.changeOrders.filter((c) => c.status === "approved" && c.id !== co.id)
+          .reduce((s2, c) => s2 + coTotals(c).tenant, 0),
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {
@@ -756,7 +770,7 @@ export function renderTenantCoHtml(input: {
   propertyLabel?: string;
   rentableSf?: number;
   co: { number: string; title: string; date: string | null; status: string; cmFeePct: number;
-    lines: Array<{ budgetLine: string; description: string; amount: number }>; work: number; cm: number; total: number; backup: string[] };
+    lines: Array<{ budgetLine: string; description: string; amount: number }>; work: number; cm: number; credit?: number; total: number; backup: string[] };
   billTo: string;
   previousApproved: number;
   generatedBy?: string | null;
@@ -780,6 +794,7 @@ export function renderTenantCoHtml(input: {
     ${lines}
     <tr class="sub"><td>Cost of work</td>${cell(co.work)}</tr>
     ${co.cm ? `<tr><td>Construction management fee (${fmtPct(co.cmFeePct)})</td>${cell(co.cm)}</tr>` : ""}
+    ${co.credit ? `<tr><td>Credit</td>${cell(-co.credit)}</tr>` : ""}
     <tr class="total"><td>Change order total</td>${cell(co.total)}</tr>
   </tbody></table>
   <table class="t" style="margin-top:12px;width:60%"><tbody>

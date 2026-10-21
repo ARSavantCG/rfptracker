@@ -58,7 +58,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
     for (const co of a.changeOrders.filter((c) => c.status === 'approved')) {
       for (const l of co.lines) m.set(l.key, (m.get(l.key) ?? 0) + l.amount);
       const t = a.changeOrderTotals.find((x) => x.id === co.id);
-      if (t?.cm && bundle.cmSettings.key) m.set(bundle.cmSettings.key, (m.get(bundle.cmSettings.key) ?? 0) + t.cm);
+      // CM fees on change orders go to the Supplemental CM Fee row below, never onto the original CM line.
     }
     return m;
   }, [a]);
@@ -248,7 +248,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
               )}
               {Math.abs(coOther) >= 0.005 && (
                 <tr className="border-t">
-                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>CM fee on change orders (no CM line in this budget)</td>
+                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>Supplemental CM Fee <span className="text-[11px] text-gray-500">— CM fee on change orders, kept apart from the original CM fee</span></td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td colSpan={2} />

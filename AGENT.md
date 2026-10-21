@@ -176,3 +176,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - Form: "Paid for by" block (only when we absorb > 0): rows of source line + amount, "+ Pay from a budget line", "Pay from Contingency", remainder = new money (Supplemental). CO list Budget + shows budgetIncrease and the sources. BvA print: Budget Increase + "Paid from …".
 - POST/PATCH validate fundedFrom keys against the baseline.
 - CM Fee Report: grey (#4b5563) section ribbons; removed "less the CM fee" sub-label and both legends.
+- (2026-10-21) Capital partner fee base fixed: feeP = rate × all original work (origAmount) and direct cost amount, not the tenant-weighted billable; invoiceCalc 'fee' costs = Σ amount. Matches the Budget tab CM fee earned (2.75% × spent).

@@ -430,10 +430,11 @@ export function billableItems(input: {
         if (link.partnerFee) suppP += ((link.partnerBasis === 'tenant' ? t : link.partnerBasis === 'absorbed' ? v - t : v) * link.partnerRate) / 100;
       }
       const split = allocate(live, orig, input.validKeys);
-      let amount = coAmount, billable = coBillable, origBillable = 0;
+      let amount = coAmount, billable = coBillable, origBillable = 0, origAmount = 0;
       for (const [k, v] of Array.from(split)) {
         if (k === input.cmKey) continue;
         amount += v;
+        origAmount += v;
         billable += (v * pctOf(k)) / 100;
         origBillable += (v * pctOf(k)) / 100;
       }
@@ -443,7 +444,8 @@ export function billableItems(input: {
         ref: `app-${a.id}`, date: a.date, vendor: input.contractName(contractId),
         item: `${label} ${a.docNumber ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
         amount: r2(amount), billable: r2(billable),
-        fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2((origBillable * rate) / 100), suppP: r2(suppP), coAmount: r2(coAmount),
+        // The capital partner's fee is on all the original work (the project's cost), not the tenant's share of it.
+        fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2((origAmount * rate) / 100), suppP: r2(suppP), coAmount: r2(coAmount),
       });
     }
   }
@@ -455,7 +457,7 @@ export function billableItems(input: {
     out.push({
       ref: `direct-${d.id}`, date: d.date, vendor: d.vendor,
       item: `${d.description || 'Charge'}${how ? ` (${how})` : ''}`,
-      amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2((billable * rate) / 100), suppP: 0, coAmount: 0,
+      amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2((d.amount * rate) / 100), suppP: 0, coAmount: 0,
     });
   }
   for (const c of input.credits || []) {
@@ -505,7 +507,8 @@ export function paidItems(billed: readonly BillableItem[], payments: ReadonlyArr
  * Less whatever earlier invoices already asked for.
  */
 export function invoiceCalc(input: { type: InvoiceType; items: readonly BillableItem[]; pct: number; previouslyInvoiced: number }) {
-  const costs = r2(input.items.reduce((s, i) => s + i.billable, 0));
+  // The capital partner's fee is figured on every cost; the tenant's invoice on their billable share.
+  const costs = r2(input.items.reduce((s, i) => s + (input.type === 'fee' && i.fee !== undefined ? i.amount : i.billable), 0));
   // Items carry their own fees (original vs supplemental); older callers get the flat rate.
   // The tenant invoice uses the tenant's rates; the capital partner's invoice the partner rate
   // (on all change order work). Items without their own fees use the flat rate.

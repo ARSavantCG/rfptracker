@@ -76,13 +76,22 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
             <Row name="Total funding" value={f.totalFunding} strong />
             <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order fees and markups" value={f.need} />
             <tr>
-              <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">{f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}</div></td>
+              <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
+                {f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}
+                {f.contingency > 0.005 && <> · contingency unspent {money(f.contingency)}</>}
+              </div></td>
               <td className={`py-1.5 text-right tabular-nums font-semibold ${f.surplus > 0.005 ? 'text-green-700' : 'text-red-700'}`}>{money(f.surplus > 0.005 ? f.surplus : f.supplemental)}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div className="text-sm space-y-2">
+        {f.overLines.length > 0 && (
+          <div className="text-xs bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-2">
+            Committed over budget: {f.overLines.map((l) => `${l.description} ${money(l.over)}`).join(' · ')}.
+            {f.contingency > 0.005 ? ' Cover it with Move money from contingency' : ` Contingency is used up — the rest is ${f.label}`}.
+          </div>
+        )}
         <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Why the budget changed</div>
         <table className="w-full">
           <tbody>

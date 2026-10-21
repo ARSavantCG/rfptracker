@@ -679,6 +679,9 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const projectedOverrun = r2(Math.max(0, projectedCost - revised));
   const approved = a.changeOrders.filter((c) => c.status === 'approved');
   let need: number;
+  // Contingency still unspent: the first place to move money from when a line runs over.
+  let contingency = 0;
+  const overLines: Array<{ key: string; description: string; over: number }> = [];
   if (cost.byKey) {
     const linesNeed = rows.filter((r) => r.key !== CO_CM_KEY).reduce((t, r) => {
       const pre = r.revised - r.changeOrders;
@@ -687,7 +690,9 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
       const c = cost.byKey!.get(r.key);
       const committed = (c?.committed ?? 0) + (c?.pending ?? 0);
       // Contingency is the reserve itself: it's surplus to draw on, not a cost to complete.
+      if (/contingenc/i.test(r.description)) contingency += Math.max(0, r.revised - committed);
       if (Math.abs(committed) < 0.005 && /contingenc/i.test(r.description)) return t;
+      if (committed - r.revised >= 0.005 && !/contingenc/i.test(r.description)) overLines.push({ key: r.key, description: r.description, over: r2(committed - r.revised) });
       return t + (Math.abs(committed) >= 0.005 ? committed : pre);
     }, 0);
     // Unallocated cost (not on any line yet) is cost too.
@@ -707,6 +712,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     projectedCost, projectedOverrun,
     /** What the project needs to finish, and the surplus left in the budget after it. */
     need, surplus: r2(Math.max(0, fundsIn - need)),
+    contingency: r2(contingency), overLines,
     /** Only the shortfall: absorbed costs the budget surplus can't cover. */
     supplemental,
     /** Absorbed change orders paid from the budget's surplus. */

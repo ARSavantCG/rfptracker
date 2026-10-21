@@ -74,11 +74,12 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <td className={`py-1.5 text-right tabular-nums ${f.supplemental > 0.005 ? 'text-red-800 font-medium' : ''}`}>{signedMoney(f.supplemental)}</td>
             </tr>
             <Row name="Total funding" value={f.totalFunding} strong />
-            <Row name="CM fees — set aside" sub="The original CM fee and the CM fees on change orders: ours, not available to spend" value={f.cmReserved} />
+            <Row name="CM fees — set aside" value={f.cmReserved}
+                 sub={`Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + change order CM fees ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />
             <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups" value={f.projectCost} />
             <tr>
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
-                {f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}
+                {f.surplus > 0.005 ? `You can spend ${money(f.spendable)} of it — the rest is the CM fee that spending earns` : `Covered by ${f.label}`}
                 {f.contingency > 0.005 && <> · contingency unspent {money(f.contingency)}</>}
                 {f.unmapped > 0.005 && <div className="text-amber-700">{money(f.unmapped)} of committed cost isn't mapped to budget lines yet — map it on the Contracts tab for a sharper projection.</div>}
               </div></td>

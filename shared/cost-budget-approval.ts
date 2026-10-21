@@ -691,7 +691,9 @@ export const SUPPLEMENTAL_DEFAULT = 'Supplemental Funding';
  * order's markups, fees and any work not yet on a contract.
  */
 export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApproval,
-  cost: { committed: number; pending: number; byKey?: ReadonlyMap<string, { committed: number; pending: number }> }) {
+  cost: { committed: number; pending: number; byKey?: ReadonlyMap<string, { committed: number; pending: number }>;
+    /** The capital partner's CM fee rate: earned on what's spent, up to the CM fee budget (a ceiling). */
+    cmRate?: number }) {
   const s = coSummary(a.changeOrders);
   const original = r2(rows.reduce((t, r) => t + r.original, 0));
   const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
@@ -708,18 +710,15 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const overLines: Array<{ key: string; description: string; over: number }> = [];
   let unmapped = 0;
   // Split: the project's cost to complete, and the CM fees (original, partner's and tenant's on change orders) set aside.
-  let cmReserved = 0, projectCost = 0;
+  let cmReserved = 0, projectCost = 0, cmCeiling = 0, cmOriginal = 0, spendable = 0;
+  const fundsInLater = () => r2(original + revisions + s.approvedBillable - need);
   if (cost.byKey) {
     // Lines bought out (anything committed): what's committed, under or over. Lines not yet: their budget.
     let committedLines = 0, openBudget = 0;
     for (const r of rows) {
       if (r.key === CO_CM_KEY || r.key === UNALLOCATED_KEY) continue;
-      // The CM fee is ours: set aside whole (budget, or what's committed if more), never counted as surplus.
-      if (r.bucket === 'cm') {
-        const c = cost.byKey.get(r.key);
-        cmReserved += Math.max(r.revised - r.changeOrders, (c?.committed ?? 0) + (c?.pending ?? 0));
-        continue;
-      }
+      // The CM fee line is the fee's ceiling, not a cost: the fee is earned on what's spent (below).
+      if (r.bucket === 'cm') { cmCeiling += r.revised - r.changeOrders; continue; }
       const pre = r.revised - r.changeOrders;
       if (r.key === DEAL_DISCOUNT_KEY) { committedLines += pre; continue; }
       const c = cost.byKey.get(r.key);
@@ -743,8 +742,17 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
       return t + x.markups + (c.links.length ? 0 : x.work);
     }, 0);
     projectCost = r2(committedLines + Math.max(openBudget, unplaced) + coExtras);
-    cmReserved = r2(cmReserved);
+    // The original fee: the rate on the original scope's cost to complete, never more than the CM fee budget.
+    const rate = cost.cmRate ?? 0;
+    const coWork = approved.reduce((t, c) => { const x = coTotals(c); return t + x.work + x.markups; }, 0);
+    // No CM fee line in the budget: the fee isn't paid from it, so nothing is set aside for it.
+    cmOriginal = r2(cmCeiling > 0 ? Math.min(rate > 0 ? Math.max(0, ((projectCost - coWork) * rate) / 100) : cmCeiling, cmCeiling) : 0);
+    cmReserved = r2(cmReserved + cmOriginal);
     need = r2(projectCost + cmReserved);
+    // What's left, as dollars you can spend: each dollar spent earns the fee too, until the fee hits its ceiling.
+    const left = fundsInLater();
+    const feeRoom = Math.max(0, cmCeiling - cmOriginal);
+    if (left > 0) spendable = rate > 0 && (left / (1 + rate / 100)) * (rate / 100) <= feeRoom ? r2(left / (1 + rate / 100)) : r2(left - Math.min(feeRoom, left));
   } else {
     need = r2(Math.max(revised, projectedCost));
   }
@@ -757,6 +765,10 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     need, surplus: r2(Math.max(0, fundsIn - need)),
     /** The CM fees set aside (not available to spend) and the project's own cost to complete. */
     cmReserved: r2(cmReserved), projectCost: r2(projectCost || need),
+    /** The original CM fee projected (rate × cost, capped at the CM fee budget), and that budget. */
+    cmOriginal, cmCeiling: r2(cmCeiling),
+    /** Surplus you can still spend, after the fee that spending would earn. */
+    spendable,
     contingency: r2(contingency), overLines,
     /** Committed cost not mapped to a budget line yet — the projection is rougher until it is. */
     unmapped,

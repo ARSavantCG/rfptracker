@@ -14,10 +14,12 @@ import { apiRequest } from '@/lib/queryClient';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type CmFee } from './types';
 
-export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, tenantSource, feeInBudget, feeInBudgetSet }: {
+export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, tenantSource, feeInBudget, feeInBudgetSet, cmUncapped }: {
   projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null; source?: 'project' | 'line' | 'none';
   /** Does the approved budget (LAF total) already include the CM fee? Then the original fee is backed out of it. */
   feeInBudget?: boolean; feeInBudgetSet?: boolean;
+  /** Earn the capital partner's fee beyond the CM fee budget (off: the budget is a ceiling). */
+  cmUncapped?: boolean;
   /** The tenant's rate (can differ from the capital partner's). */
   tenantPct?: number; tenantSource?: 'project' | 'line' | 'none';
 }) {
@@ -90,6 +92,18 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
         {feeInBudgetSet
           ? <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Edited</span>
           : <span className="text-[10px] text-gray-500">{feeInBudget ? '(assumed: the budget has a CM fee line)' : '(assumed: no CM fee line in the budget)'}</span>}
+      </label>
+      <label className="basis-full flex items-center gap-2 text-xs text-gray-700 cursor-pointer"
+             title="Off: the capital partner's original fee stops at the CM fee budget. On: it keeps earning on every dollar spent, e.g. when a lease amendment adds supplemental funding the fee applies to.">
+        <input type="checkbox" className="h-4 w-4" checked={!!cmUncapped} onChange={async (e) => {
+          try {
+            const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { cmUncapped: e.target.checked });
+            queryClient.setQueryData([projectKey(projectId)], data);
+            toast({ title: e.target.checked ? 'CM fee earned beyond the budget' : 'CM fee capped at the CM fee budget' });
+          } catch (err: any) { toast({ title: 'Not saved', description: err?.message, variant: 'destructive' }); }
+        }} />
+        Earn the capital partner's fee beyond the CM fee budget (e.g. supplemental funding from a lease amendment)
+        <span className="text-[10px] text-gray-500">{cmUncapped ? '' : `(off: the fee stops at ${money(cmFee?.budget ?? 0)})`}</span>
       </label>
     </div>
   );

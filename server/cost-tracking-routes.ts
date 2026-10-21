@@ -272,7 +272,7 @@ export async function loadProjectBundle(projectId: number) {
       changeOrders: bk.get(r.key)?.changeOrders ?? 0,
     })),
   };
-  const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending, cmRate: cmSettings.pct,
+  const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending, cmRate: cmSettings.pct, cmUncapped: cmSettings.cmUncapped,
     byKey: new Map(summary0.rows.map((r) => [r.key, { committed: r.committed, pending: r.pending }])) });
   const story = budgetStory(approval, funding0);
   const funding = {
@@ -397,6 +397,8 @@ export async function loadProjectBundle(projectId: number) {
         total: sumCo(cosApproved, (t) => t.tenant), pendingTotal: sumCo(cosPending, (t) => t.tenant),
       },
     };
+    // The CM fee budget: the ceiling on the capital partner's original fee.
+    const cmCeiling = cmSettings.key ? r2c(breakdown.filter((r) => r.key === cmSettings.key).reduce((t, r) => t + r.revised - r.changeOrders, 0)) : 0;
     const draftFor = (type: 'fee' | 'reimbursable') => {
       const issued = ((settings.cmInvoices || []) as CmInvoiceRecord[]).filter((i) => streamOf(i) === type);
       const calc = cmInvoiceCalc({
@@ -469,12 +471,19 @@ export async function loadProjectBundle(projectId: number) {
       const invPct = type === 'reimbursable' ? cmSettings.tenantPct : cmSettings.pct;
       // Earned both ways, whatever this invoice counts: on work billed and on payments made.
       // Base: every cost for the capital partner; the tenant's billable share for the tenant.
+      // The capital partner's original fee stops at the CM fee budget (a ceiling), unless the project
+      // earns the fee beyond it (e.g. supplemental funding from a lease amendment).
+      const capFee = <T extends { fee: number; suppFee: number; toDate: number; due: number; previous: number }>(x: T): T => {
+        if (type !== 'fee' || cmSettings.cmUncapped || !(cmCeiling > 0) || x.fee <= cmCeiling) return x;
+        const toDate = r2c(cmCeiling + x.suppFee);
+        return { ...x, fee: r2c(cmCeiling), toDate, due: r2c(toDate - x.previous), capped: true };
+      };
       const earnedOn = (list: typeof items) => {
-        const x = invoiceCalc({ type, items: list, pct: invPct, previouslyInvoiced: 0 });
+        const x = capFee(invoiceCalc({ type, items: list, pct: invPct, previouslyInvoiced: 0 }));
         return { base: type === 'fee' ? r2c(list.reduce((t, i) => t + i.amount, 0)) : x.costs, fee: r2c(x.fee + x.suppFee) };
       };
       const earnedBilled = earnedOn(items), earnedPaid = earnedOn(paidList);
-      const inv = invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous });
+      const inv = capFee(invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous }));
       const withPaid = (it: typeof items[number]) => ({ ...it, paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
       // The capital partner sees every cost incurred (with what's been paid), whatever the fee is counted on.
       const shown = type === 'fee' ? items.map(withPaid) : chosen.map(withPaid);
@@ -582,6 +591,8 @@ export function cmSettingsFor(project: { settings?: any }, baseline: readonly Ba
     feeInBudget: settings.feeInBudget != null ? settings.feeInBudget === true
       : (settings.cmFeeKey !== undefined ? !!settings.cmFeeKey : !!detected?.key),
     feeInBudgetSet: settings.feeInBudget != null,
+    /** Earn the capital partner's fee beyond the CM fee budget (supplemental funding, a lease amendment). Off: the budget is a ceiling. */
+    cmUncapped: settings.cmUncapped === true,
   };
 }
 
@@ -1207,6 +1218,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.cmUncapped !== undefined) next.cmUncapped = !!b.cmUncapped;
       if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);

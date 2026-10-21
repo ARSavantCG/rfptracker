@@ -118,7 +118,7 @@ export interface ProjectBundle {
     directCosts: import('@shared/cost-position').DirectCostIn[];
   };
   cmFee: CmFee | null;
-  cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none'; feeInBudget: boolean; feeInBudgetSet: boolean };
+  cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none'; feeInBudget: boolean; feeInBudgetSet: boolean; cmUncapped: boolean };
   cmInvoices: CmInvoiceRow[];
   cmInvoiceDrafts: { capital: CmInvoiceDraft; tenant: CmInvoiceDraft };
   cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }[];

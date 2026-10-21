@@ -693,7 +693,9 @@ export const SUPPLEMENTAL_DEFAULT = 'Supplemental Funding';
 export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApproval,
   cost: { committed: number; pending: number; byKey?: ReadonlyMap<string, { committed: number; pending: number }>;
     /** The capital partner's CM fee rate: earned on what's spent, up to the CM fee budget (a ceiling). */
-    cmRate?: number }) {
+    cmRate?: number;
+    /** The fee isn't capped at the CM fee budget (earned on supplemental spending too). */
+    cmUncapped?: boolean }) {
   const s = coSummary(a.changeOrders);
   const original = r2(rows.reduce((t, r) => t + r.original, 0));
   const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
@@ -746,12 +748,13 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     const rate = cost.cmRate ?? 0;
     const coWork = approved.reduce((t, c) => { const x = coTotals(c); return t + x.work + x.markups; }, 0);
     // No CM fee line in the budget: the fee isn't paid from it, so nothing is set aside for it.
-    cmOriginal = r2(cmCeiling > 0 ? Math.min(rate > 0 ? Math.max(0, ((projectCost - coWork) * rate) / 100) : cmCeiling, cmCeiling) : 0);
+    const figured = rate > 0 ? Math.max(0, ((projectCost - coWork) * rate) / 100) : cmCeiling;
+    cmOriginal = r2(cmCeiling > 0 ? (cost.cmUncapped ? figured : Math.min(figured, cmCeiling)) : 0);
     cmReserved = r2(cmReserved + cmOriginal);
     need = r2(projectCost + cmReserved);
     // What's left, as dollars you can spend: each dollar spent earns the fee too, until the fee hits its ceiling.
     const left = fundsInLater();
-    const feeRoom = Math.max(0, cmCeiling - cmOriginal);
+    const feeRoom = cost.cmUncapped ? Infinity : Math.max(0, cmCeiling - cmOriginal);
     if (left > 0) spendable = rate > 0 && (left / (1 + rate / 100)) * (rate / 100) <= feeRoom ? r2(left / (1 + rate / 100)) : r2(left - Math.min(feeRoom, left));
   } else {
     need = r2(Math.max(revised, projectedCost));

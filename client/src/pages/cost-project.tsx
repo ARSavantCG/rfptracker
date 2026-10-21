@@ -228,7 +228,8 @@ export default function CostProject() {
             <FundingSummary bundle={b} projectId={id} />
             <BudgetPanel bundle={b} projectId={id} />
             <BudgetChangeOrders bundle={b} projectId={id} />
-            <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} source={b.cmSettings.source} tenantPct={b.cmSettings.tenantPct} tenantSource={b.cmSettings.tenantSource} />
+            <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} source={b.cmSettings.source} tenantPct={b.cmSettings.tenantPct} tenantSource={b.cmSettings.tenantSource}
+              feeInBudget={b.cmSettings.feeInBudget} feeInBudgetSet={b.cmSettings.feeInBudgetSet} />
             <TeamRollUp baseline={p.baseline} />
           </TabsContent>
 

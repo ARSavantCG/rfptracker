@@ -14,8 +14,10 @@ import { apiRequest } from '@/lib/queryClient';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type CmFee } from './types';
 
-export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, tenantSource }: {
+export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, tenantSource, feeInBudget, feeInBudgetSet }: {
   projectId: number; baseline: BaselineLine[]; cmFee: CmFee | null; source?: 'project' | 'line' | 'none';
+  /** Does the approved budget (LAF total) already include the CM fee? Then the original fee is backed out of it. */
+  feeInBudget?: boolean; feeInBudgetSet?: boolean;
   /** The tenant's rate (can differ from the capital partner's). */
   tenantPct?: number; tenantSource?: 'project' | 'line' | 'none';
 }) {
@@ -75,6 +77,20 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
         </div>
       </div>
       <Button size="sm" className="h-9" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save'}</Button>
+      <label className="basis-full flex items-center gap-2 text-xs text-gray-700 cursor-pointer"
+             title="Checked: the original fee is backed out of the budget (budget ÷ (1 + rate)). Unchecked: the fee is on top (rate × budget).">
+        <input type="checkbox" className="h-4 w-4" checked={!!feeInBudget} onChange={async (e) => {
+          try {
+            const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { feeInBudget: e.target.checked });
+            queryClient.setQueryData([projectKey(projectId)], data);
+            toast({ title: e.target.checked ? 'Budget includes the CM fee' : 'CM fee is on top of the budget' });
+          } catch (err: any) { toast({ title: 'Not saved', description: err?.message, variant: 'destructive' }); }
+        }} />
+        The approved budget (LAF total) includes the CM fee — back the original fee out of it
+        {feeInBudgetSet
+          ? <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Edited</span>
+          : <span className="text-[10px] text-gray-500">{feeInBudget ? '(assumed: the budget has a CM fee line)' : '(assumed: no CM fee line in the budget)'}</span>}
+      </label>
     </div>
   );
 }

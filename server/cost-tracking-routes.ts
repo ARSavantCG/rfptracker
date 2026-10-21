@@ -369,8 +369,10 @@ export async function loadProjectBundle(projectId: number) {
     // The original budget (before change orders) includes the CM fee, so the fee is backed out of it at
     // the partner's rate: base = budget ÷ (1 + rate), fee = budget − base. E.g. $1,466,500 at 2.75%.
     const notCm = (k: string) => k !== cmSettings.key && k !== CO_CM_KEY;
-    const origTotal = r2c(breakdown.filter((r) => r.key !== CO_CM_KEY).reduce((t, r) => t + r.revised - r.changeOrders, 0));
-    const origBase = r2c(origTotal / (1 + cmSettings.pct / 100));
+    // When the budget does not include the fee (it's paid on top), the base is the budget less any CM line, and the fee is added.
+    const origTotal0 = r2c(breakdown.filter((r) => (cmSettings.feeInBudget ? r.key !== CO_CM_KEY : notCm(r.key))).reduce((t, r) => t + r.revised - r.changeOrders, 0));
+    const origBase = cmSettings.feeInBudget ? r2c(origTotal0 / (1 + cmSettings.pct / 100)) : origTotal0;
+    const origTotal = cmSettings.feeInBudget ? origTotal0 : r2c(origTotal0 * (1 + cmSettings.pct / 100));
     const origTenantBase = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => {
       const share = Number(baseline.find((x) => x.key === r.key)?.tenantSharePct ?? 100);
       return t + ((r.revised - r.changeOrders) * share) / 100;
@@ -564,6 +566,13 @@ export function cmSettingsFor(project: { settings?: any }, baseline: readonly Ba
     tenantPct: settings.tenantCmFeePct != null && Number.isFinite(Number(settings.tenantCmFeePct)) ? Number(settings.tenantCmFeePct)
       : detected?.pct ?? (settings.cmFeePct != null ? Number(settings.cmFeePct) : 0),
     tenantSource: (settings.tenantCmFeePct != null ? 'project' : detected ? 'line' : 'none') as 'project' | 'line' | 'none',
+    /**
+     * Whether the approved budget (the LAF total) already includes the CM fee. Then the original fee is
+     * backed out of it; if not, the fee is on top: rate × budget. Assumed yes when the budget has a CM line.
+     */
+    feeInBudget: settings.feeInBudget != null ? settings.feeInBudget === true
+      : (settings.cmFeeKey !== undefined ? !!settings.cmFeeKey : !!detected?.key),
+    feeInBudgetSet: settings.feeInBudget != null,
   };
 }
 
@@ -1187,6 +1196,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
       if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);

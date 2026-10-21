@@ -27,7 +27,7 @@ const num = (s: string | number) => {
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const NO_CONTRACT = '__none__';
 
-type FormLine = { key: string; description: string; amount: string; tenantPct: string };
+type FormLine = { key: string; description: string; amount: string; tenantPct: string; fromCoId?: number | null };
 type Form = {
   id: string | null; number: string; title: string; date: string; status: BudgetCO['status'];
   billable: boolean; cmFee: boolean; contractId: string; lines: FormLine[];
@@ -70,7 +70,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const edit = (co: BudgetCO): Form => ({
     id: co.id, number: co.number, title: co.title, date: co.date ?? todayIso(), status: co.status, billable: co.billable,
     cmFee: co.cmFee, contractId: NO_CONTRACT,
-    lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: String(l.tenantPct ?? 100) })),
+    lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: String(l.tenantPct ?? 100), fromCoId: l.fromCoId ?? null })),
     credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason, vendorLinks: [], fallbackKey: '',
     markups: (co.markups || []).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: m.amount != null ? fmtMoneyText(String(m.amount)) : '' })), partnerFee: co.partnerFee, partnerFeeBasis: co.partnerFeeBasis ?? 'all',
     tenantRate: fmtPctText(String(co.cmFeePct)), partnerRate: fmtPctText(String(co.partnerFeePct)), cmFeeAmount: co.cmFeeAmount != null ? fmtMoneyText(String(co.cmFeeAmount)) : '',
@@ -302,7 +302,15 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
       markups: form.markups.filter((m) => num(m.pct) > 0 || m.amount.trim() !== '').map((m) => ({ key: m.key, label: m.label, pct: num(m.pct), amount: m.amount.trim() !== '' ? num(m.amount) : null })),
       cmFeePct: num(form.tenantRate), partnerFeePct: num(form.partnerRate), cmFeeAmount: form.cmFeeAmount.trim() !== '' ? num(form.cmFeeAmount) : null,
       // Lines priced from linked vendors are re-priced from them, not typed.
-      ...(form.linked ? {} : { lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount), tenantPct: num(l.tenantPct) })) }),
+      // Linked: amounts come from the vendors; the tenant shares typed here are saved on the links.
+      ...(form.linked ? (() => {
+        const cur = bundle.approval.changeOrders.find((c) => c.id === form.id);
+        if (!cur) return {};
+        return { links: cur.links.map((lk) => {
+          const fl = form.lines.find((x) => x.fromCoId === lk.contractCoId);
+          return { contractCoId: lk.contractCoId, pct: fl ? num(fl.tenantPct) : lk.pct };
+        }) };
+      })() : { lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount), tenantPct: num(l.tenantPct) })) }),
       ...(form.id ? {} : fromVendors
         ? { vendorLinks: form.vendorLinks.map((v) => ({ contractCoId: v.contractCoId, pct: num(v.pct) })), fallbackKey: form.fallbackKey || null, lines: [] }
         : { contractId: form.contractId === NO_CONTRACT ? null : Number(form.contractId) }),
@@ -486,7 +494,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             )}
             {form.linked && (
               <div className="px-2 py-1.5 text-xs bg-violet-50 border-b text-violet-900">
-                Priced from the linked vendor change orders. Set each vendor's tenant share in the row under this change order; amounts follow the vendors.
+                Priced from the linked vendor change orders — amounts follow the vendors. Set the tenant's share here (any precision), or type what the tenant pays.
               </div>
             )}
             <table className="w-full text-sm min-w-[860px]">
@@ -539,9 +547,22 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                                                      onChange={(e) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)) })} /></td>
                     <td className="px-1 py-1"><MoneyInput className="h-8" value={l.amount} aria-label="Amount" disabled={form.linked}
                                                           onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, amount: v } : x)) })} /></td>
-                    <td className="px-1 py-1"><SharePercentInput className="h-8" value={l.tenantPct} aria-label="Tenant %" disabled={form.linked}
-                                                            onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, tenantPct: v } : x)) })} /></td>
-                    <td className="px-2 py-1 text-right tabular-nums text-green-800">{money(r2((num(l.amount) * num(l.tenantPct)) / 100))}</td>
+                    {/* A linked vendor's share applies to all its lines; it is saved on the link. */}
+                    <td className="px-1 py-1"><SharePercentInput className="h-8" value={l.tenantPct} aria-label="Tenant %" disabled={form.linked && !l.fromCoId}
+                                                            onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i || (form.linked && l.fromCoId && x.fromCoId === l.fromCoId) ? { ...x, tenantPct: v } : x)) })} /></td>
+                    <td className="px-1 py-1">{form.linked && l.fromCoId ? (
+                      <MoneyInput className="h-8 text-green-800" aria-label="Tenant pays (dollars)"
+                        value={pctDraft[`e$${i}`] ?? fmtMoneyText(String(r2((num(l.amount) * num(l.tenantPct)) / 100)))}
+                        onValueChange={(v) => setPctDraft((d) => ({ ...d, [`e$${i}`]: v }))}
+                        onBlur={(e) => {
+                          const amt = num(l.amount), dollars = num(e.target.value);
+                          if (amt > 0 && Math.abs(dollars - r2((amt * num(l.tenantPct)) / 100)) >= 0.005) {
+                            const pct = String(Math.max(0, Math.min(100, (dollars / amt) * 100)));
+                            setForm({ ...form, lines: form.lines.map((x) => (x.fromCoId === l.fromCoId ? { ...x, tenantPct: pct } : x)) });
+                          }
+                          setPctDraft((d) => { const n = { ...d }; delete n[`e$${i}`]; return n; });
+                        }} />
+                    ) : <div className="px-1 text-right tabular-nums text-green-800">{money(r2((num(l.amount) * num(l.tenantPct)) / 100))}</div>}</td>
                     <td className="px-1 text-center">
                       <button className="p-1 text-gray-400 hover:text-red-700 disabled:opacity-30" disabled={form.linked} title="Remove" onClick={() => setForm({ ...form, lines: form.lines.filter((_, j) => j !== i) })}>
                         <Trash2 className="h-4 w-4" />

@@ -11,6 +11,8 @@
 export type SovRef = { id: number; itemNo: string | null; description: string; scheduledValue: number };
 
 export type ReadRow = {
+  /** Position in PayAppRead.rows; survives JSON, unlike object identity. */
+  rowIndex: number;
   itemNo: string | null;
   description: string;
   scheduledValue: number | null;
@@ -20,6 +22,8 @@ export type ReadRow = {
   totalToDate: number | null;
   retainage: number | null;
   sovLineId: number | null;
+  /** The change order the row belongs to, as printed ("CO #3"); null = base contract. */
+  changeOrder?: string | null;
 };
 
 export type ReadG702 = Partial<Record<
@@ -92,7 +96,8 @@ export function normalizeRead(raw: any): PayAppRead {
   }
   const rows: ReadRow[] = (Array.isArray(raw?.lines) ? raw.lines : [])
     .filter((r: any) => r && String(r.description ?? '').trim() && !r.isSubtotal)
-    .map((r: any) => ({
+    .map((r: any, i: number) => ({
+      rowIndex: i,
       itemNo: r.itemNo != null && String(r.itemNo).trim() ? String(r.itemNo).trim() : null,
       description: String(r.description).trim(),
       scheduledValue: toNum(r.scheduledValue),
@@ -102,6 +107,7 @@ export function normalizeRead(raw: any): PayAppRead {
       totalToDate: toNum(r.totalToDate),
       retainage: toNum(r.retainage),
       sovLineId: Number.isInteger(Number(r.sovLineId)) && r.sovLineId !== null ? Number(r.sovLineId) : null,
+      changeOrder: r.changeOrder != null && String(r.changeOrder).trim() ? String(r.changeOrder).trim() : null,
     }));
   const n = toNum(raw?.applicationNumber);
   return {
@@ -209,16 +215,76 @@ export function payAppPrompt(contractor: string, lines: SovRef[]): string {
 Read it and return ONLY a JSON object, no preamble and no markdown fences:
 {"applicationNumber":number|null,"invoiceNumber":string|null,"periodFrom":"YYYY-MM-DD"|null,"periodTo":"YYYY-MM-DD"|null,"contractor":string|null,
  "g702":{"originalContractSum":number|null,"netChangeOrders":number|null,"contractSumToDate":number|null,"completedAndStored":number|null,"retainage":number|null,"earnedLessRetainage":number|null,"previousCertificates":number|null,"currentPaymentDue":number|null,"balanceToFinish":number|null},
- "lines":[{"itemNo":string|null,"description":string,"scheduledValue":number|null,"previous":number|null,"thisPeriod":number|null,"stored":number|null,"totalToDate":number|null,"retainage":number|null,"sovLineId":number|null,"isSubtotal":boolean}],
+ "lines":[{"itemNo":string|null,"description":string,"scheduledValue":number|null,"previous":number|null,"thisPeriod":number|null,"stored":number|null,"totalToDate":number|null,"retainage":number|null,"sovLineId":number|null,"changeOrder":string|null,"isSubtotal":boolean}],
  "warnings":string[]}
 
 G703 columns: A item no., B description, C scheduled value, D work completed from previous application, E work completed this period, F materials presently stored (not in D or E), G total completed and stored to date, H % (G/C), I balance to finish, J retainage.
 - One entry in "lines" per G703 row, including change order rows. Mark subtotal, page total and grand total rows "isSubtotal": true.
 - Numbers are plain dollars: no $ or commas; a figure in parentheses is negative. Use null for a blank cell, 0 for a cell showing 0 or "-".
 - periodTo is the "period to" date on the G702.
+- "changeOrder": for a change order row, the change order number as printed (e.g. "CO #3", "PCCO 001"); null for base contract rows.
 - "sovLineId": which of OUR lines below the row is, by its id, or null if none fits. Each of our ids at most once.
 - Copy figures exactly as printed. Do not compute or correct anything; if the contractor's math looks wrong, say so in "warnings".
 
 Our schedule of values for this contract (id, item #, description, scheduled value):
 ${list}`;
+}
+
+/* ------------------------------------------------------------------ setup */
+
+export type SetupLine = { rowIndex: number; itemNo: string | null; description: string; scheduledValue: number; changeOrder: string | null };
+export type OpeningLine = { rowIndex: number; sovLineId: number | null; work: number; retainage: number | null };
+export type SetupPlan = {
+  /** New SOV lines to create from G703 rows our contract does not have. */
+  lines: SetupLine[];
+  /** Change orders those lines need, by the number printed on the G703. */
+  changeOrders: string[];
+  /** Everything billed before tracking, as one application numbered just before this one. */
+  opening: { number: number; label: string; lines: OpeningLine[]; total: number } | null;
+  /** Retainage % their G702 implies (line 5 ÷ line 4), offered when it differs from the contract's. */
+  retainagePct: number | null;
+};
+
+export const coKey = (s: string) => s.toLowerCase().replace(/change\s*order|pcco|co|#|no\.?/g, '').replace(/[^a-z0-9]/g, '').replace(/^0+(?=\d)/, '');
+
+/**
+ * What it takes to make our contract match this pay app: lines for the rows
+ * that matched nothing, and — when nothing has been recorded before this app —
+ * one opening application carrying column D, so "previous" and G702 line 7
+ * agree from the first app tracked.
+ */
+export function setupPlan(read: PayAppRead, m: MatchResult, ctx: {
+  thisNumber: number; priorAppCount: number; retainagePct: number;
+}): SetupPlan {
+  const rowIndex = (r: ReadRow) => r.rowIndex;
+  const lines: SetupLine[] = m.unmatched
+    .filter((r) => (r.scheduledValue ?? 0) !== 0 || workOfRow(r) !== 0 || (r.previous ?? 0) !== 0)
+    .map((r) => ({ rowIndex: rowIndex(r), itemNo: r.itemNo, description: r.description, scheduledValue: r2(r.scheduledValue ?? 0), changeOrder: r.changeOrder ?? null }));
+  const changeOrders: string[] = [];
+  for (const l of lines) if (l.changeOrder && !changeOrders.some((c) => coKey(c) === coKey(l.changeOrder!))) changeOrders.push(l.changeOrder);
+
+  let opening: SetupPlan['opening'] = null;
+  if (ctx.priorAppCount === 0 && ctx.thisNumber > 1) {
+    const newIdx = new Set(lines.map((l) => l.rowIndex));
+    const ol: OpeningLine[] = [];
+    const add = (r: ReadRow, sovLineId: number | null) => {
+      const prev = r2(r.previous ?? 0);
+      if (!prev) return;
+      // Their column J is retainage to date; the share held on earlier work is pro rata.
+      const toDate = prev + workOfRow(r) + (r.stored ?? 0);
+      const ret = r.retainage != null && toDate ? r2(r.retainage * prev / toDate) : null;
+      ol.push({ rowIndex: rowIndex(r), sovLineId, work: prev, retainage: ret });
+    };
+    for (const x of m.matched) add(x.row, x.sovLineId);
+    for (const r of m.unmatched) if (newIdx.has(rowIndex(r))) add(r, null);
+    if (ol.length) {
+      const n = ctx.thisNumber - 1;
+      opening = { number: n, label: n === 1 ? 'App 1 (before tracking)' : `Apps 1–${n} (before tracking)`, lines: ol, total: r2(ol.reduce((s, l) => s + l.work, 0)) };
+    }
+  }
+
+  const g = read.g702;
+  const implied = g.retainage != null && g.completedAndStored ? Math.round((g.retainage / g.completedAndStored) * 10000) / 100 : null;
+  const retainagePct = implied != null && Math.abs(implied - ctx.retainagePct) >= 0.01 ? implied : null;
+  return { lines, changeOrders, opening, retainagePct };
 }

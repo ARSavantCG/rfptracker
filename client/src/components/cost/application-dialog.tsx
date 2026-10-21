@@ -17,7 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import type { PayAppRead, MatchResult } from '@shared/cost-payapp-read';
+import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
+import { Checkbox } from '@/components/ui/checkbox';
 import { g702For, lineProgress, type Application } from '@shared/cost-tracking';
 import {
   money, projectKey,
@@ -62,6 +63,9 @@ export function ApplicationDialog({
   const ai = useAiStatus();
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [aiCells, setAiCells] = useState<Record<number, AiCell>>({});
+  const [setupDone, setSetupDone] = useState(false);
+  const [added, setAdded] = useState(0);
+  const [pick, setPick] = useState({ lines: true, opening: true, paid: true, retainage: true });
 
   const mine = useMemo(() => applications.filter((a) => a.contractId === contract?.id), [applications, contract?.id]);
   const thisNumber = app ? app.number : (parseInt(number, 10) || 0);
@@ -85,6 +89,8 @@ export function ApplicationDialog({
     setFile(null);
     setAiResult(null);
     setAiCells({});
+    setSetupDone(false);
+    setPick({ lines: true, opening: true, paid: true, retainage: true });
     const d: Record<number, Draft> = {};
     for (const l of app?.lines ?? []) {
       d[l.sovLineId] = {
@@ -219,8 +225,49 @@ export function ApplicationDialog({
       if (!periodStart && r.periodFrom) setPeriodStart(r.periodFrom);
       if (!periodEnd && r.periodTo) setPeriodEnd(r.periodTo);
       setAiResult(r);
+      setSetupDone(false);
+      setPick({ lines: true, opening: true, paid: true, retainage: true });
     },
     onError: (e: any) => toast({ title: 'AI could not read it', description: e?.message, variant: 'destructive', duration: 10000 }),
+  });
+
+  /** Lines the contract lacks, billing before tracking, retainage — from the pay app. */
+  const plan = useMemo(() => aiResult && contract
+    ? setupPlan(aiResult, aiResult, { thisNumber, priorAppCount: mine.filter((a) => a.number < thisNumber).length, retainagePct: Number(contract.retainagePct) })
+    : null, [aiResult, thisNumber, mine, contract?.retainagePct]);
+  const setup = useMutation({
+    mutationFn: async () => apiRequest(`/api/cost-contracts/${contract!.id}/setup-from-pay-app`, 'POST', {
+      lines: pick.lines ? plan!.lines : [],
+      opening: pick.opening ? plan!.opening : null,
+      openingPaid: pick.opening && pick.paid,
+      // A day before this period began, when known: paid before this app.
+      openingPaidDate: periodStart ? new Date(new Date(`${periodStart}T12:00:00Z`).getTime() - 86400000).toISOString().slice(0, 10) : null,
+      retainagePct: pick.retainage ? plan!.retainagePct : null,
+    }) as Promise<{ lineIds: Record<string, number>; openingId: number | null }>,
+    onSuccess: async (r) => {
+      await queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
+      const rows = aiResult!.rows;
+      const cells: Record<number, AiCell> = {};
+      setDraft((d) => {
+        const out = { ...d };
+        for (const [idx, id] of Object.entries(r.lineIds)) {
+          const row = rows[Number(idx)];
+          if (!row) continue;
+          const work = workOfRow(row), stored = Math.round((row.stored ?? 0) * 100) / 100;
+          const ret = row.retainage == null ? null : Math.round(row.retainage * 100) / 100;
+          cells[id] = { work, stored, retainage: ret, previous: row.previous == null ? null : Math.round(row.previous * 100) / 100 };
+          out[id] = { work: work ? work.toFixed(2) : '', stored: stored ? stored.toFixed(2) : '', retainage: ret ? ret.toFixed(2) : '', toDate: '' };
+        }
+        return out;
+      });
+      setAiCells((c) => ({ ...c, ...cells }));
+      setSetupDone(true);
+      const n = Object.keys(r.lineIds).length;
+      setAdded(n);
+      toast({ title: 'Contract set up from the pay app',
+        description: [n ? `${n} line${n === 1 ? '' : 's'} added (assign them to budget lines on the contract)` : '', r.openingId ? 'opening balance recorded' : ''].filter(Boolean).join('; ') + '. Now check this pay app and save it.' });
+    },
+    onError: (e: any) => toast({ title: 'Not set up', description: e?.message, variant: 'destructive', duration: 10000 }),
   });
 
   const save = useMutation({
@@ -309,18 +356,80 @@ export function ApplicationDialog({
                     : `Their G702 says ${money(theirs)} due; these lines give ${money(ours)} (${money(ours - theirs)} difference).`}
               </div>
               <div className="text-xs text-gray-700">
-                {aiResult.matched.length} line{aiResult.matched.length === 1 ? '' : 's'} filled from {aiResult.fileName} (violet).
-                {aiResult.unmatched.length ? ` ${aiResult.unmatched.length} of their lines did not match ours.` : ''} Nothing is saved until you click Save.
+                {(() => {
+                  const filled = aiResult.matched.length + (setupDone ? added : 0);
+                  const left = aiResult.unmatched.length - (setupDone ? added : 0);
+                  return <>{filled} line{filled === 1 ? '' : 's'} filled from {aiResult.fileName} (violet).
+                    {left > 0 ? ` ${left} of their lines did not match ours.` : ''} This pay app is not saved until you click Record.</>;
+                })()}
               </div>
-              {aiResult.warnings.length > 0 && (
-                <ul className="text-xs text-gray-800 list-disc pl-5">
-                  {aiResult.warnings.slice(0, 8).map((w, i) => <li key={i}>{w}</li>)}
-                  {aiResult.warnings.length > 8 && <li>…and {aiResult.warnings.length - 8} more</li>}
-                </ul>
-              )}
+              {(() => {
+                const ws = setupDone ? aiResult.warnings.filter((w) => !w.includes('did not match a line')) : aiResult.warnings;
+                return ws.length > 0 && (
+                  <ul className="text-xs text-gray-800 list-disc pl-5">
+                    {ws.slice(0, 8).map((w, i) => <li key={i}>{w}</li>)}
+                    {ws.length > 8 && <li>…and {ws.length - 8} more</li>}
+                  </ul>
+                );
+              })()}
             </div>
           );
         })()}
+
+        {plan && !setupDone && (plan.lines.length > 0 || plan.opening || plan.retainagePct != null) && (
+          <div className="rounded-md border border-violet-300 bg-white px-3 py-3 text-sm space-y-2">
+            <div className="font-medium text-gray-900">Set up this contract from the pay app</div>
+            {plan.lines.length > 0 && (
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox checked={pick.lines} onCheckedChange={(v) => setPick({ ...pick, lines: !!v })} />
+                  <span>Add {plan.lines.length} line{plan.lines.length === 1 ? '' : 's'} from their G703 ({money(plan.lines.reduce((s, l) => s + l.scheduledValue, 0))} scheduled)
+                    {plan.changeOrders.length ? `, including ${plan.changeOrders.length} change order${plan.changeOrders.length === 1 ? '' : 's'}` : ''}</span>
+                </label>
+                <div className="mt-1 ml-6 max-h-44 overflow-y-auto border rounded">
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {plan.lines.map((l) => (
+                        <tr key={l.rowIndex} className="border-b last:border-0">
+                          <td className="px-2 py-1 text-gray-500 w-14">{l.itemNo ?? ''}</td>
+                          <td className="px-2 py-1">{l.description}</td>
+                          <td className="px-2 py-1 text-gray-600">{l.changeOrder ?? 'Base contract'}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">{money(l.scheduledValue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            {plan.opening && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox className="mt-0.5" checked={pick.opening} onCheckedChange={(v) => setPick({ ...pick, opening: !!v })} />
+                <span>Record what was billed before tracking as <span className="font-medium">{plan.opening.label}</span>: {money(plan.opening.total)} of work, from their "previous application" column.
+                  <span className="block text-xs text-gray-600">So "previous" and G702 line 7 match from this pay app on.</span></span>
+              </label>
+            )}
+            {plan.opening && pick.opening && (
+              <label className="flex items-center gap-2 cursor-pointer ml-6">
+                <Checkbox checked={pick.paid} onCheckedChange={(v) => setPick({ ...pick, paid: !!v })} />
+                <span>It has been paid (so it doesn't show as owed)</span>
+              </label>
+            )}
+            {plan.retainagePct != null && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox checked={pick.retainage} onCheckedChange={(v) => setPick({ ...pick, retainage: !!v })} />
+                <span>Set contract retainage to {plan.retainagePct.toFixed(2)}% (their G702; the contract says {Number(contract.retainagePct).toFixed(2)}%)</span>
+              </label>
+            )}
+            <div className="flex items-center gap-3">
+              <Button type="button" size="sm" disabled={setup.isPending || !((pick.lines && plan.lines.length) || (pick.opening && plan.opening) || (pick.retainage && plan.retainagePct != null))}
+                      onClick={() => setup.mutate()}>
+                {setup.isPending ? 'Setting up…' : 'Set up contract'}
+              </Button>
+              <span className="text-xs text-gray-600">Saves these to the contract now. This pay app still waits for you to save it.</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
           Enter

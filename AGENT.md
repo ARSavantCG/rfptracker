@@ -101,3 +101,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - One switch for every AI feature: Admin → AI (`app_settings.ai_enabled`, missing = on). Server: `server/lib/ai-switch.ts` — put `requireAi` on any new AI route; client: `useAiStatus().on` hides the button.
 - All AI uses the one `ANTHROPIC_API_KEY` secret. AI only fills a screen for review; it never saves.
 - Pay app reader: `POST /api/cost-contracts/:id/read-pay-app` (file or documentId). The model proposes which SOV line each G703 row is; `shared/cost-payapp-read.ts` re-checks every match (id → item # → description → value) and returns unmatched rows rather than dropping them.
+- Setup from a pay app: `setupPlan()` (shared) + `POST /api/cost-contracts/:id/setup-from-pay-app` add missing lines/COs (unallocated), an opening app numbered N−1 from column D (optionally marked paid), and retainage %. Rows carry `rowIndex` — never match rows by object identity after JSON.
+- SovGridEditor resets to server lines while untouched; a stale open grid would otherwise delete lines added elsewhere on save.

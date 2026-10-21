@@ -37,7 +37,7 @@ import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStora
 import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
-import { normalizeRead, matchRows, payAppPrompt } from '@shared/cost-payapp-read';
+import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
 import { waiverChecklist, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
@@ -989,6 +989,17 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.reconciled !== undefined) patch.reconciled = !!b.reconciled;
       if (b.method !== undefined) patch.method = METHODS.includes(String(b.method)) ? String(b.method) : null;
       if (b.reference !== undefined) patch.reference = b.reference ? String(b.reference).slice(0, 120) : null;
+      if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes).slice(0, 2000) : null;
+      if (b.amount !== undefined) {
+        const cents = toCents(b.amount);
+        if (cents === 0) return res.status(400).json({ message: 'Enter the amount paid.' });
+        patch.amountCents = cents;
+      }
+      if (b.paidDate !== undefined) {
+        const d = String(b.paidDate || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return res.status(400).json({ message: 'Enter the date it was paid.' });
+        patch.paidDate = new Date(`${d}T12:00:00Z`);
+      }
       if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
       const [row] = await db.update(costPayments).set(patch).where(eq(costPayments.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'Payment not found' });
@@ -1333,6 +1344,103 @@ export function registerCostTrackingRoutes(app: Express): void {
     } catch (e: any) {
       if (e?.status === 401) return res.status(502).json({ message: 'The Anthropic API key was rejected. Check the ANTHROPIC_API_KEY secret.' });
       fail(res, e, 'read the pay app');
+    }
+  });
+
+  /**
+   * Make the contract match a pay app AI just read: add the lines it does not
+   * have (and the change orders they sit under), and record what was billed
+   * before tracking began as one opening application. All or nothing.
+   */
+  app.post('/api/cost-contracts/:id/setup-from-pay-app', ...canEdit, async (req, res) => {
+    try {
+      const contractId = intParam(req, 'id');
+      if (contractId === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [contract] = await db.select().from(costContracts).where(eq(costContracts.id, contractId));
+      if (!contract) return res.status(404).json({ message: 'Contract not found' });
+      const b = req.body || {};
+      const lines: any[] = (Array.isArray(b.lines) ? b.lines : []).filter((l: any) => String(l?.description ?? '').trim());
+      const opening = b.opening && Array.isArray(b.opening.lines) && b.opening.lines.length ? b.opening : null;
+      const pct = b.retainagePct != null && Number.isFinite(Number(b.retainagePct)) ? Number(b.retainagePct) : null;
+      if (!lines.length && !opening && pct === null) return res.status(400).json({ message: 'Nothing to set up.' });
+
+      const result = await db.transaction(async (tx) => {
+        let retainageBp = contract.retainageBp;
+        if (pct !== null && pct >= 0 && pct <= 100) {
+          retainageBp = Math.round(pct * 100);
+          await tx.update(costContracts).set({ retainageBp }).where(eq(costContracts.id, contractId));
+        }
+        const cos = await tx.select().from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
+        const coIds = new Map<string, number>();
+        for (const c of cos) if (c.status !== 'void') coIds.set(coKey(c.number), c.id);
+        let coOrder = cos.length;
+        for (const l of lines) {
+          if (!l.changeOrder) continue;
+          const k = coKey(String(l.changeOrder));
+          if (coIds.has(k)) continue;
+          const [co] = await tx.insert(costChangeOrders).values({
+            contractId, number: String(l.changeOrder).slice(0, 60), title: null, status: 'approved',
+            approvedDate: new Date(), sortOrder: coOrder++,
+          }).returning();
+          coIds.set(k, co.id);
+        }
+        const existing = await tx.select({ id: costSovLines.id }).from(costSovLines).where(eq(costSovLines.contractId, contractId));
+        const lineIds: Record<number, number> = {};
+        let order = existing.length;
+        for (const l of lines) {
+          const [row] = await tx.insert(costSovLines).values({
+            contractId,
+            changeOrderId: l.changeOrder ? coIds.get(coKey(String(l.changeOrder))) ?? null : null,
+            itemNo: l.itemNo ? String(l.itemNo).slice(0, 40) : null,
+            description: String(l.description).trim().slice(0, 300),
+            scheduledValueCents: toCents(l.scheduledValue),
+            allocationMode: 'unallocated', allocations: [], sortOrder: order++,
+          }).returning();
+          lineIds[Number(l.rowIndex)] = row.id;
+        }
+
+        let openingId: number | null = null;
+        if (opening) {
+          const n = Math.floor(Number(opening.number));
+          const apps = await tx.select({ number: costApplications.number }).from(costApplications)
+            .where(eq(costApplications.contractId, contractId));
+          if (!(n >= 1)) throw new UserError('The opening balance needs a pay app number.');
+          if (apps.some((a) => a.number <= n)) throw new UserError(`Pay apps up to ${n} are already recorded, so there is no gap to fill with an opening balance.`);
+          const valid = new Set((await tx.select({ id: costSovLines.id }).from(costSovLines)
+            .where(eq(costSovLines.contractId, contractId))).map((x) => x.id));
+          const [app0] = await tx.insert(costApplications).values({
+            contractId, number: n, kind: 'pay_app', invoiceNumber: null,
+            notes: String(opening.label || 'Billed before tracking').slice(0, 200), createdBy: who(req),
+          }).returning();
+          openingId = app0.id;
+          const rows = [];
+          for (const ol of opening.lines) {
+            const id = ol.sovLineId != null ? Number(ol.sovLineId) : lineIds[Number(ol.rowIndex)];
+            if (!id || !valid.has(id)) continue;
+            const work = toCents(ol.work);
+            if (!work) continue;
+            const ret = ol.retainage === null || ol.retainage === undefined || ol.retainage === ''
+              ? Math.round(work * retainageBp / 10000) : toCents(ol.retainage);
+            rows.push({ applicationId: app0.id, sovLineId: id, workThisPeriodCents: work, storedToDateCents: 0, retainageToDateCents: ret });
+          }
+          if (rows.length) await tx.insert(costApplicationLines).values(rows);
+          // Billed before tracking is, as a rule, paid before tracking. Recorded so
+          // "owed" is only what is actually open; certified = work less retainage.
+          if (b.openingPaid) {
+            const due = rows.reduce((t, r) => t + r.workThisPeriodCents - r.retainageToDateCents, 0);
+            const d = /^\d{4}-\d{2}-\d{2}$/.test(String(b.openingPaidDate ?? '')) ? String(b.openingPaidDate) : new Date().toISOString().slice(0, 10);
+            if (due > 0) await tx.insert(costPayments).values({
+              contractId, applicationId: app0.id, amountCents: due, paidDate: new Date(`${d}T12:00:00Z`),
+              reference: null, method: 'other', notes: 'Paid before tracking began (recorded when the contract was set up from a pay app).', createdBy: who(req),
+            });
+          }
+        }
+        return { lineIds, openingId, retainagePct: retainageBp / 100 };
+      });
+      res.json(result);
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'set up the contract');
     }
   });
 

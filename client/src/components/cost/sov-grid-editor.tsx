@@ -81,6 +81,15 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   const original = useMemo(() => lines.map(toRow), [lines]);
   const [rows, setRows] = useState<Row[]>(() => (original.length ? original.map((r) => ({ ...r })) : [blankRow(), blankRow(), blankRow()]));
   const [paste, setPaste] = useState<string | null>(null);
+  /**
+   * Lines can arrive while this grid is open (AI setup from a pay app saves
+   * them directly). If nothing has been typed here, take them — otherwise a
+   * save of the stale grid would read them as removed and delete them.
+   */
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) setRows(original.length ? original.map((r) => ({ ...r })) : [blankRow(), blankRow(), blankRow()]);
+  }, [original]);
   const [saving, setSaving] = useState(false);
   const descRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const baselineName = new Map(baseline.map((b) => [b.key, b.description]));
@@ -90,7 +99,10 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   useEffect(() => {
     if (focusRid && descRefs.current[focusRid]) { descRefs.current[focusRid]!.focus(); setFocusRid(null); }
   }, [focusRid, rows]);
-  const update = (r: string, patch: Partial<Row>) => setRows((rs) => rs.map((x) => (x.rid === r ? { ...x, ...patch } : x)));
+  const update = (r: string, patch: Partial<Row>) => {
+    touched.current = true;
+    setRows((rs) => rs.map((x) => (x.rid === r ? { ...x, ...patch } : x)));
+  };
   const isBlank = (x: Row) => x.id == null && !x.description.trim() && !num(x.value);
   const addRow = (after?: string) => {
     // Enter on a line moves to the empty line under it if there is one; otherwise adds one.
@@ -112,6 +124,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
       toast({ title: 'Billed on a pay app', description: 'This line has billing against it, so it stays. Set its value to zero instead.' });
       return;
     }
+    touched.current = true;
     setRows((rs) => rs.filter((x) => x.rid !== r.rid));
   };
 
@@ -128,6 +141,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
     if (!parsed.lines.length) { toast({ title: 'Nothing read', description: 'Each row needs a description and an amount.' }); return; }
     const incoming = parsed.lines.map((l) => ({ ...blankRow(), itemNo: l.itemNo ?? '', code: l.code ?? '', description: l.description, value: fmtMoneyText(String(l.scheduledValue)) }));
     // Fill the empty rows first, then append.
+    touched.current = true;
     setRows((rs) => [...rs.filter((r) => r.id != null || r.description.trim() || num(r.value)), ...incoming]);
     setPaste(null);
     toast({ title: `${incoming.length} line${incoming.length === 1 ? '' : 's'} added to the grid`, description: parsed.skipped.length ? `${parsed.skipped.length} header or total row${parsed.skipped.length === 1 ? '' : 's'} skipped. Review, then Save.` : 'Review, then Save.' });

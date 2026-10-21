@@ -3,14 +3,15 @@
  * base contract first, then each change order as its own header with its own
  * lines (cost of work, insurance, fee) underneath — and its pay apps.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { useAiStatus } from '@/hooks/use-ai-status';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput } from './inputs';
 import { fmtPctText } from '@shared/format';
@@ -41,6 +42,7 @@ export function ContractCard({
   onPackage?: (contract: ContractRow, app: ApplicationRow) => void;
   defaultOpen?: boolean;
 }) {
+  const ai = useAiStatus();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
@@ -60,6 +62,12 @@ export function ContractCard({
   // Which group's lines are open in the grid: 'base', a change order id, or none.
   // A brand-new contract opens straight into its base contract.
   const [editing, setEditing] = useState<string | null>(lines.length === 0 && changeOrders.length === 0 ? 'base' : null);
+  // The empty grid opens by itself on a new contract; if lines then arrive from
+  // elsewhere (AI setup from a pay app), close it rather than leave a stale grid open.
+  const autoOpened = useRef(editing === 'base');
+  useEffect(() => {
+    if (autoOpened.current && lines.length > 0 && editing === 'base') { autoOpened.current = false; setEditing(null); }
+  }, [lines.length]);
   const billedIds = useMemo(() => new Set(applications.flatMap((a) => a.lines.map((l) => l.sovLineId))), [applications]);
   const removeContract = useMutation({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}`, 'DELETE'),
@@ -309,17 +317,19 @@ export function ContractCard({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Pay apps &amp; invoices</div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="h-8" disabled={lines.length === 0}
+            <Button size="sm" variant="outline" className="h-8" disabled={lines.length === 0 && !ai.on}
                     onClick={() => onOpenApplication(contract, null, 'invoice')}>
               <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
             </Button>
-            <Button size="sm" className="h-8" disabled={lines.length === 0}
+            <Button size="sm" className="h-8" disabled={lines.length === 0 && !ai.on}
                     onClick={() => onOpenApplication(contract, null, 'pay_app')}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Pay app
             </Button>
           </div>
         </div>
-        {lines.length === 0 && <p className="text-xs text-gray-500">Add the schedule of values first.</p>}
+        {lines.length === 0 && <p className="text-xs text-gray-500">
+          {ai.on ? 'No schedule of values yet: enter it above, or start a pay app, attach the G703 and let AI set the contract up from it.' : 'Add the schedule of values first.'}
+        </p>}
         {applications.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[720px]">
@@ -348,12 +358,16 @@ export function ContractCard({
                         <td className="py-1.5 pr-2 text-right" onClick={(e) => e.stopPropagation()}>
                           <button className={`tabular-nums hover:underline ${open > 0.005 ? 'text-red-700 font-medium' : 'text-green-700'}`}
                                   title="Record or view payments" onClick={() => onPay?.(contract, a)}>
-                            {open > 0.005 ? money(open) : 'Paid'}
+                            {open > 0.005 ? money(open) : 'Paid ✓'}
                           </button>
                         </td>
                       </>);
                     })()}
                     <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" title="Record a payment: check date, check #, amount"
+                              onClick={() => onPay?.(contract, a)}>
+                        <DollarSign className="h-3.5 w-3.5 mr-0.5" /> {payments.some((p) => p.applicationId === a.id) ? 'Payments' : 'Record payment'}
+                      </Button>
                       <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => onPackage?.(contract, a)}>
                         <FolderOpen className="h-3.5 w-3.5 mr-1" /> Package{docsFor(a.id).length ? ` (${docsFor(a.id).length})` : ''}
                       </Button>

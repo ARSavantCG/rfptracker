@@ -150,6 +150,7 @@ export interface PaymentRow {
   reference: string | null;
   method: string | null;
   reconciled: boolean;
+  notes?: string | null;
 }
 
 export interface CmFee {

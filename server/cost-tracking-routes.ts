@@ -291,7 +291,7 @@ export async function loadProjectBundle(projectId: number) {
   }));
   const positionInput = {
     contractIds, lines, changeOrders, applications: dated, payments,
-    directCosts: directCosts.map((d) => ({ date: d.date, amount: d.amount })),
+    directCosts: directCosts.map((d) => ({ id: d.id, date: d.date, amount: d.amount, vendor: d.vendor, description: d.description, method: d.method, reference: d.reference, key: d.key })),
   };
   const position = positionAsOf(todayEastern(), positionInput);
 

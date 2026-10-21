@@ -73,6 +73,12 @@ export interface ApplicationPosition {
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const day = (iso: string | null | undefined) => String(iso ?? '').slice(0, 10);
 
+/** A cost with no contract behind it: a permit fee, a utility deposit. Paid when dated. */
+export interface DirectCostIn {
+  date: string; amount: number;
+  id?: number; vendor?: string; description?: string; method?: string | null; reference?: string | null; key?: string | null;
+}
+
 export function positionAsOf(asOf: string, input: {
   contractIds: readonly number[];
   lines: readonly SovLine[];
@@ -80,7 +86,7 @@ export function positionAsOf(asOf: string, input: {
   applications: readonly DatedApplication[];
   payments: readonly Payment[];
   /** Card charges and other costs with no contract. Paid when dated. */
-  directCosts?: ReadonlyArray<{ date: string; amount: number }>;
+  directCosts?: ReadonlyArray<DirectCostIn>;
 }) {
   const cutoff = day(asOf);
   // An application counts once its date has passed — and so does every
@@ -142,7 +148,12 @@ export function positionAsOf(asOf: string, input: {
   }).sort((x, y) => x.contractId - y.contractId || x.number - y.number);
 
   const directRows = (input.directCosts || []).filter((d) => day(d.date) <= cutoff);
-  const direct = { total: r2(directRows.reduce((s, d) => s + (Number(d.amount) || 0), 0)), count: directRows.length };
+  const direct = {
+    total: r2(directRows.reduce((s, d) => s + (Number(d.amount) || 0), 0)), count: directRows.length,
+    // Each one spelled out: who was paid, for what, how — they have no contract or pay app to point to.
+    rows: directRows.map((d) => ({ ...d, date: day(d.date), amount: r2(Number(d.amount) || 0) }))
+      .sort((x, y) => x.date.localeCompare(y.date) || (x.id ?? 0) - (y.id ?? 0)),
+  };
 
   const sum = (k: keyof ContractPosition) => r2(contracts.reduce((s, c) => s + (c[k] as number), 0));
   // A direct cost is billed and paid in one go: it adds to the sum, the

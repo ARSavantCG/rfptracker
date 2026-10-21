@@ -266,6 +266,8 @@ export function renderCostPositionHtml(input: {
   scope?: string;
   /** Each pay app checked against the contractor's G702. */
   checks?: Map<number, { status: string; dueDiff: number | null } | undefined>;
+  /** Budget line names, for the direct costs listed. */
+  lineNames?: Map<string, string>;
   generatedBy?: string | null;
 }): string {
   const { position: p } = input;
@@ -284,8 +286,25 @@ export function renderCostPositionHtml(input: {
   const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
     <td class="num">${fmt(c.contractSum)}${c.pendingChanges ? `<div style="font-size:9px;color:#b45309">+ ${money2(c.pendingChanges)} pending CO</div>` : ""}</td>${cell(c.billedToDate)}<td class="num">${fmtPct(c.pctComplete)}</td>${cell(c.retainageHeld)}
     ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("")
-    + (p.direct && p.direct.count > 0 ? `<tr><td>Direct costs (${p.direct.count} ${p.direct.count === 1 ? "entry" : "entries"})</td>
+    + (p.direct && p.direct.count > 0 ? `<tr><td>Direct costs — no contract <span style="color:#6b7280">(${p.direct.count}, listed below)</span></td>
     ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.00%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
+
+  // Costs with no contract: spelled out one by one, under headings that fit them.
+  const METHOD: Record<string, string> = { card: "Card", check: "Check", ach: "ACH", wire: "Wire", other: "Other" };
+  const paidBy = (d: { method?: string | null; reference?: string | null }) => {
+    const m = d.method ? METHOD[d.method] || d.method : "";
+    const ref = d.reference || "";
+    return m && ref.toLowerCase().startsWith(m.toLowerCase()) ? ref : [m, ref].filter(Boolean).join(" ");
+  };
+  const directRows = p.direct?.rows ?? [];
+  const directTable = directRows.length === 0 ? "" : `
+  <h3 class="sec">Direct Costs (No Contract)</h3>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">Budget Line</th><th class="l">Paid By</th><th>Amount</th></tr></thead><tbody>
+    ${directRows.map((d) => `<tr><td class="l">${escapeHtml(longDate(d.date))}</td><td class="l">${escapeHtml(d.vendor || "")}</td><td class="l">${escapeHtml(d.description || "")}</td>
+      <td class="l">${escapeHtml(d.key ? input.lineNames?.get(d.key) ?? "Removed line" : "Unallocated")}</td><td class="l">${escapeHtml(paidBy(d))}</td>${cell(d.amount)}</tr>`).join("")}
+    <tr class="total"><td class="l" colspan="5">Total direct costs</td>${cell(p.direct.total)}</tr>
+  </tbody></table>
+  <div class="legend">Paid directly, with no contract or pay app behind them — billed and paid in one go, so nothing is owed or held.</div>`;
 
   const appRows = p.applications.length === 0
     ? `<tr><td colspan="7" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
@@ -310,6 +329,7 @@ export function renderCostPositionHtml(input: {
   <table class="t"><thead><tr><th>Contract</th><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">vs Contractor G702</th></tr></thead><tbody>
     ${appRows}
   </tbody></table>
+  ${directTable}
   ${cmFeeTable(input.cmFee)}
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
@@ -787,6 +807,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         cmFee: asOf === todayEastern() && !one && want !== "direct" ? b.cmFee : null,
         scope: one ? one.counterparty + (one.contractNumber ? ` #${one.contractNumber}` : "") : want === "direct" ? "Direct costs only" : "",
         checks,
+        lineNames: new Map(((b.project.baseline || []) as any[]).map((x) => [x.key, x.description])),
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {

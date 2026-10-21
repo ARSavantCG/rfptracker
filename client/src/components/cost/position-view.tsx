@@ -23,6 +23,13 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
   const [scope, setScope] = useState('all');
   const p = useMemo(() => positionAsOf(asOf || todayIso(), filterPositionInput(bundle.positionInput, scope)), [asOf, scope, bundle.positionInput]);
   const contractName = new Map(bundle.contracts.map((c) => [c.id, c.counterparty]));
+  const lineName = new Map(bundle.project.baseline.map((b) => [b.key, b.description]));
+  const METHOD: Record<string, string> = { card: 'Card', check: 'Check', ach: 'ACH', wire: 'Wire', other: 'Other' };
+  const paidBy = (d: { method?: string | null; reference?: string | null }) => {
+    const m = d.method ? METHOD[d.method] || d.method : '';
+    const ref = d.reference || '';
+    return m && ref.toLowerCase().startsWith(m.toLowerCase()) ? ref : [m, ref].filter(Boolean).join(' ');
+  };
   const t = p.totals;
 
   const H = ({ children, left }: { children: React.ReactNode; left?: boolean }) =>
@@ -102,7 +109,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
             ))}
             {p.direct.count > 0 && (
               <tr className="border-b last:border-0">
-                <td className="px-3 py-1.5">Direct costs <span className="text-xs text-gray-500">({p.direct.count} on the ledger)</span></td>
+                <td className="px-3 py-1.5">Direct costs — no contract <span className="text-xs text-gray-500">({p.direct.count}, listed below)</span></td>
                 <D v={p.direct.total} /><D v={p.direct.total} />
                 <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">100.00%</td>
                 <D v={0} /><D v={p.direct.total} /><D v={p.direct.total} /><D v={0} tone="text-green-700" /><D v={0} />
@@ -152,6 +159,35 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
           </tbody>
         </table>
       </div>
+      {p.direct.rows.length > 0 && (
+        <div className="bg-white border rounded-lg overflow-x-auto">
+          <div className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Direct costs (no contract)</div>
+          <table className="w-full text-sm min-w-[760px]">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
+                <H left>Date</H><H left>Paid to</H><H left>Description</H><H left>Budget line</H><H left>Paid by</H><H>Amount</H>
+              </tr>
+            </thead>
+            <tbody>
+              {p.direct.rows.map((d, i) => (
+                <tr key={d.id ?? i} className="border-b last:border-0">
+                  <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{shortDate(d.date)}</td>
+                  <td className="px-3 py-1.5">{d.vendor}</td>
+                  <td className="px-3 py-1.5 text-gray-700">{d.description}</td>
+                  <td className="px-3 py-1.5 text-gray-700">{d.key ? lineName.get(d.key) ?? 'Removed line' : <span className="text-amber-700">Unallocated</span>}</td>
+                  <td className="px-3 py-1.5 text-gray-700">{paidBy(d)}</td>
+                  <D v={d.amount} />
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-800 font-semibold">
+                <td className="px-3 py-2" colSpan={5}>Total direct costs</td><D v={p.direct.total} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
       <p className="text-xs text-gray-500">
         A pay app counts from its period end date (and brings every earlier app on that contract with it); a payment from the day it was paid. Approved change orders only.
         {undated.length > 0 && ` * ${undated.length} pay app${undated.length === 1 ? ' has' : 's have'} no period end — dated the day entered. Add it in the pay app to place it correctly.`}

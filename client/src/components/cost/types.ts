@@ -115,7 +115,7 @@ export interface ProjectBundle {
   positionInput: {
     contractIds: number[]; lines: SovLine[]; changeOrders: ChangeOrder[];
     applications: DatedApplication[]; payments: Payment[];
-    directCosts: { date: string; amount: number }[];
+    directCosts: import('@shared/cost-position').DirectCostIn[];
   };
   cmFee: CmFee | null;
   cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none' };

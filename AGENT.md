@@ -127,3 +127,7 @@ and live test output are proof. The gold standard is: click the button and watch
 - Each linked vendor CO row has "Assign budget lines": a per-line select that PATCHes the vendor SOV line's allocation (so cost follows) then resyncs the tenant CO. Lines can go to different budget lines.
 - linesFromVendors fallback ignores keys a vendor line has since been mapped to.
 - budgetVsActual doesn't add a second Unallocated row when the effective baseline already has one.
+
+## Direct costs spelled out (2026-10-21)
+- positionAsOf: `direct.rows` (id, date, vendor, description, method, reference, key, amount). positionInput.directCosts carries those fields.
+- Pay App Status (screen + print): summary row "Direct costs — no contract (n, listed below)" + a "Direct Costs (No Contract)" table: Date | Paid To | Description | Budget Line | Paid By | Amount.

@@ -114,3 +114,9 @@ and live test output are proof. The gold standard is: click the button and watch
 - Pay App Status filters by contract (`?contract=<id>|direct|all`) via `filterPositionInput`, shared by screen and print; CM fee section only for "all".
 - Partner fee basis per tenant CO: `partnerFeeBasis` all | tenant (absorbed share not charged), or `partnerFee` false for none; applies to coTotals, supplemental earned and partner invoices.
 - Two CM fee rates: `cmSettings.pct` = capital partner rate (settings.cmFeePct); `cmSettings.tenantPct` = tenant rate (settings.tenantCmFeePct, else the CM line's name %, i.e. the LAF). Tenant change orders fix both on creation (`cmFeePct` tenant, `partnerFeePct` partner) and carry `markups` (default `defaultMarkups()` = the LAF's % lines). `coTotals`: budget = cost + markups + partner fee (all work); tenant pays = tenant share + markups + tenant fee (on share + markups) − credit; absorbed = budget − tenant (can be negative: the fee spread). Reimbursable invoices use the tenant rate; fee invoices the partner rate (`fee/suppFee` vs `feeP/suppP` on items).
+
+## Tenant change orders: discount, per-CO rates, typed fee, fixed markups (2026-10-21)
+- CM fee to the tenant is figured on max(0, tenant work + markups − credit): a discount carries no CM fee.
+- Tenant rate (`cmFeePct`) and partner rate (`partnerFeePct`) are editable per change order (POST/PATCH); defaults come from project settings.
+- `cmFeeAmount` overrides the figured tenant fee (shown amber "Edited"); clear it to go back to figured.
+- `CoMarkup.amount` = fixed-amount markup (e.g. permit fees); % ignored when set. Tenant sheet omits % for fixed lines.

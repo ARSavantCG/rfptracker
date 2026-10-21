@@ -34,7 +34,9 @@ type Form = {
   /** New change orders: vendor change orders picked in the form, priced from them. */
   vendorLinks: { contractCoId: number; pct: string }[]; fallbackKey: string;
   /** The tenant's markups (the LAF's % lines), on their share of the cost. */
-  markups: { key: string; label: string; pct: string }[];
+  markups: { key: string; label: string; pct: string; amount: string }[];
+  /** Rates on this change order (default: the project's), and the tenant fee typed as an amount. */
+  tenantRate: string; partnerRate: string; cmFeeAmount: string;
   /** CM fee to the capital partner: on all the work, only the tenant's share, or none. */
   partnerFee: boolean;
   partnerFeeBasis: 'all' | 'tenant';
@@ -60,14 +62,16 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,
     lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant', vendorLinks: [], fallbackKey: '',
-    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)) })), partnerFee: true, partnerFeeBasis: 'all',
+    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: '' })), partnerFee: true, partnerFeeBasis: 'all',
+    tenantRate: fmtPctText(String(tenantRate)), partnerRate: fmtPctText(String(rate)), cmFeeAmount: '',
   });
   const edit = (co: BudgetCO): Form => ({
     id: co.id, number: co.number, title: co.title, date: co.date ?? todayIso(), status: co.status, billable: co.billable,
     cmFee: co.cmFee, contractId: NO_CONTRACT,
     lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: fmtPctText(String(l.tenantPct ?? 100)) })),
     credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason, vendorLinks: [], fallbackKey: '',
-    markups: (co.markups || []).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)) })), partnerFee: co.partnerFee, partnerFeeBasis: co.partnerFeeBasis ?? 'all',
+    markups: (co.markups || []).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: m.amount != null ? fmtMoneyText(String(m.amount)) : '' })), partnerFee: co.partnerFee, partnerFeeBasis: co.partnerFeeBasis ?? 'all',
+    tenantRate: fmtPctText(String(co.cmFeePct)), partnerRate: fmtPctText(String(co.partnerFeePct)), cmFeeAmount: co.cmFeeAmount != null ? fmtMoneyText(String(co.cmFeeAmount)) : '',
   });
 
   const run = async (fn: () => Promise<any>, ok: string) => {
@@ -217,12 +221,14 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     ? r2(form.vendorLinks.reduce((s, v) => s + (coLines(v.contractCoId) * num(v.pct)) / 100, 0))
     : r2(form.lines.reduce((s, l) => s + (num(l.amount) * num(l.tenantPct)) / 100, 0));
   // Rates are fixed on the change order once written: the tenant's and the capital partner's.
-  const existing = form?.id ? cos.find((c) => c.id === form.id) : null;
-  const formRate = existing ? existing.cmFeePct : tenantRate;
-  const formPartnerRate = existing ? existing.partnerFeePct : rate;
-  const formMarkups = form ? form.markups.map((m) => ({ ...m, amount: r2((formTenantWork * num(m.pct)) / 100) })) : [];
-  const formMarkupTotal = r2(formMarkups.reduce((s, m) => s + m.amount, 0));
-  const formCm = form?.cmFee ? r2(((formTenantWork + formMarkupTotal) * formRate) / 100) : 0;
+  const formRate = form ? num(form.tenantRate) : tenantRate;
+  const formPartnerRate = form ? num(form.partnerRate) : rate;
+  const formMarkups = form ? form.markups.map((m) => ({ ...m, fixed: m.amount.trim() !== '', value: m.amount.trim() !== '' ? num(m.amount) : r2((formTenantWork * num(m.pct)) / 100) })) : [];
+  const formMarkupTotal = r2(formMarkups.reduce((s, m) => s + m.value, 0));
+  // No CM fee on a discount: the tenant's fee is on their cost + markups less the credit, unless typed.
+  const formCmFigured = form?.cmFee ? r2((Math.max(0, formTenantWork + formMarkupTotal - num(form.credit)) * formRate) / 100) : 0;
+  const formCmTyped = !!form && form.cmFeeAmount.trim() !== '';
+  const formCm = form?.cmFee ? (formCmTyped ? num(form.cmFeeAmount) : formCmFigured) : 0;
   const formCmOurs = form?.partnerFee ? r2(((form.partnerFeeBasis === 'tenant' ? formTenantWork : formWork) * formPartnerRate) / 100) : 0;
   const formCredit = form ? num(form.credit) : 0;
   const formBudget = r2(formWork + formMarkupTotal + formCmOurs);
@@ -235,7 +241,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     const body = {
       number: form.number, title: form.title, date: form.date, status: form.status, billable: form.billable, cmFee: form.cmFee,
       credit: formCredit, cmOnAbsorbed: form.cmOnAbsorbed, reason: form.reason, partnerFee: form.partnerFee, partnerFeeBasis: form.partnerFeeBasis,
-      markups: form.markups.filter((m) => num(m.pct) > 0).map((m) => ({ key: m.key, label: m.label, pct: num(m.pct) })),
+      markups: form.markups.filter((m) => num(m.pct) > 0 || m.amount.trim() !== '').map((m) => ({ key: m.key, label: m.label, pct: num(m.pct), amount: m.amount.trim() !== '' ? num(m.amount) : null })),
+      cmFeePct: num(form.tenantRate), partnerFeePct: num(form.partnerRate), cmFeeAmount: form.cmFeeAmount.trim() !== '' ? num(form.cmFeeAmount) : null,
       // Lines priced from linked vendors are re-priced from them, not typed.
       ...(form.linked ? {} : { lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount), tenantPct: num(l.tenantPct) })) }),
       ...(form.id ? {} : fromVendors
@@ -467,11 +474,12 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(formTenantWork)}</td><td /></tr>
                 {formMarkups.map((m, i) => (
                   <tr key={`m${m.key}`}>
-                    <td colSpan={2} className="px-2 py-1">{m.label} <span className="text-[11px] text-gray-500">markup on the tenant's share</span></td>
-                    <td />
-                    <td className="px-1 py-1"><PercentInput className="h-8" value={form.markups[i].pct} aria-label={`${m.label} %`}
+                    <td colSpan={2} className="px-2 py-1">{m.label} <span className="text-[11px] text-gray-500">{m.fixed ? 'fixed amount' : "markup on the tenant's share — or type a fixed amount"}</span></td>
+                    <td className="px-1 py-1"><MoneyInput className={`h-8 ${m.fixed ? 'border-amber-400 bg-amber-50' : ''}`} value={form.markups[i].amount} aria-label={`${m.label} amount`}
+                      onValueChange={(v) => setForm({ ...form, markups: form.markups.map((x, j) => (j === i ? { ...x, amount: v } : x)) })} /></td>
+                    <td className="px-1 py-1"><PercentInput className="h-8" value={form.markups[i].pct} aria-label={`${m.label} %`} disabled={m.fixed}
                       onValueChange={(v) => setForm({ ...form, markups: form.markups.map((x, j) => (j === i ? { ...x, pct: v } : x)) })} /></td>
-                    <td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(m.amount)}</td>
+                    <td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(m.value)}</td>
                     <td className="px-1 text-center">
                       <button className="p-1 text-gray-400 hover:text-red-700" title="Remove this markup" onClick={() => setForm({ ...form, markups: form.markups.filter((_, j) => j !== i) })}>
                         <Trash2 className="h-4 w-4" />
@@ -489,7 +497,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                           <Select value="" onValueChange={(v) => {
                             const d = avail.find((x) => x.key === v);
                             const b = baseline.find((x) => x.key === v)!;
-                            setForm({ ...form, markups: [...form.markups, { key: v, label: d?.label ?? b.description, pct: fmtPctText(String(d?.pct ?? 0)) }] });
+                            setForm({ ...form, markups: [...form.markups, { key: v, label: d?.label ?? b.description, pct: fmtPctText(String(d?.pct ?? 0)), amount: '' }] });
                           }}>
                             <SelectTrigger className="h-7 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="+ Add a markup" /></SelectTrigger>
                             <SelectContent className="pm-scope">
@@ -507,15 +515,20 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <td colSpan={2} className="px-2 py-1">
                     <label className="inline-flex items-center gap-2">
                       <input type="checkbox" checked={form.cmFee} onChange={(e) => setForm({ ...form, cmFee: e.target.checked })} />
-                      CM fee to the tenant at {formRate.toFixed(2)}% <span className="text-[11px] text-gray-500">on their cost + markups</span>
+                      CM fee to the tenant <span className="text-[11px] text-gray-500">on their cost + markups, less any credit{formCmTyped ? ` · figured ${money(formCmFigured)}` : ' — or type the amount'}</span>
+                      {formCmTyped && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Edited</span>}
                     </label>
                   </td>
-                  <td colSpan={2} /><td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(formCm)}</td><td />
+                  <td className="px-1 py-1"><MoneyInput className={`h-8 ${formCmTyped ? 'border-amber-400 bg-amber-50' : ''}`} value={form.cmFeeAmount} aria-label="Tenant CM fee amount" disabled={!form.cmFee}
+                    onValueChange={(v) => setForm({ ...form, cmFeeAmount: v })} /></td>
+                  <td className="px-1 py-1"><PercentInput className="h-8" value={form.tenantRate} aria-label="Tenant CM fee rate" disabled={!form.cmFee || formCmTyped}
+                    onValueChange={(v) => setForm({ ...form, tenantRate: v })} /></td>
+                  <td className="px-2 py-1 text-right tabular-nums text-green-800">{signedMoney(formCm)}</td><td />
                 </tr>
                 <tr>
                   <td colSpan={2} className="px-2 py-1">
                     <span className="inline-flex items-center gap-2 flex-wrap">
-                      CM fee to the capital partner at {formPartnerRate.toFixed(2)}%
+                      CM fee to the capital partner
                       <Select value={!form.partnerFee ? 'none' : form.partnerFeeBasis}
                               onValueChange={(v) => setForm({ ...form, partnerFee: v !== 'none', partnerFeeBasis: v === 'tenant' ? 'tenant' : 'all' })}>
                         <SelectTrigger className="h-7 w-72 text-xs"><SelectValue /></SelectTrigger>
@@ -528,10 +541,12 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       <span className="text-[11px] text-gray-500">Supplemental CM Fee</span>
                     </span>
                   </td>
-                  <td className="px-2 py-1 text-right tabular-nums">{signedMoney(formCmOurs)}</td><td colSpan={3} />
+                  <td className="px-2 py-1 text-right tabular-nums">{signedMoney(formCmOurs)}</td>
+                  <td className="px-1 py-1"><PercentInput className="h-8" value={form.partnerRate} aria-label="Capital partner CM fee rate" disabled={!form.partnerFee}
+                    onValueChange={(v) => setForm({ ...form, partnerRate: v })} /></td><td colSpan={2} />
                 </tr>
                 <tr>
-                  <td colSpan={2} className="px-2 py-1">Credit to the tenant <span className="text-[11px] text-gray-500">a concession we absorb</span></td>
+                  <td colSpan={2} className="px-2 py-1">Credit to the tenant <span className="text-[11px] text-gray-500">a discount we absorb — no CM fee on it</span></td>
                   <td colSpan={2} />
                   <td className="px-1 py-1"><MoneyInput className="h-8" value={form.credit} aria-label="Credit to the tenant" onValueChange={(v) => setForm({ ...form, credit: v })} /></td><td />
                 </tr>

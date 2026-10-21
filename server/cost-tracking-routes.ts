@@ -805,7 +805,9 @@ export function registerCostTrackingRoutes(app: Express): void {
       const co = normalizeCO({
         ...b, id: `co-${nanoid(8)}`,
         // Rates are fixed when the change order is written: the tenant's, and the capital partner's.
-        cmFeePct: cms.tenantPct, partnerFeePct: cms.pct,
+        // Typed on the change order, else the project's rates.
+        cmFeePct: b.cmFeePct != null && b.cmFeePct !== '' ? b.cmFeePct : cms.tenantPct,
+        partnerFeePct: b.partnerFeePct != null && b.partnerFeePct !== '' ? b.partnerFeePct : cms.pct,
         partnerFee: b.partnerFee !== false,
         markups: Array.isArray(b.markups) ? b.markups : defaultMarkups(baseline, cms.key),
         contractId: null, contractCoId: null, links: [],
@@ -867,7 +869,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (i < 0) return res.status(404).json({ message: 'Change order not found' });
       const cur = a.changeOrders[i];
       const b = req.body || {};
-      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee', 'partnerFeeBasis']) })!;
+      const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee', 'partnerFeeBasis', 'cmFeePct', 'partnerFeePct', 'cmFeeAmount']) })!;
       const keys = new Set(baseline.map((x) => x.key));
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       // The vendors' side: write the estimate onto a contract, link vendor change

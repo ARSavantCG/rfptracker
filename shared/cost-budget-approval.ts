@@ -65,7 +65,8 @@ export interface BudgetCOLine {
   /** The vendor change order the line was priced from, if any. */
   fromCoId?: number | null;
 }
-export interface CoMarkup { key: string; label: string; pct: number }
+/** A markup on the tenant's share: a % of it, or a fixed amount (e.g. permit fees charged at cost). */
+export interface CoMarkup { key: string; label: string; pct: number; amount?: number | null }
 
 /** The LAF's % lines (other than the CM fee): "Permit Fees (3.00%)", "Contingency (5.00%)". */
 export function defaultMarkups(baseline: ReadonlyArray<{ key: string; description: string; bucket: string }>, cmKey: string | null): CoMarkup[] {
@@ -97,6 +98,8 @@ export interface BudgetCO {
   cmFeePct: number;
   /** Markups on the tenant's share — the LAF's % lines (permit, contingency…). Each raises its budget line. */
   markups: CoMarkup[];
+  /** The tenant's CM fee as a typed amount, overriding the rate (null = figured). */
+  cmFeeAmount: number | null;
   /** CM fee the capital partner pays on all of this change order's work (the partner rate). */
   partnerFee: boolean;
   partnerFeePct: number;
@@ -249,8 +252,13 @@ export function normalizeCO(raw: any): BudgetCO | null {
     cmFee: raw.cmFee !== false,
     cmFeePct: Math.max(0, Math.min(100, num(raw.cmFeePct))),
     markups: Array.isArray(raw.markups) ? raw.markups
-      .map((m: any) => ({ key: String(m?.key ?? ''), label: String(m?.label ?? '').trim(), pct: Math.max(0, Math.min(100, Math.round(num(m?.pct) * 100) / 100)) }))
-      .filter((m: CoMarkup) => m.key && m.pct > 0) : [],
+      .map((m: any) => ({
+        key: String(m?.key ?? ''), label: String(m?.label ?? '').trim(), pct: Math.max(0, Math.min(100, Math.round(num(m?.pct) * 100) / 100)),
+        amount: m?.amount !== undefined && m?.amount !== null && m?.amount !== '' ? r2(num(m.amount)) : null,
+      }))
+      .filter((m: CoMarkup) => m.key && (m.pct > 0 || m.amount != null)) : [],
+    /** The tenant's CM fee typed as an amount (blank = figured from the rate). */
+    cmFeeAmount: raw.cmFeeAmount !== undefined && raw.cmFeeAmount !== null && raw.cmFeeAmount !== '' ? r2(num(raw.cmFeeAmount)) : null,
     // Older change orders had no partner fee setting; they earn it at their own rate.
     partnerFee: raw.partnerFee !== undefined ? raw.partnerFee !== false : raw.cmOnAbsorbed === true,
     partnerFeePct: Math.max(0, Math.min(100, num(raw.partnerFeePct ?? raw.cmFeePct))),
@@ -281,17 +289,21 @@ export function coTotals(co: BudgetCO) {
   const tenantWork = r2(co.lines.reduce((s, l) => s + (l.amount * (l.tenantPct ?? 100)) / 100, 0));
   const ourWork = r2(work - tenantWork);
   // The tenant's markups, on their share of the cost.
-  const markupLines = (co.markups || []).map((m) => ({ ...m, amount: r2((tenantWork * m.pct) / 100) }));
+  const markupLines = (co.markups || []).map((m) => ({ ...m, amount: m.amount != null ? r2(m.amount) : r2((tenantWork * m.pct) / 100), fixed: m.amount != null }));
   const markups = r2(markupLines.reduce((s, m) => s + m.amount, 0));
-  // Two CM fees: the tenant's (their rate, on their cost + markups) and the capital partner's (on all the work).
-  const cm = co.cmFee ? r2(((tenantWork + markups) * co.cmFeePct) / 100) : 0;
+  const credit0 = r2(co.credit || 0);
+  // Two CM fees: the tenant's (their rate, on their cost + markups less any credit — no fee on a discount)
+  // and the capital partner's (on the work). The tenant's can be typed as an amount instead.
+  const cmBase = r2(Math.max(0, tenantWork + markups - credit0));
+  const cmFigured = co.cmFee ? r2((cmBase * co.cmFeePct) / 100) : 0;
+  const cm = co.cmFee ? (co.cmFeeAmount != null ? r2(co.cmFeeAmount) : cmFigured) : 0;
   const cmAbsorbed = co.partnerFee ? r2(((co.partnerFeeBasis === 'tenant' ? tenantWork : work) * (co.partnerFeePct ?? 0)) / 100) : 0;
   const credit = r2(co.credit || 0);
   // The budget holds the work, the markups and the partner's fee; the tenant pays their share, markups and fee.
   const total = r2(work + markups + cmAbsorbed);
   const tenant = r2(tenantWork + markups + cm - credit);
   const absorbed = r2(total - tenant);
-  return { work, tenantWork, ourWork, markups, markupLines, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total };
+  return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total };
 }
 
 /** Approved change orders, summed. */

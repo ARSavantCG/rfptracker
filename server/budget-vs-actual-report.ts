@@ -749,7 +749,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
           lines: co.lines.map((l) => ({ budgetLine: String(lineName.get(l.key) ?? ""), description: l.description, amount: Math.round(l.amount * (l.tenantPct ?? 100)) / 100 }))
             .filter((l) => Math.abs(l.amount) >= 0.005),
           work: t.tenantWork, cm: t.cm, credit: t.credit, total: t.tenant,
-          markups: t.markupLines.filter((m) => m.amount).map((m) => ({ label: `${m.label} (${fmtPct(m.pct)})`, amount: m.amount })),
+          markups: t.markupLines.filter((m) => m.amount).map((m) => ({ label: m.fixed ? m.label : `${m.label} (${fmtPct(m.pct)})`, amount: m.amount })),
           backup: b.documents.filter((d: any) => d.budgetCoId === co.id).map((d: any) => d.originalName),
         },
         billTo: String(((b.project as any).settings || {}).billTo || b.project.tenantName || ""),

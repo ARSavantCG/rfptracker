@@ -25,6 +25,8 @@ export interface DatedApplication extends Application {
   date: string;
   kind?: string;
   invoiceNumber?: string | null;
+  /** Printed number (Pay App 7, Invoice 2); falls back to `number`. */
+  docNumber?: number;
 }
 
 export interface Payment {
@@ -40,6 +42,8 @@ export interface Payment {
 export interface ContractPosition {
   contractId: number;
   contractSum: number;
+  /** Change orders still marked pending — not in the contract sum, shown beside it. */
+  pendingChanges: number;
   billedToDate: number;
   pctComplete: number;
   retainageHeld: number;
@@ -58,6 +62,8 @@ export interface ApplicationPosition {
   applicationId: number;
   contractId: number;
   number: number;
+  docNumber: number;
+  kind: string;
   date: string;
   due: number;
   paid: number;
@@ -103,9 +109,13 @@ export function positionAsOf(asOf: string, input: {
     const myPays = pays.filter((p) => p.contractId === contractId);
     const paid = r2(myPays.reduce((s, p) => s + p.amount, 0));
     const net = r2(billed - held);
+    const pendingChanges = r2((input.lines || [])
+      .filter((l) => l.contractId === contractId && lineStatus(l, cos) === 'pending')
+      .reduce((s, l) => s + (Number(l.scheduledValue) || 0), 0));
     return {
       contractId,
       contractSum,
+      pendingChanges,
       billedToDate: r2(billed),
       pctComplete: contractSum ? r2((billed / contractSum) * 100) : 0,
       retainageHeld: r2(held),
@@ -126,7 +136,7 @@ export function positionAsOf(asOf: string, input: {
     });
     const paid = r2(pays.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0));
     return {
-      applicationId: a.id, contractId: a.contractId, number: a.number, date: day(a.date),
+      applicationId: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber ?? a.number, kind: a.kind ?? 'pay_app', date: day(a.date),
       due: g.currentPaymentDue, paid, open: r2(g.currentPaymentDue - paid),
     };
   }).sort((x, y) => x.contractId - y.contractId || x.number - y.number);
@@ -333,7 +343,7 @@ export function billableItems(input: {
       const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
       out.push({
         ref: `app-${a.id}`, date: a.date, vendor: input.contractName(contractId),
-        item: `${label} ${a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
+        item: `${label} ${a.docNumber ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
         amount: r2(amount), billable: r2(billable),
       });
     }

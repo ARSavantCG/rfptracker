@@ -35,6 +35,8 @@ export interface AppRef {
   id: number;
   contractId: number;
   number: number;
+  /** Printed number, when it differs from the order number. */
+  docNumber?: number | null;
 }
 
 export interface UnconditionalRow {
@@ -142,9 +144,9 @@ export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[]): 
         : !next ? 'awaiting next pay app'
         : u?.received ? 'complete' : 'unconditional outstanding';
       out.push({
-        contractId: app.contractId, appId: app.id, appNumber: app.number, vendor: c.vendor,
+        contractId: app.contractId, appId: app.id, appNumber: app.docNumber || app.number, vendor: c.vendor,
         conditionalAmount: r2(c.amount), conditionalReceived: c.received,
-        unconditionalDueWith: next?.number ?? null, unconditionalAmount: u ? r2(u.amount) : null,
+        unconditionalDueWith: next ? (next.docNumber || next.number) : null, unconditionalAmount: u ? r2(u.amount) : null,
         unconditionalReceived: !!u?.received, status, edited: !!u?.edited,
       });
     }

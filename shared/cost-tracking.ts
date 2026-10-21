@@ -70,6 +70,37 @@ export interface ChangeOrder {
   id: number;
   contractId: number;
   status: ChangeOrderStatus;
+  /**
+   * First pay app the CO belongs on. Earlier apps' G702s leave it out of
+   * lines 2, 3 and 9, as the contractor's did. Null/absent = every app.
+   */
+  startApp?: number | null;
+}
+
+/**
+ * Which pay app each change order starts on: the number set on it; else the
+ * first app that bills one of its lines; else the first app recorded after
+ * the CO was; else the next app. Pure.
+ */
+export function changeOrderStarts(input: {
+  changeOrders: readonly { id: number; contractId: number; startAppNumber?: number | null; createdAt?: string | Date | null }[];
+  lines: readonly { id: number; changeOrderId: number | null }[];
+  applications: readonly { contractId: number; number: number; createdAt?: string | Date | null; lines: readonly { sovLineId: number; workThisPeriod: number; storedToDate: number }[] }[];
+}): Map<number, { start: number | null; source: 'set' | 'billed' | 'recorded' | 'next' | 'none' }> {
+  const out = new Map<number, { start: number | null; source: 'set' | 'billed' | 'recorded' | 'next' | 'none' }>();
+  const t = (d: string | Date | null | undefined) => (d ? new Date(d).getTime() : NaN);
+  for (const co of input.changeOrders) {
+    if (co.startAppNumber != null && co.startAppNumber > 0) { out.set(co.id, { start: co.startAppNumber, source: 'set' }); continue; }
+    const mine = new Set(input.lines.filter((l) => l.changeOrderId === co.id).map((l) => l.id));
+    const apps = input.applications.filter((a) => a.contractId === co.contractId).sort((a, b) => a.number - b.number);
+    const billed = apps.find((a) => a.lines.some((l) => mine.has(l.sovLineId) && (n(l.workThisPeriod) !== 0 || n(l.storedToDate) !== 0)));
+    if (billed) { out.set(co.id, { start: billed.number, source: 'billed' }); continue; }
+    const after = apps.find((a) => t(a.createdAt) > t(co.createdAt));
+    if (after) { out.set(co.id, { start: after.number, source: 'recorded' }); continue; }
+    if (apps.length) { out.set(co.id, { start: apps[apps.length - 1].number + 1, source: 'next' }); continue; }
+    out.set(co.id, { start: null, source: 'none' });
+  }
+  return out;
 }
 
 export interface ApplicationLine {
@@ -377,9 +408,15 @@ export function g702For(contractId: number, upTo: number, input: {
   lines: readonly SovLine[];
   changeOrders: readonly ChangeOrder[];
   applications: readonly Application[];
-}): G702 {
+}, opts?: { allChangeOrders?: boolean }): G702 {
   const cos = new Map((input.changeOrders || []).map((c) => [c.id, c]));
-  const mine = (input.lines || []).filter((l) => l.contractId === contractId && lineStatus(l, cos) === 'approved');
+  // A CO is on app N's G702 only from its start app on — unless asked for the contract as it stands today.
+  const onThisApp = (l: SovLine) => {
+    if (opts?.allChangeOrders || l.changeOrderId == null) return true;
+    const s = cos.get(l.changeOrderId)?.startApp;
+    return s == null || s <= upTo;
+  };
+  const mine = (input.lines || []).filter((l) => l.contractId === contractId && lineStatus(l, cos) === 'approved' && onThisApp(l));
   const original = mine.filter((l) => l.changeOrderId == null).reduce((s, l) => s + n(l.scheduledValue), 0);
   const changes = mine.filter((l) => l.changeOrderId != null).reduce((s, l) => s + n(l.scheduledValue), 0);
   const appsFor = (cutoff: number) => (input.applications || [])
@@ -407,6 +444,43 @@ export function g702For(contractId: number, upTo: number, input: {
     currentPaymentDue: round2(earnedLess - previous),
     balanceToFinish: round2(sumToDate - earnedLess),
   };
+}
+
+/**
+ * Two numbers per pay app or invoice. `number` is the order within the
+ * contract — every "previous" and G702 line 7 is worked from it. `docNumber`
+ * is what is printed on it, and pay apps and invoices count separately:
+ * Invoice 1 can follow Pay App 3 on the same contract.
+ */
+type Numbered = { id: number; contractId: number; number: number; kind?: string | null; docNumber?: number | null };
+
+/** The printed number of each app: as set, else its order (pay apps) or its place among the invoices. */
+export function docNumbers(apps: readonly Numbered[]): Map<number, number> {
+  const out = new Map<number, number>();
+  const rank = new Map<string, number>();
+  for (const a of [...apps].sort((x, y) => x.contractId - y.contractId || x.number - y.number)) {
+    const k = `${a.contractId}|${a.kind === 'invoice' ? 'invoice' : 'pay_app'}`;
+    rank.set(k, (rank.get(k) ?? 0) + 1);
+    out.set(a.id, a.docNumber != null && a.docNumber > 0 ? a.docNumber : a.kind === 'invoice' ? rank.get(k)! : a.number);
+  }
+  return out;
+}
+
+/**
+ * Numbers for a new pay app or invoice on a contract. The printed number is
+ * the next of its kind unless one is given. The order number matches it on a
+ * contract that is all pay apps (so Pay App 7 is 7 and an opening balance can
+ * be 6); otherwise it goes after everything already recorded.
+ */
+export function newAppNumbers(kind: string, docNumber: number | null, apps: readonly Numbered[]): { seq: number; doc: number } {
+  const isInv = kind === 'invoice';
+  const docs = docNumbers(apps);
+  const same = apps.filter((a) => (a.kind === 'invoice') === isInv);
+  const doc = docNumber && docNumber > 0 ? Math.floor(docNumber) : same.reduce((m, a) => Math.max(m, docs.get(a.id)!), 0) + 1;
+  const maxSeq = apps.reduce((m, a) => Math.max(m, a.number), 0);
+  const pure = !isInv && !apps.some((a) => a.kind === 'invoice');
+  const seq = pure && !apps.some((a) => a.number === doc) ? doc : maxSeq + 1;
+  return { seq, doc };
 }
 
 /** PRJ-2026-001. */

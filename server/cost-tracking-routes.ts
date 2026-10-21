@@ -28,7 +28,7 @@ import {
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
 import {
-  budgetVsActual, g702For, formatProjectNumber,
+  budgetVsActual, g702For, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
@@ -225,10 +225,6 @@ export async function loadProjectBundle(projectId: number) {
       ? l.allocationMode : 'unallocated') as AllocationMode,
     allocations: (l.allocations || []) as any,
   }));
-  const changeOrders: ChangeOrder[] = cos.map((c) => ({
-    id: c.id, contractId: c.contractId,
-    status: (CO_STATUSES.includes(c.status) ? c.status : 'pending') as ChangeOrder['status'],
-  }));
   const applications: Application[] = apps.map((a) => ({
     id: a.id, contractId: a.contractId, number: a.number,
     lines: appLines.filter((l) => l.applicationId === a.id).map((l) => ({
@@ -237,6 +233,17 @@ export async function loadProjectBundle(projectId: number) {
       storedToDate: dollars(l.storedToDateCents),
       retainageToDate: dollars(l.retainageToDateCents),
     })),
+  }));
+  // Which pay app each CO first appears on, so earlier G702s leave it out.
+  const coStarts = changeOrderStarts({
+    changeOrders: cos.map((c) => ({ id: c.id, contractId: c.contractId, startAppNumber: c.startAppNumber, createdAt: c.createdAt })),
+    lines: lines.map((l) => ({ id: l.id, changeOrderId: l.changeOrderId })),
+    applications: apps.map((a) => ({ ...applications.find((x) => x.id === a.id)!, createdAt: a.createdAt })),
+  });
+  const changeOrders: ChangeOrder[] = cos.map((c) => ({
+    id: c.id, contractId: c.contractId,
+    status: (CO_STATUSES.includes(c.status) ? c.status : 'pending') as ChangeOrder['status'],
+    startApp: coStarts.get(c.id)?.start ?? null,
   }));
 
   // Measured against the budget after the deal: each line less the discount
@@ -259,9 +266,10 @@ export async function loadProjectBundle(projectId: number) {
     })),
   };
 
+  const docs = docNumbers(apps);
   const dated: DatedApplication[] = applications.map((a) => {
     const row = apps.find((x) => x.id === a.id)!;
-    return { ...a, date: isoDay(row.periodEnd ?? row.createdAt) };
+    return { ...a, date: isoDay(row.periodEnd ?? row.createdAt), kind: row.kind, invoiceNumber: row.invoiceNumber, docNumber: docs.get(a.id) };
   });
   const payments: Payment[] = payRows.map((p) => ({
     id: p.id, contractId: p.contractId, applicationId: p.applicationId ?? null,
@@ -285,16 +293,17 @@ export async function loadProjectBundle(projectId: number) {
     : null;
   const g702 = Object.fromEntries(contracts.map((c) => {
     const nums = applications.filter((a) => a.contractId === c.id).map((a) => a.number);
-    return [c.id, g702For(c.id, nums.length ? Math.max(...nums) : 0, { lines, changeOrders, applications })];
+    return [c.id, g702For(c.id, nums.length ? Math.max(...nums) : 0, { lines, changeOrders, applications }, { allChangeOrders: true })];
   }));
 
   return {
     project: { ...project, baseline },
     contracts: contracts.map((c) => ({ ...c, retainagePct: c.retainageBp / 100 })),
-    changeOrders: cos,
+    changeOrders: cos.map((c) => ({ ...c, startApp: coStarts.get(c.id)?.start ?? null, startSource: coStarts.get(c.id)?.source ?? 'none' })),
     sovLines: sov.map((l) => ({ ...l, scheduledValue: dollars(l.scheduledValueCents) })),
     applications: apps.map((a) => ({
       ...a,
+      docNumber: docs.get(a.id)!,
       lines: appLines.filter((l) => l.applicationId === a.id).map((l) => ({
         id: l.id, sovLineId: l.sovLineId,
         workThisPeriod: dollars(l.workThisPeriodCents),
@@ -330,7 +339,7 @@ export async function loadProjectBundle(projectId: number) {
         lines, changeOrders,
         applications: dated.map((a) => {
           const row = apps.find((x) => x.id === a.id)!;
-          return { ...a, kind: row.kind, invoiceNumber: row.invoiceNumber };
+          return { ...a, kind: row.kind, invoiceNumber: row.invoiceNumber, docNumber: docs.get(a.id) };
         }),
         directCosts,
         tenantPct: new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number])),
@@ -361,7 +370,7 @@ export async function loadProjectBundle(projectId: number) {
         if (!row) return null;
         return {
           vendor: contracts.find((c) => c.id === row.contractId)?.counterparty ?? 'Contract',
-          item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${row.number}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
+          item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(row.id)}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
         };
       });
       const inv = invoiceCalc({ type, items: chosen, pct: cmSettings.pct, previouslyInvoiced: calc.previous });
@@ -393,7 +402,7 @@ export async function loadProjectBundle(projectId: number) {
       applicationLabel: (aid) => {
         const a = apps.find((x) => x.id === aid);
         if (!a) return 'Payment';
-        return `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`;
+        return `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(a.id) ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`;
       },
       budgetLineName: (key) => (key ? baseline.find((b) => b.key === key)?.description ?? 'Unallocated' : 'Unallocated'),
     }),
@@ -1206,6 +1215,24 @@ export function registerCostTrackingRoutes(app: Express): void {
         patch.status = String(b.status);
         patch.approvedDate = b.status === 'approved' ? new Date() : null;
       }
+      if (b.startAppNumber !== undefined) {
+        const n = b.startAppNumber === null || b.startAppNumber === '' ? null : Math.floor(Number(b.startAppNumber));
+        if (n !== null && !(n >= 1)) return res.status(400).json({ message: 'Pick a pay app number.' });
+        if (n !== null) {
+          // It cannot start after an app that already bills it.
+          const [co] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, id));
+          if (!co) return res.status(404).json({ message: 'Change order not found' });
+          const lineIds = (await db.select({ id: costSovLines.id }).from(costSovLines).where(eq(costSovLines.changeOrderId, id))).map((l) => l.id);
+          if (lineIds.length) {
+            const billed = await db.select({ number: costApplications.number })
+              .from(costApplicationLines).innerJoin(costApplications, eq(costApplications.id, costApplicationLines.applicationId))
+              .where(inArray(costApplicationLines.sovLineId, lineIds));
+            const first = billed.reduce((m, r) => Math.min(m, r.number), Infinity);
+            if (first < n) return res.status(400).json({ message: `${co.number} is already billed on Pay App ${first}, so it has to start on App ${first} or earlier.` });
+          }
+        }
+        patch.startAppNumber = n;
+      }
       const [row] = await db.update(costChangeOrders).set(patch).where(eq(costChangeOrders.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'Change order not found' });
       res.json(row);
@@ -1452,17 +1479,19 @@ export function registerCostTrackingRoutes(app: Express): void {
       const [contract] = await db.select().from(costContracts).where(eq(costContracts.id, contractId));
       if (!contract) return res.status(404).json({ message: 'Contract not found' });
       const b = req.body || {};
-      const existing = await db.select({ number: costApplications.number })
+      const kind = b.kind === 'invoice' ? 'invoice' : 'pay_app';
+      const existing = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number, kind: costApplications.kind, docNumber: costApplications.docNumber })
         .from(costApplications).where(eq(costApplications.contractId, contractId));
-      const number = Number.isFinite(Number(b.number)) && Number(b.number) > 0
-        ? Math.floor(Number(b.number))
-        : existing.reduce((m, a) => Math.max(m, a.number), 0) + 1;
-      if (existing.some((a) => a.number === number)) {
-        return res.status(409).json({ message: `Application ${number} already exists on this contract. Open it to edit it.` });
+      // The number typed is the printed one; older callers send it as `number`.
+      const typed = Number(b.docNumber ?? b.number);
+      const { seq: number, doc } = newAppNumbers(kind, Number.isFinite(typed) && typed > 0 ? typed : null, existing);
+      const docs = docNumbers(existing);
+      if (existing.some((a) => (a.kind === 'invoice') === (kind === 'invoice') && docs.get(a.id) === doc)) {
+        return res.status(409).json({ message: `${kind === 'invoice' ? 'Invoice' : 'Pay App'} ${doc} already exists on this contract. Open it to edit it.` });
       }
       const [row] = await db.insert(costApplications).values({
-        contractId, number,
-        kind: b.kind === 'invoice' ? 'invoice' : 'pay_app',
+        contractId, number, docNumber: doc,
+        kind,
         invoiceNumber: b.invoiceNumber ? String(b.invoiceNumber) : null,
         periodStart: b.periodStart ? new Date(b.periodStart) : null,
         periodEnd: b.periodEnd ? new Date(b.periodEnd) : null,
@@ -1487,6 +1516,17 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.periodStart !== undefined) patch.periodStart = b.periodStart ? new Date(b.periodStart) : null;
       if (b.periodEnd !== undefined) patch.periodEnd = b.periodEnd ? new Date(b.periodEnd) : null;
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
+      if (b.docNumber !== undefined && b.docNumber !== null && b.docNumber !== '') {
+        const doc = Math.floor(Number(b.docNumber));
+        if (!(doc >= 1)) return res.status(400).json({ message: 'Enter a number.' });
+        const others = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number, kind: costApplications.kind, docNumber: costApplications.docNumber })
+          .from(costApplications).where(eq(costApplications.contractId, appRow.contractId));
+        const docs = docNumbers(others);
+        if (others.some((a) => a.id !== id && (a.kind === 'invoice') === (appRow.kind === 'invoice') && docs.get(a.id) === doc)) {
+          return res.status(409).json({ message: `${appRow.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${doc} already exists on this contract.` });
+        }
+        patch.docNumber = doc;
+      }
       if (Object.keys(patch).length) await db.update(costApplications).set(patch).where(eq(costApplications.id, id));
       let written = null;
       if (b.lines !== undefined) {
@@ -1605,8 +1645,9 @@ export function registerCostTrackingRoutes(app: Express): void {
       const [c] = await db.select().from(costContracts).where(eq(costContracts.id, a.contractId));
       const [project] = await db.select().from(costProjects).where(eq(costProjects.id, c.projectId));
       const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
-      const allApps = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number })
+      const allApps = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number, kind: costApplications.kind, docNumber: costApplications.docNumber })
         .from(costApplications).where(eq(costApplications.contractId, a.contractId));
+      const dn = docNumbers(allApps);
       const waivers = (await db.select().from(costWaivers).where(eq(costWaivers.contractId, a.contractId))).map((w) => ({
         id: w.id, contractId: w.contractId, applicationId: w.applicationId, kind: w.kind as Waiver['kind'], vendor: w.vendor,
         amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null, received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null,
@@ -1624,13 +1665,13 @@ export function registerCostTrackingRoutes(app: Express): void {
       const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
       const nn = (n: number) => String(n).padStart(2, '0');
       const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
-      const zipName = safe([project.tenantName, property?.name, c.counterparty, `${label} ${nn(a.number)}`].filter(Boolean).join(' - ')) + '.zip';
+      const zipName = safe([project.tenantName, property?.name, c.counterparty, `${label} ${nn(dn.get(a.id)!)}`].filter(Boolean).join(' - ')) + '.zip';
       const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
       const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
       const folder: Record<string, string> = {
         g702: '1 G702-G703',
-        conditional: `2 Conditional Waivers (${label} ${nn(a.number)})`,
-        unconditional: `3 Unconditional Waivers (${prev ? `Pay App ${nn(prev.number)}` : 'prior'})`,
+        conditional: `2 Conditional Waivers (${label} ${nn(dn.get(a.id)!)})`,
+        unconditional: `3 Unconditional Waivers (${prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior'})`,
         invoice: '4 Invoices & Backup',
         other: '5 Other',
       };
@@ -1654,12 +1695,12 @@ export function registerCostTrackingRoutes(app: Express): void {
         const type = w ? w.kind : (d.docType || 'g702');
         let name: string;
         if (w) {
-          const covers = w.kind === 'conditional' ? `${label} ${nn(a.number)}` : prev ? `Pay App ${nn(prev.number)}` : 'prior';
+          const covers = w.kind === 'conditional' ? `${label} ${nn(dn.get(a.id)!)}` : prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior';
           name = `${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
         } else if (type === 'g702') {
-          name = `${safe(c.counterparty)} - ${label} ${nn(a.number)} - G702-G703${ext(d.originalName)}`;
+          name = `${safe(c.counterparty)} - ${label} ${nn(dn.get(a.id)!)} - G702-G703${ext(d.originalName)}`;
         } else {
-          name = `${label} ${nn(a.number)} - ${safe(d.originalName)}`;
+          name = `${label} ${nn(dn.get(a.id)!)} - ${safe(d.originalName)}`;
         }
         const zipPath = unique(`${folder[type] ?? folder.other}/${name}`);
         let buf: Buffer | null = null;

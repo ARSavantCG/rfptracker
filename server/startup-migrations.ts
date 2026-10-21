@@ -111,6 +111,10 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_contracts', column: 'contract_date', type: 'text' },
   { table: 'cost_contracts', column: 'start_date', type: 'text' },
   { table: 'cost_contracts', column: 'completion_date', type: 'text' },
+  // First pay app a change order appears on; null = worked out from billing.
+  { table: 'cost_change_orders', column: 'start_app_number', type: 'integer' },
+  // The number printed on the pay app or invoice; pay apps and invoices count separately.
+  { table: 'cost_applications', column: 'doc_number', type: 'integer' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

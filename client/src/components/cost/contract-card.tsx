@@ -107,6 +107,12 @@ export function ContractCard({
     onSuccess: () => { refresh(); setCoForm(null); },
     onError: (e: any) => toast({ title: 'Not added', description: e?.message, variant: 'destructive' }),
   });
+  const setCoStart = useMutation({
+    mutationFn: ({ id, startAppNumber }: { id: number; startAppNumber: number | null }) =>
+      apiRequest(`/api/cost-change-orders/${id}`, 'PATCH', { startAppNumber }),
+    onSuccess: refresh,
+    onError: (e: any) => toast({ title: 'Not changed', description: e?.message, variant: 'destructive', duration: 10000 }),
+  });
   const setCoStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiRequest(`/api/cost-change-orders/${id}`, 'PATCH', { status }),
@@ -223,6 +229,31 @@ export function ContractCard({
                           </Select>
                         </div>
                       )}
+                      {g.co && (() => {
+                        const co = g.co!;
+                        const sorted = [...applications].sort((a, b) => a.number - b.number);
+                        const next = (sorted.length ? sorted[sorted.length - 1].number : 0) + 1;
+                        const nameOf = (n: number) => {
+                          const a = sorted.find((x) => x.number === n);
+                          return a ? `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}` : 'next pay app';
+                        };
+                        const auto = co.startApp == null ? 'Auto' : `Auto · from ${nameOf(co.startApp)}`;
+                        return (
+                          <div className="w-44" title="The first pay app this change order is on. Earlier pay apps leave it out of their G702 and their entry grid.">
+                            <Select value={co.startAppNumber == null ? 'auto' : String(co.startAppNumber)}
+                                    onValueChange={(v) => setCoStart.mutate({ id: co.id, startAppNumber: v === 'auto' ? null : Number(v) })}>
+                              <SelectTrigger className={`h-7 text-xs ${co.startAppNumber != null ? 'border-amber-300 bg-amber-50 text-amber-900' : ''}`}>
+                                <SelectValue>{co.startAppNumber == null ? auto : `From ${nameOf(co.startAppNumber)} · Edited`}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="pm-scope">
+                                <SelectItem value="auto">{auto}</SelectItem>
+                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>From {a.kind === 'invoice' ? 'Invoice' : 'App'} {a.docNumber}</SelectItem>)}
+                                <SelectItem value={String(next)}>From the next pay app</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })()}
                       {g.co && (
                         <button className="text-gray-400 hover:text-red-700" title="Delete this change order"
                                 onClick={() => {
@@ -343,7 +374,7 @@ export function ContractCard({
                 {[...applications].sort((a, b) => b.number - a.number).map((a) => (
                   <tr key={a.id} className="border-b last:border-0 hover:bg-blue-50/40 cursor-pointer"
                       onClick={() => onOpenApplication(contract, a, a.kind)}>
-                    <td className="py-1.5 pr-2">{a.kind === 'invoice' ? 'Inv' : 'App'} {a.number}</td>
+                    <td className="py-1.5 pr-2">{a.kind === 'invoice' ? 'Inv' : 'App'} {a.docNumber}</td>
                     <td className="py-1.5 pr-2 text-gray-700">{a.invoiceNumber || '—'}</td>
                     <td className="py-1.5 pr-2 text-gray-700 text-xs">
                       {a.periodEnd ? new Date(a.periodEnd).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '—'}

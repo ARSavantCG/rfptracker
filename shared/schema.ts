@@ -2315,6 +2315,8 @@ export const costChangeOrders = pgTable("cost_change_orders", {
   title: text("title"),
   status: text("status").notNull().default("pending"), // approved | pending | void
   approvedDate: timestamp("approved_date"),
+  /** First pay app the CO is on (G702 line 2 from here). Null = worked out from billing. */
+  startAppNumber: integer("start_app_number"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_change_orders_contract_idx").on(t.contractId)]);
@@ -2338,7 +2340,9 @@ export const costSovLines = pgTable("cost_sov_lines", {
 export const costApplications = pgTable("cost_applications", {
   id: serial("id").primaryKey(),
   contractId: integer("contract_id").notNull(),
-  number: integer("number").notNull(),       // order within the contract
+  number: integer("number").notNull(),       // order within the contract (drives the G702 math)
+  /** The number printed on it: Pay App 7, Invoice 2. Pay apps and invoices count separately. Null = worked out. */
+  docNumber: integer("doc_number"),
   kind: text("kind").notNull().default("pay_app"), // pay_app | invoice
   invoiceNumber: text("invoice_number"),
   periodStart: timestamp("period_start"),

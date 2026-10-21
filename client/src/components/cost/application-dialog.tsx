@@ -19,7 +19,7 @@ import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucid
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
-import { g702For, lineProgress, type Application } from '@shared/cost-tracking';
+import { g702For, lineProgress, newAppNumbers, type Application } from '@shared/cost-tracking';
 import {
   money, projectKey,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow,
@@ -68,7 +68,12 @@ export function ApplicationDialog({
   const [pick, setPick] = useState({ lines: true, opening: true, paid: true, retainage: true });
 
   const mine = useMemo(() => applications.filter((a) => a.contractId === contract?.id), [applications, contract?.id]);
-  const thisNumber = app ? app.number : (parseInt(number, 10) || 0);
+  // `number` on screen is the printed one (Invoice 2); thisNumber is the order
+  // within the contract that "previous" is worked from — what the server will assign.
+  const typedDoc = parseInt(number, 10) || 0;
+  const thisNumber = app ? app.number : typedDoc ? newAppNumbers(kind, typedDoc, mine).seq : 0;
+  const sameKind = mine.filter((a) => a.kind === kind && a.id !== app?.id);
+  const docTaken = !!typedDoc && sameKind.some((a) => a.docNumber === typedDoc);
   const cos = useMemo(() => new Map(changeOrders.map((c) => [c.id, c])), [changeOrders]);
   const contractLines = useMemo(() => lines.filter((l) => l.contractId === contract?.id
     && (l.changeOrderId == null || cos.get(l.changeOrderId)?.status !== 'void')), [lines, contract?.id, cos]);
@@ -80,8 +85,7 @@ export function ApplicationDialog({
 
   useEffect(() => {
     if (!open || !contract) return;
-    const next = (mine.reduce((m, a) => Math.max(m, a.number), 0) || 0) + 1;
-    setNumber(String(app ? app.number : next));
+    setNumber(String(app ? app.docNumber : newAppNumbers(kind, null, mine).doc));
     setInvoiceNumber(app?.invoiceNumber ?? '');
     setPeriodStart(isoDate(app?.periodStart ?? null));
     setPeriodEnd(isoDate(app?.periodEnd ?? null));
@@ -132,7 +136,7 @@ export function ApplicationDialog({
     const current: Application = { id: -1, contractId: contract.id, number: thisNumber, lines: outLines };
     return g702For(contract.id, thisNumber, {
       lines: lines.map((l) => ({ ...l })),
-      changeOrders: changeOrders.map((c) => ({ id: c.id, contractId: c.contractId, status: c.status })),
+      changeOrders: changeOrders.map((c) => ({ id: c.id, contractId: c.contractId, status: c.status, startApp: c.startApp })),
       applications: [...others, current],
     });
   }, [contract?.id, thisNumber, JSON.stringify(outLines), mine, lines, changeOrders]);
@@ -220,7 +224,7 @@ export function ApplicationDialog({
         return out;
       });
       setAiCells(cells);
-      if (!app && r.applicationNumber && !mine.some((a) => a.number === r.applicationNumber)) setNumber(String(r.applicationNumber));
+      if (!app && r.applicationNumber && !mine.some((a) => a.kind === kind && a.docNumber === r.applicationNumber)) setNumber(String(r.applicationNumber));
       if (!invoiceNumber && r.invoiceNumber) setInvoiceNumber(r.invoiceNumber);
       if (!periodStart && r.periodFrom) setPeriodStart(r.periodFrom);
       if (!periodEnd && r.periodTo) setPeriodEnd(r.periodTo);
@@ -272,7 +276,7 @@ export function ApplicationDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const body = { number: thisNumber, kind, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
+      const body = { docNumber: typedDoc, kind, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
       const saved = app
         ? (await apiRequest(`/api/cost-applications/${app.id}`, 'PUT', body), { id: app.id })
         : await apiRequest(`/api/cost-contracts/${contract!.id}/applications`, 'POST', body);
@@ -300,7 +304,10 @@ export function ApplicationDialog({
   if (!contract) return null;
   const groups = [
     { label: 'Base contract', lines: contractLines.filter((l) => l.changeOrderId == null) },
-    ...changeOrders.filter((c) => c.contractId === contract.id && c.status !== 'void').map((c) => ({
+    // A CO shows from its start app on — or on any app that already bills it.
+    ...changeOrders.filter((c) => c.contractId === contract.id && c.status !== 'void'
+      && (c.startApp == null || c.startApp <= thisNumber || contractLines.some((l) => l.changeOrderId === c.id && draft[l.id] && (num(draft[l.id].work) || num(draft[l.id].stored) || num(draft[l.id].toDate)))))
+      .map((c) => ({
       label: `${c.number}${c.title ? ` — ${c.title}` : ''}${c.status === 'pending' ? ' (pending)' : ''}`,
       lines: contractLines.filter((l) => l.changeOrderId === c.id),
     })),
@@ -312,12 +319,14 @@ export function ApplicationDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="pm-scope max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{app ? `${label} ${app.number}` : `New ${label.toLowerCase()}`} — {contract.counterparty}</DialogTitle>
+          <DialogTitle>{app ? `${label} ${app.docNumber}` : `New ${label.toLowerCase()}`} — {contract.counterparty}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="space-y-1"><Label>No.</Label>
-            <Input value={number} onChange={(e) => setNumber(e.target.value)} disabled={!!app} inputMode="numeric" /></div>
+            <Input value={number} onChange={(e) => setNumber(e.target.value)} inputMode="numeric"
+                   className={docTaken ? 'border-red-400' : ''} />
+            {docTaken && <div className="text-[11px] text-red-700">{label} {typedDoc} already exists on this contract</div>}</div>
           <div className="space-y-1"><Label>Invoice #</Label>
             <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} /></div>
           <div className="space-y-1"><Label>Period from</Label>
@@ -548,7 +557,7 @@ export function ApplicationDialog({
           ) : <span />}
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending || !thisNumber}>
+            <Button onClick={() => save.mutate()} disabled={save.isPending || !thisNumber || docTaken}>
               {save.isPending ? 'Saving…' : app ? 'Save changes' : `Record ${label.toLowerCase()}`}
             </Button>
           </div>

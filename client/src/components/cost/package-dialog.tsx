@@ -42,7 +42,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 
   const app = target?.app;
   const label = app?.kind === 'invoice' ? 'Invoice' : 'Pay App';
-  const apps = useMemo(() => bundle.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number })), [bundle.applications]);
+  const apps = useMemo(() => bundle.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })), [bundle.applications]);
   const ck = useMemo(() => (app ? waiverChecklist(app.id, apps, bundle.waivers) : null), [app?.id, apps, bundle.waivers]);
   const files = app ? bundle.documents.filter((d) => d.applicationId === app.id) : [];
   const docName = (id: number | null) => bundle.documents.find((d) => d.id === id)?.originalName;
@@ -102,13 +102,13 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   };
 
   if (!target || !app || !ck) return null;
-  const prevLabel = ck.previous ? `Pay App ${nn(ck.previous.number)}` : null;
+  const prevLabel = ck.previous ? `Pay App ${nn(ck.previous.docNumber || ck.previous.number)}` : null;
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="pm-scope sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{target.contract.counterparty} — {label} {nn(app.number)} package</DialogTitle>
+          <DialogTitle>{target.contract.counterparty} — {label} {nn(app.docNumber)} package</DialogTitle>
         </DialogHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap -mt-2">
           <p className="text-xs text-gray-600">
@@ -170,7 +170,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         {/* Conditional waivers for this pay app */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional waivers — {label} {nn(app.number)}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional waivers — {label} {nn(app.docNumber)}</h3>
             {!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewC({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}
           </div>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Next pay app, the app expects an unconditional from each of them.</p>

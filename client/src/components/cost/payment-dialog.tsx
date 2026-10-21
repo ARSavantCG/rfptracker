@@ -72,7 +72,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
       <DialogContent className="pm-scope sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {app?.number}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
+            Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {app?.docNumber}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
           </DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-3 gap-2 text-sm">

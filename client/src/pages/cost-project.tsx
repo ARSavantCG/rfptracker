@@ -265,7 +265,7 @@ export default function CostProject() {
                       <button className="text-blue-700 hover:underline text-left break-all" onClick={() => openDocument(d.id)}>{d.originalName}</button>
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="text-xs text-gray-500 text-right">
-                          {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.number}` : ''}
+                          {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.docNumber}` : ''}
                           {d.directCostId ? 'Ledger receipt' : ''}
                           <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
                         </div>

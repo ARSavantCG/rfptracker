@@ -38,6 +38,11 @@ export interface ChangeOrderRow {
   number: string;
   title: string | null;
   status: 'approved' | 'pending' | 'void';
+  /** Set by hand; null = worked out. */
+  startAppNumber: number | null;
+  /** The pay app it actually starts on, set or worked out (null = no apps yet). */
+  startApp: number | null;
+  startSource: 'set' | 'billed' | 'recorded' | 'next' | 'none';
 }
 
 export interface SovLineRow {
@@ -55,7 +60,10 @@ export interface SovLineRow {
 export interface ApplicationRow {
   id: number;
   contractId: number;
+  /** Order within the contract — drives "previous". Not shown. */
   number: number;
+  /** The number shown and printed: Pay App 7, Invoice 2 (each kind counts on its own). */
+  docNumber: number;
   kind: 'pay_app' | 'invoice';
   invoiceNumber: string | null;
   periodStart: string | null;

@@ -73,7 +73,12 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
             {p.contracts.map((c) => (
               <tr key={c.contractId} className="border-b last:border-0">
                 <td className="px-3 py-1.5">{contractName.get(c.contractId)}</td>
-                <D v={c.contractSum} /><D v={c.billedToDate} />
+                <td className="px-3 py-1.5 text-right tabular-nums">
+                  {signedMoney(c.contractSum)}
+                  {c.pendingChanges ? <div className="text-[11px] text-amber-700" title="Change orders marked Pending are left out of the contract sum. Set them to Approved on the Contracts tab.">
+                    + {money(c.pendingChanges)} pending CO</div> : null}
+                </td>
+                <D v={c.billedToDate} />
                 <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{c.pctComplete.toFixed(2)}%</td>
                 <D v={c.retainageHeld} /><D v={c.netBilled} /><D v={c.paid} />
                 <D v={c.owed} tone={owedTone(c.owed)} /><D v={c.leftToPay} />
@@ -117,7 +122,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
               return (
                 <tr key={a.applicationId} className="border-b last:border-0">
                   <td className="px-3 py-1.5">{contractName.get(a.contractId)}</td>
-                  <td className="px-3 py-1.5">{app?.kind === 'invoice' ? 'Inv' : 'App'} {a.number}</td>
+                  <td className="px-3 py-1.5">{app?.kind === 'invoice' ? 'Inv' : 'App'} {app?.docNumber ?? a.number}</td>
                   <td className="px-3 py-1.5 text-gray-600">{app?.periodEnd ? shortDate(a.date) : <span className="text-amber-700" title="No period end entered — dated the day it was entered">{shortDate(a.date)}*</span>}</td>
                   <D v={a.due} /><D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
                   <td className="px-2 text-right">

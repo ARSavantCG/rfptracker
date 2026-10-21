@@ -515,7 +515,10 @@ export function invoiceCalc(input: { type: InvoiceType; items: readonly Billable
   const split = input.items.some((i) => i.fee !== undefined);
   const partner = input.type === 'fee';
   const sum = (f: (i: BillableItem) => number | undefined) => r2(input.items.reduce((s, i) => s + (f(i) ?? 0), 0));
-  const fee = !split ? r2((costs * input.pct) / 100) : partner ? sum((i) => i.feeP ?? i.fee) : sum((i) => i.fee);
+  // The capital partner's original fee is figured once on the total (rate × original work), so it ties to
+  // the cent with base × rate instead of drifting by the rounding of each item.
+  const origWork = r2(input.items.reduce((s, i) => s + (i.amount - (i.coAmount ?? 0)), 0));
+  const fee = !split ? r2((costs * input.pct) / 100) : partner ? r2((origWork * input.pct) / 100) : sum((i) => i.fee);
   const suppFee = !split ? 0 : partner ? sum((i) => i.suppP ?? i.suppFee) : sum((i) => i.suppFee);
   const cpFee = 0;
   const toDate = input.type === 'reimbursable' ? r2(costs + fee + suppFee) : r2(fee + suppFee);

@@ -50,7 +50,7 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
         </div>
         <div className="text-xs text-gray-600">
           Earned as the work is billed: the rate × spent to date on every other budget line.
-          {cmFee && <> Earned so far <span className="font-medium tabular-nums">{money(cmFee.earned)}</span> of {money(cmFee.budget)}.</>}
+          {cmFee && <> Earned so far on work billed <span className="font-medium tabular-nums">{money(cmFee.earned)}</span>, on payments made <span className="font-medium tabular-nums">{money(cmFee.earnedOnPaid)}</span> (of {money(cmFee.budget)}).</>}
           {cmFee?.supplemental && <> Supplemental CM fee (change orders): <span className="font-medium tabular-nums">{money(cmFee.supplemental.earned + cmFee.supplemental.earnedCp)}</span> of {money(cmFee.supplemental.budget)}.</>}
         </div>
       </div>

@@ -159,7 +159,7 @@ export function renderCmFeeReportHtml(input: {
   rentableSf?: number;
   rates: { partner: number; tenant: number; line: string | null };
   billing: { capital: BillingStream; tenant: BillingStream };
-  changeOrders: Array<{ number: string; title: string; status: string; tenantWork: number; work: number; tenantRate: number; tenantFee: number; partnerRate: number; partnerBasis: string; partnerFee: number }>;
+  changeOrders: Array<{ number: string; title: string; status: string; tenantWork: number; work: number; markups: number; credit: number; tenantBase: number; tenantRate: number; tenantFee: number; partnerBase: number; partnerRate: number; partnerBasis: string; partnerFee: number }>;
   invoices: FeeInvoice[];
   cmFee?: CmFeeView | null;
   generatedBy?: string | null;
@@ -210,10 +210,12 @@ export function renderCmFeeReportHtml(input: {
   </tbody></table>
 
   ${cos.length ? `<h3 class="sec">CM Fees on Change Orders</h3>
-  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Status</th><th>Cost of Work</th><th>Tenant Share</th><th>Tenant Rate</th><th>Tenant CM Fee</th><th>Partner Rate</th><th>Partner CM Fee</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Status</th><th>Cost of Work</th><th>Tenant Share</th><th>Markups</th><th>Credit</th>
+    <th>Tenant Fee Base</th><th>Tenant Rate</th><th>Tenant CM Fee</th><th>Partner Fee Base</th><th>Partner Rate</th><th>Partner CM Fee</th></tr></thead><tbody>
     ${cos.map((x) => `<tr><td>${escapeHtml(x.number)}${x.title ? ` — ${escapeHtml(x.title)}` : ""}</td><td>${escapeHtml(x.status[0].toUpperCase() + x.status.slice(1))}</td>${cell(x.work)}${cell(x.tenantWork)}
-      <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : x.partnerBasis === "absorbed" ? "difference only" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
-    <tr class="total"><td colspan="2">Total</td>${cell(coSum("work"))}${cell(coSum("tenantWork"))}<td></td>${cell(coSum("tenantFee"))}<td></td>${cell(coSum("partnerFee"))}</tr>
+      ${cell(x.markups)}${x.credit ? cell(-x.credit) : `<td class="num muted">—</td>`}${cell(x.tenantBase)}
+      <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}${cell(x.partnerBase)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : x.partnerBasis === "absorbed" ? "difference only" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
+    <tr class="total"><td colspan="2">Total</td>${cell(coSum("work"))}${cell(coSum("tenantWork"))}${cell(coSum("markups"))}${coSum("credit") ? cell(-coSum("credit")) : `<td class="num muted">—</td>`}${cell(coSum("tenantBase"))}<td></td>${cell(coSum("tenantFee"))}${cell(coSum("partnerBase"))}<td></td>${cell(coSum("partnerFee"))}</tr>
   </tbody></table>
 ` : ""}
 
@@ -874,8 +876,10 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         billing: b.cmInvoiceDrafts,
         changeOrders: b.approval.changeOrders.filter((c) => c.status !== "void").map((c) => {
           const t = coTotals(c);
-          return { number: c.number, title: c.title, status: c.status, work: t.work, tenantWork: t.tenantWork,
-            tenantRate: c.cmFeePct, tenantFee: t.cm, partnerRate: c.partnerFeePct ?? 0, partnerBasis: c.partnerFeeBasis ?? "all", partnerFee: t.cmAbsorbed };
+          // Fee bases shown so each row ties: tenant share + markups − credit = what the tenant's fee is on.
+          return { number: c.number, title: c.title, status: c.status, work: t.work, tenantWork: t.tenantWork, markups: t.markups, credit: t.credit,
+            tenantBase: t.tenantFeeBase, tenantRate: c.cmFeePct, tenantFee: t.cm,
+            partnerBase: t.partnerBase, partnerRate: c.partnerFeePct ?? 0, partnerBasis: c.partnerFeeBasis ?? "all", partnerFee: t.cmAbsorbed };
         }),
         invoices: b.cmInvoices,
         cmFee: b.cmFee,

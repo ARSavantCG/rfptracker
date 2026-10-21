@@ -179,3 +179,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - (2026-10-21) Capital partner fee base fixed: feeP = rate × all original work (origAmount) and direct cost amount, not the tenant-weighted billable; invoiceCalc 'fee' costs = Σ amount. Matches the Budget tab CM fee earned (2.75% × spent).
 - (2026-10-21) Funding need no longer double counts unmapped contract cost: need = committed lines + max(open (un-bought, non-contingency) line budgets, Unallocated committed) + CO extras. Returns `unmapped`; funding box nudges to map lines.
 - (2026-10-21) invoiceCalc 'fee': original fee = r2(Σ(amount − coAmount) × rate) once, so it ties to base × rate (was a cent off from per-item rounding). CM fee box shows earned on billed and on paid.
+- (2026-10-21) CM Fee Report 'CM Fees on Change Orders' adds Markups, Credit, Tenant Fee Base, Partner Fee Base so each row ties to the party table.

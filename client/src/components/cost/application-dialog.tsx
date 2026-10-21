@@ -15,7 +15,7 @@ import { MoneyInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,6 +67,8 @@ export function ApplicationDialog({
   const [retTarget, setRetTarget] = useState('');
   /** The contractor's G702 figures for this pay app (typed or read by AI). */
   const [theirs, setTheirs] = useState<Record<string, string>>({});
+  /** Groups (base contract, each change order) rolled up to their subtotal. */
+  const [rolled, setRolled] = useState<Set<string>>(new Set());
   const [aiCells, setAiCells] = useState<Record<number, AiCell>>({});
   const [setupDone, setSetupDone] = useState(false);
   const [added, setAdded] = useState(0);
@@ -517,8 +519,20 @@ export function ApplicationDialog({
             </thead>
             {groups.map((g) => (
               <tbody key={g.label}>
-                <tr className="bg-gray-100"><td colSpan={8} className="px-2 py-1 text-xs font-semibold text-gray-800">{g.label}</td></tr>
-                {g.lines.map((l) => {
+                <tr className="bg-gray-100"><td colSpan={8} className="px-2 py-1 text-xs font-semibold text-gray-800">
+                  <button className="inline-flex items-center gap-1 hover:text-blue-800" onClick={() => setRolled((r) => { const n = new Set(r); if (n.has(g.label)) n.delete(g.label); else n.add(g.label); return n; })}
+                          title={rolled.has(g.label) ? 'Show its lines' : 'Roll up to its subtotal'}>
+                    {rolled.has(g.label) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}{g.label}
+                    {rolled.has(g.label) && <span className="font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'} rolled up</span>}
+                  </button>
+                  {groups.length > 1 && g === groups[0] && (
+                    <span className="float-right font-normal">
+                      <button className="text-blue-700 hover:underline mr-3" onClick={() => setRolled(new Set(groups.map((x) => x.label)))}>Roll up all</button>
+                      <button className="text-blue-700 hover:underline" onClick={() => setRolled(new Set())}>Show all</button>
+                    </span>
+                  )}
+                </td></tr>
+                {!rolled.has(g.label) && g.lines.map((l) => {
                   const p = prior.get(l.id);
                   const previous = (p?.completed ?? 0) + (p?.stored ?? 0);
                   const toDate = (p?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');

@@ -43,6 +43,17 @@ export function ContractCard({
   defaultOpen?: boolean;
 }) {
   const ai = useAiStatus();
+  // The base contract and each change order roll up to their header line; remembered per contract.
+  const rollKey = `pm-rolled-${contract.id}`;
+  const [rolled, setRolled] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(rollKey) || '[]')); } catch { return new Set(); }
+  });
+  const toggleRoll = (k: string) => setRolled((r) => {
+    const n = new Set(r);
+    if (n.has(k)) n.delete(k); else n.add(k);
+    try { localStorage.setItem(rollKey, JSON.stringify(Array.from(n))); } catch { /* private window */ }
+    return n;
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
@@ -216,7 +227,12 @@ export function ContractCard({
                 <tr className="bg-gray-100 border-y">
                   <td colSpan={2} className="px-3 py-1.5 font-semibold text-gray-900">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span>{g.label}</span>
+                      <button className="inline-flex items-center gap-1 hover:text-blue-800" title={rolled.has(String(g.id ?? 'base')) ? 'Show its lines' : 'Roll up to one line'}
+                              onClick={() => toggleRoll(String(g.id ?? 'base'))}>
+                        {rolled.has(String(g.id ?? 'base')) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        <span>{g.label}</span>
+                        {rolled.has(String(g.id ?? 'base')) && <span className="text-xs font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'}</span>}
+                      </button>
                       {g.co && (
                         <div className="w-28">
                           <Select value={g.co.status} onValueChange={(v) => setCoStatus.mutate({ id: g.co!.id, status: v })}>
@@ -300,7 +316,7 @@ export function ContractCard({
                 {editing === String(g.id ?? 'base') ? (
                   <SovGridEditor contractId={contract.id} changeOrderId={g.id} label={g.label} lines={g.lines}
                                  baseline={baseline} billedIds={billedIds} projectId={projectId} onDone={() => setEditing(null)} />
-                ) : g.lines.length === 0 ? (
+                ) : rolled.has(String(g.id ?? 'base')) ? null : g.lines.length === 0 ? (
                   <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-600">
                     No lines yet — click <span className="font-medium">Enter lines</span> to type {g.co ? 'the change order\'s cost of work, insurance and fee' : 'the schedule of values'}, or paste it from Excel.
                   </td></tr>

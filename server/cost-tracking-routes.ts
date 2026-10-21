@@ -795,12 +795,37 @@ export function registerCostTrackingRoutes(app: Express): void {
       const co = normalizeCO({
         ...b, id: `co-${nanoid(8)}`,
         cmFeePct: cmSettingsFor(project, baseline).pct,
-        contractId: null, contractCoId: null,
+        contractId: null, contractCoId: null, links: [],
       })!;
       const keys = new Set(baseline.map((x) => x.key));
-      if (!co.lines.length) return res.status(400).json({ message: 'Add at least one line with an amount.' });
+      // Vendor change orders picked in the form: the lines are priced from them.
+      const vendor = (Array.isArray(b.vendorLinks) ? b.vendorLinks : [])
+        .map((l: any) => ({ contractCoId: Number(l?.contractCoId), pct: Math.max(0, Math.min(100, Math.round(Number(l?.pct ?? 100) * 100) / 100)) }))
+        .filter((l: any) => Number.isFinite(l.contractCoId) && l.contractCoId > 0);
+      if (vendor.length) {
+        const links: BudgetCO['links'] = [];
+        for (const v of vendor) {
+          const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, v.contractCoId));
+          const [k] = cco ? await db.select().from(costContracts).where(eq(costContracts.id, cco.contractId)) : [];
+          if (!cco || !k || k.projectId !== id) throw new UserError('That vendor change order is not on a contract in this project.');
+          if (a.changeOrders.some((c) => c.links.some((x) => x.contractCoId === cco.id))) throw new UserError(`${k.counterparty} ${cco.number} is already linked to another tenant change order.`);
+          if (!links.some((x) => x.contractCoId === cco.id)) links.push({ contractCoId: cco.id, contractId: cco.contractId, pct: Number.isFinite(v.pct) ? v.pct : 100 });
+        }
+        co.links = links;
+        // A vendor line not mapped yet lands on the budget line chosen in the form.
+        const fallback = b.fallbackKey && keys.has(String(b.fallbackKey)) ? [{ key: String(b.fallbackKey), description: '', amount: 0, tenantPct: 100 }] : [];
+        co.lines = await linesFromVendors(id, links, co.lines.length ? co.lines : fallback, baseline);
+        co.contractCoId = links[0].contractCoId;
+        co.contractId = links[0].contractId;
+        // Approving the tenant change order approves the vendors' with it.
+        if (co.status === 'approved') {
+          await db.update(costChangeOrders).set({ status: 'approved', approvedDate: new Date() })
+            .where(inArray(costChangeOrders.id, links.map((l) => l.contractCoId)));
+        }
+      }
+      if (!co.lines.length) return res.status(400).json({ message: 'Add at least one line with an amount, or pick the vendor change order behind it.' });
       if (co.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
-      const contractId = b.contractId != null && b.contractId !== '' ? Number(b.contractId) : null;
+      const contractId = b.contractId != null && b.contractId !== '' && !vendor.length ? Number(b.contractId) : null;
       if (contractId) {
         const ccoId = await writeContractCo(contractId, co, baseline);
         co.links = [{ contractCoId: ccoId, contractId, pct: co.billable ? 100 : 0 }];
@@ -890,8 +915,9 @@ export function registerCostTrackingRoutes(app: Express): void {
       next.contractCoId = links[0]?.contractCoId ?? null;
       next.contractId = links[0]?.contractId ?? null;
       a.changeOrders[i] = next;
-      // Keep the vendors' change orders in step on status.
-      if (next.links.length && next.status !== cur.status) {
+      // Approving the tenant change order approves the vendors' with it. The reverse
+      // never: work already released to a vendor stays released while who pays is decided.
+      if (next.links.length && next.status !== cur.status && next.status === 'approved') {
         await db.update(costChangeOrders).set({ status: next.status, ...(next.status === 'approved' ? { approvedDate: new Date() } : {}) })
           .where(inArray(costChangeOrders.id, next.links.map((l) => l.contractCoId)));
       }

@@ -31,6 +31,8 @@ type Form = {
   id: string | null; number: string; title: string; date: string; status: BudgetCO['status'];
   billable: boolean; cmFee: boolean; contractId: string; lines: FormLine[];
   credit: string; cmOnAbsorbed: boolean; linked: boolean; reason: string;
+  /** New change orders: vendor change orders picked in the form, priced from them. */
+  vendorLinks: { contractCoId: number; pct: string }[]; fallbackKey: string;
 };
 
 export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
@@ -50,13 +52,13 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const blank = (): Form => ({
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,
-    lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant',
+    lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant', vendorLinks: [], fallbackKey: '',
   });
   const edit = (co: BudgetCO): Form => ({
     id: co.id, number: co.number, title: co.title, date: co.date ?? todayIso(), status: co.status, billable: co.billable,
     cmFee: co.cmFee, contractId: NO_CONTRACT,
     lines: co.lines.map((l) => ({ key: l.key, description: l.description, amount: fmtMoneyText(String(l.amount)), tenantPct: fmtPctText(String(l.tenantPct ?? 100)) })),
-    credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason,
+    credit: co.credit ? fmtMoneyText(String(co.credit)) : '', cmOnAbsorbed: co.cmOnAbsorbed, linked: co.links.length > 0, reason: co.reason, vendorLinks: [], fallbackKey: '',
   });
 
   const run = async (fn: () => Promise<any>, ok: string) => {
@@ -200,15 +202,18 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     );
   };
 
-  const formWork = form ? r2(form.lines.reduce((s, l) => s + num(l.amount), 0)) : 0;
-  const formTenantWork = form ? r2(form.lines.reduce((s, l) => s + (num(l.amount) * num(l.tenantPct)) / 100, 0)) : 0;
+  const fromVendors = !!form && form.vendorLinks.length > 0;
+  const formWork = !form ? 0 : fromVendors ? r2(form.vendorLinks.reduce((s, v) => s + coLines(v.contractCoId), 0)) : r2(form.lines.reduce((s, l) => s + num(l.amount), 0));
+  const formTenantWork = !form ? 0 : fromVendors
+    ? r2(form.vendorLinks.reduce((s, v) => s + (coLines(v.contractCoId) * num(v.pct)) / 100, 0))
+    : r2(form.lines.reduce((s, l) => s + (num(l.amount) * num(l.tenantPct)) / 100, 0));
   const formRate = form?.id ? (cos.find((c) => c.id === form.id)?.cmFeePct ?? rate) : rate;
   const formCm = form?.cmFee ? r2((formTenantWork * formRate) / 100) : 0;
   const formCmOurs = form?.cmFee && form.cmOnAbsorbed ? r2(((formWork - formTenantWork) * formRate) / 100) : 0;
   const formCredit = form ? num(form.credit) : 0;
   const formTenant = r2(formTenantWork + formCm - formCredit);
   const formOurs = r2(formWork - formTenantWork + formCredit + formCmOurs);
-  const formLinesOk = form ? form.linked || (form.lines.filter((l) => num(l.amount)).every((l) => l.key) && form.lines.some((l) => num(l.amount))) : false;
+  const formLinesOk = form ? form.linked || fromVendors || (form.lines.filter((l) => num(l.amount)).every((l) => l.key) && form.lines.some((l) => num(l.amount))) : false;
 
   const submit = async () => {
     if (!form) return;
@@ -217,7 +222,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
       credit: formCredit, cmOnAbsorbed: form.cmOnAbsorbed, reason: form.reason,
       // Lines priced from linked vendors are re-priced from them, not typed.
       ...(form.linked ? {} : { lines: form.lines.filter((l) => num(l.amount)).map((l) => ({ key: l.key, description: l.description, amount: num(l.amount), tenantPct: num(l.tenantPct) })) }),
-      ...(form.id ? {} : { contractId: form.contractId === NO_CONTRACT ? null : Number(form.contractId) }),
+      ...(form.id ? {} : fromVendors
+        ? { vendorLinks: form.vendorLinks.map((v) => ({ contractCoId: v.contractCoId, pct: num(v.pct) })), fallbackKey: form.fallbackKey || null, lines: [] }
+        : { contractId: form.contractId === NO_CONTRACT ? null : Number(form.contractId) }),
     };
     const ok = await run(
       () => (form.id
@@ -340,7 +347,43 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             </Field>
           </div>
 
+          {!form.id && (
+            <div className="bg-white border rounded-md p-2 space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap text-sm">
+                <span className="font-medium text-gray-800">Vendor change orders behind it</span>
+                <span className="text-xs text-gray-500">— pick the GC's (or any vendor's) change order and the amounts come from it; nothing to type.</span>
+              </div>
+              {(() => {
+                const picked = new Set(form.vendorLinks.map((v) => v.contractCoId));
+                const free = bundle.changeOrders.filter((c) => c.status !== 'void' && !linkedIds.has(c.id) && !picked.has(c.id));
+                return free.length ? (
+                  <div className="w-[28rem]">
+                    <Select value="" onValueChange={(v) => setForm({ ...form, vendorLinks: [...form.vendorLinks, { contractCoId: Number(v), pct: form.billable ? '100.00' : '0.00' }] })}>
+                      <SelectTrigger className="h-8 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="+ Link a vendor change order" /></SelectTrigger>
+                      <SelectContent className="pm-scope">
+                        {free.map((c) => <SelectItem key={c.id} value={String(c.id)}>{contractName(c.contractId)} {c.number}{c.title ? ` — ${c.title}` : ''} · {money(coLines(c.id))}{c.status === 'approved' ? ' · approved' : ' · pending'}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500">{bundle.changeOrders.length ? 'Every vendor change order is already linked.' : 'No vendor change orders yet — add them on the contract (Contracts tab), or type the amounts below as an estimate.'}</div>
+                );
+              })()}
+            </div>
+          )}
+
           <div className="bg-white border rounded-md overflow-x-auto">
+            {fromVendors && (
+              <div className="px-2 py-1.5 text-xs bg-violet-50 border-b text-violet-900 flex items-center gap-2 flex-wrap">
+                Priced from the vendor change orders. Any vendor line not yet mapped to a budget line goes on:
+                <div className="w-64">
+                  <Select value={form.fallbackKey || undefined} onValueChange={(v) => setForm({ ...form, fallbackKey: v })}>
+                    <SelectTrigger className="h-7 text-xs bg-white data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
+                    <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             {form.linked && (
               <div className="px-2 py-1.5 text-xs bg-violet-50 border-b text-violet-900">
                 Priced from the linked vendor change orders. Set each vendor's tenant share in the row under this change order; amounts follow the vendors.
@@ -355,7 +398,26 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                 </tr>
               </thead>
               <tbody>
-                {form.lines.map((l, i) => (
+                {fromVendors && form.vendorLinks.map((v, i) => {
+                  const cco = bundle.changeOrders.find((c) => c.id === v.contractCoId);
+                  const amt = coLines(v.contractCoId);
+                  return (
+                    <tr key={`v${v.contractCoId}`} className="border-b">
+                      <td className="px-2 py-1.5 text-gray-900">{contractName(cco?.contractId ?? null)} {cco?.number}</td>
+                      <td className="px-2 py-1.5 text-gray-600">{cco?.title || ''}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{money(amt)}</td>
+                      <td className="px-1 py-1"><PercentInput className="h-8" value={v.pct} aria-label="Tenant %"
+                        onValueChange={(val) => setForm({ ...form, vendorLinks: form.vendorLinks.map((x, j) => (j === i ? { ...x, pct: val } : x)) })} /></td>
+                      <td className="px-2 py-1 text-right tabular-nums text-green-800">{money(r2((amt * num(v.pct)) / 100))}</td>
+                      <td className="px-1 text-center">
+                        <button className="p-1 text-gray-400 hover:text-red-700" title="Remove" onClick={() => setForm({ ...form, vendorLinks: form.vendorLinks.filter((_, j) => j !== i) })}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!fromVendors && form.lines.map((l, i) => (
                   <tr key={i} className="border-b last:border-0">
                     <td className="px-1 py-1">
                       <Select value={l.key || undefined} onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, key: v } : x)) })}>
@@ -420,10 +482,10 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
 
           <div className="flex items-end justify-between gap-3 flex-wrap">
             <div className="flex items-end gap-3 flex-wrap">
-              <Button size="sm" variant="outline" className="h-9" disabled={form.linked} onClick={() => setForm({ ...form, lines: [...form.lines, { key: '', description: '', amount: '', tenantPct: form.billable ? '100.00' : '0.00' }] })}>
+              <Button size="sm" variant="outline" className="h-9" disabled={form.linked || fromVendors} onClick={() => setForm({ ...form, lines: [...form.lines, { key: '', description: '', amount: '', tenantPct: form.billable ? '100.00' : '0.00' }] })}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Line
               </Button>
-              {!form.id && bundle.contracts.length > 0 && (
+              {!form.id && !fromVendors && bundle.contracts.length > 0 && (
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">Also write it on a contract (cost of work only — the CM fee is ours)</div>
                   <Select value={form.contractId} onValueChange={(v) => setForm({ ...form, contractId: v })}>

@@ -394,6 +394,17 @@ export interface G702 {
   previousCertificates: number;
   currentPaymentDue: number;
   balanceToFinish: number;
+  /**
+   * The G702's change order summary box: approved on earlier pay apps vs
+   * approved on this one, additions and deductions apart. A CO is "approved
+   * on" its start app.
+   */
+  changeOrderSummary: {
+    previous: { additions: number; deductions: number };
+    thisPeriod: { additions: number; deductions: number };
+    /** COs approved on this pay app. */
+    thisPeriodIds: number[];
+  };
 }
 
 /**
@@ -432,6 +443,19 @@ export function g702For(contractId: number, upTo: number, input: {
   const prior = priorNumbers.length ? earned(Math.max(...priorNumbers)) : { done: 0, held: 0 };
   const sumToDate = original + changes;
   const earnedLess = now.done - now.held;
+  // Change order summary: "this period" = started after the previous app, up to this one.
+  const prevNumber = priorNumbers.length ? Math.max(...priorNumbers) : -Infinity;
+  const perCo = new Map<number, number>();
+  for (const l of mine) if (l.changeOrderId != null) perCo.set(l.changeOrderId, (perCo.get(l.changeOrderId) ?? 0) + n(l.scheduledValue));
+  const summary = { previous: { additions: 0, deductions: 0 }, thisPeriod: { additions: 0, deductions: 0 }, thisPeriodIds: [] as number[] };
+  for (const [id, v] of Array.from(perCo)) {
+    const s = cos.get(id)?.startApp;
+    const isThis = !opts?.allChangeOrders && s != null && s > prevNumber && s <= upTo;
+    const bucket = isThis ? summary.thisPeriod : summary.previous;
+    if (v >= 0) bucket.additions += v; else bucket.deductions += -v;
+    if (isThis) summary.thisPeriodIds.push(id);
+  }
+  for (const b of [summary.previous, summary.thisPeriod]) { b.additions = round2(b.additions); b.deductions = round2(b.deductions); }
   const previous = prior.done - prior.held;
   return {
     originalContractSum: round2(original),
@@ -443,6 +467,7 @@ export function g702For(contractId: number, upTo: number, input: {
     previousCertificates: round2(previous),
     currentPaymentDue: round2(earnedLess - previous),
     balanceToFinish: round2(sumToDate - earnedLess),
+    changeOrderSummary: summary,
   };
 }
 

@@ -1138,9 +1138,11 @@ export function registerCostTrackingRoutes(app: Express): void {
       const status = CO_STATUSES.includes(String(b.status)) ? String(b.status) : 'pending';
       const existing = await db.select({ id: costChangeOrders.id })
         .from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
+      const start = b.startAppNumber != null && Number(b.startAppNumber) >= 1 ? Math.floor(Number(b.startAppNumber)) : null;
       const [row] = await db.insert(costChangeOrders).values({
         contractId, number, title: b.title ? String(b.title) : null, status,
         approvedDate: status === 'approved' ? new Date() : null,
+        startAppNumber: status === 'approved' ? start : null,
         sortOrder: existing.length,
       }).returning();
       res.json(row);
@@ -1214,6 +1216,19 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.status !== undefined && CO_STATUSES.includes(String(b.status))) {
         patch.status = String(b.status);
         patch.approvedDate = b.status === 'approved' ? new Date() : null;
+        // Approved now and not tied to a pay app yet: it goes on the next one,
+        // unless it is already billed (then the first app that bills it).
+        if (b.status === 'approved' && b.startAppNumber === undefined) {
+          const [co] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, id));
+          if (co && co.status !== 'approved' && co.startAppNumber == null) {
+            const lineIds = (await db.select({ id: costSovLines.id }).from(costSovLines).where(eq(costSovLines.changeOrderId, id))).map((l) => l.id);
+            const billed = lineIds.length ? await db.select({ number: costApplications.number })
+              .from(costApplicationLines).innerJoin(costApplications, eq(costApplications.id, costApplicationLines.applicationId))
+              .where(inArray(costApplicationLines.sovLineId, lineIds)) : [];
+            const apps = await db.select({ number: costApplications.number }).from(costApplications).where(eq(costApplications.contractId, co.contractId));
+            patch.startAppNumber = billed.length ? Math.min(...billed.map((r) => r.number)) : apps.reduce((m, a) => Math.max(m, a.number), 0) + 1;
+          }
+        }
       }
       if (b.startAppNumber !== undefined) {
         const n = b.startAppNumber === null || b.startAppNumber === '' ? null : Math.floor(Number(b.startAppNumber));

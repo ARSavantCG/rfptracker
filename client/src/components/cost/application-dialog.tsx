@@ -532,6 +532,26 @@ export function ApplicationDialog({
                 </div>
               ))}
             </div>
+            {(() => {
+              const cs = preview.changeOrderSummary;
+              const any = cs.previous.additions || cs.previous.deductions || cs.thisPeriod.additions || cs.thisPeriod.deductions;
+              if (!any) return null;
+              const names = changeOrders.filter((c) => cs.thisPeriodIds.includes(c.id)).map((c) => c.number).join(', ');
+              const cell = (v: number, neg = false) => <td className="px-2 py-0.5 text-right tabular-nums">{v ? (neg ? `(${money(v)})` : money(v)) : '—'}</td>;
+              return (
+                <div className="mt-3 pt-2 border-t">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-1">Change order summary</div>
+                  <table className="text-sm">
+                    <thead><tr className="text-[11px] text-gray-500"><th /><th className="px-2 text-right font-medium">Additions</th><th className="px-2 text-right font-medium">Deductions</th></tr></thead>
+                    <tbody>
+                      <tr><td className="pr-4 text-gray-700">Approved in previous months</td>{cell(cs.previous.additions)}{cell(cs.previous.deductions, true)}</tr>
+                      <tr><td className="pr-4 text-gray-700">Approved this month{names ? <span className="text-gray-500"> ({names})</span> : null}</td>{cell(cs.thisPeriod.additions)}{cell(cs.thisPeriod.deductions, true)}</tr>
+                      <tr className="font-medium"><td className="pr-4">Totals</td>{cell(cs.previous.additions + cs.thisPeriod.additions)}{cell(cs.previous.deductions + cs.thisPeriod.deductions, true)}</tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
 

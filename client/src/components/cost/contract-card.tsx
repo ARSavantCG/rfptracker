@@ -46,7 +46,7 @@ export function ContractCard({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
-  const [coForm, setCoForm] = useState<{ number: string; title: string } | null>(null);
+  const [coForm, setCoForm] = useState<{ number: string; title: string; approvedOn: string } | null>(null);
   // Open or folded, remembered per contract in this browser. Open by default
   // when it's the only contract, or a new one with nothing in it yet.
   const storeKey = `pm-contract-open-${contract.id}`;
@@ -103,10 +103,13 @@ export function ContractCard({
 
   const addCo = useMutation({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}/change-orders`, 'POST',
-      { number: coForm!.number, title: coForm!.title, status: 'pending' }),
+      coForm!.approvedOn === 'pending'
+        ? { number: coForm!.number, title: coForm!.title, status: 'pending' }
+        : { number: coForm!.number, title: coForm!.title, status: 'approved', startAppNumber: Number(coForm!.approvedOn) }),
     onSuccess: () => { refresh(); setCoForm(null); },
     onError: (e: any) => toast({ title: 'Not added', description: e?.message, variant: 'destructive' }),
   });
+  const nextAppNumber = applications.reduce((m, a) => Math.max(m, a.number), 0) + 1;
   const setCoStart = useMutation({
     mutationFn: ({ id, startAppNumber }: { id: number; startAppNumber: number | null }) =>
       apiRequest(`/api/cost-change-orders/${id}`, 'PATCH', { startAppNumber }),
@@ -237,18 +240,18 @@ export function ContractCard({
                           const a = sorted.find((x) => x.number === n);
                           return a ? `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}` : 'next pay app';
                         };
-                        const auto = co.startApp == null ? 'Auto' : `Auto · from ${nameOf(co.startApp)}`;
+                        const auto = co.startApp == null ? 'Approved on: auto' : `Auto · approved on ${nameOf(co.startApp)}`;
                         return (
-                          <div className="w-44" title="The first pay app this change order is on. Earlier pay apps leave it out of their G702 and their entry grid.">
+                          <div className="w-52" title="The pay app this change order was approved on. Its G702 lists it under 'approved this period'; earlier pay apps leave it out.">
                             <Select value={co.startAppNumber == null ? 'auto' : String(co.startAppNumber)}
                                     onValueChange={(v) => setCoStart.mutate({ id: co.id, startAppNumber: v === 'auto' ? null : Number(v) })}>
-                              <SelectTrigger className={`h-7 text-xs ${co.startAppNumber != null ? 'border-amber-300 bg-amber-50 text-amber-900' : ''}`}>
-                                <SelectValue>{co.startAppNumber == null ? auto : `From ${nameOf(co.startAppNumber)} · Edited`}</SelectValue>
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue>{co.startAppNumber == null ? auto : `Approved on ${nameOf(co.startAppNumber)}`}</SelectValue>
                               </SelectTrigger>
                               <SelectContent className="pm-scope">
                                 <SelectItem value="auto">{auto}</SelectItem>
-                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>From {a.kind === 'invoice' ? 'Invoice' : 'App'} {a.docNumber}</SelectItem>)}
-                                <SelectItem value={String(next)}>From the next pay app</SelectItem>
+                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'App'} {a.docNumber}</SelectItem>)}
+                                <SelectItem value={String(next)}>Approved on the next pay app</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -332,12 +335,25 @@ export function ContractCard({
             <label className="text-xs text-gray-600" htmlFor={`co-title-${contract.id}`}>For</label>
             <Input id={`co-title-${contract.id}`} value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })}
                    className="h-8 w-56 text-sm" />
+            <label className="text-xs text-gray-600">Approved on</label>
+            <div className="w-48">
+              <Select value={coForm.approvedOn} onValueChange={(v) => setCoForm({ ...coForm, approvedOn: v })}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">
+                  <SelectItem value={String(nextAppNumber)}>The next pay app</SelectItem>
+                  {[...applications].sort((a, b) => b.number - a.number).map((a) => (
+                    <SelectItem key={a.id} value={String(a.number)}>{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {a.docNumber}</SelectItem>
+                  ))}
+                  <SelectItem value="pending">Not approved yet (pending)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button size="sm" className="h-8" disabled={!coForm.number.trim() || addCo.isPending} onClick={() => addCo.mutate()}>Add</Button>
             <Button size="sm" variant="ghost" className="h-8" onClick={() => setCoForm(null)}>Cancel</Button>
           </div>
         ) : (
           <Button size="sm" variant="outline" className="h-8"
-                  onClick={() => setCoForm({ number: `PCCO #${String(changeOrders.length + 1).padStart(3, '0')}`, title: '' })}>
+                  onClick={() => setCoForm({ number: `PCCO #${String(changeOrders.length + 1).padStart(3, '0')}`, title: '', approvedOn: String(nextAppNumber) })}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Change order
           </Button>
         )}

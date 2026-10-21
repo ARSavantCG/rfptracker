@@ -153,3 +153,8 @@ and live test output are proof. The gold standard is: click the button and watch
 - Original budget = Σ breakdown (revised − changeOrders) excluding CM lines (was committed). coTotals now returns partnerBase/tenantFeeBase; projection carries coBase/pendingBase. Same columns on the Reports tab.
 - (2026-10-21) Original budget INCLUDES the CM fee: origTotal = Σ(revised − changeOrders) incl. CM line (excl. Supplemental CM line); base = origTotal ÷ (1 + partner rate); original fee = origTotal − base. Accordia: $1,466,500 → $1,427,250.61 + $39,249.39.
 - (2026-10-21) `settings.feeInBudget` (checkbox in the CM fee box): budget includes the CM fee → back it out; unchecked → base = budget less CM lines, fee on top. Default (unset) = the budget has a CM line. Exposed as cmSettings.feeInBudget / feeInBudgetSet.
+
+## Partner fee "difference only" + earned by party (2026-10-21)
+- partnerFeeBasis adds 'absorbed' (work − tenant share). New COs from the form default to 'absorbed'; API/legacy default stays 'all'. Wired through coTotals (partnerOn), coFeeLinks/supplementalCmEarned/billableItems (v − t).
+- Drafts carry earnedBilled / earnedPaid {base, fee} regardless of basis. CM Fee Report "CM Fee Earned to Date" is by party × basis (billed, paid) with Total Anticipated and Remaining; replaces cmFeeTable there.
+- Local test token expires after 24h: `UPDATE auth_tokens SET expires_at = now() + interval '7 days' WHERE token=…` in rfpt_verify.

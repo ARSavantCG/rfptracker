@@ -208,12 +208,21 @@ export function renderCmFeeReportHtml(input: {
   ${cos.length ? `<h3 class="sec">CM Fees on Change Orders</h3>
   <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Status</th><th>Cost of Work</th><th>Tenant Share</th><th>Tenant Rate</th><th>Tenant CM Fee</th><th>Partner Rate</th><th>Partner CM Fee</th></tr></thead><tbody>
     ${cos.map((x) => `<tr><td>${escapeHtml(x.number)}${x.title ? ` — ${escapeHtml(x.title)}` : ""}</td><td>${escapeHtml(x.status[0].toUpperCase() + x.status.slice(1))}</td>${cell(x.work)}${cell(x.tenantWork)}
-      <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
+      <td class="num">${x.tenantFee ? fmtPct(x.tenantRate) : "—"}</td>${cell(x.tenantFee)}<td class="num">${x.partnerFee ? fmtPct(x.partnerRate) : "—"}${x.partnerFee ? sub(x.partnerBasis === "tenant" ? "tenant share" : x.partnerBasis === "absorbed" ? "difference only" : "all work") : ""}</td>${cell(x.partnerFee)}</tr>`).join("")}
     <tr class="total"><td colspan="2">Total</td>${cell(coSum("work"))}${cell(coSum("tenantWork"))}<td></td>${cell(coSum("tenantFee"))}<td></td>${cell(coSum("partnerFee"))}</tr>
   </tbody></table>
   <div class="legend">The fee each change order carries when approved — earned as its work is billed. Pending and void change orders are listed for reference.</div>` : ""}
 
-  ${cmFeeTable(input.cmFee)}
+  <h3 class="sec">CM Fee Earned to Date</h3>
+  <table class="t"><thead><tr><th class="l">Party</th><th class="l">Basis</th><th>Base</th><th>Rate</th><th>Earned</th><th>Total Anticipated Fees</th><th>Remaining</th></tr></thead><tbody>
+    ${([["Capital partner", c], ["Tenant", t]] as const).map(([label, s]) => {
+      const rows: Array<[string, { base: number; fee: number } | undefined]> = [["On work billed to date", s.earnedBilled], ["On payments made to date", s.earnedPaid]];
+      return rows.map(([basis, e], k) => `<tr${k === 0 ? ' style="border-top:1px solid #9ca3af"' : ""}><td>${k === 0 ? escapeHtml(label) : ""}</td><td>${basis}${s.basis === (k === 0 ? "billed" : "paid") ? sub("invoiced on this basis") : ""}</td>
+        ${cell(e?.base ?? 0)}<td class="num">${fmtPct(s.pct)}</td>${cell(e?.fee ?? 0)}${cell(P(s).fee)}${cell(P(s).fee - (e?.fee ?? 0), negCls(P(s).fee - (e?.fee ?? 0)))}</tr>`).join("");
+    }).join("")}
+  </tbody></table>
+  <div class="legend">Capital partner: the base is every cost on the project (less the CM fee line). Tenant: their billable share of change order work${t.tenantCosOnly === false ? " and of the original scope" : ""}. Change orders can carry their own rates, so earned may differ slightly from base × rate.</div>
+
 
   <h3 class="sec">CM Fee Invoices Issued</h3>
   <table class="t"><thead><tr><th class="l">Invoice</th><th class="l">To</th><th class="l">Date</th><th>Amount</th><th>CM Fee</th><th>Costs</th></tr></thead><tbody>
@@ -232,6 +241,8 @@ export type BillingStream = {
   /** The CM fee part of what has been invoiced (the rest of a tenant invoice is costs). */
   feeInvoiced?: number;
   tenantCosOnly?: boolean;
+  earnedBilled?: { base: number; fee: number };
+  earnedPaid?: { base: number; fee: number };
   projected?: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; coBase?: number; pendingBase?: number; total?: number; pendingTotal?: number };
 };
 

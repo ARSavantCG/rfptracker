@@ -39,7 +39,7 @@ type Form = {
   tenantRate: string; partnerRate: string; cmFeeAmount: string;
   /** CM fee to the capital partner: on all the work, only the tenant's share, or none. */
   partnerFee: boolean;
-  partnerFeeBasis: 'all' | 'tenant';
+  partnerFeeBasis: 'all' | 'tenant' | 'absorbed';
 };
 
 export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
@@ -62,7 +62,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,
     lines: [{ key: '', description: '', amount: '', tenantPct: '100.00' }], credit: '', cmOnAbsorbed: false, linked: false, reason: 'tenant', vendorLinks: [], fallbackKey: '',
-    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: '' })), partnerFee: true, partnerFeeBasis: 'all',
+    markups: defaultMarkups(baseline, bundle.cmSettings.key).map((m) => ({ ...m, pct: fmtPctText(String(m.pct)), amount: '' })), partnerFee: true, partnerFeeBasis: 'absorbed',
     tenantRate: fmtPctText(String(tenantRate)), partnerRate: fmtPctText(String(rate)), cmFeeAmount: '',
   });
   const edit = (co: BudgetCO): Form => ({
@@ -277,7 +277,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const formCmFigured = form?.cmFee ? r2((Math.max(0, formTenantWork + formMarkupTotal - num(form.credit)) * formRate) / 100) : 0;
   const formCmTyped = !!form && form.cmFeeAmount.trim() !== '';
   const formCm = form?.cmFee ? (formCmTyped ? num(form.cmFeeAmount) : formCmFigured) : 0;
-  const formCmOurs = form?.partnerFee ? r2(((form.partnerFeeBasis === 'tenant' ? formTenantWork : formWork) * formPartnerRate) / 100) : 0;
+  const formCmOurs = form?.partnerFee ? r2(((form.partnerFeeBasis === 'tenant' ? formTenantWork : form.partnerFeeBasis === 'absorbed' ? formWork - formTenantWork : formWork) * formPartnerRate) / 100) : 0;
   const formCredit = form ? num(form.credit) : 0;
   const formBudget = r2(formWork + formMarkupTotal + formCmOurs);
   const formTenant = r2(formTenantWork + formMarkupTotal + formCm - formCredit);
@@ -313,7 +313,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
           <h2 className="font-semibold text-gray-900">Budget change orders</h2>
           <p className="text-xs text-gray-600 mt-0.5">
             Every change to the budget after it was set: why it happened, the vendors' change orders behind it, and who pays —
-            the tenant (their share, markups and CM fee at {tenantRate.toFixed(2)}%) or {bundle.funding?.label ?? 'Supplemental Funding'}. The capital partner's {rate.toFixed(2)}% on all change order work goes on the Supplemental CM Fee line.
+            the tenant (their share, markups and CM fee at {tenantRate.toFixed(2)}%) or {bundle.funding?.label ?? 'Supplemental Funding'}. The capital partner's {rate.toFixed(2)}% (by default on the difference we absorb) goes on the Supplemental CM Fee line.
           </p>
         </div>
         {!form && <Button size="sm" onClick={() => setForm(blank())}><Plus className="h-3.5 w-3.5 mr-1" /> Change order</Button>}
@@ -348,7 +348,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     <td className="px-3 py-2 text-right tabular-nums">{signedMoney(t.work)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-gray-700">
                       {t.markups ? <div>{signedMoney(t.markups)} <span className="text-[10px] text-gray-500">markups</span></div> : null}
-                      {t.cmAbsorbed ? <div>{signedMoney(t.cmAbsorbed)} <span className="text-[10px] text-gray-500">partner {co.partnerFeePct.toFixed(2)}%{co.partnerFeeBasis === 'tenant' ? ' · tenant share' : ''}</span></div> : null}
+                      {t.cmAbsorbed ? <div>{signedMoney(t.cmAbsorbed)} <span className="text-[10px] text-gray-500">partner {co.partnerFeePct.toFixed(2)}%{co.partnerFeeBasis === 'tenant' ? ' · tenant share' : co.partnerFeeBasis === 'absorbed' ? ' · difference only' : ''}</span></div> : null}
                       {!t.markups && !t.cmAbsorbed ? '—' : null}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold">{signedMoney(t.total)}</td>
@@ -584,11 +584,12 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     <span className="inline-flex items-center gap-2 flex-wrap">
                       CM fee to the capital partner
                       <Select value={!form.partnerFee ? 'none' : form.partnerFeeBasis}
-                              onValueChange={(v) => setForm({ ...form, partnerFee: v !== 'none', partnerFeeBasis: v === 'tenant' ? 'tenant' : 'all' })}>
-                        <SelectTrigger className="h-7 w-72 text-xs"><SelectValue /></SelectTrigger>
+                              onValueChange={(v) => setForm({ ...form, partnerFee: v !== 'none', partnerFeeBasis: v === 'tenant' ? 'tenant' : v === 'absorbed' ? 'absorbed' : 'all' })}>
+                        <SelectTrigger className="h-7 w-96 max-w-full text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent className="pm-scope">
-                          <SelectItem value="all">On all the work (absorbed costs too)</SelectItem>
-                          <SelectItem value="tenant">Only on the tenant's share (not on absorbed)</SelectItem>
+                          <SelectItem value="absorbed">Only on the difference — what we absorb (the tenant pays the rest)</SelectItem>
+                          <SelectItem value="all">On all the work (the tenant's share too)</SelectItem>
+                          <SelectItem value="tenant">Only on the tenant's share</SelectItem>
                           <SelectItem value="none">None on this change order</SelectItem>
                         </SelectContent>
                       </Select>

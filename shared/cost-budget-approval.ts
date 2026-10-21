@@ -104,7 +104,8 @@ export interface BudgetCO {
   partnerFee: boolean;
   partnerFeePct: number;
   /** What the partner fee is on: all the work, or only the tenant's share (absorbed costs not charged). */
-  partnerFeeBasis: 'all' | 'tenant';
+  /** What the capital partner's fee is figured on: all the work, the tenant's share, or only what we absorb (the difference). */
+  partnerFeeBasis: 'all' | 'tenant' | 'absorbed';
   /** Vendor change orders priced into this one (any contracts). */
   links: BudgetCOLink[];
   /** Credit to the tenant (a concession), absorbed by us. */
@@ -265,7 +266,7 @@ export function normalizeCO(raw: any): BudgetCO | null {
     // Older change orders had no partner fee setting; they earn it at their own rate.
     partnerFee: raw.partnerFee !== undefined ? raw.partnerFee !== false : raw.cmOnAbsorbed === true,
     partnerFeePct: Math.max(0, Math.min(100, num(raw.partnerFeePct ?? raw.cmFeePct))),
-    partnerFeeBasis: raw.partnerFeeBasis === 'tenant' ? 'tenant' : 'all',
+    partnerFeeBasis: raw.partnerFeeBasis === 'tenant' ? 'tenant' : raw.partnerFeeBasis === 'absorbed' ? 'absorbed' : 'all',
     links,
     credit: Math.max(0, r2(num(raw.credit))),
     cmOnAbsorbed: raw.cmOnAbsorbed === true,
@@ -300,14 +301,15 @@ export function coTotals(co: BudgetCO) {
   const cmBase = r2(Math.max(0, tenantWork + markups - credit0));
   const cmFigured = co.cmFee ? r2((cmBase * co.cmFeePct) / 100) : 0;
   const cm = co.cmFee ? (co.cmFeeAmount != null ? r2(co.cmFeeAmount) : cmFigured) : 0;
-  const cmAbsorbed = co.partnerFee ? r2(((co.partnerFeeBasis === 'tenant' ? tenantWork : work) * (co.partnerFeePct ?? 0)) / 100) : 0;
+  const partnerOn = co.partnerFeeBasis === 'tenant' ? tenantWork : co.partnerFeeBasis === 'absorbed' ? r2(work - tenantWork) : work;
+  const cmAbsorbed = co.partnerFee ? r2((partnerOn * (co.partnerFeePct ?? 0)) / 100) : 0;
   const credit = r2(co.credit || 0);
   // The budget holds the work, the markups and the partner's fee; the tenant pays their share, markups and fee.
   const total = r2(work + markups + cmAbsorbed);
   const tenant = r2(tenantWork + markups + cm - credit);
   const absorbed = r2(total - tenant);
   // What each fee is figured on (0 when that fee is off).
-  const partnerBase = co.partnerFee ? (co.partnerFeeBasis === 'tenant' ? tenantWork : work) : 0;
+  const partnerBase = co.partnerFee ? partnerOn : 0;
   const tenantFeeBase = co.cmFee ? cmBase : 0;
   return { work, tenantWork, ourWork, markups, markupLines, cmBase, cmFigured, cm, cmAbsorbed, partnerFee: cmAbsorbed, credit, tenant, absorbed, total, partnerBase, tenantFeeBase };
 }

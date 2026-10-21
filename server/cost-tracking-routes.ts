@@ -455,7 +455,7 @@ export async function loadProjectBundle(projectId: number) {
       // Paid to date on each item: payments on its pay app; a direct charge is paid when entered.
       const paidOn = new Map<string, number>();
       for (const p of payments) if (p.applicationId != null) paidOn.set(`app-${p.applicationId}`, (paidOn.get(`app-${p.applicationId}`) ?? 0) + p.amount);
-      const chosen = basis === 'billed' ? items : paidItems(items, payments, (aid) => {
+      const paidList = paidItems(items, payments, (aid) => {
         const row = apps.find((x) => x.id === aid);
         if (!row) return null;
         return {
@@ -463,8 +463,16 @@ export async function loadProjectBundle(projectId: number) {
           item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(row.id)}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
         };
       });
+      const chosen = basis === 'billed' ? items : paidList;
       // The tenant is invoiced at the tenant rate; the capital partner at the partner rate.
       const invPct = type === 'reimbursable' ? cmSettings.tenantPct : cmSettings.pct;
+      // Earned both ways, whatever this invoice counts: on work billed and on payments made.
+      // Base: every cost for the capital partner; the tenant's billable share for the tenant.
+      const earnedOn = (list: typeof items) => {
+        const x = invoiceCalc({ type, items: list, pct: invPct, previouslyInvoiced: 0 });
+        return { base: type === 'fee' ? r2c(list.reduce((t, i) => t + i.amount, 0)) : x.costs, fee: r2c(x.fee + x.suppFee) };
+      };
+      const earnedBilled = earnedOn(items), earnedPaid = earnedOn(paidList);
       const inv = invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous });
       const withPaid = (it: typeof items[number]) => ({ ...it, paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
       // The capital partner sees every cost incurred (with what's been paid), whatever the fee is counted on.
@@ -477,7 +485,7 @@ export async function loadProjectBundle(projectId: number) {
         // The fee part of it: the latest invoice's fee to date (each one carries its running fee).
         feeInvoiced: issued.length ? r2c((Number(issued[issued.length - 1].earned) || 0) + (Number(issued[issued.length - 1].suppFee) || 0)) : 0,
         invoices: issued.length,
-        tenantCosOnly,
+        tenantCosOnly, earnedBilled, earnedPaid,
         projected: (() => {
           const pr = projection[type] as { original: number; changeOrders: number; pending: number; budget: number; base: number; coBase: number; pendingBase: number; total?: number; pendingTotal?: number };
           return { ...pr, fee: r2c(pr.original + pr.changeOrders) };

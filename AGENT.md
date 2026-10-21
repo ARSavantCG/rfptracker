@@ -165,3 +165,7 @@ and live test output are proof. The gold standard is: click the button and watch
 - (2026-10-21) Tenant CO print: banner 'Tenant Change Order' (number stays in the info rows), no eyebrow, no budget-line mapping under each line.
 - (2026-10-21) Budget panel and Budget change orders roll up (useRolled hook, localStorage pm-rolled-budget-<id> / pm-rolled-budget-cos-<id>); bodies stay mounted (hidden) so unsaved edits survive.
 - (2026-10-21) Edit form for a linked tenant CO: Tenant % (and Tenant pays $) editable per vendor line; applies to all lines of that vendor CO and is sent as `links` on PATCH (all current links sent, so none are dropped).
+
+## Supplemental funding only for a shortfall (2026-10-21)
+- fundingSources(rows, a, {committed, pending, byKey}): need = Σ lines (committed+pending if anything committed, else budget before COs; contingency lines with nothing committed = 0; deal-discount row at budget) + unplaced cost + approved COs' markups + tenant fee + partner fee + work of unlinked COs. fundsIn = original + revisions + tenant. supplemental = max(0, need − fundsIn); surplus = max(0, fundsIn − need); absorbedFromSurplus; totalFunding = fundsIn + supplemental.
+- Funding box (screen + BvA print) shows Projected cost to complete and Projected surplus / shortfall; story shows "we absorb $X" instead of the supplemental label.

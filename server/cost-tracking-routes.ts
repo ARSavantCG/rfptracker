@@ -272,7 +272,8 @@ export async function loadProjectBundle(projectId: number) {
       changeOrders: bk.get(r.key)?.changeOrders ?? 0,
     })),
   };
-  const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending });
+  const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending,
+    byKey: new Map(summary0.rows.map((r) => [r.key, { committed: r.committed, pending: r.pending }])) });
   const story = budgetStory(approval, funding0);
   const funding = {
     ...funding0,

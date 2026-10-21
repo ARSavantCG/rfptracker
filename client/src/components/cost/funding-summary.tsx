@@ -2,9 +2,9 @@
  * "We started at $1.38M — why are we at $1.5M?" in one box.
  *
  * Sources of funds: the capital partner's approved budget, the tenant for
- * the change orders billed to them, and supplemental funding for what is
- * absorbed (approved absorbed change orders, plus any projected cost beyond
- * the revised budget). The sources add to the revised budget.
+ * the change orders billed to them, and supplemental funding only for what
+ * those can't cover. Absorbed change orders come out of the budget's surplus
+ * first (Adolfo, 2026-10-21).
  */
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -66,13 +66,19 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                   </span>
                 )}
                 <div className="text-[11px] text-gray-500">
-                  Absorbed change orders {money(f.absorbed)}
-                  {f.projectedOverrun > 0.005 ? ` + projected beyond budget ${money(f.projectedOverrun)}` : ''}
+                  {f.supplemental > 0.005
+                    ? "Needed beyond the budget and the tenant's share"
+                    : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money(f.absorbed)} are paid from the budget surplus` : 'None needed'}
                 </div>
               </td>
               <td className={`py-1.5 text-right tabular-nums ${f.supplemental > 0.005 ? 'text-red-800 font-medium' : ''}`}>{signedMoney(f.supplemental)}</td>
             </tr>
             <Row name="Total funding" value={f.totalFunding} strong />
+            <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order fees and markups" value={f.need} />
+            <tr>
+              <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">{f.surplus > 0.005 ? 'Left in the budget to tap into' : `Covered by ${f.label}`}</div></td>
+              <td className={`py-1.5 text-right tabular-nums font-semibold ${f.surplus > 0.005 ? 'text-green-700' : 'text-red-700'}`}>{money(f.surplus > 0.005 ? f.surplus : f.supplemental)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -87,7 +93,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                   {g.label}
                   <div className="text-[11px] text-gray-500">
                     {g.cos.map((c) => c.number).join(', ')}
-                    {g.tenant ? ` · tenant pays ${money(g.tenant)}` : ''}{g.absorbed ? ` · ${f.label.toLowerCase()} ${money(g.absorbed)}` : ''}
+                    {g.tenant ? ` · tenant pays ${money(g.tenant)}` : ''}{g.absorbed ? ` · we absorb ${money(g.absorbed)}` : ''}
                   </div>
                 </td>
                 <td className="py-1.5 text-right tabular-nums">{signedMoney(g.total)}</td>

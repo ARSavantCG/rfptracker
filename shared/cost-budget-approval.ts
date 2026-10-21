@@ -654,7 +654,20 @@ export const SUPPLEMENTAL_DEFAULT = 'Supplemental Funding';
  * supplemental funding for what is absorbed — approved absorbed change
  * orders now, and any projected cost beyond the revised budget.
  */
-export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApproval, cost: { committed: number; pending: number }) {
+/**
+ * Where the money comes from. The capital partner's approved budget and the
+ * tenant (for change orders billed to them) come first. Supplemental funding is
+ * only what those can't cover: what absorbed change orders (and anything else
+ * over budget) leave short once the budget's surplus is used. While the work is
+ * coming in under budget, absorbed change orders are paid from that surplus.
+ *
+ * What the project needs: each budget line at what's committed (+ pending) on
+ * it once it has a contract — under or over budget — or at its budget before
+ * change orders while nothing is committed yet; plus each approved change
+ * order's markups, fees and any work not yet on a contract.
+ */
+export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApproval,
+  cost: { committed: number; pending: number; byKey?: ReadonlyMap<string, { committed: number; pending: number }> }) {
   const s = coSummary(a.changeOrders);
   const original = r2(rows.reduce((t, r) => t + r.original, 0));
   const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
@@ -664,12 +677,41 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const absorbed = s.approvedAbsorbed;
   const projectedCost = r2(cost.committed + cost.pending);
   const projectedOverrun = r2(Math.max(0, projectedCost - revised));
+  const approved = a.changeOrders.filter((c) => c.status === 'approved');
+  let need: number;
+  if (cost.byKey) {
+    const linesNeed = rows.filter((r) => r.key !== CO_CM_KEY).reduce((t, r) => {
+      const pre = r.revised - r.changeOrders;
+      if (r.key === DEAL_DISCOUNT_KEY) return t + pre;
+      // Bought out (anything committed on it): what's committed, under or over. Not yet: its budget.
+      const c = cost.byKey!.get(r.key);
+      const committed = (c?.committed ?? 0) + (c?.pending ?? 0);
+      // Contingency is the reserve itself: it's surplus to draw on, not a cost to complete.
+      if (Math.abs(committed) < 0.005 && /contingenc/i.test(r.description)) return t;
+      return t + (Math.abs(committed) >= 0.005 ? committed : pre);
+    }, 0);
+    // Unallocated cost (not on any line yet) is cost too.
+    const unplaced = Array.from(cost.byKey).filter(([k]) => !rows.some((r) => r.key === k)).reduce((t, [, c]) => t + c.committed + c.pending, 0);
+    const coExtras = approved.reduce((t, c) => {
+      const x = coTotals(c);
+      return t + x.markups + x.cm + x.cmAbsorbed + (c.links.length ? 0 : x.work);
+    }, 0);
+    need = r2(linesNeed + unplaced + coExtras);
+  } else {
+    need = r2(Math.max(revised, projectedCost));
+  }
+  const fundsIn = r2(original + revisions + tenant);
+  const supplemental = r2(Math.max(0, need - fundsIn));
   return {
     original, revisions, transfers, tenant, absorbed, revised,
     projectedCost, projectedOverrun,
-    supplemental: r2(absorbed + projectedOverrun),
-    /** Revised budget plus anything projected beyond it. */
-    totalFunding: r2(revised + projectedOverrun),
+    /** What the project needs to finish, and the surplus left in the budget after it. */
+    need, surplus: r2(Math.max(0, fundsIn - need)),
+    /** Only the shortfall: absorbed costs the budget surplus can't cover. */
+    supplemental,
+    /** Absorbed change orders paid from the budget's surplus. */
+    absorbedFromSurplus: r2(Math.max(0, absorbed - supplemental)),
+    totalFunding: r2(fundsIn + supplemental),
     projectedVariance: r2(revised - projectedCost),
     pendingChangeOrders: s.pending,
   };

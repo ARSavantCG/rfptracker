@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink } from 'lucide-react';
+import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink, ChevronDown, ChevronRight } from 'lucide-react';
+import { useRolled } from '@/hooks/use-rolled';
 import { openDocument } from './contract-card';
 import { CO_REASONS, CO_UNASSIGNED_KEY, reasonLabel, defaultMarkups, type BudgetCO } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
@@ -43,6 +44,7 @@ type Form = {
 };
 
 export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
+  const [rolled, toggleRolled] = useRolled(`pm-rolled-budget-cos-${projectId}`);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const a = bundle.approval;
@@ -318,14 +320,25 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
     <div className="bg-white border rounded-lg">
       <div className="px-4 py-3 border-b flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="font-semibold text-gray-900">Budget change orders</h2>
+          <button className="flex items-center gap-1.5" onClick={toggleRolled} aria-expanded={!rolled} title={rolled ? 'Show the change orders' : 'Roll up'}>
+            {rolled ? <ChevronRight className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+            <h2 className="font-semibold text-gray-900">Budget change orders</h2>
+            {rolled && (
+              <span className="text-xs text-gray-700 font-normal tabular-nums ml-1">
+                {cos.length} · approved {money(bundle.approval.coSummary.approved)}
+                {bundle.approval.coSummary.pending > 0.005 && <span className="text-amber-700"> · pending {money(bundle.approval.coSummary.pending)}</span>}
+              </span>
+            )}
+          </button>
           <p className="text-xs text-gray-600 mt-0.5">
             Every change to the budget after it was set: why it happened, the vendors' change orders behind it, and who pays —
             the tenant (their share, markups and CM fee at {tenantRate.toFixed(2)}%) or {bundle.funding?.label ?? 'Supplemental Funding'}. The capital partner's {rate.toFixed(2)}% (by default on the difference we absorb) goes on the Supplemental CM Fee line.
           </p>
         </div>
-        {!form && <Button size="sm" onClick={() => setForm(blank())}><Plus className="h-3.5 w-3.5 mr-1" /> Change order</Button>}
+        {!form && <Button size="sm" onClick={() => { if (rolled) toggleRolled(); setForm(blank()); }}><Plus className="h-3.5 w-3.5 mr-1" /> Change order</Button>}
       </div>
+      {/* Kept mounted when rolled up, so a half-filled form isn't lost. */}
+      <div className={rolled ? 'hidden' : ''}>
 
       {cos.length > 0 && (
         <div className="overflow-x-auto">
@@ -654,6 +667,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

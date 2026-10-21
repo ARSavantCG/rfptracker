@@ -163,3 +163,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - Tenant shares (link pct, line tenantPct) keep up to 10 decimals (normalizeCO pct helper, POST vendorLinks, PATCH links). `SharePercentInput` stores the typed value, shows 2 decimals.
 - Vendor rows (new form and the row under each tenant CO) have a "Tenant pays" dollars box: typing dollars sets pct = dollars ÷ cost × 100 exactly.
 - (2026-10-21) Tenant CO print: banner 'Tenant Change Order' (number stays in the info rows), no eyebrow, no budget-line mapping under each line.
+- (2026-10-21) Budget panel and Budget change orders roll up (useRolled hook, localStorage pm-rolled-budget-<id> / pm-rolled-budget-cos-<id>); bodies stay mounted (hidden) so unsaved edits survive.

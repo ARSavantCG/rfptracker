@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useRolled } from '@/hooks/use-rolled';
 import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import { rollUp, transferNet, DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText } from '@shared/format';
@@ -33,6 +34,7 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 type Row = { key: string; description: string; bucket: string; priced: string; discount: string; tenantSharePct: string; masterItemId?: number | null };
 
 export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
+  const [rolled, toggleRolled] = useRolled(`pm-rolled-budget-${projectId}`);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const a = bundle.approval;
@@ -145,7 +147,10 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
       <div className="px-4 py-3 border-b flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-gray-900">Budget</h2>
+            <button className="flex items-center gap-1.5" onClick={toggleRolled} aria-expanded={!rolled} title={rolled ? 'Show the budget' : 'Roll up'}>
+              {rolled ? <ChevronRight className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+              <h2 className="font-semibold text-gray-900">Budget</h2>
+            </button>
             {confirmed
               ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 rounded px-2 py-0.5"><Lock className="h-3 w-3" /> Confirmed {shortDate(a.confirmedAt)}</span>
               : <span className="text-xs font-semibold text-amber-800 bg-amber-100 rounded px-2 py-0.5">Draft</span>}
@@ -154,6 +159,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             {confirmed
               ? `Original ${money(a.originalTotal)}. Edits and change orders from here are revisions.`
               : 'Enter the LAF total; put any deal discount on the lines it belongs to; then confirm.'}
+            {rolled && <span className="ml-1 font-medium text-gray-800 tabular-nums">Current {money(a.currentTotal ?? a.approvedTotal)} · {baseline.length} lines</span>}
           </p>
         </div>
         <div className="flex gap-2">
@@ -170,7 +176,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className={`p-4 space-y-4 ${rolled ? 'hidden' : ''}`}>
         <div className={`grid grid-cols-2 ${hasCos ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-3`}>
           <Stat label="Priced" value={money(priced)} />
           <div>

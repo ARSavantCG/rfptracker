@@ -34,6 +34,7 @@ import { ContractCard, openDocument } from '@/components/cost/contract-card';
 import { AllocationDialog } from '@/components/cost/allocation-dialog';
 import { PasteLinesDialog } from '@/components/cost/paste-lines-dialog';
 import { ApplicationDialog } from '@/components/cost/application-dialog';
+import { shortProjectName } from '@shared/project-name';
 import { BaselineEditor } from '@/components/cost/baseline-editor';
 import {
   money, signedMoney, projectKey, BUCKET_LABEL, shortDate, openReport,
@@ -121,7 +122,7 @@ export default function CostProject() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="text-xs text-gray-500">{p.projectNumber}{p.status === 'closed' ? ' · closed' : ''}</div>
-            <h1 className="text-2xl font-bold text-gray-900">{p.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{shortProjectName(p.name)}</h1>
             {p.tenantName && <div className="text-sm text-gray-600">{p.tenantName}</div>}
           </div>
         </div>
@@ -301,6 +302,7 @@ export default function CostProject() {
         <div className="border-t pt-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="text-xs text-gray-500">
             {p.status === 'closed' ? 'This project is closed. It still shows under Closed on the project list.' : 'Close the project once it is finished; it moves to Closed on the project list.'}
+            {shortProjectName(p.name) !== p.name && <div className="mt-1 text-[11px] text-gray-400">Full Name: {p.name}</div>}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setStatus.mutate(p.status === 'closed' ? 'active' : 'closed')}>

@@ -1,4 +1,5 @@
 /** All active projects at a glance (admins): totals, CM fee, vendor billings, schedule. Starts simple. */
+import { shortProjectName } from '@shared/project-name';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { feeDonut, type ProjectDashboard, type FeeDonut, type VendorDonut } from '@shared/cost-dashboard';
@@ -23,7 +24,7 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
   const fee = live.reduce((t, p) => addFee(t, p.dashboard!.fee), zeroFee);
   const vendor = live.reduce((t, p) => addVendor(t, p.dashboard!.vendor), zeroVendor);
   const sum = (f: (d: ProjectDashboard) => number) => live.reduce((t, p) => t + f(p.dashboard!), 0);
-  const schedule = live.flatMap((p) => p.dashboard!.schedule.map((r) => ({ ...r, project: p.name })));
+  const schedule = live.flatMap((p) => p.dashboard!.schedule.map((r) => ({ ...r, project: shortProjectName(p.name) })));
   const behind = schedule.filter((r) => r.status === 'late' || r.status === 'behind').length;
   return (
     <div className="space-y-3">

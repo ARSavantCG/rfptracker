@@ -13,7 +13,7 @@ import { Printer, FileText, Trash2, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
 import { FundingSummary } from './funding-summary';
-import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle, type CmInvoiceDraft } from './types';
+import { money, shortDate, todayIso, openReport, projectKey, type ProjectBundle, type CmInvoiceDraft, type CmInvoiceRow } from './types';
 
 export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBudget }: {
   bundle: ProjectBundle;
@@ -274,7 +274,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       {mine.length > 0 && (
         <table className="w-full text-sm">
           <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued by</th><th className="w-28" />
+            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued by</th><th className="py-1 pl-4">Paid</th><th className="w-28" />
           </tr></thead>
           <tbody>
             {mine.map((inv, i) => (
@@ -283,6 +283,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
                 <td className="py-1.5">{shortDate(inv.date)}</td>
                 <td className="py-1.5 text-right tabular-nums">{money(inv.due)}</td>
                 <td className="py-1.5 pl-4 text-gray-600">{inv.issuedBy || ''}</td>
+                <td className="py-1.5 pl-4"><PaidCell inv={inv} projectId={projectId} /></td>
                 <td className="py-1.5 text-right whitespace-nowrap">
                   <button className="text-blue-700 hover:underline text-xs mr-2" onClick={() => open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(inv.number)}`)}>Reprint</button>
                   {i === mine.length - 1 && (
@@ -296,6 +297,38 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       )}
     </Card>
   );
+}
+/** When the invoice was paid and how much came in — feeds "fee paid" on the dashboards. */
+function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(inv.paidDate || todayIso());
+  const [amount, setAmount] = useState(inv.paidAmount != null ? inv.paidAmount.toFixed(2) : inv.due.toFixed(2));
+  const save = async (clear?: boolean) => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(inv.number)}/payment`, 'PATCH',
+        clear ? { amount: null } : { date, amount: parseFloat(amount.replace(/,/g, '')) });
+      queryClient.setQueryData([projectKey(projectId)], data);
+      setEditing(false);
+      toast({ title: clear ? `${inv.number} marked unpaid` : `Payment recorded on ${inv.number}` });
+    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+  };
+  if (editing) return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <Input type="date" className="h-8 w-36" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date paid" />
+      <Input className="h-8 w-28 text-right tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Amount received" />
+      <Button size="sm" className="h-8" onClick={() => save()}>Save</Button>
+      {inv.paidDate && <Button size="sm" variant="ghost" className="h-8 text-red-700" onClick={() => save(true)}>Clear</Button>}
+      <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditing(false)}>Cancel</Button>
+    </div>
+  );
+  return inv.paidDate
+    ? <button className="text-left text-xs hover:underline" onClick={() => setEditing(true)} title="Edit the payment">
+        <span className="text-green-700 font-medium tabular-nums">{money(inv.paidAmount ?? 0)}</span> <span className="text-gray-600">on {shortDate(inv.paidDate)}</span>
+        {inv.paidAmount != null && inv.paidAmount + 0.005 < inv.due && <span className="text-amber-700"> · short {money(inv.due - inv.paidAmount)}</span>}
+      </button>
+    : <button className="text-blue-700 hover:underline text-xs" onClick={() => setEditing(true)}>Record payment</button>;
 }
 function SumRow({ label, a, b, subA, subB, strong }: { label: string; a: string; b: string; subA?: string; subB?: string; strong?: boolean }) {
   return (

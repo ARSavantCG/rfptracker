@@ -27,6 +27,7 @@ import {
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { eq, inArray, like, desc } from 'drizzle-orm';
+import { feePaid, feeDonut, vendorDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
 import {
   budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
@@ -322,7 +323,7 @@ export async function loadProjectBundle(projectId: number) {
     return [c.id, g702For(c.id, nums.length ? Math.max(...nums) : 0, { lines, changeOrders, applications }, { allChangeOrders: true })];
   }));
 
-  return {
+  const bundle = {
     project: { ...project, baseline },
     contracts: contracts.map((c) => ({ ...c, retainagePct: c.retainageBp / 100 })),
     changeOrders: cos.map((c) => ({ ...c, startApp: coStarts.get(c.id)?.start ?? null, startSource: coStarts.get(c.id)?.source ?? 'none' })),
@@ -541,12 +542,17 @@ export async function loadProjectBundle(projectId: number) {
       budgetLineName: (key) => (key ? baseline.find((b) => b.key === key)?.description ?? 'Unallocated' : 'Unallocated'),
     }),
   };
+  // Admin dashboard figures ride along (the UI shows them to admins only).
+  return { ...bundle, dashboard: dashboardFor(bundle) };
 }
 
 /** A CM fee invoice as issued: its numbers frozen, so a reprint matches what was sent. */
 export interface CmInvoiceRecord {
   number: string;
   date: string;
+  /** Payment received on this invoice (from the capital partner or the tenant). */
+  paidDate?: string | null;
+  paidAmount?: number | null;
   base: number;
   pct: number;
   earned: number;
@@ -662,9 +668,12 @@ const fail = (res: Response, error: unknown, what: string) => {
 
 export function registerCostTrackingRoutes(app: Express): void {
   /** Every project, with its headline numbers. */
-  app.get('/api/cost-projects', ...canEdit, async (_req, res) => {
+  app.get('/api/cost-projects', ...canEdit, async (req, res) => {
     try {
       const rows = await db.select().from(costProjects).orderBy(desc(costProjects.createdAt));
+      // Dashboards (CM fees, vendor billings, schedule) are for admins only.
+      const u: any = (req as any).user;
+      const admin = !!u && (u.role === 'admin' || (u.permissions || []).includes('admin.access'));
       const out = [];
       for (const p of rows) {
         const b = await loadProjectBundle(p.id);
@@ -673,6 +682,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           totals: b?.summary.totals ?? null,
           reconciles: b?.summary.reconciles ?? true,
           contractCount: b?.contracts.length ?? 0,
+          ...(admin && b ? { dashboard: b.dashboard } : {}),
         });
       }
       res.json({ projects: out });
@@ -1103,6 +1113,33 @@ export function registerCostTrackingRoutes(app: Express): void {
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'issue the invoice'); }
+  });
+
+  /** Payment received on an issued invoice (date and amount); amount null clears it. */
+  app.patch('/api/cost-projects/:id/cm-invoices/:number/payment', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const settings: any = { ...(project.settings || {}) };
+      const list: CmInvoiceRecord[] = [...(settings.cmInvoices || [])];
+      const i = list.findIndex((x) => x.number === req.params.number);
+      if (i < 0) return res.status(404).json({ message: 'Invoice not found' });
+      const amount = req.body?.amount;
+      if (amount === null || amount === '') {
+        list[i] = { ...list[i], paidDate: null, paidAmount: null };
+      } else {
+        const date = String(req.body?.date ?? '').slice(0, 10);
+        const amt = Math.round(Number(amount) * 100) / 100;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: 'Enter the date it was paid.' });
+        if (!(amt > 0)) return res.status(400).json({ message: 'Enter the amount received.' });
+        list[i] = { ...list[i], paidDate: date, paidAmount: amt };
+      }
+      settings.cmInvoices = list;
+      await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'record the payment'); }
   });
 
   /** Only the latest invoice can be withdrawn, so the "previously invoiced" chain stays true. */
@@ -2135,4 +2172,21 @@ export function registerCostTrackingRoutes(app: Express): void {
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'remove the file'); }
   });
+}
+
+
+/** The dashboard for one project (admins): CM fee, vendor billings and schedule, each split to add up. */
+export function dashboardFor(b: any): ProjectDashboard {
+  const paid = feePaid(b.cmInvoices as any);
+  const stream = (d: any, p: number) => ({ earned: d.earnedBilled?.fee ?? 0, invoiced: d.feeInvoiced ?? 0, anticipated: d.projected?.fee ?? 0, paid: p });
+  const cap = stream(b.cmInvoiceDrafts.capital, paid.fee);
+  const ten = stream(b.cmInvoiceDrafts.tenant, paid.tenant);
+  const pctOf = new Map(b.position.contracts.map((c: any) => [c.contractId, c.pctComplete]));
+  return {
+    fee: feeDonut([cap, ten]),
+    feeByParty: { capital: feeDonut([cap]), tenant: feeDonut([ten]) },
+    vendor: vendorDonut(b.position.totals),
+    schedule: scheduleRows(b.contracts as any, (id) => Number(pctOf.get(id) ?? 0), todayEastern()),
+    spent: b.summary.totals.toDate, budget: b.summary.totals.budget, committed: b.summary.totals.committed,
+  };
 }

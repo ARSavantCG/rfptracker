@@ -23,6 +23,8 @@ import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
 import { ReportsView } from '@/components/cost/reports-view';
+import { ProjectOverview } from '@/components/cost/project-overview';
+import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
 import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
 import { PercentInput } from '@/components/cost/inputs';
@@ -43,7 +45,9 @@ export default function CostProject() {
   const id = Number(params?.id);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState('budget');
+  const { user } = useAuth();
+  const isAdmin = !!user && ((user as any).role === 'admin' || ((user as any).permissions || []).includes('admin.access'));
+  const [tab, setTab] = useState<string | null>(null);
   const [editing, setEditing] = useState<SovLineRow | null>(null);
   const [pasteTarget, setPasteTarget] = useState<{ contractId: number; changeOrderId: number | null; label: string } | null>(null);
   const [appState, setAppState] = useState<{ contract: ContractRow; app: ApplicationRow | null; kind: 'pay_app' | 'invoice' } | null>(null);
@@ -139,8 +143,11 @@ export default function CostProject() {
           ))}
         </div>
 
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs value={tab ?? (isAdmin ? 'overview' : 'budget')} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-wrap justify-start gap-6 rounded-none border-b border-gray-300 bg-transparent p-0">
+            {isAdmin && (
+              <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Overview</TabsTrigger>
+            )}
             <TabsTrigger value="budget" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               Budget{b.approval.status !== 'confirmed' && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">Draft</span>}
             </TabsTrigger>
@@ -154,6 +161,11 @@ export default function CostProject() {
             <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Reports</TabsTrigger>
           </TabsList>
 
+          {isAdmin && (
+            <TabsContent value="overview" className="mt-4">
+              <ProjectOverview bundle={b} />
+            </TabsContent>
+          )}
           <TabsContent value="reports" className="mt-4">
             <ReportsView bundle={b} projectId={id} onShowUnallocated={() => setTab('contracts')} onShowBudget={() => setTab('budget')} />
           </TabsContent>

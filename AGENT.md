@@ -189,3 +189,10 @@ and live test output are proof. The gold standard is: click the button and watch
 - Snapshot (rom-pricing-utils) carries priceTiers (rate lock). ROM pilot modal, evaluation budget, server line saves and template seeding set unitPrice = effectiveUnitPrice when tiered. ROM pilot rows show "Range …" and "Minimum: top of …".
 - Catalog form: PriceTiersEditor (client/src/components/price-tiers-editor.tsx) replaces the min/max SF tier fields; Item family kept (spec-tag variants). List + printed library show tiersSummary.
 - server/lib/merge-price-tiers.ts runs once at startup (app_settings 'price_tiers_merged_v1'): SF-tier groups (itemGroup + min/max SF, no match tags) → lowest tier row becomes one item named after the group with ranges at current prices; other rows retired (is_active=false, never deleted); templates repointed/deduped. enforceRomRateLock reads inactive items too so old ROMs stay editable.
+
+## Dashboards (2026-10-22)
+- Admin-only. Per project: Overview tab (first tab for admins). Portfolio: top of /projects, sums active projects; collapsible.
+- Figures come from `shared/cost-dashboard.ts` (pure) via `dashboardFor(bundle)` in cost-tracking-routes; every bundle carries `dashboard`; the list endpoint adds it only for admins.
+- CM fee donut: paid / invoiced not paid / earned not invoiced (on work billed) / not yet earned; centre = anticipated. "Paid" comes from `paidDate`/`paidAmount` on CM invoices — recorded on Reports → invoice card → "Record payment" (`PATCH /api/cost-projects/:id/cm-invoices/:number/payment`, `{amount:null}` clears).
+- Vendor donut: paid / approved not paid (owed) / retainage / not yet billed = contract sum.
+- Schedule: bar = % billed, line = % of start→completion elapsed; late = past completion, behind = billed trails time by >10 pts. Needs contract start + completion dates; undated contracts fold into one "Show N" line.

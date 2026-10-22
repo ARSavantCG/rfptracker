@@ -121,6 +121,8 @@ export interface ProjectBundle {
   cmSettings: { pct: number; key: string | null; source: 'project' | 'line' | 'none'; tenantPct: number; tenantSource: 'project' | 'line' | 'none'; feeInBudget: boolean; feeInBudgetSet: boolean; cmUncapped: boolean };
   cmInvoices: CmInvoiceRow[];
   cmInvoiceDrafts: { capital: CmInvoiceDraft; tenant: CmInvoiceDraft };
+  /** Admin dashboard figures (shown to admins only). */
+  dashboard: import('@shared/cost-dashboard').ProjectDashboard;
   cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }[];
     base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
@@ -131,6 +133,7 @@ export interface ProjectBundle {
 export interface CmInvoiceRow {
   number: string; date: string; base: number; pct: number; earned: number; previous: number; due: number;
   issuedBy: string | null; issuedAt: string;
+  paidDate?: string | null; paidAmount?: number | null;
   /** fee = the capital partner's invoice; reimbursable = the tenant's. Older ones: fee unless set. */
   type?: 'fee' | 'reimbursable';
 }

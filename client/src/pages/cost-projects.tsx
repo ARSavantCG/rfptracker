@@ -4,6 +4,8 @@
  * Opened from a signed RFP, a project freezes that RFP's budget as its
  * baseline and from then on tracks what the work actually costs against it.
  */
+import { useAuth } from '@/hooks/useAuth';
+import { PortfolioDashboard } from '@/components/cost/portfolio-dashboard';
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -22,9 +24,13 @@ type ListRow = CostProjectRow & {
   totals: { budget: number; committed: number; pending: number; toDate: number; variance: number } | null;
   reconciles: boolean;
   contractCount: number;
+  /** Admins only. */
+  dashboard?: import('@shared/cost-dashboard').ProjectDashboard;
 };
 
 export default function CostProjects() {
+  const { user } = useAuth();
+  const isAdmin = !!user && ((user as any).role === 'admin' || ((user as any).permissions || []).includes('admin.access'));
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -96,6 +102,8 @@ export default function CostProjects() {
           </div>
           <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> New project</Button>
         </div>
+
+        {isAdmin && <PortfolioDashboard projects={all as any} />}
 
         <div className="flex gap-1 bg-gray-100 rounded-md p-1 w-fit">
           {(['active', 'closed', 'all'] as const).map((k) => (

@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { coLog, cosOnPayApp } from '@shared/co-log';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, fundingNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -644,7 +644,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
-                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1">Pending Funding — {paidNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!)}</span>}
+                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1">Pending Funding — {fundingNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!, partyOf(r, gcName))}</span>}
                       {(() => {
                         // Entered on the pay app it releases: it belongs with the next one, answering this one's conditional.
                         const c = r.source === 'added' && r.id && nextRef ? conds.find((x) => sameVendor(x.vendor, r.vendor)) : null;

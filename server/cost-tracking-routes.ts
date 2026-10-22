@@ -42,7 +42,7 @@ import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-paya
 
 const AI_MODEL = 'claude-sonnet-4-5';
 import { coLog, cosOnPayApp } from '@shared/co-log';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, gcPaymentDue, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, fundingNote, gcPaymentDue, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
 
@@ -2205,8 +2205,9 @@ export function registerCostTrackingRoutes(app: Express): void {
       // Unconditionals for a pay app we haven't paid in full yet can't exist — say so rather than OUTSTANDING.
       const paidOf = bundleForPaid ? paidOfFrom(bundleForPaid.payments, (aid) => { const x: any = bundleForPaid.applications.find((y: any) => y.id === aid); return x ? gcPaymentDue(x, bundleForPaid.waivers, c.counterparty).due : null; }) : undefined;
       const prevPaid = prev && paidOf ? paidOf(prev.id) : null;
-      const waitNote = prev && unpaid(prevPaid) ? `PENDING FUNDING (${paidNote(dn.get(prev.id)!, prevPaid!)})` : null;
-      for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : (waitNote && u.source === 'expected' ? waitNote : 'OUTSTANDING')}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
+      const waitNote = (u: { vendor: string; party?: 'gc' | 'sub' | null }) => `PENDING FUNDING (${fundingNote(dn.get(prev!.id)!, prevPaid!, partyOf(u, c.counterparty))})`;
+      const waiting = !!prev && unpaid(prevPaid);
+      for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : (waiting && u.source === 'expected' ? waitNote(u) : 'OUTSTANDING')}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
       if (ck.unconditionals.length) contents.push(...sums(waiverTotals(ck.unconditionals, c.counterparty)));
       const earlier = waiverLog(allApps.map((x) => ({ ...x, docNumber: dn.get(x.id) ?? x.number })), waivers, () => c.counterparty, paidOf)
         .filter((r) => waiverOutstanding(r.status) && prev && (allApps.find((x) => x.id === r.appId)?.number ?? 0) < prev.number);

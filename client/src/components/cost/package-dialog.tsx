@@ -574,7 +574,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
-                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Not the contractor's to give yet">Pending Funding — {paidNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!)}</span>}
+                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1">Pending Funding — {paidNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!)}</span>}
                       {(() => {
                         // Entered on the pay app it releases: it belongs with the next one, answering this one's conditional.
                         const c = r.source === 'added' && r.id && nextRef ? conds.find((x) => sameVendor(x.vendor, r.vendor)) : null;

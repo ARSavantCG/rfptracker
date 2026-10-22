@@ -651,7 +651,7 @@ export function renderWaiverLogHtml(input: {
       nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
       nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
       nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
-    ].filter(Boolean).join(", ")}.` : ""}${nWait ? ` ${nWait} unconditional${nWait === 1 ? "" : "s"} pending funding — not the contractor's to give yet.` : ""}`,
+    ].filter(Boolean).join(", ")}.` : ""}${nWait ? ` ${nWait} unconditional${nWait === 1 ? "" : "s"} pending funding.` : ""}`,
   ];
   const STATUS: Record<string, string> = { received: "Received", outstanding: "Outstanding", missing: "Not Entered", "not needed": "Not Needed", "awaiting payment": "Pending Funding" };
   const byContract = new Map<number, PayAppWaivers[]>();

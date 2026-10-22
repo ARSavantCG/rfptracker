@@ -1636,6 +1636,10 @@ export const romScopeItems = pgTable("rom_scope_items", {
   // column pair that was designed but never built. Column created by startup
   // migration, NOT drizzle-kit push.
   specTags: json("spec_tags").$type<SpecTag[]>().default([]),
+  // Pricing by quantity (Adolfo 2026-10-22): one item, a price per quantity range. Each range is
+  // per unit, a flat package, or per package of N. Never cheaper than the top of the range below.
+  // Math in shared/line-total.ts. Column created by startup migration.
+  priceTiers: json("price_tiers").$type<PriceTier[]>().default([]),
   // Quarterly pricing intelligence fields
   pricingMode: text("pricing_mode").default('average'), // 'average' | 'contractor' | 'manual'
   selectedContractorName: text("selected_contractor_name"), // which contractor's price to use when mode is 'contractor'
@@ -1684,6 +1688,18 @@ export type SpecTagSource = keyof typeof SPEC_TAG_SOURCES;
 // set) for the item/variant to be auto-selected. Values are stored as strings
 // (form inputs); the resolver parses numerically with the parseFloat+strip
 // pattern per UI-STANDARDS.md.
+/** One quantity range on a catalog item. min/max inclusive (null = open). */
+export type PriceTier = {
+  min: number | null;
+  max: number | null;
+  /** unit: qty × price · flat: price for the whole range · step: price per package of `step` units. */
+  mode: 'unit' | 'flat' | 'step';
+  price: number;
+  step?: number | null;
+  /** What the price assumes, e.g. "1 RTU + 200 LF duct". Shown on the line. */
+  note?: string;
+};
+
 export type SpecTag = {
   kind: 'quantity' | 'match';
   propertySpec: SpecTagSource;

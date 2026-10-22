@@ -141,6 +141,8 @@ async function generateRomReportHtml(romPilot: any, lineItems: any[], scopeItems
     return {
       ...item,
       actualQuantity,
+      // Priced by quantity: the range sets the unit price shown on the report.
+      ...(computed.tier ? { unitPrice: String(computed.effectiveUnitPrice), tierLabel: computed.tier.label, tierFloor: computed.tier.floorApplied ? computed.tier.floorLabel : null, tierNote: computed.tier.note || null } : {}),
       totalPrice: computed.total.toString(),
       minimumApplied: computed.minimumApplied,
       minimumCost: computed.minimumCost,
@@ -665,7 +667,8 @@ export function registerRomRoutes(app: Express): void {
             rows.push({
               scopeItemId: cat.id,
               quantity: qty.toString(),
-              unitPrice: price.toString(),
+              // Priced by quantity: the range sets the unit price (shared/line-total.ts).
+              unitPrice: (computeLineTotal({ quantity: qty, unitPrice: price, item: cat }).effectiveUnitPrice).toString(),
               // Minimum floors the gross before tenant share (shared/line-total.ts).
               totalPrice: computeLineTotal({
                 quantity: qty, unitPrice: price, tenantShare: share, item: cat,
@@ -1135,7 +1138,9 @@ function computeRomFeeTotals(items: any[], catalogById: Map<any, any>) {
 }
 
 async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[] } | { error: string }> {
-  const catalog = await storage.getAllRomScopeItems();
+  // Inactive items count too: a ROM saved with an item since retired (e.g. a tier merged into
+  // one item with pricing by quantity) must stay editable at the price it was saved with.
+  const catalog = await db.select().from(romScopeItems);
   const byId = new Map(catalog.map((c: any) => [c.id, c]));
   const isAdminUser = !!req.user?.permissions?.includes?.("admin.access");
   const out: any[] = [];
@@ -1155,7 +1160,7 @@ async function enforceRomRateLock(req: any, items: any[]): Promise<{ items: any[
     // Rate lock also locks the catalog minimum — a client that posts a quantity
     // under the floor cannot dodge it by editing the total (shared/line-total.ts).
     const computed = computeLineTotal({ quantity: qty, unitPrice: locked, tenantShare: share, item: cat });
-    out.push({ ...item, unitPrice: locked.toString(), totalPrice: computed.total.toString() });
+    out.push({ ...item, unitPrice: (computed.tier ? computed.effectiveUnitPrice : locked).toString(), totalPrice: computed.total.toString() });
   }
   return { items: out };
 }

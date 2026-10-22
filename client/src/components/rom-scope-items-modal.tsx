@@ -1,3 +1,4 @@
+import { PriceTiersEditor, tiersFromForm, tiersToForm, tiersSummary, type PriceTierForm } from "@/components/price-tiers-editor";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -156,6 +157,7 @@ interface RomScopeItem {
   itemGroup?: string | null; // For tiered pricing - groups related tiers
   minSquareFootage?: number | null; // Minimum square footage for this tier
   maxSquareFootage?: number | null; // Maximum square footage for this tier
+  priceTiers?: unknown[] | null; // Pricing by quantity (shared/line-total.ts)
   specTags?: Array<{ kind: string; propertySpec: string; value?: string; maxValue?: string }> | null; // Property-driven quantity/variant tags
   createdAt: string;
   updatedAt: string;
@@ -196,6 +198,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
     itemGroup: "", // Tiered pricing group name
     minSquareFootage: "", // Minimum square footage for tier
     maxSquareFootage: "", // Maximum square footage for tier
+    priceTiers: [] as PriceTierForm[],
     attachments: [] as Array<{
       id: string;
       fileName: string;
@@ -518,7 +521,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             <tr>
               <td style="font-family: monospace; font-size: 8px;">${item.csiCode || '—'}</td>
               <td class="item-name">${item.name}</td>
-              <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+              <td class="item-price" style="text-align: center;">${tiersSummary(item.priceTiers) ? tiersSummary(item.priceTiers) : `$${formattedPrice} per ${item.unit}`}</td>
               <td class="item-date" style="text-align: center;">${lastUpdated}</td>
               <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
                 ${hasFiles ? 'Yes' : 'No'}
@@ -887,7 +890,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                       return `
                         <tr>
                           <td class="item-name">${item.name}</td>
-                          <td class="item-price" style="text-align: center;">$${formattedPrice} per ${item.unit}</td>
+                          <td class="item-price" style="text-align: center;">${tiersSummary(item.priceTiers) ? tiersSummary(item.priceTiers) : `$${formattedPrice} per ${item.unit}`}</td>
                           <td class="item-date" style="text-align: center;">${lastUpdated}</td>
                           <td class="${hasFiles ? 'has-file' : 'no-file'}" style="text-align: center;">
                             ${hasFiles ? 'Yes' : 'No'}
@@ -1075,6 +1078,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       itemGroup: "",
       minSquareFootage: "",
       maxSquareFootage: "",
+      priceTiers: [],
       attachments: [],
       referencePricing: [],
       specTags: [],
@@ -1122,6 +1126,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       itemGroup: formData.itemGroup || null,
       minSquareFootage: formData.minSquareFootage ? parseInt(formData.minSquareFootage) : null,
       maxSquareFootage: formData.maxSquareFootage ? parseInt(formData.maxSquareFootage) : null,
+      priceTiers: tiersFromForm(formData.priceTiers),
       // Spec tags: strip the client-only _key (UI-STANDARDS: schema stripping is
       // how client keys stay unpersisted — json columns pass through zod, so we
       // strip explicitly) and drop rows that never picked a property spec.
@@ -1161,6 +1166,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
       itemGroup: item.itemGroup || "",
       minSquareFootage: item.minSquareFootage?.toString() || "",
       maxSquareFootage: item.maxSquareFootage?.toString() || "",
+      priceTiers: tiersToForm(item.priceTiers),
       attachments: item.attachments || [],
       referencePricing: item.referencePricing || [],
       specTags: withTagKeys((item as any).specTags || []),
@@ -1442,58 +1448,17 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                   </div>
                 </div>
 
-                {/* Tiered Pricing Section */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="flex items-center space-x-2">
-                    <Label className="text-sm font-semibold">Tiered Pricing (Optional)</Label>
-                    <p className="text-xs text-gray-500">
-                      Use for items with different pricing based on square footage tiers
-                    </p>
+                {/* Pricing by quantity (shared/line-total.ts) */}
+                <div className="space-y-3 pt-4 border-t">
+                  <div>
+                    <Label className="text-sm font-semibold">Pricing by quantity (optional)</Label>
+                    <p className="text-xs text-gray-500">One item, a price per quantity range — e.g. Office 0–3,000 SF $200, 3,001–5,000 $180, 5,001+ $165; or AC: up to 5,000 SF one package, then per 5,000 SF.</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="itemGroup">Item Group</Label>
-                      <Input
-                        id="itemGroup"
-                        data-testid="input-itemGroup"
-                        placeholder="e.g., Office Area"
-                        value={formData.itemGroup}
-                        onChange={(e) => setFormData({...formData, itemGroup: e.target.value})}
-                      />
-                      <p className="text-xs text-gray-500">
-                        Groups related tiers together
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="minSquareFootage">Min Square Footage</Label>
-                      <Input
-                        id="minSquareFootage"
-                        data-testid="input-minSquareFootage"
-                        type="number"
-                        placeholder="e.g., 3001"
-                        value={formData.minSquareFootage}
-                        onChange={(e) => setFormData({...formData, minSquareFootage: e.target.value})}
-                      />
-                      <p className="text-xs text-gray-500">
-                        Leave blank for no minimum
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="maxSquareFootage">Max Square Footage</Label>
-                      <Input
-                        id="maxSquareFootage"
-                        data-testid="input-maxSquareFootage"
-                        type="number"
-                        placeholder="e.g., 5000"
-                        value={formData.maxSquareFootage}
-                        onChange={(e) => setFormData({...formData, maxSquareFootage: e.target.value})}
-                      />
-                      <p className="text-xs text-gray-500">
-                        Leave blank for no maximum
-                      </p>
-                    </div>
+                  <PriceTiersEditor value={formData.priceTiers} unit={formData.unit} onChange={(v) => setFormData({...formData, priceTiers: v})} />
+                  <div className="space-y-2 max-w-sm">
+                    <Label htmlFor="itemGroup">Item family</Label>
+                    <Input id="itemGroup" data-testid="input-itemGroup" value={formData.itemGroup} onChange={(e) => setFormData({...formData, itemGroup: e.target.value})} />
+                    <p className="text-xs text-gray-500">Groups variants picked by property specs (e.g. demising wall by clear height).</p>
                   </div>
                 </div>
 
@@ -1792,6 +1757,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                           {item.unitPrice.startsWith('=') && (
                                             <span className="ml-1 text-xs text-blue-600">📊</span>
                                           )}
+                                          {tiersSummary(item.priceTiers) && <span className="ml-2 text-xs text-indigo-700" title="Pricing by quantity">{tiersSummary(item.priceTiers)}</span>}
                                         </span>
                                         {item.hasMinimumCost && item.minimumCost && (
                                           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
@@ -2219,6 +2185,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                   {item.unitPrice.startsWith('=') && (
                                     <span className="ml-1 text-xs text-blue-600">📊</span>
                                   )}
+                                  {tiersSummary(item.priceTiers) && <span className="ml-2 text-xs text-indigo-700" title="Pricing by quantity">{tiersSummary(item.priceTiers)}</span>}
                                 </span>
                                 {item.hasMinimumCost && item.minimumCost && (
                                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
@@ -2671,58 +2638,17 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                 </div>
                               )}
 
-                              {/* Tiered Pricing Section */}
-                              <div className="space-y-4 pt-4 border-t">
-                                <div className="flex items-center space-x-2">
-                                  <Label className="text-sm font-semibold">Tiered Pricing (Optional)</Label>
-                                  <p className="text-xs text-gray-500">
-                                    Use for items with different pricing based on square footage tiers
-                                  </p>
+                              {/* Pricing by quantity (shared/line-total.ts) */}
+                              <div className="space-y-3 pt-4 border-t">
+                                <div>
+                                  <Label className="text-sm font-semibold">Pricing by quantity (optional)</Label>
+                                  <p className="text-xs text-gray-500">One item, a price per quantity range — e.g. Office 0–3,000 SF $200, 3,001–5,000 $180, 5,001+ $165; or AC: up to 5,000 SF one package, then per 5,000 SF.</p>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="itemGroup-inline">Item Group</Label>
-                                    <Input
-                                      id="itemGroup-inline"
-                                      data-testid="input-itemGroup-inline"
-                                      placeholder="e.g., Office Area"
-                                      value={formData.itemGroup}
-                                      onChange={(e) => setFormData({...formData, itemGroup: e.target.value})}
-                                    />
-                                    <p className="text-xs text-gray-500">
-                                      Groups related tiers together
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor="minSquareFootage-inline">Min Square Footage</Label>
-                                    <Input
-                                      id="minSquareFootage-inline"
-                                      data-testid="input-minSquareFootage-inline"
-                                      type="number"
-                                      placeholder="e.g., 3001"
-                                      value={formData.minSquareFootage}
-                                      onChange={(e) => setFormData({...formData, minSquareFootage: e.target.value})}
-                                    />
-                                    <p className="text-xs text-gray-500">
-                                      Leave blank for no minimum
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor="maxSquareFootage-inline">Max Square Footage</Label>
-                                    <Input
-                                      id="maxSquareFootage-inline"
-                                      data-testid="input-maxSquareFootage-inline"
-                                      type="number"
-                                      placeholder="e.g., 5000"
-                                      value={formData.maxSquareFootage}
-                                      onChange={(e) => setFormData({...formData, maxSquareFootage: e.target.value})}
-                                    />
-                                    <p className="text-xs text-gray-500">
-                                      Leave blank for no maximum
-                                    </p>
-                                  </div>
+                                <PriceTiersEditor value={formData.priceTiers} unit={formData.unit} onChange={(v) => setFormData({...formData, priceTiers: v})} />
+                                <div className="space-y-2 max-w-sm">
+                                  <Label htmlFor="itemGroup-inline">Item family</Label>
+                                  <Input id="itemGroup-inline" data-testid="input-itemGroup-inline" value={formData.itemGroup} onChange={(e) => setFormData({...formData, itemGroup: e.target.value})} />
+                                  <p className="text-xs text-gray-500">Groups variants picked by property specs (e.g. demising wall by clear height).</p>
                                 </div>
                               </div>
 

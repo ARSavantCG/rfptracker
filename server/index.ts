@@ -63,6 +63,8 @@ app.use((req, res, next) => {
   try {
     await runStartupMigrations();
     log("✅ Startup schema check complete");
+    // One-time: merge SF-tier catalog items into single items with pricing by quantity.
+    await (await import("./lib/merge-price-tiers")).mergeTierGroupsOnce();
   } catch (error) {
     log(`⚠️  Warning: startup schema check failed: ${error}`);
   }

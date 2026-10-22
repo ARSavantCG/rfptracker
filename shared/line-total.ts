@@ -42,13 +42,101 @@ export function effectiveMinimumCost(source: MinimumCostSource | null | undefine
   return min;
 }
 
+// ── Pricing by quantity (Adolfo 2026-10-22) ──────────────────────────────────
+// One catalog item carries a price per quantity range ("Office 0–3,000 SF $200,
+// 3,001–5,000 $180, 5,001+ $165"). The range holding the quantity sets the price,
+// and the line is NEVER cheaper than the top of a range below it: 3,200 SF at
+// $180 = $576,000 is lifted to the 3,000 SF × $200 = $600,000 minimum, until the
+// new rate catches up (≈3,334 SF), then it's simply SF × the range's rate.
+
+export interface PriceTierLike {
+  min?: number | string | null;
+  max?: number | string | null;
+  mode?: string | null;
+  price?: number | string | null;
+  step?: number | string | null;
+  note?: string | null;
+}
+type Tier = { min: number | null; max: number | null; mode: 'unit' | 'flat' | 'step'; price: number; step: number | null; note: string };
+
+export function normalizeTiers(raw: unknown): Tier[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as PriceTierLike[])
+    .map((t) => ({
+      min: parseMoney(t?.min as any),
+      max: parseMoney(t?.max as any),
+      mode: (t?.mode === 'flat' || t?.mode === 'step' ? t.mode : 'unit') as Tier['mode'],
+      price: parseMoney(t?.price as any) ?? 0,
+      step: parseMoney(t?.step as any),
+      note: String(t?.note ?? '').trim(),
+    }))
+    .filter((t) => t.price > 0 || t.mode === 'flat')
+    .sort((a, b) => (a.min ?? 0) - (b.min ?? 0));
+}
+
+function tierAmount(t: Tier, qty: number): number {
+  if (t.mode === 'flat') return t.price;
+  if (t.mode === 'step') return Math.ceil(Math.max(0, qty) / (t.step && t.step > 0 ? t.step : 1)) * t.price;
+  return qty * t.price;
+}
+
+const fmtQty = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+export function tierLabel(t: { min: number | null; max: number | null }): string {
+  const lo = t.min ?? 0;
+  return t.max == null ? `${fmtQty(lo)}+` : `${fmtQty(lo)}–${fmtQty(t.max)}`;
+}
+
+export interface TierResult {
+  /** The amount for this quantity, after the "never cheaper than the range below" floor. */
+  gross: number;
+  index: number;
+  label: string;
+  note: string;
+  mode: Tier['mode'];
+  /** True when the top of a lower range set the price. */
+  floorApplied: boolean;
+  floor: number;
+  floorLabel: string;
+}
+
+/** Prices a quantity against an item's ranges. null when the item has none. */
+export function priceByTiers(rawTiers: unknown, quantity: number | string | null | undefined): TierResult | null {
+  const tiers = normalizeTiers(rawTiers);
+  if (!tiers.length) return null;
+  const qty = parseMoney(quantity as any) ?? 0;
+  // The range holding the quantity; above every range → the last; below the first → the first.
+  let index = tiers.findIndex((t) => qty >= (t.min ?? 0) - 1e-9 && (t.max == null || qty <= t.max + 1e-9));
+  if (index < 0) index = qty < (tiers[0].min ?? 0) ? 0 : tiers.length - 1;
+  const t = tiers[index];
+  const own = tierAmount(t, qty);
+  // The top of every lower range is a floor: a bigger space never prices below a smaller one.
+  let floor = 0, floorLabel = '';
+  for (let j = 0; j < index; j++) {
+    const top = tiers[j].max ?? tiers[j].min ?? 0;
+    const amt = tierAmount(tiers[j], top);
+    if (amt > floor) { floor = amt; floorLabel = tierLabel(tiers[j]); }
+  }
+  const floorApplied = floor > own + 0.005;
+  return { gross: floorApplied ? floor : own, index, label: tierLabel(t), note: t.note, mode: t.mode, floorApplied, floor, floorLabel };
+}
+
+/** The ranges on a line item, whichever snapshot carries them (same order as resolveMinimumSource). */
+export function resolveTierSource(item: any): unknown[] | null {
+  if (!item) return null;
+  for (const c of [item.romSnapshot, item.masterItemSnapshot, item.scopeItem, item]) {
+    const t = c?.priceTiers;
+    if (Array.isArray(t) && normalizeTiers(t).length) return t;
+  }
+  return null;
+}
+
 export interface LineTotalInput {
   quantity: number | string | null | undefined;
   unitPrice: number | string | null | undefined;
   /** Tenant share as a PERCENT (0-100), not a fraction. Defaults to 100. */
   tenantShare?: number | string | null;
-  /** Catalog item or romSnapshot carrying minimumCost / hasMinimumCost. */
-  item?: MinimumCostSource | null;
+  /** Catalog item or romSnapshot carrying minimumCost / hasMinimumCost (and priceTiers). */
+  item?: (MinimumCostSource & { priceTiers?: unknown }) | null;
 }
 
 export interface LineTotalResult {
@@ -62,6 +150,10 @@ export interface LineTotalResult {
   minimumApplied: boolean;
   /** The minimum that applied, or null. Surface this in the UI. */
   minimumCost: number | null;
+  /** Priced by quantity range: which range, and whether a lower range's top set the price. */
+  tier: TierResult | null;
+  /** The per-unit price this line works out to (gross ÷ quantity) — the tier's rate, or less when floored. */
+  effectiveUnitPrice: number;
 }
 
 /**
@@ -80,7 +172,9 @@ export function computeLineTotal(input: LineTotalInput): LineTotalResult {
   const shareRaw = parseMoney(input.tenantShare);
   const sharePct = shareRaw === null ? 100 : shareRaw;
 
-  const rawTotal = qty * price;
+  // Pricing by quantity wins over the line's typed unit price: the range sets it.
+  const tier = priceByTiers(input.item?.priceTiers ?? resolveTierSource(input.item), qty);
+  const rawTotal = tier ? tier.gross : qty * price;
 
   const minimumCost = effectiveMinimumCost(input.item);
   const grossTotal = minimumCost !== null ? Math.max(rawTotal, minimumCost) : rawTotal;
@@ -91,6 +185,8 @@ export function computeLineTotal(input: LineTotalInput): LineTotalResult {
     total: grossTotal * (sharePct / 100),
     minimumApplied: minimumCost !== null && minimumCost > rawTotal,
     minimumCost,
+    tier,
+    effectiveUnitPrice: tier ? (qty ? Math.round((tier.gross / qty) * 10000) / 10000 : (tier.mode === 'flat' ? tier.gross : 0)) : price,
   };
 }
 

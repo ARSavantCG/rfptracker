@@ -1013,9 +1013,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const qty = parseFloat(item.quantity) || 0;
         const unitPx = parseFloat(item.unitPrice) || 0;
         // Catalog minimum travels on romSnapshot (shared/line-total.ts).
-        const totalPx = computeLineTotal({
+        const lt = computeLineTotal({
           quantity: qty, unitPrice: unitPx, item: item.romSnapshot,
-        }).total;
+        });
+        const totalPx = lt.total;
+        // Priced by quantity: the range sets the unit price.
+        if (lt.tier) item = { ...item, unitPrice: String(lt.effectiveUnitPrice) };
 
         return {
           ...item,
@@ -1227,9 +1230,12 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
         const qty = parseFloat(item.quantity) || 0;
         const unitPx = parseFloat(item.unitPrice) || 0;
         // Catalog minimum travels on romSnapshot (shared/line-total.ts).
-        const totalPx = computeLineTotal({
+        const lt = computeLineTotal({
           quantity: qty, unitPrice: unitPx, item: item.romSnapshot,
-        }).total;
+        });
+        const totalPx = lt.total;
+        // Priced by quantity: the range sets the unit price.
+        if (lt.tier) item = { ...item, unitPrice: String(lt.effectiveUnitPrice) };
         return {
           ...item,
           totalPrice: totalPx.toString(),
@@ -4685,9 +4691,10 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
           if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
             const quantity = updatedItem.quantity;
             const unitPrice = parseFloat(updatedItem.unitPrice) || 0;
-            updatedItem.totalPrice = computeLineTotal({
-              quantity, unitPrice, item: updatedItem.romSnapshot,
-            }).total.toFixed(2);
+            const lt = computeLineTotal({ quantity, unitPrice, item: updatedItem.romSnapshot });
+            updatedItem.totalPrice = lt.total.toFixed(2);
+            // Priced by quantity: the range sets the unit price.
+            if (lt.tier) updatedItem.unitPrice = String(lt.effectiveUnitPrice);
           }
           
           return updatedItem;

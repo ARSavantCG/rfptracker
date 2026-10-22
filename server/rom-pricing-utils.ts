@@ -55,6 +55,8 @@ export function resolveLiveRomItemPricing(romItem: any, fallback: RomLineItemFal
     // the moment a user edits a quantity. See shared/line-total.ts.
     minimumCost: romItem?.minimumCost ?? fallback.snapshot?.minimumCost ?? null,
     hasMinimumCost: romItem?.hasMinimumCost ?? fallback.snapshot?.hasMinimumCost ?? false,
+    // Pricing by quantity travels with the line too (rate lock): the ranges at the time it was priced.
+    priceTiers: (Array.isArray(romItem?.priceTiers) && romItem.priceTiers.length ? romItem.priceTiers : fallback.snapshot?.priceTiers) ?? [],
   };
 
   return { label, unitPrice, unit, category, snapshot };

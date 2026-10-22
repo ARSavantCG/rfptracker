@@ -4145,7 +4145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: resolved.label,
           quantity: item.qty || 1,
           unit: normalizedUnit,
-          unitPrice: resolved.unitPrice ? resolved.unitPrice.toString() : "0",
+          unitPrice: (computeLineTotal({ quantity: item.qty || 0, unitPrice: resolved.unitPrice, item: resolved.snapshot }).effectiveUnitPrice || resolved.unitPrice || 0).toString(),
           // Catalog minimum rides in resolved.snapshot (shared/line-total.ts).
           totalPrice: computeLineTotal({
             quantity: item.qty || 0,
@@ -4220,7 +4220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               description: resolved.label || row.description,
               quantity,
               unit: normalizedUnit,
-              unitPrice: unitPrice.toString(),
+              unitPrice: (computeLineTotal({ quantity, unitPrice, item: resolved.snapshot }).effectiveUnitPrice || unitPrice).toString(),
               // Catalog minimum rides in resolved.snapshot (shared/line-total.ts).
               totalPrice: computeLineTotal({
                 quantity, unitPrice, item: resolved.snapshot,

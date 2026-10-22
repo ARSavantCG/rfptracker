@@ -235,13 +235,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       const p = toApply.find(pp => matchesRow(li, pp));
       if (!p || p.proposedQuantity === null || p.proposedQuantity === undefined) return li;
       const qty = String(p.proposedQuantity);
-      let baseTotal = (parseFloat(qty) || 0) * (parseFloat(li.unitPrice) || 0);
-      const si = li.scopeItem;
-      if (si?.hasMinimumCost && si.minimumCost) {
-        baseTotal = Math.max(baseTotal, parseFloat(si.minimumCost) || 0);
-      }
       const share = (typeof li.tenantShare === "number" ? li.tenantShare : parseFloat(String(li.tenantShare)) || 100);
-      return { ...li, quantity: qty, totalPrice: (baseTotal * (share / 100)).toString() };
+      // One source of line math (minimum cost, pricing by quantity): shared/line-total.ts.
+      const c = computeLineTotal({ quantity: qty, unitPrice: li.unitPrice, tenantShare: share, item: li.scopeItem });
+      return { ...li, quantity: qty, ...(c.tier ? { unitPrice: String(c.effectiveUnitPrice) } : {}), totalPrice: c.total.toString() };
     });
     setTenantImprovements(prev => applyTo(prev));
     setDesignSoftCosts(prev => applyTo(prev));
@@ -302,9 +299,10 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       // other edit surface stay in agreement. This modal had the ONLY correct
       // implementation; the rest of the app computed qty * price and lost the floor.
       const scopeItem = updatedItems[index].scopeItem;
-      updatedItems[index].totalPrice = computeLineTotal({
-        quantity, unitPrice, tenantShare, item: scopeItem,
-      }).total.toString();
+      const c = computeLineTotal({ quantity, unitPrice, tenantShare, item: scopeItem });
+      updatedItems[index].totalPrice = c.total.toString();
+      // Priced by quantity: the range sets the unit price.
+      if (c.tier) updatedItems[index].unitPrice = String(c.effectiveUnitPrice);
     }
 
     setItems(updatedItems);
@@ -578,10 +576,12 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                     updateLineItem(category, index, 'quantity', currentQuantity);
                                     
                                     // Create updated item with current input value
+                                    const c = computeLineTotal({ quantity: currentQuantity, unitPrice: item.unitPrice, tenantShare: item.tenantShare || 100, item: item.scopeItem });
                                     const updatedItem = {
                                       ...item,
                                       quantity: currentQuantity,
-                                      totalPrice: ((parseFloat(currentQuantity) || 0) * (parseFloat(item.unitPrice) || 0) * ((item.tenantShare || 100) / 100)).toString()
+                                      ...(c.tier ? { unitPrice: String(c.effectiveUnitPrice) } : {}),
+                                      totalPrice: c.total.toString(),
                                     };
                                     
                                     saveIndividualLineItem.mutate(updatedItem);
@@ -610,9 +610,11 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                               <Input
                                 type="text"
 value={(() => {
+                                  // Priced by quantity: the range's rate (or less when a lower range's top sets it).
+                                  const c = computeLineTotal({ quantity: item.quantity, unitPrice: item.unitPrice, item: item.scopeItem });
+                                  if (c.tier) return formatCurrency(c.effectiveUnitPrice);
                                   // Get the correct unit price - prioritize scope item price for accuracy
                                   let price = item.scopeItem?.unitPrice || item.unitPrice || "0";
-                                  
                                   return formatCurrency(parseFloat(price));
                                 })()}
                                 className="h-7 text-xs bg-gray-100 text-right w-24"
@@ -625,6 +627,17 @@ value={(() => {
                                 className="h-7 text-xs bg-gray-100 text-right w-28"
                                 readOnly
                               />
+                              {(() => {
+                                const t = computeLineTotal({ quantity: item.quantity, unitPrice: item.unitPrice, item: item.scopeItem }).tier;
+                                if (!t) return null;
+                                return (
+                                  <div className="text-[10px] leading-tight mt-0.5 text-gray-500 w-28" title={t.note || undefined}>
+                                    Range {t.label}
+                                    {t.floorApplied && <div className="text-amber-700">Minimum: top of {t.floorLabel}</div>}
+                                    {t.note && <div className="truncate">{t.note}</div>}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="py-2 px-3">
                               <Input

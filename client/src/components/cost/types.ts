@@ -86,6 +86,8 @@ export interface DocumentRow {
   directCostId: number | null;
   budgetCoId?: string | null;
   docType: string | null;
+  /** Whose pay application it is (GC or a sub). */
+  vendor?: string | null;
   originalName: string;
   sizeBytes: number | null;
   storage: 'object' | 'local';

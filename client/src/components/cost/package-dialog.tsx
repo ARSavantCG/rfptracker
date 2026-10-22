@@ -12,11 +12,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Download, GripVertical, Paperclip, Plus, Trash2, Upload } from 'lucide-react';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -64,6 +64,10 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const [moving, setMoving] = useState<{ kind: Kind; key: string } | null>(null);
   const [dropAt, setDropAt] = useState<{ kind: Kind; key: string; after: boolean } | null>(null);
   const [override, setOverride] = useState<{ kind: Kind; keys: string[] } | null>(null);
+  // Rolled up or open, per section: open by default while anything in it needs attention.
+  const [folds, setFolds] = useState<Record<string, boolean>>({});
+  const isOpen = (k: string, def: boolean) => folds[k] ?? def;
+  const toggle = (k: string, def: boolean) => setFolds((f) => ({ ...f, [k]: !(f[k] ?? def) }));
   const arrange = <T,>(kind: Kind, list: T[], keyOf: (x: T) => string) =>
     override?.kind === kind ? [...list].sort((a, b) => override.keys.indexOf(keyOf(a)) - override.keys.indexOf(keyOf(b))) : list;
   const conds = ck ? arrange('conditional', ck.conditionals, (w) => `c${w.id}`) : [];
@@ -196,6 +200,44 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   };
 
   if (!target || !app || !ck) return null;
+
+  // Pay applications: one row per vendor (the GC first if it has no conditional yet).
+  const payRows = payAppVendors(conds, gcName);
+  const payFiles = (r: { vendor: string; party: WaiverParty }) => files.filter((d) => !bundle.waivers.some((w) => w.documentId === d.id) && isPayAppOf(d, r));
+  /** What a file is, as the Files dropdown shows it. */
+  const assignedTo = (d: typeof files[number]) => {
+    const w = bundle.waivers.find((x) => x.documentId === d.id && x.applicationId === app.id);
+    if (w && w.kind === 'conditional') return `cw:${w.id}`;
+    if (w) { const r = unconds.find((x) => x.id === w.id); if (r) return `uw:${uKey(r)}`; }
+    if (!w) { const i = payRows.findIndex((r) => isPayAppOf(d, r)); if (i >= 0) return `pa:${i}`; }
+    return `t:${d.docType && d.docType !== 'sub_pay_app' ? d.docType : 'g702'}`;
+  };
+  const unassigned = files.filter((d) => ['t:conditional', 't:unconditional', 't:g702'].includes(assignedTo(d)));
+  const assign = (docId: number, v: string) => call(async () => {
+    const [kind, ref] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)];
+    const linked = bundle.waivers.find((x) => x.documentId === docId);
+    if (kind === 'cw') return apiRequest(`/api/cost-waivers/${ref}`, 'PATCH', { documentId: docId });
+    if (kind === 'uw') {
+      const r = unconds.find((x) => uKey(x) === ref)!;
+      let id = r.id;
+      if (!id) id = ((await apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'unconditional', vendor: r.vendor, amount: r.amount, fromWaiverId: r.fromWaiverId, received: false })) as any).id;
+      return apiRequest(`/api/cost-waivers/${id}`, 'PATCH', { documentId: docId });
+    }
+    if (linked && (ref === 'conditional' || ref === 'unconditional')) await apiRequest(`/api/cost-waivers/${linked.id}`, 'PATCH', { documentId: null });
+    if (kind === 'pa') { const r = payRows[Number(ref)]; return apiRequest(`/api/cost-documents/${docId}`, 'PATCH', { docType: r.party === 'gc' ? 'g702' : 'sub_pay_app', vendor: r.vendor }); }
+    return apiRequest(`/api/cost-documents/${docId}`, 'PATCH', { docType: ref, vendor: null });
+  }, 'File Assigned');
+
+  // Roll-up lines for the waiver sections.
+  const sumLine = (rows: Array<{ vendor: string; amount: number; notNeeded: boolean; party?: WaiverParty | null; received: boolean }>, noun: string) => {
+    const live = rows.filter((r) => !r.notNeeded);
+    const t = waiverTotals(rows, gcName);
+    return `${live.length} ${noun}${live.length === 1 ? '' : 's'} · ${live.filter((r) => r.received).length} of ${live.length} Received · Subs ${money(t.subs)} · GC ${money(t.gc)} · GC Less Subs ${money(t.gap)}`;
+  };
+  const condOpen = !!newC || ck.missing.length > 0 || !ck.conditionals.length || conds.some((w) => !w.received && !w.notNeeded);
+  const condSummary = ck.conditionals.length ? sumLine(conds, 'Conditional') : 'None Yet';
+  const uncondOpen = !!newU || unconds.some((r) => !r.received && !r.notNeeded);
+  const uncondSummary = unconds.length ? sumLine(unconds, 'Unconditional') : 'None Expected';
   const prevLabel = ck.previous ? `Pay App ${nn(ck.previous.docNumber || ck.previous.number)}` : null;
 
   return (
@@ -217,14 +259,13 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
 
-        {/* Files */}
+        {/* Files: drop anything here, then say what each one is — or drop it on its row below. */}
         <section className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Files</h3>
           <div {...dz('files', { docType: dropType })}
                className={`border-2 border-dashed rounded-md px-3 py-3 flex items-center gap-3 flex-wrap text-sm ${drag === 'files' ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}`}>
             <Upload className="h-4 w-4 text-gray-500" />
             <span>Drop files here as</span>
-            <div className="w-56">
+            <div className="w-60">
               <Select value={dropType} onValueChange={setDropType}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">{DOC_TYPES.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
@@ -236,42 +277,96 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 if (list.length) call(async () => { for (const f of list) await upload(f, { docType: dropType }); }, 'Saved');
               }} />
             </label>
-            <span className="text-xs text-gray-500">Waiver files are better dropped on their row below — they're named by vendor and amount.</span>
+            <span className="text-xs text-gray-500">Pay apps and waivers are better dropped on their row below — they're named by vendor.</span>
           </div>
           {files.length > 0 && (
-            <div className="border rounded-md divide-y">
-              {files.map((d) => {
-                const w = bundle.waivers.find((x) => x.documentId === d.id);
-                return (
-                  <div key={d.id} className="px-3 py-1.5 flex items-center gap-3 text-sm">
-                    <button className="text-blue-700 hover:underline text-left break-all flex-1" onClick={() => openDocument(d.id)}>{d.originalName}</button>
-                    {w ? (
-                      <span className="text-xs text-gray-600 whitespace-nowrap">{w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} · {w.vendor}</span>
-                    ) : (
-                      <div className="w-48">
-                        <Select value={d.docType || 'g702'} onValueChange={(v) => call(() => apiRequest(`/api/cost-documents/${d.id}`, 'PATCH', { docType: v }))}>
-                          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent className="pm-scope">{DOC_TYPES.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+            <Fold title={`Files (${files.length})`} open={isOpen('files', unassigned.length > 0)} onToggle={() => toggle('files', unassigned.length > 0)}
+                  summary={unassigned.length ? <span className="text-amber-700 font-medium">{unassigned.length} not assigned</span> : 'All assigned'}>
+              <div className="border rounded-md divide-y">
+                {files.map((d) => {
+                  const v = assignedTo(d);
+                  const loose = unassigned.includes(d);
+                  return (
+                    <div key={d.id} className={`px-3 py-1.5 flex items-center gap-3 text-sm ${loose ? 'bg-amber-50/60' : ''}`}>
+                      <button className="text-blue-700 hover:underline text-left break-all flex-1 min-w-0" onClick={() => openDocument(d.id)}>{d.originalName}</button>
+                      {loose && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1 whitespace-nowrap">Not Assigned</span>}
+                      <div className="w-72 max-w-[45%] flex-shrink-0">
+                        <Select value={v} onValueChange={(nv) => assign(d.id, nv)}>
+                          <SelectTrigger className="h-7 text-xs text-left [&>span]:truncate" aria-label={`What ${d.originalName} is`}><SelectValue /></SelectTrigger>
+                          <SelectContent className="pm-scope max-h-80">
+                            <SelectGroup><SelectLabel>Pay Applications</SelectLabel>
+                              {payRows.map((r, i) => <SelectItem key={`pa${i}`} value={`pa:${i}`}>Pay App — {r.vendor} ({r.party === 'gc' ? 'GC' : 'Sub'})</SelectItem>)}
+                            </SelectGroup>
+                            {conds.length > 0 && <SelectGroup><SelectLabel>Conditional Waivers — {label} {nn(app.docNumber)}</SelectLabel>
+                              {conds.map((w) => <SelectItem key={`cw${w.id}`} value={`cw:${w.id}`}>Conditional — {w.vendor}</SelectItem>)}
+                            </SelectGroup>}
+                            {unconds.length > 0 && <SelectGroup><SelectLabel>Unconditional Waivers — {prevLabel}</SelectLabel>
+                              {unconds.map((r) => <SelectItem key={`uw${uKey(r)}`} value={`uw:${uKey(r)}`}>Unconditional — {r.vendor}</SelectItem>)}
+                            </SelectGroup>}
+                            <SelectGroup><SelectLabel>Other</SelectLabel>
+                              {DOC_TYPES.filter(([k]) => k === 'invoice' || k === 'other' || k === 'conditional' || k === 'unconditional' || k === 'g702').map(([k, t]) => (
+                                <SelectItem key={k} value={`t:${k}`}>{k === 'conditional' || k === 'unconditional' ? `${t} (Not Assigned)` : k === 'g702' ? 'G702 / G703 (Not Assigned)' : t}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
                         </Select>
                       </div>
-                    )}
-                    <button className="text-gray-400 hover:text-red-700" title="Remove this file"
-                            onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) call(() => apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'), 'File removed'); }}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                      <button className="text-gray-400 hover:text-red-700 flex-shrink-0" title="Remove this file"
+                              onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) call(() => apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'), 'File Removed'); }}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </Fold>
           )}
         </section>
 
-        {/* Conditional waivers for this pay app */}
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional Waivers — {label} {nn(app.docNumber)}</h3>
-            {!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewC({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}
+        {/* Pay applications: the GC's G702/G703 and each sub's own, one row per vendor. */}
+        <Fold title={`Pay Applications — ${label} ${nn(app.docNumber)}`} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
+              summary={`${payRows.filter((r) => payFiles(r).length).length} of ${payRows.length} attached`}>
+          <p className="text-xs text-gray-600">The GC's pay application and each sub's, as backup. Vendors come from the conditional waivers below. Drop a file on its row.</p>
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
+                <th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-16">GC / Sub</th><th className="px-2 py-1.5">Pay Application (Drop It on the Row)</th>
+              </tr></thead>
+              <tbody>
+                {payRows.map((r, i) => {
+                  const key = `pa${i}`; const mine = payFiles(r);
+                  const extra = { docType: r.party === 'gc' ? 'g702' : 'sub_pay_app', vendor: r.vendor };
+                  return (
+                    <tr key={key} {...dz(key, extra)} className={`border-b last:border-0 ${drag === key ? 'bg-blue-100' : ''}`}>
+                      <td className="px-2 py-1.5">{r.vendor}</td>
+                      <td className="px-2"><span className={`text-[11px] font-semibold rounded px-1.5 py-0.5 ${r.party === 'gc' ? 'text-blue-800 bg-blue-100' : 'text-gray-700 bg-gray-100'}`}>{r.party === 'gc' ? 'GC' : 'Sub'}</span></td>
+                      <td className="px-2 py-1 text-xs">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          {mine.map((d) => (
+                            <span key={d.id} className="inline-flex items-center gap-1">
+                              <button className="text-blue-700 hover:underline inline-flex items-center gap-1 text-left break-all" onClick={() => openDocument(d.id)}><Paperclip className="h-3 w-3 flex-shrink-0" />{short(d.originalName)}</button>
+                              <button className="text-gray-400 hover:text-red-700" title="Not this vendor's pay app — move it back to Files"
+                                      onClick={() => call(() => apiRequest(`/api/cost-documents/${d.id}`, 'PATCH', { docType: 'other', vendor: null }), 'Moved to Files')}><X className="h-3 w-3" /></button>
+                            </span>
+                          ))}
+                          <label className="text-gray-500 hover:text-blue-700 cursor-pointer inline-flex items-center gap-1">
+                            <Paperclip className="h-3 w-3" /> {mine.length ? 'Add Another' : 'Attach or Drop'}
+                            <input type="file" multiple className="hidden" onChange={(e) => { const list = Array.from(e.target.files ?? []); e.target.value = ''; if (list.length) call(async () => { for (const f of list) await upload(f, extra); }, 'Pay App Saved'); }} />
+                          </label>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        </Fold>
+
+        {/* Conditional waivers for this pay app */}
+        <Fold title={`Conditional Waivers — ${label} ${nn(app.docNumber)}`} open={isOpen('cond', condOpen)} onToggle={() => toggle('cond', condOpen)}
+              summary={condSummary}
+              action={!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewC({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
           <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} Payment Due (G702 Line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
             {conds.map((w) => {
@@ -287,7 +382,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={w.received}
                          onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { received: e.target.checked }))} /></td>
                   <td className="px-2 text-xs"><FileCell name={docName(w.documentId)} id={w.documentId}
-                         onPick={(f) => call(() => upload(f, { docType: 'conditional', waiverId: String(w.id) }), 'Waiver saved')} /></td>
+                         onPick={(f) => call(() => upload(f, { docType: 'conditional', waiverId: String(w.id) }), 'Waiver Saved')}
+                         onUnlink={() => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { documentId: null }), 'Unlinked — the file is back in Files')} /></td>
                   <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4" checked={w.notNeeded} title="Not needed"
                          onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { notNeeded: e.target.checked }))} /></td>
                   <td className="px-1 text-center"><button className="p-1 text-gray-400 hover:text-red-700" title="Remove"
@@ -319,16 +415,12 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             )}
             {!ck.conditionals.length && !ck.missing.length && !newC && <tr><td colSpan={8} className="px-3 py-2 text-sm text-gray-500">None yet.</td></tr>}
           </WaiverTable>
-        </section>
+        </Fold>
 
         {/* Unconditional waivers for the pay app before */}
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-              Unconditional Waivers {prevLabel ? `— For ${prevLabel}` : ''}
-            </h3>
-            {!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewU({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}
-          </div>
+        <Fold title={`Unconditional Waivers${prevLabel ? ` — For ${prevLabel}` : ''}`} open={isOpen('uncond', uncondOpen)} onToggle={() => toggle('uncond', uncondOpen)}
+              summary={uncondSummary}
+              action={!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewU({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, uncond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}>
           <p className="text-xs text-gray-600">
             {prevLabel ? `Expected from every vendor that gave a conditional on ${prevLabel}, for the same amount, in the same order. Type over anything that's different — it's marked Edited.` : 'This is the first pay app on the contract, so none are expected yet.'}
           </p>
@@ -357,7 +449,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <td className="px-1 align-top pt-1.5"><PartyPill row={r} gcName={gcName} onSet={(p) => saveU(r, { party: p })} /></td>
                   <td className="px-1 py-1 align-top"><BlurMoney value={r.amount} key={`${key}-${r.amount}`} onSave={(v) => saveU(r, { amount: v })} /></td>
                   <td className="px-2 text-center align-top pt-2"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={r.received} onChange={(e) => saveU(r, { received: e.target.checked })} /></td>
-                  <td className="px-2 text-xs align-top pt-2"><FileCell name={docName(r.documentId)} id={r.documentId} onPick={(f) => call(() => uploadToU(r, f), 'Waiver saved')} /></td>
+                  <td className="px-2 text-xs align-top pt-2"><FileCell name={docName(r.documentId)} id={r.documentId} onPick={(f) => call(() => uploadToU(r, f), 'Waiver Saved')}
+                         onUnlink={r.id ? () => call(() => apiRequest(`/api/cost-waivers/${r.id}`, 'PATCH', { documentId: null }), 'Unlinked — the file is back in Files') : undefined} /></td>
                   <td className="px-2 text-center align-top pt-2"><input type="checkbox" className="h-4 w-4" checked={r.notNeeded} title="Not needed" onChange={(e) => saveU(r, { notNeeded: e.target.checked })} /></td>
                   <td className="px-1 text-center align-top pt-1">
                     {r.id && (r.source === 'added' || r.edited) && (
@@ -387,7 +480,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             )}
             {!ck.unconditionals.length && !newU && <tr><td colSpan={8} className="px-3 py-2 text-sm text-gray-500">None expected.</td></tr>}
           </WaiverTable>
-        </section>
+        </Fold>
 
         {/* Anything still owed from pay apps before the last one */}
         {earlier.length > 0 && (
@@ -512,6 +605,23 @@ function MissingRow({ m, busy, start, onAdd, onSkip }: { m: MissingConditional; 
   );
 }
 
+/** A section that rolls up to one line: title, a summary while closed, and its action button. */
+function Fold({ title, summary, open, onToggle, action, children }: { title: string; summary?: React.ReactNode; open: boolean; onToggle: () => void; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" className="flex items-center gap-1.5 min-w-0 text-left" onClick={onToggle} aria-expanded={open}>
+          <ChevronRight className={`h-4 w-4 flex-shrink-0 text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">{title}</h3>
+          {!open && summary && <span className="text-xs text-gray-600 ml-2 truncate normal-case">{summary}</span>}
+        </button>
+        {action}
+      </div>
+      {open && children}
+    </section>
+  );
+}
+
 /** A money box that saves when you leave it. */
 function BlurMoney({ value, onSave }: { value: number; onSave: (v: number) => void }) {
   const [v, setV] = useState(fmtMoneyText(String(value)));
@@ -519,11 +629,21 @@ function BlurMoney({ value, onSave }: { value: number; onSave: (v: number) => vo
                      onBlur={(e) => { const n = parseFloat(e.target.value.replace(/[$,\s]/g, '')) || 0; if (Math.abs(n - value) >= 0.005) onSave(n); }} />;
 }
 
-function FileCell({ name, id, onPick }: { name?: string; id: number | null; onPick: (f: File) => void }) {
+const short = (name: string) => (name.length > 34 ? `${name.slice(0, 32)}…` : name);
+
+/** A waiver's file: open it, replace it (the old one goes back to Files), or unlink it. */
+function FileCell({ name, id, onPick, onUnlink }: { name?: string; id: number | null; onPick: (f: File) => void; onUnlink?: () => void }) {
   return id && name ? (
-    <button className="text-blue-700 hover:underline inline-flex items-center gap-1 text-left break-all" onClick={() => openDocument(id)}>
-      <Paperclip className="h-3 w-3 flex-shrink-0" />{name.length > 34 ? `${name.slice(0, 32)}…` : name}
-    </button>
+    <span className="inline-flex items-center gap-1.5 flex-wrap">
+      <button className="text-blue-700 hover:underline inline-flex items-center gap-1 text-left break-all" onClick={() => openDocument(id)}>
+        <Paperclip className="h-3 w-3 flex-shrink-0" />{short(name)}
+      </button>
+      <label className="text-gray-500 hover:text-blue-700 cursor-pointer" title="Replace with another file (this one goes back to Files)">
+        <RefreshCw className="h-3 w-3 inline" />
+        <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(f); }} />
+      </label>
+      {onUnlink && <button className="text-gray-400 hover:text-red-700" title="Wrong file — unlink it (it goes back to Files)" onClick={onUnlink}><X className="h-3 w-3" /></button>}
+    </span>
   ) : (
     <label className="text-gray-500 hover:text-blue-700 cursor-pointer inline-flex items-center gap-1">
       <Paperclip className="h-3 w-3" /> Attach or Drop

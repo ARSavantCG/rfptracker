@@ -280,9 +280,23 @@ export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[], c
 
 /** Document types for a pay app package, in the order the zip folders take. */
 export const DOC_TYPES: Array<[string, string]> = [
-  ['g702', 'G702 / G703'],
-  ['conditional', 'Conditional waivers'],
-  ['unconditional', 'Unconditional waivers'],
-  ['invoice', 'Invoices & backup'],
+  ['g702', 'GC Pay App (G702 / G703)'],
+  ['sub_pay_app', 'Sub Pay App'],
+  ['conditional', 'Conditional Waiver'],
+  ['unconditional', 'Unconditional Waiver'],
+  ['invoice', 'Invoices & Backup'],
   ['other', 'Other'],
 ];
+
+/** A pay app's vendors, in waiver order, the GC first if it has no conditional yet: one row each for their pay application. */
+export function payAppVendors(conditionals: ReadonlyArray<{ vendor: string; party?: WaiverParty | null; notNeeded?: boolean }>, contractName: string) {
+  const rows = conditionals.filter((c) => !c.notNeeded).map((c) => ({ vendor: c.vendor, party: partyOf(c, contractName) }));
+  if (!rows.some((r) => r.party === 'gc')) rows.unshift({ vendor: contractName, party: 'gc' });
+  return rows;
+}
+
+/** Is this file that vendor's pay application? The GC's also takes any G702 with no vendor on it. */
+export function isPayAppOf(doc: { docType: string | null; vendor?: string | null }, row: { vendor: string; party: WaiverParty }): boolean {
+  if (row.party === 'gc') return doc.docType === 'g702' && (!doc.vendor || sameVendor(doc.vendor, row.vendor));
+  return doc.docType === 'sub_pay_app' && !!doc.vendor && sameVendor(doc.vendor, row.vendor);
+}

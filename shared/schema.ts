@@ -2392,6 +2392,8 @@ export const costDocuments = pgTable("cost_documents", {
   budgetCoId: text("budget_co_id"),
   // What it is in a pay app package: g702 | conditional | unconditional | invoice | other.
   docType: text("doc_type"),
+  /** Whose it is: a pay app's GC or one of its subs (pay applications). */
+  vendor: text("vendor"),
   originalName: text("original_name").notNull(),
   mimeType: text("mime_type"),
   sizeBytes: integer("size_bytes"),

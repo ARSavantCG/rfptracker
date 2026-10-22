@@ -41,7 +41,7 @@ import { requireAi } from './lib/ai-switch';
 import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
 
@@ -2008,8 +2008,19 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       const patch = waiverValues(req.body || {}, true);
       if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      if (patch.documentId !== undefined) {
+        if (patch.documentId == null) {
+          // Unlinked (the wrong file): it isn't in hand any more, unless told otherwise.
+          if (req.body?.received === undefined) patch.received = false;
+        } else {
+          // One file, one waiver: take it off any other waiver, tag it, and count this one received.
+          await db.update(costWaivers).set({ documentId: null, received: false }).where(eq(costWaivers.documentId, patch.documentId));
+          if (req.body?.received === undefined) patch.received = true;
+        }
+      }
       const [row] = await db.update(costWaivers).set(patch).where(eq(costWaivers.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'Waiver not found' });
+      if (patch.documentId) await db.update(costDocuments).set({ docType: row.kind, vendor: null }).where(eq(costDocuments.id, patch.documentId));
       res.json(row);
     } catch (e) {
       if (e instanceof UserError) return res.status(400).json({ message: e.message });
@@ -2035,7 +2046,12 @@ export function registerCostTrackingRoutes(app: Express): void {
       const patch: any = {};
       if (b.docType !== undefined) patch.docType = DOC_TYPES.some(([k]) => k === b.docType) ? String(b.docType) : null;
       if (b.applicationId !== undefined) patch.applicationId = b.applicationId == null ? null : Number(b.applicationId);
+      if (b.vendor !== undefined) patch.vendor = b.vendor ? String(b.vendor).trim().slice(0, 200) || null : null;
       if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
+      // Retagged as something other than a waiver: no longer any waiver's file.
+      if (patch.docType !== undefined && patch.docType !== 'conditional' && patch.docType !== 'unconditional') {
+        await db.update(costWaivers).set({ documentId: null, received: false }).where(eq(costWaivers.documentId, id));
+      }
       const [row] = await db.update(costDocuments).set(patch).where(eq(costDocuments.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'File not found' });
       res.json(row);
@@ -2045,7 +2061,7 @@ export function registerCostTrackingRoutes(app: Express): void {
   /**
    * One pay app's package as a zip, named so it can be followed without
    * opening it:  Tenant - Property - Contractor - Pay App 02.zip
-   *   1 G702-G703/
+   *   1 Pay Applications/   00 GC - G702-G703, then each sub's pay app in waiver order
    *   2 Conditional Waivers (Pay App 02)/  ABC Plumbing - Conditional - Pay App 02 - $40,000.00.pdf
    *   3 Unconditional Waivers (Pay App 01)/
    *   4 Invoices & Backup/
@@ -2072,6 +2088,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const prev = previousApp({ id: a.id, contractId: a.contractId, number: a.number }, allApps);
       const ck = waiverChecklist(a.id, allApps, waivers, c.counterparty);
       const docs = await db.select().from(costDocuments).where(eq(costDocuments.applicationId, a.id));
+      const payRows = payAppVendors(ck.conditionals, c.counterparty);
       const waiverDocIds = new Set(waivers.filter((w) => w.applicationId === a.id && w.documentId).map((w) => w.documentId!));
       const extra = waiverDocIds.size
         ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(waiverDocIds)))).filter((d) => !docs.some((x) => x.id === d.id))
@@ -2086,7 +2103,8 @@ export function registerCostTrackingRoutes(app: Express): void {
       const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
       const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
       const folder: Record<string, string> = {
-        g702: '1 G702-G703',
+        g702: '1 Pay Applications',
+        sub_pay_app: '1 Pay Applications',
         conditional: `2 Conditional Waivers (${label} ${nn(dn.get(a.id)!)})`,
         unconditional: `3 Unconditional Waivers (${prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior'})`,
         invoice: '4 Invoices & Backup',
@@ -2109,7 +2127,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const missing: string[] = [];
       for (const d of all) {
         const w = waivers.find((x) => x.documentId === d.id && x.applicationId === a.id);
-        const type = w ? w.kind : (d.docType || 'g702');
+        const type = w ? w.kind : (d.docType === 'conditional' || d.docType === 'unconditional' ? 'other' : (d.docType || 'g702'));
         let name: string;
         if (w) {
           const covers = w.kind === 'conditional' ? `${label} ${nn(dn.get(a.id)!)}` : prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior';
@@ -2118,7 +2136,10 @@ export function registerCostTrackingRoutes(app: Express): void {
           const pos = list.findIndex((x) => x.id === w.id);
           name = `${pos >= 0 ? `${nn(pos + 1)} ` : ''}${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
         } else if (type === 'g702') {
-          name = `${safe(c.counterparty)} - ${label} ${nn(dn.get(a.id)!)} - G702-G703${ext(d.originalName)}`;
+          name = `00 ${safe(d.vendor || c.counterparty)} - GC - ${label} ${nn(dn.get(a.id)!)} - G702-G703${ext(d.originalName)}`;
+        } else if (type === 'sub_pay_app') {
+          const pos = payRows.findIndex((r) => r.party === 'sub' && d.vendor && sameVendor(r.vendor, d.vendor));
+          name = `${nn(pos >= 0 ? pos : 98)} ${safe(d.vendor || 'Subcontractor')} - Sub Pay App - ${label} ${nn(dn.get(a.id)!)}${ext(d.originalName)}`;
         } else {
           name = `${label} ${nn(dn.get(a.id)!)} - ${safe(d.originalName)}`;
         }
@@ -2196,6 +2217,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         directCostId: num(req.body?.directCostId),
         budgetCoId: req.body?.budgetCoId ? String(req.body.budgetCoId).slice(0, 40) : null,
         docType: DOC_TYPES.some(([k]) => k === req.body?.docType) ? String(req.body.docType) : null,
+        vendor: req.body?.vendor ? String(req.body.vendor).trim().slice(0, 200) || null : null,
         originalName: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: file.size,
@@ -2205,6 +2227,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       }).returning();
       // A file dropped on a waiver is that waiver: attach it and mark it received.
       const waiverId = num(req.body?.waiverId);
+      // A new file on a waiver replaces the one it had; the old one stays in the package's files, untied, to retag or remove.
       if (waiverId) await db.update(costWaivers).set({ documentId: row.id, received: true }).where(eq(costWaivers.id, waiverId));
       res.json(row);
     } catch (e) {

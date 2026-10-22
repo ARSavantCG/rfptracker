@@ -209,3 +209,9 @@ and live test output are proof. The gold standard is: click the button and watch
 - Swept with a TS-AST script (labels in th/h*/Button/SelectItem/TabsTrigger/label/DialogTitle, label=/title= on Card-like components, label: props, ?: branches). New UI text should follow the rule by hand.
 - CM fee donut: Earned, Not Invoiced split into "— Costs Paid" (ready to invoice) and "— Costs Not Yet Paid" (`earnedOnPaid` per stream from draft.earnedPaid.fee).
 - Dialogs fit the window: `w-[96vw] max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]` (wide tables scroll in their own box). Package dialog: header pinned, body scrolls.
+
+## Package files: swap, roll up, pay apps per vendor (2026-10-22)
+- `cost_documents.vendor`; DOC_TYPES adds `sub_pay_app` (labels Title Case). `payAppVendors(conditionals, contractName)` = one Pay Applications row per vendor (GC first if missing); `isPayAppOf(doc,row)` (GC row takes untagged-vendor G702s too).
+- PATCH waiver `{documentId}`: null = unlink (received → false unless sent); id = link (taken off any other waiver, doc retagged to the waiver kind, received → true). PATCH document with a non-waiver docType unlinks it from any waiver. Uploading onto a waiver row replaces its file; the old one stays in Files, untied.
+- Dialog: Files list (assign each file via one dropdown: Pay App — vendor, Conditional — vendor, Unconditional — vendor, or a type; "Not Assigned" flagged), Pay Applications section, sections roll up (open by default while something needs attention or a row is being added).
+- Zip: "1 Pay Applications/00 GC - … G702-G703", then "NN Sub - Sub Pay App" in waiver order.

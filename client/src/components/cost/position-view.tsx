@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Printer } from 'lucide-react';
+import { Printer, ChevronRight } from 'lucide-react';
 import { positionAsOf, filterPositionInput } from '@shared/cost-position';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { money, signedMoney, shortDate, todayIso, openReport, checkBadge, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
@@ -19,6 +19,9 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
 }) {
   const { toast } = useToast();
   const [asOf, setAsOf] = useState(todayIso());
+  // Each list rolls up to one line; remembered.
+  const [appsOpen, toggleApps] = useRemembered('pm-payapps-open-apps', true);
+  const [directOpen, toggleDirect] = useRemembered('pm-payapps-open-direct', true);
   /** All, one contract (its id), or "direct". The printout follows the same choice. */
   const [scope, setScope] = useState('all');
   const p = useMemo(() => positionAsOf(asOf || todayIso(), filterPositionInput(bundle.positionInput, scope)), [asOf, scope, bundle.positionInput]);
@@ -128,8 +131,9 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
       </div>
 
       <div className="bg-white border rounded-lg overflow-x-auto">
-        <div className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Pay apps &amp; invoices</div>
-        <table className="w-full text-sm min-w-[640px]">
+        <RollHead k="payapps" open={appsOpen} onToggle={toggleApps} title="Pay Apps & Invoices"
+                  summary={`${p.applications.length} · due ${money(p.applications.reduce((t, a) => t + a.due, 0))} · paid ${money(p.applications.reduce((t, a) => t + a.paid, 0))} · open ${money(p.applications.reduce((t, a) => t + a.open, 0))}`} />
+        {appsOpen && <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
               <H left>Contract</H><H left>No.</H><H left>Dated</H><H>Payment due</H><H>Paid</H><H>Open</H><th className="w-44" />
@@ -157,12 +161,13 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
               );
             })}
           </tbody>
-        </table>
+        </table>}
       </div>
       {p.direct.rows.length > 0 && (
         <div className="bg-white border rounded-lg overflow-x-auto">
-          <div className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Direct costs (no contract)</div>
-          <table className="w-full text-sm min-w-[760px]">
+          <RollHead k="direct" open={directOpen} onToggle={toggleDirect} title="Direct Costs (No Contract)"
+                    summary={`${p.direct.rows.length} · ${money(p.direct.total)}`} />
+          {directOpen && <table className="w-full text-sm min-w-[760px]">
             <thead>
               <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
                 <H left>Date</H><H left>Paid to</H><H left>Description</H><H left>Budget line</H><H left>Paid by</H><H>Amount</H>
@@ -182,10 +187,10 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-800 font-semibold">
-                <td className="px-3 py-2" colSpan={5}>Total direct costs</td><D v={p.direct.total} />
+                <td className="px-3 py-2" colSpan={5}>Total Direct Costs</td><D v={p.direct.total} />
               </tr>
             </tfoot>
-          </table>
+          </table>}
         </div>
       )}
       <p className="text-xs text-gray-500">
@@ -203,5 +208,22 @@ function Stat({ label, value, tone, sub }: { label: string; value: string; tone?
       <div className={`text-lg font-semibold tabular-nums ${tone || 'text-gray-900'}`}>{value}</div>
       {sub && <div className="text-[11px] text-gray-500 tabular-nums">{sub}</div>}
     </div>
+  );
+}
+
+
+function useRemembered(key: string, def: boolean): [boolean, () => void] {
+  const [open, setOpen] = useState(() => { try { const v = localStorage.getItem(key); return v == null ? def : v === '1'; } catch { return def; } });
+  const toggle = () => setOpen((v) => { try { localStorage.setItem(key, v ? '0' : '1'); } catch { /* private window */ } return !v; });
+  return [open, toggle];
+}
+
+function RollHead({ k, open, onToggle, title, summary }: { k: string; open: boolean; onToggle: () => void; title: string; summary?: string }) {
+  return (
+    <button type="button" data-roll={k} onClick={onToggle} aria-expanded={open} className={`w-full flex items-center gap-2 px-3 ${open ? 'pt-3' : 'py-3'} text-left`}>
+      <ChevronRight className={`h-4 w-4 text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} />
+      <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{title}</span>
+      {!open && summary && <span className="text-xs text-gray-600 tabular-nums ml-2">{summary}</span>}
+    </button>
   );
 }

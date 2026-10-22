@@ -22,6 +22,7 @@ import { FundingSummary } from '@/components/cost/funding-summary';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
+import { ProjectFilesList } from '@/components/cost/project-files';
 import { ReportsView, LenderPackagesCard } from '@/components/cost/reports-view';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
@@ -195,29 +196,7 @@ export default function CostProject() {
               {b.documents.length === 0 ? (
                 <p className="text-sm text-gray-600">No files yet. Attach pay apps when you record them.</p>
               ) : (
-                <div className="bg-white border rounded-lg divide-y">
-                  {b.documents.map((d) => {
-                    const appRow = b.applications.find((a) => a.id === d.applicationId);
-                    const contract = b.contracts.find((c) => c.id === (appRow?.contractId ?? d.contractId));
-                    return (
-                      <div key={d.id} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
-                        <button className="text-blue-700 hover:underline text-left break-all" onClick={() => openDocument(d.id)}>{d.originalName}</button>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-xs text-gray-500 text-right">
-                            {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.docNumber}` : ''}
-                            {d.directCostId ? 'Ledger receipt' : ''}
-                            {d.changeOrderId ? ` · ${b.changeOrders.find((co) => co.id === d.changeOrderId)?.number ?? 'Change order'} (executed)` : ''}
-                            <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
-                          </div>
-                          <button className="text-gray-400 hover:text-red-700" title="Remove this file"
-                                  onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ProjectFilesList b={b} onRemove={(d) => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }} />
               )}
                       </div>
           </div>

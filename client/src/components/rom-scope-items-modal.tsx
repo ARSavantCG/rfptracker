@@ -1451,12 +1451,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                 {/* Pricing by quantity (shared/line-total.ts) */}
                 <div className="space-y-3 pt-4 border-t">
                   <div>
-                    <Label className="text-sm font-semibold">Pricing by quantity (optional)</Label>
+                    <Label className="text-sm font-semibold">Pricing by Quantity (Optional)</Label>
                     <p className="text-xs text-gray-500">One item, a price per quantity range — e.g. Office 0–3,000 SF $200, 3,001–5,000 $180, 5,001+ $165; or AC: up to 5,000 SF one package, then per 5,000 SF.</p>
                   </div>
                   <PriceTiersEditor value={formData.priceTiers} unit={formData.unit} onChange={(v) => setFormData({...formData, priceTiers: v})} />
                   <div className="space-y-2 max-w-sm">
-                    <Label htmlFor="itemGroup">Item family</Label>
+                    <Label htmlFor="itemGroup">Item Family</Label>
                     <Input id="itemGroup" data-testid="input-itemGroup" value={formData.itemGroup} onChange={(e) => setFormData({...formData, itemGroup: e.target.value})} />
                     <p className="text-xs text-gray-500">Groups variants picked by property specs (e.g. demising wall by clear height).</p>
                   </div>
@@ -1595,7 +1595,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                   size="sm"
                                   onClick={() => startEditingFile(file.id, file.fileName)}
                                   className="text-blue-600 hover:text-blue-700"
-                                  title="Rename file"
+                                  title="Rename File"
                                 >
                                   <Edit3 className="h-4 w-4" />
                                 </Button>
@@ -1610,7 +1610,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDownloadFile(file.fileName, file.filePath)}
-                                title="Download file"
+                                title="Download File"
                               >
                                 <i className="fas fa-download h-3 w-3"></i>
                               </Button>
@@ -1619,7 +1619,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => removeExistingFile(file.id)}
-                                title="Delete file"
+                                title="Delete File"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -2105,7 +2105,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                                         size="sm"
                                                         onClick={() => startEditingFile(file.id, file.fileName)}
                                                         className="text-blue-600 hover:text-blue-700"
-                                                        title="Rename file"
+                                                        title="Rename File"
                                                       >
                                                         <Edit3 className="h-4 w-4" />
                                                       </Button>
@@ -2120,7 +2120,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                                       variant="ghost"
                                                       size="sm"
                                                       onClick={() => handleDownloadFile(file.fileName, file.filePath)}
-                                                      title="Download file"
+                                                      title="Download File"
                                                     >
                                                       <Download className="h-4 w-4" />
                                                     </Button>
@@ -2129,7 +2129,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                                       variant="ghost"
                                                       size="sm"
                                                       onClick={() => removeExistingFile(file.id)}
-                                                      title="Delete file"
+                                                      title="Delete File"
                                                     >
                                                       <X className="h-4 w-4" />
                                                     </Button>
@@ -2510,7 +2510,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               {canDeleteRomScope && (
                                 <div className="space-y-4 pt-4 border-t">
                                   <div className="flex items-center justify-between">
-                                    <Label className="text-base font-semibold">Reference Pricing (for quarterly contractor verification)</Label>
+                                    <Label className="text-base font-semibold">Reference Pricing (for Quarterly Contractor Verification)</Label>
                                     <Button 
                                       type="button"
                                       onClick={startAddingReferencePrice} 
@@ -2641,12 +2641,12 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                               {/* Pricing by quantity (shared/line-total.ts) */}
                               <div className="space-y-3 pt-4 border-t">
                                 <div>
-                                  <Label className="text-sm font-semibold">Pricing by quantity (optional)</Label>
+                                  <Label className="text-sm font-semibold">Pricing by Quantity (Optional)</Label>
                                   <p className="text-xs text-gray-500">One item, a price per quantity range — e.g. Office 0–3,000 SF $200, 3,001–5,000 $180, 5,001+ $165; or AC: up to 5,000 SF one package, then per 5,000 SF.</p>
                                 </div>
                                 <PriceTiersEditor value={formData.priceTiers} unit={formData.unit} onChange={(v) => setFormData({...formData, priceTiers: v})} />
                                 <div className="space-y-2 max-w-sm">
-                                  <Label htmlFor="itemGroup-inline">Item family</Label>
+                                  <Label htmlFor="itemGroup-inline">Item Family</Label>
                                   <Input id="itemGroup-inline" data-testid="input-itemGroup-inline" value={formData.itemGroup} onChange={(e) => setFormData({...formData, itemGroup: e.target.value})} />
                                   <p className="text-xs text-gray-500">Groups variants picked by property specs (e.g. demising wall by clear height).</p>
                                 </div>
@@ -2782,7 +2782,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                                 size="sm"
                                                 onClick={() => startEditingFile(file.id, file.fileName)}
                                                 className="text-blue-600 hover:text-blue-700"
-                                                title="Rename file"
+                                                title="Rename File"
                                               >
                                                 <Edit3 className="h-4 w-4" />
                                               </Button>
@@ -2797,7 +2797,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                               variant="ghost"
                                               size="sm"
                                               onClick={() => handleDownloadFile(file.fileName, file.filePath)}
-                                              title="Download file"
+                                              title="Download File"
                                             >
                                               <i className="fas fa-download h-3 w-3"></i>
                                             </Button>
@@ -2806,7 +2806,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
                                               variant="ghost"
                                               size="sm"
                                               onClick={() => removeExistingFile(file.id)}
-                                              title="Delete file"
+                                              title="Delete File"
                                             >
                                               <X className="h-4 w-4" />
                                             </Button>
@@ -2929,7 +2929,7 @@ export function RomScopeItemsModal({ isOpen, onClose }: RomScopeItemsModalProps)
             {(printFilters.categories.length === 0 || printFilters.categories.includes("Tenant Improvements")) && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">CSI Divisions (Tenant Improvements only)</Label>
+                  <Label className="text-sm font-medium">CSI Divisions (Tenant Improvements Only)</Label>
                   <div className="flex space-x-2">
                     <button
                       type="button"

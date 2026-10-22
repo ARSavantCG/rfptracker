@@ -121,7 +121,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   };
   const removeRow = (r: Row) => {
     if (r.id && billedIds.has(r.id)) {
-      toast({ title: 'Billed on a pay app', description: 'This line has billing against it, so it stays. Set its value to zero instead.' });
+      toast({ title: 'Billed on a Pay App', description: 'This line has billing against it, so it stays. Set its value to zero instead.' });
       return;
     }
     touched.current = true;
@@ -138,7 +138,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
 
   const readPaste = () => {
     const parsed = parseSovPaste(paste ?? '');
-    if (!parsed.lines.length) { toast({ title: 'Nothing read', description: 'Each row needs a description and an amount.' }); return; }
+    if (!parsed.lines.length) { toast({ title: 'Nothing Read', description: 'Each row needs a description and an amount.' }); return; }
     const incoming = parsed.lines.map((l) => ({ ...blankRow(), itemNo: l.itemNo ?? '', code: l.code ?? '', description: l.description, value: fmtMoneyText(String(l.scheduledValue)) }));
     // Fill the empty rows first, then append.
     touched.current = true;
@@ -167,11 +167,11 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
         try { await apiRequest(`/api/cost-sov-lines/${o.id}`, 'DELETE'); } catch (e: any) { problems.push(`${o.description}: ${e?.message}`); }
       }
       toast(problems.length
-        ? { title: 'Saved, with exceptions', description: problems.join(' · '), variant: 'destructive', duration: 10000 }
+        ? { title: 'Saved, with Exceptions', description: problems.join(' · '), variant: 'destructive', duration: 10000 }
         : { title: `${label} saved`, description: `${added.length} added · ${changed.length} changed · ${removed.length} removed` });
       onDone();
     } catch (e: any) {
-      toast({ title: 'Not saved', description: e?.message, variant: 'destructive', duration: 10000 });
+      toast({ title: 'Not Saved', description: e?.message, variant: 'destructive', duration: 10000 });
     } finally {
       setSaving(false);
       queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
@@ -189,7 +189,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                 <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Paste from Excel or a G703
               </Button>
               <Button size="sm" variant="ghost" className="h-8" onClick={() => { if (!dirty || window.confirm('Discard the changes to these lines?')) onDone(); }}>Cancel</Button>
-              <Button size="sm" className="h-8" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>{saving ? 'Saving…' : 'Save lines'}</Button>
+              <Button size="sm" className="h-8" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>{saving ? 'Saving…' : 'Save Lines'}</Button>
             </div>
           </div>
           {paste != null && (
@@ -201,7 +201,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
               <Textarea rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} className="font-mono text-xs" aria-label="Rows to paste" />
               <div className="flex justify-end gap-2">
                 <Button size="sm" variant="ghost" onClick={() => setPaste(null)}>Cancel</Button>
-                <Button size="sm" disabled={!paste.trim()} onClick={readPaste}>Add to grid</Button>
+                <Button size="sm" disabled={!paste.trim()} onClick={readPaste}>Add to Grid</Button>
               </div>
             </div>
           )}
@@ -211,10 +211,10 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
                   <th className="px-2 py-1.5 w-20">Item</th>
-                  <th className="px-2 py-1.5 w-36">Cost code</th>
+                  <th className="px-2 py-1.5 w-36">Cost Code</th>
                   <th className="px-2 py-1.5">Description</th>
-                  <th className="px-2 py-1.5 w-40 text-right">Scheduled value</th>
-                  <th className="px-2 py-1.5 w-64">Budget line</th>
+                  <th className="px-2 py-1.5 w-40 text-right">Scheduled Value</th>
+                  <th className="px-2 py-1.5 w-64">Budget Line</th>
                   <th className="w-10" />
                 </tr>
               </thead>
@@ -238,9 +238,9 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                         <Select value={r.map} onValueChange={(v) => update(r.rid, { map: v })}>
                           <SelectTrigger className={`h-8 text-xs ${r.map === UNMAPPED ? 'text-amber-800 border-amber-300' : ''}`}><SelectValue /></SelectTrigger>
                           <SelectContent className="pm-scope">
-                            <SelectItem value={UNMAPPED}>Not mapped yet</SelectItem>
+                            <SelectItem value={UNMAPPED}>Not Mapped Yet</SelectItem>
                             {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
-                            <SelectItem value={SPREAD}>Spread with the work (GCs, insurance, fee)</SelectItem>
+                            <SelectItem value={SPREAD}>Spread with the Work (GCs, Insurance, Fee)</SelectItem>
                             {r.split && (
                               <SelectItem value={SPLIT}>
                                 Split: {r.split.map((a) => `${baselineName.get(a.baselineKey) ?? 'Removed line'} ${Number(a.pct).toFixed(2)}%`).join(' · ')}
@@ -279,7 +279,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                 if (!dirty || window.confirm('Discard the changes to these lines?')) onDone();
               }}>Cancel</Button>
               <Button size="sm" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>
-                {saving ? 'Saving…' : 'Save lines'}
+                {saving ? 'Saving…' : 'Save Lines'}
               </Button>
             </div>
           </div>

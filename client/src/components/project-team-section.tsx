@@ -89,9 +89,9 @@ export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKey });
       reset();
-      toast({ title: "Added to project team" });
+      toast({ title: "Added to Project Team" });
     },
-    onError: (e: Error) => toast({ title: "Could not add", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Could Not Add", description: e.message, variant: "destructive" }),
   });
 
   const removeMutation = useMutation({
@@ -99,9 +99,9 @@ export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId
       apiRequest(`${base}/${memberId}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKey });
-      toast({ title: "Removed from project team" });
+      toast({ title: "Removed from Project Team" });
     },
-    onError: (e: Error) => toast({ title: "Could not remove", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Could Not Remove", description: e.message, variant: "destructive" }),
   });
 
   // Group by role so the panel reads like the printed directory.
@@ -142,12 +142,12 @@ export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                <optgroup label="Core design team">
+                <optgroup label="Core Design Team">
                   {PROJECT_TEAM_CORE_ROLES.map((r) => (
                     <option key={r} value={r}>{PROJECT_TEAM_ROLE_LABELS[r]}</option>
                   ))}
                 </optgroup>
-                <optgroup label="Add as needed">
+                <optgroup label="Add as Needed">
                   {PROJECT_TEAM_ROLES.filter((r) => !PROJECT_TEAM_CORE_ROLES.includes(r as any) && r !== "other").map((r) => (
                     <option key={r} value={r}>{PROJECT_TEAM_ROLE_LABELS[r]}</option>
                   ))}
@@ -224,7 +224,7 @@ export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId
 
           <div className="flex gap-2">
             <Button size="sm" onClick={() => addMutation.mutate()} disabled={!contactId || addMutation.isPending || (role === "other" && !customRole.trim())}>
-              {addMutation.isPending ? "Adding…" : "Add to team"}
+              {addMutation.isPending ? "Adding…" : "Add to Team"}
             </Button>
             <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button>
           </div>
@@ -272,7 +272,7 @@ export function ProjectTeamSection({ rfpId, leaseId }: { rfpId?: number; leaseId
                       variant="ghost"
                       onClick={() => removeMutation.mutate(m.id)}
                       disabled={removeMutation.isPending}
-                      title="Remove from project team"
+                      title="Remove from Project Team"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-red-600" />
                     </Button>

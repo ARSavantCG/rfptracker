@@ -2831,7 +2831,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     // An assembly can now be created empty and populated afterwards.
     if (!newAssemblyName.trim()) {
       toast({
-        title: "Name required",
+        title: "Name Required",
         description: "Give the assembly a name — e.g. \"Electrical Upgrade\".",
         variant: "destructive",
         duration: 6000,
@@ -4548,15 +4548,15 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
 
   const addNewItem = (category: 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', addAnother: boolean = false) => {
     if (!newItem.description && !newItem.unitPrice) {
-      toast({ title: "Missing fields", description: "Select an item from the picker (or choose 'Use as custom entry') and enter a unit price.", variant: "destructive" });
+      toast({ title: "Missing Fields", description: "Select an item from the picker (or choose 'Use as custom entry') and enter a unit price.", variant: "destructive" });
       return;
     }
     if (!newItem.description) {
-      toast({ title: "Description required", description: "Select an item from the dropdown or click 'Use as custom entry' to set the description.", variant: "destructive" });
+      toast({ title: "Description Required", description: "Select an item from the dropdown or click 'Use as custom entry' to set the description.", variant: "destructive" });
       return;
     }
     if (!newItem.unitPrice) {
-      toast({ title: "Unit price required", description: "Enter a unit price before adding this line item.", variant: "destructive" });
+      toast({ title: "Unit Price Required", description: "Enter a unit price before adding this line item.", variant: "destructive" });
       return;
     }
 
@@ -4816,7 +4816,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
     if (acknowledgedImbalance) return true;
     setAcknowledgedImbalance(true);
     toast({
-      title: "Budget does not reconcile",
+      title: "Budget Does Not Reconcile",
       description: reconciliation.message,
       variant: "destructive",
       duration: 12000,
@@ -5422,7 +5422,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       onClick={() => moveItemUp(category, index)}
                                       disabled={index === 0}
                                       className="h-5 w-5 p-0"
-                                      title="Move up"
+                                      title="Move Up"
                                     >
                                       <ChevronUp className="h-3 w-3" />
                                     </Button>
@@ -5432,7 +5432,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                       onClick={() => moveItemDown(category, index)}
                                       disabled={index === items.length - 1}
                                       className="h-5 w-5 p-0"
-                                      title="Move down"
+                                      title="Move Down"
                                     >
                                       <ChevronDown className="h-3 w-3" />
                                     </Button>
@@ -5665,7 +5665,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                           size="sm"
                                           onClick={() => setEditingItem(null)}
                                           className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                          title="Save changes"
+                                          title="Save Changes"
                                         >
                                           <Save className="h-3 w-3" />
                                         </Button>
@@ -5674,7 +5674,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                           size="sm"
                                           onClick={() => setEditingItem(null)}
                                           className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                                          title="Cancel editing"
+                                          title="Cancel Editing"
                                         >
                                           <X className="h-3 w-3" />
                                         </Button>
@@ -5777,7 +5777,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                         size="sm"
                                         onClick={() => setEditingItem(item.id)}
                                         className="h-8 w-8 p-0"
-                                        title="Edit item"
+                                        title="Edit Item"
                                       >
                                         <Edit className="h-3 w-3" />
                                       </Button>
@@ -5797,7 +5797,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                           }));
                                         }}
                                         className="h-8 w-8 p-0"
-                                        title="Duplicate item"
+                                        title="Duplicate Item"
                                       >
                                         <Copy className="h-3 w-3" />
                                       </Button>
@@ -5806,7 +5806,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
                                         size="sm"
                                         onClick={() => deleteItem(category as 'tenantImprovements' | 'designSoftCosts' | 'existingImprovements', item.id)}
                                         className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        title="Delete item"
+                                        title="Delete Item"
                                       >
                                         <Trash2 className="h-3 w-3" />
                                       </Button>
@@ -6999,7 +6999,7 @@ export function EvaluationBudget({ rfp, isWorkflowCollapsed = false, onComplete 
               {saveProgressMutation.isPending
                 ? "Saving..."
                 : !reconciliation.balanced && acknowledgedImbalance
-                  ? "Save anyway"
+                  ? "Save Anyway"
                   : "Save Progress"}
             </Button>
             <Button

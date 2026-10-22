@@ -450,7 +450,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                   onClick={() => saveIndividualLineItem.mutate(item)}
                                   disabled={saveIndividualLineItem.isPending}
                                   className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  title="Save this line item"
+                                  title="Save This Line Item"
                                 >
                                   <Save className="h-3 w-3" />
                                 </Button>

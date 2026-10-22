@@ -83,7 +83,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
       queryClient.invalidateQueries({ queryKey: [`/api/bid-collections/${bid?.id}/line-items`] });
     },
     onError: () => {
-      toast({ title: "Failed to save category", variant: "destructive" });
+      toast({ title: "Failed to Save Category", variant: "destructive" });
     },
   });
 
@@ -153,7 +153,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
     if (!bid?.id) return;
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) {
-      toast({ title: "Not authenticated", description: "Please log in again.", variant: "destructive" });
+      toast({ title: "Not Authenticated", description: "Please log in again.", variant: "destructive" });
       return;
     }
     setAiLoading(true);
@@ -174,7 +174,7 @@ export function BidViewModal({ isOpen, onClose, bid }: BidViewModalProps) {
       setAiAnalysis(data);
     } catch (error: any) {
       toast({
-        title: "Analysis failed",
+        title: "Analysis Failed",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });

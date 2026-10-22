@@ -117,9 +117,9 @@ export function QuarterlyPricingPanel({
       queryClient.invalidateQueries({ queryKey: [`/api/scope-items/${scopeItemId}/contractor-pricing`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       setQuoteForm({ contractorName: "", customName: "", price: "", unit: scopeItemUnit, quarter: defaultQuarter(), notes: "" });
-      toast({ title: "Quote saved" });
+      toast({ title: "Quote Saved" });
     },
-    onError: () => toast({ title: "Failed to save quote", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Save Quote", variant: "destructive" }),
   });
 
   const deleteQuoteMutation = useMutation({
@@ -129,7 +129,7 @@ export function QuarterlyPricingPanel({
       queryClient.invalidateQueries({ queryKey: [`/api/scope-items/${scopeItemId}/contractor-pricing`] });
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
     },
-    onError: () => toast({ title: "Failed to delete quote", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Delete Quote", variant: "destructive" }),
   });
 
   const updateModeMutation = useMutation({
@@ -137,9 +137,9 @@ export function QuarterlyPricingPanel({
       apiRequest(`/api/scope-items/${scopeItemId}/pricing-mode`, "PATCH", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
-      toast({ title: "Pricing mode saved" });
+      toast({ title: "Pricing Mode Saved" });
     },
-    onError: () => toast({ title: "Failed to save pricing mode", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Save Pricing Mode", variant: "destructive" }),
   });
 
   const handleAddQuote = () => {
@@ -324,7 +324,7 @@ export function QuarterlyPricingPanel({
             </select>
           </div>
           <div className="col-span-2">
-            <Label className="text-xs">Notes (optional)</Label>
+            <Label className="text-xs">Notes (Optional)</Label>
             <Input
               className="h-8 text-xs"
               value={quoteForm.notes}

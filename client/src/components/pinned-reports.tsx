@@ -141,14 +141,14 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
       toast({ title: 'Pinned', description: `${def?.label || 'Report'} added to the top of this page.` });
     },
     onError: (error: any) =>
-      toast({ title: 'Could not pin', description: error?.message || 'Unknown error', variant: 'destructive' }),
+      toast({ title: 'Could Not Pin', description: error?.message || 'Unknown error', variant: 'destructive' }),
   });
 
   const unpinMutation = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/me/report-pins/${id}`, 'DELETE'),
     onSuccess: () => refresh(),
     onError: (error: any) =>
-      toast({ title: 'Could not remove the pin', description: error?.message || 'Unknown error', variant: 'destructive' }),
+      toast({ title: 'Could Not Remove the Pin', description: error?.message || 'Unknown error', variant: 'destructive' }),
   });
 
   /**
@@ -200,7 +200,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       if (!window.open(objectUrl, '_blank')) {
-        toast({ title: 'Pop-up blocked', description: 'Allow pop-ups for this site to open the report.', variant: 'destructive' });
+        toast({ title: 'Pop-Up Blocked', description: 'Allow pop-ups for this site to open the report.', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Report error:', error);
@@ -240,7 +240,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
     try {
       await navigator.clipboard.writeText(absolute);
       toast({
-        title: 'Link copied',
+        title: 'Link Copied',
         description: `${label} — opens for anyone signed in to the app.`,
       });
     } catch {
@@ -324,7 +324,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                   open(incoming.def.kind, buildReportUrl(incoming.def, incoming.params), incoming.def.label)
                 }
               >
-                Open report
+                Open Report
               </Button>
               <Button
                 size="sm"
@@ -332,7 +332,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
                 onClick={() => pinMutation.mutate({ reportKey: incoming.def.key, params: incoming.params })}
               >
                 <Star className="h-4 w-4 mr-1" />
-                Pin it
+                Pin It
               </Button>
             </div>
           </CardContent>
@@ -349,7 +349,7 @@ export function PinnedReports({ onOpenCustomReport }: PinnedReportsProps = {}) {
             </CardTitle>
             <Button variant="outline" size="sm" onClick={() => setBrowseOpen(!catalogOpen)}>
               {catalogOpen ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
-              Browse all reports
+              Browse All Reports
             </Button>
           </div>
         </CardHeader>

@@ -230,7 +230,7 @@ export default function ContactPasswordModal({
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-medium">Login Instructions for {contact.name}:</h4>
+                <h4 className="font-medium">Login Instructions For {contact.name}:</h4>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>• Username: {contact.email}</p>
                   <p>• Password: {generatedPassword}</p>

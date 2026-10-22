@@ -119,9 +119,9 @@ export function RecordProjectActuals({
       queryClient.invalidateQueries({ queryKey: ["/api/project-actuals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/project-actuals/benchmarks"] });
       setSaved(true);
-      toast({ title: "Project actuals recorded successfully" });
+      toast({ title: "Project Actuals Recorded Successfully" });
     },
-    onError: () => toast({ title: "Failed to save project actuals", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Save Project Actuals", variant: "destructive" }),
   });
 
   const handleSave = () => {
@@ -401,7 +401,7 @@ export function RecordProjectActuals({
             className="text-gray-500"
             onClick={() => setDismissed(true)}
           >
-            Skip for now
+            Skip for Now
           </Button>
         </div>
       </CardContent>

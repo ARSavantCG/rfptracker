@@ -84,7 +84,7 @@ export default function DashboardPipeline({ onRfpClick }: DashboardPipelineProps
     return (
       <Card className="mb-6 border-destructive">
         <CardHeader>
-          <CardTitle className="text-destructive text-sm">Could not load pipeline data</CardTitle>
+          <CardTitle className="text-destructive text-sm">Could Not Load Pipeline Data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{(error as Error)?.message}</p>

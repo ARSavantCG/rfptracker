@@ -57,18 +57,18 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
       setNewName("");
       setNewDescription("");
       setNewCategory("");
-      toast({ title: "Bundle created" });
+      toast({ title: "Bundle Created" });
     },
-    onError: (e: any) => toast({ title: "Failed to create bundle", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Create Bundle", description: e?.message, variant: "destructive" }),
   });
 
   const deleteBundle = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/scope-bundles/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scope-bundles"] });
-      toast({ title: "Bundle deleted" });
+      toast({ title: "Bundle Deleted" });
     },
-    onError: (e: any) => toast({ title: "Failed to delete bundle", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Delete Bundle", description: e?.message, variant: "destructive" }),
   });
 
   const addItem = useMutation({
@@ -77,18 +77,18 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/scope-bundles/${editingBundleId}`] });
       setSelectedItemToAdd("");
-      toast({ title: "Item added to bundle" });
+      toast({ title: "Item Added to Bundle" });
     },
-    onError: (e: any) => toast({ title: "Failed to add item", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Add Item", description: e?.message, variant: "destructive" }),
   });
 
   const removeItem = useMutation({
     mutationFn: (itemId: number) => apiRequest(`/api/scope-bundles/items/${itemId}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/scope-bundles/${editingBundleId}`] });
-      toast({ title: "Item removed" });
+      toast({ title: "Item Removed" });
     },
-    onError: (e: any) => toast({ title: "Failed to remove item", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Remove Item", description: e?.message, variant: "destructive" }),
   });
 
   if (!open) return null;
@@ -148,7 +148,7 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
                   onClick={() => createBundle.mutate()}
                   className="flex items-center gap-1"
                 >
-                  <Plus className="h-4 w-4" /> Create bundle
+                  <Plus className="h-4 w-4" /> Create Bundle
                 </Button>
               </div>
 
@@ -168,7 +168,7 @@ export function ScopeBundlesModal({ open, onClose }: ScopeBundlesModalProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="outline" onClick={() => setEditingBundleId(b.id)}>
-                          Manage items
+                          Manage Items
                         </Button>
                         <button
                           onClick={() => { if (confirm(`Delete bundle "${b.name}"?`)) deleteBundle.mutate(b.id); }}

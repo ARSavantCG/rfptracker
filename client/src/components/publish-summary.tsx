@@ -516,7 +516,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                 onClick={downloadAllFiles}
                 className="text-xs"
                 disabled={!rfp}
-                title="Download files from all workflow steps"
+                title="Download Files from All Workflow Steps"
               >
                 Download All Files
               </Button>
@@ -568,7 +568,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             {/* Show uploaded files */}
             {uploadedFiles.length > 0 && (
               <div className="space-y-2 mt-4">
-                <h5 className="text-sm font-medium text-gray-700">Files ready for upload:</h5>
+                <h5 className="text-sm font-medium text-gray-700">Files Ready for Upload:</h5>
                 <div className="space-y-1">
                   {uploadedFiles.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
@@ -601,7 +601,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
             {/* Show currently uploaded files */}
             {(rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).length > 0) || newlyUploadedFiles.length > 0 ? (
               <div className="space-y-2 mt-6">
-                <h5 className="text-sm font-medium text-gray-700">Published Files (these override all other reports):</h5>
+                <h5 className="text-sm font-medium text-gray-700">Published Files (These Override All Other Reports):</h5>
                 <div className="space-y-1">
                   {/* Show existing files (not deleted) */}
                   {rfp && rfp.files && rfp.files.filter((file: any) => !deletedFileIds.has(file.id)).map((file: any) => (
@@ -622,7 +622,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                           size="sm"
                           onClick={() => downloadFile(file.id, file.name)}
                           className="h-8 w-8 p-0"
-                          title="Download file"
+                          title="Download File"
                         >
                           <Download className="h-3 w-3" />
                         </Button>
@@ -632,7 +632,7 @@ export function PublishSummary({ rfp }: PublishSummaryProps) {
                           onClick={() => deleteFileMutation.mutate(file.id)}
                           disabled={deleteFileMutation.isPending}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Delete file"
+                          title="Delete File"
                         >
                           {deleteFileMutation.isPending ? "..." : <Trash2 className="h-3 w-3" />}
                         </Button>

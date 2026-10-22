@@ -8,6 +8,8 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 export interface FeeStreamIn {
   /** On work billed to date (the fee earned). */
   earned: number;
+  /** On costs paid to date — the part of earned that's ready to invoice on a paid basis. */
+  earnedOnPaid?: number;
   invoiced: number;
   /** Anticipated at completion (original + change orders). */
   anticipated: number;
@@ -31,20 +33,34 @@ export function feePaid(invoices: readonly CmInvoiceIn[]): { fee: number; tenant
   return { fee: r2(out.fee), tenant: r2(out.tenant) };
 }
 
-export type FeeDonut = { paid: number; invoicedUnpaid: number; earnedNotInvoiced: number; notYetEarned: number; anticipated: number; earned: number; invoiced: number };
+/**
+ * Earned, Not Invoiced is split by whether the costs behind it have been
+ * paid: on costs paid it can be invoiced now; on costs billed but not yet
+ * paid it waits for those payments (when invoices are figured on paid).
+ * Worked out per stream (each is invoiced on its own), then added up.
+ */
+export type FeeDonut = {
+  paid: number; invoicedUnpaid: number;
+  /** Both parts together. */
+  earnedNotInvoiced: number;
+  earnedNotInvoicedPaid: number; earnedNotInvoicedBilled: number;
+  notYetEarned: number; anticipated: number; earned: number; earnedOnPaid: number; invoiced: number;
+};
 export function feeDonut(streams: Array<FeeStreamIn & { paid: number }>): FeeDonut {
-  const sum = (f: (s: FeeStreamIn & { paid: number }) => number) => r2(streams.reduce((t, s) => t + f(s), 0));
-  const paid = sum((s) => s.paid);
-  const invoiced = sum((s) => s.invoiced);
-  const earned = sum((s) => s.earned);
-  const anticipated = sum((s) => Math.max(s.anticipated, s.earned, s.invoiced));
-  return {
-    paid,
-    invoicedUnpaid: r2(Math.max(0, invoiced - paid)),
-    earnedNotInvoiced: r2(Math.max(0, earned - invoiced)),
-    notYetEarned: r2(Math.max(0, anticipated - Math.max(earned, invoiced))),
-    anticipated, earned, invoiced,
-  };
+  const out: FeeDonut = { paid: 0, invoicedUnpaid: 0, earnedNotInvoiced: 0, earnedNotInvoicedPaid: 0, earnedNotInvoicedBilled: 0, notYetEarned: 0, anticipated: 0, earned: 0, earnedOnPaid: 0, invoiced: 0 };
+  for (const s of streams) {
+    const onPaid = Math.min(s.earnedOnPaid ?? s.earned, s.earned);
+    const top = Math.max(s.anticipated, s.earned, s.invoiced);
+    out.paid += s.paid;
+    out.invoicedUnpaid += Math.max(0, s.invoiced - s.paid);
+    out.earnedNotInvoicedPaid += Math.max(0, onPaid - s.invoiced);
+    out.earnedNotInvoicedBilled += Math.max(0, s.earned - Math.max(s.invoiced, onPaid));
+    out.notYetEarned += Math.max(0, top - Math.max(s.earned, s.invoiced));
+    out.anticipated += top; out.earned += s.earned; out.earnedOnPaid += onPaid; out.invoiced += s.invoiced;
+  }
+  out.earnedNotInvoiced = out.earnedNotInvoicedPaid + out.earnedNotInvoicedBilled;
+  for (const k of Object.keys(out) as Array<keyof FeeDonut>) out[k] = r2(out[k]);
+  return out;
 }
 
 export type VendorDonut = { contractSum: number; earned: number; paid: number; owed: number; retainage: number; notBilled: number };

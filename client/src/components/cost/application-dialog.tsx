@@ -298,10 +298,10 @@ export function ApplicationDialog({
       setSetupDone(true);
       const n = Object.keys(r.lineIds).length;
       setAdded(n);
-      toast({ title: 'Contract set up from the pay app',
+      toast({ title: 'Contract Set Up from the Pay App',
         description: [n ? `${n} line${n === 1 ? '' : 's'} added (assign them to budget lines on the contract)` : '', r.openingId ? 'opening balance recorded' : ''].filter(Boolean).join('; ') + '. Now check this pay app and save it.' });
     },
-    onError: (e: any) => toast({ title: 'Not set up', description: e?.message, variant: 'destructive', duration: 10000 }),
+    onError: (e: any) => toast({ title: 'Not Set Up', description: e?.message, variant: 'destructive', duration: 10000 }),
   });
 
   const save = useMutation({
@@ -323,13 +323,13 @@ export function ApplicationDialog({
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); onClose(); },
     onError: (e: any) => {
       queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
-      toast({ title: 'Not saved', description: e?.message, variant: 'destructive', duration: 10000 });
+      toast({ title: 'Not Saved', description: e?.message, variant: 'destructive', duration: 10000 });
     },
   });
   const remove = useMutation({
     mutationFn: () => apiRequest(`/api/cost-applications/${app!.id}`, 'DELETE'),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); onClose(); },
-    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Deleted', description: e?.message, variant: 'destructive' }),
   });
 
   /** Subtotal across a set of lines, for every column of the grid. */
@@ -357,7 +357,7 @@ export function ApplicationDialog({
 
   if (!contract) return null;
   const groups = [
-    { label: 'Base contract', lines: contractLines.filter((l) => l.changeOrderId == null) },
+    { label: 'Base Contract', lines: contractLines.filter((l) => l.changeOrderId == null) },
     // A CO shows from its start app on — or on any app that already bills it.
     ...changeOrders.filter((c) => c.contractId === contract.id && c.status !== 'void'
       && (c.startApp == null || c.startApp <= thisNumber || contractLines.some((l) => l.changeOrderId === c.id && draft[l.id] && (num(draft[l.id].work) || num(draft[l.id].stored) || num(draft[l.id].toDate)))))
@@ -371,9 +371,9 @@ export function ApplicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto">
+      <DialogContent className="pm-scope w-[96vw] max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
         <DialogHeader>
-          <DialogTitle>{app ? `${label} ${app.docNumber}` : `New ${label.toLowerCase()}`} — {contract.counterparty}</DialogTitle>
+          <DialogTitle>{app ? `${label} ${app.docNumber}` : `New ${label}`} — {contract.counterparty}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -383,9 +383,9 @@ export function ApplicationDialog({
             {docTaken && <div className="text-[11px] text-red-700">{label} {typedDoc} already exists on this contract</div>}</div>
           <div className="space-y-1"><Label>Invoice #</Label>
             <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} /></div>
-          <div className="space-y-1"><Label>Period from</Label>
+          <div className="space-y-1"><Label>Period From</Label>
             <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
-          <div className="space-y-1"><Label>Period to</Label>
+          <div className="space-y-1"><Label>Period To</Label>
             <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
         </div>
 
@@ -394,7 +394,7 @@ export function ApplicationDialog({
             <Button type="button" size="sm" variant="outline" className="h-8 border-violet-300 text-violet-800"
                     disabled={!readSource || read.isPending} onClick={() => read.mutate()}>
               {read.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
-              {read.isPending ? 'Reading…' : aiResult ? 'Read again' : 'Read with AI'}
+              {read.isPending ? 'Reading…' : aiResult ? 'Read Again' : 'Read with AI'}
             </Button>
             <span className="text-xs text-gray-700">
               {readSource
@@ -487,7 +487,7 @@ export function ApplicationDialog({
             <div className="flex items-center gap-3">
               <Button type="button" size="sm" disabled={setup.isPending || !((pick.lines && plan.lines.length) || (pick.opening && plan.opening) || (pick.retainage && plan.retainagePct != null))}
                       onClick={() => setup.mutate()}>
-                {setup.isPending ? 'Setting up…' : 'Set up contract'}
+                {setup.isPending ? 'Setting Up…' : 'Set Up Contract'}
               </Button>
               <span className="text-xs text-gray-600">Saves these to the contract now. This pay app still waits for you to save it.</span>
             </div>
@@ -497,9 +497,9 @@ export function ApplicationDialog({
         <div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
           Enter
           <Button type="button" size="sm" variant={entry === 'period' ? 'default' : 'outline'} className="h-7"
-                  onClick={() => switchEntry('period')}>This period (E)</Button>
+                  onClick={() => switchEntry('period')}>This Period (E)</Button>
           <Button type="button" size="sm" variant={entry === 'toDate' ? 'default' : 'outline'} className="h-7"
-                  onClick={() => switchEntry('toDate')}>Total to date (G)</Button>
+                  onClick={() => switchEntry('toDate')}>Total to Date (G)</Button>
           <span>— whichever column is easier to copy off the G703. Retainage left blank is {Number(contract.retainagePct).toFixed(2)}% of work to date.</span>
         </div>
 
@@ -510,9 +510,9 @@ export function ApplicationDialog({
                 <th className="px-2 py-1.5">Description</th>
                 <th className="px-2 py-1.5 text-right">Scheduled</th>
                 <th className="px-2 py-1.5 text-right">Previous</th>
-                <th className="px-2 py-1.5 text-right w-32">{entry === 'period' ? 'This period' : 'Total to date'}</th>
+                <th className="px-2 py-1.5 text-right w-32">{entry === 'period' ? 'This Period' : 'Total to Date'}</th>
                 <th className="px-2 py-1.5 text-right w-28">Stored</th>
-                <th className="px-2 py-1.5 text-right">To date</th>
+                <th className="px-2 py-1.5 text-right">To Date</th>
                 <th className="px-2 py-1.5 text-right">%</th>
                 <th className="px-2 py-1.5 text-right w-28">Retainage</th>
               </tr>
@@ -527,8 +527,8 @@ export function ApplicationDialog({
                   </button>
                   {groups.length > 1 && g === groups[0] && (
                     <span className="float-right font-normal">
-                      <button className="text-blue-700 hover:underline mr-3" onClick={() => setRolled(new Set(groups.map((x) => x.label)))}>Roll up all</button>
-                      <button className="text-blue-700 hover:underline" onClick={() => setRolled(new Set())}>Show all</button>
+                      <button className="text-blue-700 hover:underline mr-3" onClick={() => setRolled(new Set(groups.map((x) => x.label)))}>Roll Up All</button>
+                      <button className="text-blue-700 hover:underline" onClick={() => setRolled(new Set())}>Show All</button>
                     </span>
                   )}
                 </td></tr>
@@ -681,7 +681,7 @@ export function ApplicationDialog({
           </label>
           {attached.map((d) => (
             <button key={d.id} type="button" onClick={() => openDocument(d.id)} className="text-xs text-blue-700 hover:underline">
-              {d.originalName}{d.storage === 'local' ? ' (not backed up)' : ''}
+              {d.originalName}{d.storage === 'local' ? ' (Not Backed Up)' : ''}
             </button>
           ))}
         </div>
@@ -689,13 +689,13 @@ export function ApplicationDialog({
         <DialogFooter className="gap-2 sm:justify-between">
           {app ? (
             <Button type="button" variant="ghost" className="text-red-700" disabled={remove.isPending} onClick={() => remove.mutate()}>
-              Delete {label.toLowerCase()}
+              Delete {label}
             </Button>
           ) : <span />}
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending || !thisNumber || docTaken}>
-              {save.isPending ? 'Saving…' : app ? 'Save changes' : `Record ${label.toLowerCase()}`}
+              {save.isPending ? 'Saving…' : app ? 'Save Changes' : `Record ${label}`}
             </Button>
           </div>
         </DialogFooter>

@@ -47,37 +47,38 @@ export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { t
   );
 }
 
-export const FEE_COLORS = { paid: '#15803d', invoiced: '#2563eb', earned: '#f59e0b', future: '#d1d5db' };
-export function FeeDonutCard({ d, title = 'CM fee', subtitle }: { d: FeeDonut; title?: string; subtitle?: string }) {
+export const FEE_COLORS = { paid: '#15803d', invoiced: '#2563eb', earnedPaid: '#d97706', earnedBilled: '#fcd34d', future: '#d1d5db' };
+export function FeeDonutCard({ d, title = 'CM Fee', subtitle }: { d: FeeDonut; title?: string; subtitle?: string }) {
   return <Donut title={title} subtitle={subtitle ?? 'Anticipated at completion, by where it stands'} centerLabel="Anticipated" centerValue={d.anticipated}
     slices={[
-      { label: 'Paid', value: d.paid, color: FEE_COLORS.paid, hint: 'received on CM fee invoices' },
-      { label: 'Invoiced, not paid', value: d.invoicedUnpaid, color: FEE_COLORS.invoiced },
-      { label: 'Earned, not invoiced', value: d.earnedNotInvoiced, color: FEE_COLORS.earned, hint: 'on work billed to date' },
-      { label: 'Not yet earned', value: d.notYetEarned, color: FEE_COLORS.future },
+      { label: 'Paid', value: d.paid, color: FEE_COLORS.paid, hint: 'Received on CM fee invoices' },
+      { label: 'Invoiced, Not Paid', value: d.invoicedUnpaid, color: FEE_COLORS.invoiced },
+      { label: 'Earned, Not Invoiced — Costs Paid', value: d.earnedNotInvoicedPaid, color: FEE_COLORS.earnedPaid, hint: 'Ready to invoice now' },
+      { label: 'Earned, Not Invoiced — Costs Not Yet Paid', value: d.earnedNotInvoicedBilled, color: FEE_COLORS.earnedBilled, hint: 'On work billed; invoice once it’s paid' },
+      { label: 'Not Yet Earned', value: d.notYetEarned, color: FEE_COLORS.future },
     ]} />;
 }
 
-export function VendorDonutCard({ d, title = 'Vendor billings' }: { d: VendorDonut; title?: string }) {
+export function VendorDonutCard({ d, title = 'Vendor Billings' }: { d: VendorDonut; title?: string }) {
   return <Donut title={title} subtitle={`Earned (approved pay apps) ${money(d.earned)} of ${money(d.contractSum)} committed`} centerLabel="Committed" centerValue={d.contractSum}
     slices={[
       { label: 'Paid', value: d.paid, color: '#15803d' },
-      { label: 'Approved, not paid', value: d.owed, color: '#dc2626', hint: 'owed on pay apps and invoices' },
-      { label: 'Retainage held', value: d.retainage, color: '#7c3aed' },
-      { label: 'Not yet billed', value: d.notBilled, color: '#d1d5db' },
+      { label: 'Approved, Not Paid', value: d.owed, color: '#dc2626', hint: 'Owed on pay apps and invoices' },
+      { label: 'Retainage Held', value: d.retainage, color: '#7c3aed' },
+      { label: 'Not Yet Billed', value: d.notBilled, color: '#d1d5db' },
     ]} />;
 }
 
 const STATUS: Record<ScheduleStatus, { label: string; cls: string }> = {
-  'late': { label: 'Past completion', cls: 'bg-red-100 text-red-800' },
+  'late': { label: 'Past Completion', cls: 'bg-red-100 text-red-800' },
   'behind': { label: 'Behind', cls: 'bg-amber-100 text-amber-900' },
-  'on-track': { label: 'On track', cls: 'bg-green-100 text-green-800' },
-  'done': { label: 'Fully billed', cls: 'bg-gray-100 text-gray-700' },
-  'no-dates': { label: 'No dates', cls: 'bg-gray-50 text-gray-500 border' },
+  'on-track': { label: 'On Track', cls: 'bg-green-100 text-green-800' },
+  'done': { label: 'Fully Billed', cls: 'bg-gray-100 text-gray-700' },
+  'no-dates': { label: 'No Dates', cls: 'bg-gray-50 text-gray-500 border' },
 };
 
 /** Billing against the calendar: the bar is % billed, the line is % of the time gone. */
-export function ScheduleCard({ rows, title = 'Schedule — billing vs time', showProject }: { rows: Array<ScheduleRow & { project?: string }>; title?: string; showProject?: boolean }) {
+export function ScheduleCard({ rows, title = 'Schedule — Billing vs Time', showProject }: { rows: Array<ScheduleRow & { project?: string }>; title?: string; showProject?: boolean }) {
   const order: ScheduleStatus[] = ['late', 'behind', 'on-track', 'done', 'no-dates'];
   const sorted = [...rows].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
   const counts = order.map((s) => [s, rows.filter((r) => r.status === s).length] as const).filter(([, n]) => n);
@@ -94,7 +95,7 @@ export function ScheduleCard({ rows, title = 'Schedule — billing vs time', sho
           <div className="text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {counts.map(([s, n]) => <span key={s} className={`text-xs rounded px-2 py-0.5 ${STATUS[s].cls}`}>{n} {STATUS[s].label.toLowerCase()}</span>)}
+          {counts.map(([s, n]) => <span key={s} className={`text-xs rounded px-2 py-0.5 ${STATUS[s].cls}`}>{n} {STATUS[s].label}</span>)}
         </div>
       </div>
       {sorted.length === 0 ? <p className="text-sm text-gray-500">No contracts yet.</p> : (
@@ -104,8 +105,8 @@ export function ScheduleCard({ rows, title = 'Schedule — billing vs time', sho
               <div className="min-w-0">
                 <div className="truncate text-gray-900">{r.name}</div>
                 <div className="text-[11px] text-gray-500 truncate">
-                  {showProject && r.project ? `${r.project} · ` : ''}{r.finish ? `completion ${new Date(`${r.finish}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'add start and completion dates on the contract'}
-                  {r.daysLeft != null && r.status !== 'done' ? (r.daysLeft >= 0 ? ` · ${r.daysLeft} days left` : ` · ${-r.daysLeft} days past`) : ''}
+                  {showProject && r.project ? `${r.project} · ` : ''}{r.finish ? `Completion ${new Date(`${r.finish}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Add start and completion dates on the contract'}
+                  {r.daysLeft != null && r.status !== 'done' ? (r.daysLeft >= 0 ? ` · ${r.daysLeft} Days Left` : ` · ${-r.daysLeft} Days Past`) : ''}
                 </div>
               </div>
               <div className="relative h-3 bg-gray-100 rounded col-span-2 sm:col-span-1 order-last sm:order-none">
@@ -113,14 +114,14 @@ export function ScheduleCard({ rows, title = 'Schedule — billing vs time', sho
                 {r.pctTime != null && <div className="absolute -top-1 -bottom-1 w-0.5 bg-gray-900" style={{ left: `calc(${r.pctTime}% - 1px)` }} title={`${r.pctTime.toFixed(0)}% of the time gone`} />}
               </div>
               <div className="flex items-center gap-2 whitespace-nowrap">
-                <span className="tabular-nums text-xs text-gray-700 sm:w-36 text-right">{r.pctBilled.toFixed(0)}% billed{r.pctTime != null ? ` · ${r.pctTime.toFixed(0)}% time` : ''}</span>
+                <span className="tabular-nums text-xs text-gray-700 sm:w-36 text-right">{r.pctBilled.toFixed(0)}% Billed{r.pctTime != null ? ` · ${r.pctTime.toFixed(0)}% Time` : ''}</span>
                 <span className={`text-[11px] rounded px-1.5 py-0.5 w-28 text-center ${STATUS[r.status].cls}`}>{STATUS[r.status].label}</span>
               </div>
             </div>
           ))}
           {dated.length > 0 && undated.length > 0 && (
             <button className="text-xs text-blue-700 hover:underline" onClick={() => setShowUndated((v) => !v)}>
-              {showUndated ? 'Hide' : 'Show'} {undated.length} contract{undated.length === 1 ? '' : 's'} with no start or completion date
+              {showUndated ? 'Hide' : 'Show'} {undated.length} Contract{undated.length === 1 ? '' : 's'} with No Start or Completion Date
             </button>
           )}
         </div>

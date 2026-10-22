@@ -87,7 +87,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
       toast({ title: ok });
       return true;
     } catch (e: any) {
-      toast({ title: 'Not saved', description: e?.message, variant: 'destructive' });
+      toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' });
       return false;
     } finally { setBusy(false); }
   };
@@ -125,7 +125,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const removeDoc = async (id: number, name: string) => {
     if (!window.confirm(`Remove ${name} from this change order?`)) return;
     try { await apiRequest(`/api/cost-documents/${id}`, 'DELETE'); queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); }
-    catch (e: any) { toast({ title: 'Not removed', description: e?.message, variant: 'destructive' }); }
+    catch (e: any) { toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }); }
   };
   // Called as a function, not a component, so the row keeps its state across re-renders.
   const coExtras = (co: BudgetCO, work: number) => {
@@ -189,7 +189,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                         {vls.length > 0 && (
                           <button className={`hover:underline whitespace-nowrap ${unassigned ? 'text-amber-800' : 'text-blue-700'}`}
                                   onClick={() => setMapOpen((m) => ({ ...m, [mapKey]: !m[mapKey] }))}>
-                            {mapOpen[mapKey] ? 'Hide budget lines' : unassigned ? `Assign budget lines (${unassigned} unassigned)` : 'Budget lines'}
+                            {mapOpen[mapKey] ? 'Hide Budget Lines' : unassigned ? `Assign Budget Lines (${unassigned} unassigned)` : 'Budget Lines'}
                           </button>
                         )}
                       </td>
@@ -204,9 +204,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                             <Select value={keyOf(x)} onValueChange={(v) => assignLine(co, x.id, v)}>
                               <SelectTrigger className={`h-6 text-xs ${keyOf(x) === CO_UNASSIGNED_KEY ? 'border-amber-400 bg-amber-50' : ''}`}><SelectValue /></SelectTrigger>
                               <SelectContent className="pm-scope">
-                                <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now</SelectItem>
-                                {keyOf(x) === '__split__' && <SelectItem value="__split__" disabled>Split over several lines (Contracts tab)</SelectItem>}
-                                {keyOf(x) === '__spread__' && <SelectItem value="__spread__" disabled>Spread with the contract (Contracts tab)</SelectItem>}
+                                <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for Now</SelectItem>
+                                {keyOf(x) === '__split__' && <SelectItem value="__split__" disabled>Split Over Several Lines (Contracts Tab)</SelectItem>}
+                                {keyOf(x) === '__spread__' && <SelectItem value="__spread__" disabled>Spread with the Contract (Contracts Tab)</SelectItem>}
                                 {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                               </SelectContent>
                             </Select>
@@ -227,7 +227,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             {drift && (
               <button className="text-amber-800 hover:underline" title="Update this change order to the vendors' current amounts"
                       onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true }), `${co.number} re-priced`)}>
-                Use the vendors' current prices
+                Use the Vendors' Current Prices
               </button>
             )}
             {linking === co.id ? (
@@ -250,7 +250,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               </span>
             ) : (
               <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => { setLinking(co.id); setLinkTo(''); }}>
-                <Link2 className="h-3.5 w-3.5" /> {co.links.length ? 'Link another vendor change order' : 'Link a vendor change order'}
+                <Link2 className="h-3.5 w-3.5" /> {co.links.length ? 'Link Another Vendor Change Order' : 'Link a Vendor Change Order'}
               </button>
             )}
             <span className="text-gray-500">Backup:</span>
@@ -266,8 +266,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             </label>
             {totals(co.id).tenantWork > 0.005 && (
               <button className="text-blue-700 hover:underline inline-flex items-center gap-1 ml-auto"
-                      onClick={async () => { if (!(await openReport(`/api/reports/tenant-co/${projectId}?co=${encodeURIComponent(co.id)}`))) toast({ title: 'Report failed', variant: 'destructive' }); }}>
-                <Printer className="h-3.5 w-3.5" /> Tenant change order
+                      onClick={async () => { if (!(await openReport(`/api/reports/tenant-co/${projectId}?co=${encodeURIComponent(co.id)}`))) toast({ title: 'Report Failed', variant: 'destructive' }); }}>
+                <Printer className="h-3.5 w-3.5" /> Tenant Change Order
               </button>
             )}
           </div>
@@ -339,7 +339,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
         <div>
           <button className="flex items-center gap-1.5" onClick={toggleRolled} aria-expanded={!rolled} title={rolled ? 'Show the change orders' : 'Roll up'}>
             {rolled ? <ChevronRight className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
-            <h2 className="font-semibold text-gray-900">Budget change orders</h2>
+            <h2 className="font-semibold text-gray-900">Budget Change Orders</h2>
             {rolled && (
               <span className="text-xs text-gray-700 font-normal tabular-nums ml-1">
                 {cos.length} · approved {money(bundle.approval.coSummary.approved)}
@@ -352,7 +352,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             the tenant (their share, markups and CM fee at {tenantRate.toFixed(2)}%) or {bundle.funding?.label ?? 'Supplemental Funding'}. The capital partner's {rate.toFixed(2)}% (by default on the difference we absorb) goes on the Supplemental CM Fee line.
           </p>
         </div>
-        {!form && <Button size="sm" onClick={() => { if (rolled) toggleRolled(); setForm(blank()); }}><Plus className="h-3.5 w-3.5 mr-1" /> Change order</Button>}
+        {!form && <Button size="sm" onClick={() => { if (rolled) toggleRolled(); setForm(blank()); }}><Plus className="h-3.5 w-3.5 mr-1" /> Change Order</Button>}
       </div>
       {/* Kept mounted when rolled up, so a half-filled form isn't lost. */}
       <div className={rolled ? 'hidden' : ''}>
@@ -363,9 +363,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                 <th className="px-3 py-1.5">No.</th><th className="px-3 py-1.5">For</th><th className="px-3 py-1.5">Date</th>
-                <th className="px-3 py-1.5 text-right">Cost of work</th><th className="px-3 py-1.5 text-right" title="Markups on the tenant's share, and the capital partner's CM fee">Markups · partner fee</th>
+                <th className="px-3 py-1.5 text-right">Cost of Work</th><th className="px-3 py-1.5 text-right" title="Markups on the tenant's share, and the capital partner's CM fee">Markups · Partner Fee</th>
                 <th className="px-3 py-1.5 text-right" title="Budget increase: cost + markups + partner fee">Budget +</th>
-                <th className="px-3 py-1.5 text-right">Tenant pays</th><th className="px-3 py-1.5 text-right">Absorbed</th>
+                <th className="px-3 py-1.5 text-right">Tenant Pays</th><th className="px-3 py-1.5 text-right">Absorbed</th>
                 <th className="px-3 py-1.5 w-36">Status</th><th className="w-16" />
               </tr>
             </thead>
@@ -457,7 +457,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               <Select value={form.billable ? 'yes' : 'no'} disabled={form.linked}
                       onValueChange={(v) => setForm({ ...form, billable: v === 'yes', lines: form.lines.map((l) => ({ ...l, tenantPct: v === 'yes' ? '100.00' : '0.00' })) })}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent className="pm-scope"><SelectItem value="yes">Billable to tenant (100.00%)</SelectItem><SelectItem value="no">Not billable — we absorb it (0.00%)</SelectItem></SelectContent>
+                <SelectContent className="pm-scope"><SelectItem value="yes">Billable to Tenant (100.00%)</SelectItem><SelectItem value="no">Not Billable — We Absorb It (0.00%)</SelectItem></SelectContent>
               </Select>
             </Field>
           </div>
@@ -476,7 +476,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     <Select value="" onValueChange={(v) => setForm({ ...form, vendorLinks: [...form.vendorLinks, { contractCoId: Number(v), pct: form.billable ? '100.00' : '0.00' }] })}>
                       <SelectTrigger className="h-8 text-xs data-[placeholder]:text-gray-900"><SelectValue placeholder="+ Link a vendor change order" /></SelectTrigger>
                       <SelectContent className="pm-scope">
-                        {free.map((c) => <SelectItem key={c.id} value={String(c.id)}>{contractName(c.contractId)} {c.number}{c.title ? ` — ${c.title}` : ''} · {money(coLines(c.id))}{c.status === 'approved' ? ' · approved' : ' · pending'}</SelectItem>)}
+                        {free.map((c) => <SelectItem key={c.id} value={String(c.id)}>{contractName(c.contractId)} {c.number}{c.title ? ` — ${c.title}` : ''} · {money(coLines(c.id))}{c.status === 'approved' ? ' · Approved' : ' · Pending'}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -495,7 +495,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <Select value={form.fallbackKey || CO_UNASSIGNED_KEY} onValueChange={(v) => setForm({ ...form, fallbackKey: v === CO_UNASSIGNED_KEY ? '' : v })}>
                     <SelectTrigger className="h-7 text-xs bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent className="pm-scope">
-                      <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now — map it later</SelectItem>
+                      <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for Now — Map It Later</SelectItem>
                       {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -510,9 +510,9 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             <table className="w-full text-sm min-w-[860px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
-                  <th className="px-2 py-1.5 w-72">Budget line</th><th className="px-2 py-1.5">Description</th>
+                  <th className="px-2 py-1.5 w-72">Budget Line</th><th className="px-2 py-1.5">Description</th>
                   <th className="px-2 py-1.5 w-40 text-right">Cost</th><th className="px-2 py-1.5 w-28 text-right" title="Share of this cost the tenant pays">Tenant %</th>
-                  <th className="px-2 py-1.5 w-36 text-right">Tenant pays</th><th className="w-9" />
+                  <th className="px-2 py-1.5 w-36 text-right">Tenant Pays</th><th className="w-9" />
                 </tr>
               </thead>
               <tbody>
@@ -548,7 +548,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                       <Select value={l.key || undefined} onValueChange={(v) => setForm({ ...form, lines: form.lines.map((x, j) => (j === i ? { ...x, key: v } : x)) })}>
                         <SelectTrigger className={`h-8 text-xs data-[placeholder]:text-gray-900 ${!l.key && num(l.amount) ? 'border-red-400' : ''}`}><SelectValue placeholder="— choose —" /></SelectTrigger>
                         <SelectContent className="pm-scope">
-                          <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for now</SelectItem>
+                          <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for Now</SelectItem>
                           {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -628,7 +628,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <td colSpan={2} className="px-2 py-1">
                     <label className="inline-flex items-center gap-2">
                       <input type="checkbox" checked={form.cmFee} onChange={(e) => setForm({ ...form, cmFee: e.target.checked })} />
-                      CM fee to the tenant <span className="text-[11px] text-gray-500">on their cost + markups, less any credit{formCmTyped ? ` · figured ${money(formCmFigured)}` : ' — or type the amount'}</span>
+                      CM Fee to the Tenant <span className="text-[11px] text-gray-500">on their cost + markups, less any credit{formCmTyped ? ` · figured ${money(formCmFigured)}` : ' — or type the amount'}</span>
                       {formCmTyped && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Edited</span>}
                     </label>
                   </td>
@@ -648,8 +648,8 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                         <SelectContent className="pm-scope">
                           <SelectItem value="absorbed">Only on the difference — what we absorb (the tenant pays the rest)</SelectItem>
                           <SelectItem value="all">On all the work (the tenant's share too)</SelectItem>
-                          <SelectItem value="tenant">Only on the tenant's share</SelectItem>
-                          <SelectItem value="none">None on this change order</SelectItem>
+                          <SelectItem value="tenant">Only on the Tenant's Share</SelectItem>
+                          <SelectItem value="none">None on This Change Order</SelectItem>
                         </SelectContent>
                       </Select>
                       <span className="text-[11px] text-gray-500">Supplemental CM Fee</span>
@@ -693,10 +693,10 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                     <tr className="bg-gray-50/60">
                       <td colSpan={2} className="px-2 py-1">
                         <span className="inline-flex gap-3 flex-wrap text-xs">
-                          <button className="text-blue-700 hover:underline" onClick={() => setForm({ ...form, fundedFrom: [...form.fundedFrom, { key: '', amount: fmtMoneyText(String(formNewMoney)) }] })}>+ Pay from a budget line</button>
+                          <button className="text-blue-700 hover:underline" onClick={() => setForm({ ...form, fundedFrom: [...form.fundedFrom, { key: '', amount: fmtMoneyText(String(formNewMoney)) }] })}>+ Pay from a Budget Line</button>
                           {contingencyLine && formNewMoney > 0.005 && !form.fundedFrom.some((f) => f.key === contingencyLine.key) && (
                             <button className="text-blue-700 hover:underline" onClick={() => setForm({ ...form, fundedFrom: [...form.fundedFrom, { key: contingencyLine.key, amount: fmtMoneyText(String(r2(Math.min(formNewMoney, Math.max(0, lineLeft(contingencyLine.key)))))) }] })}>
-                              Pay from {contingencyLine.description}
+                              Pay From {contingencyLine.description}
                             </button>
                           )}
                         </span>
@@ -726,7 +726,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <Select value={form.contractId} onValueChange={(v) => setForm({ ...form, contractId: v })}>
                     <SelectTrigger className="h-9 w-72"><SelectValue /></SelectTrigger>
                     <SelectContent className="pm-scope">
-                      <SelectItem value={NO_CONTRACT}>No — budget only</SelectItem>
+                      <SelectItem value={NO_CONTRACT}>No — Budget Only</SelectItem>
                       {bundle.contracts.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -735,7 +735,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setForm(null)}>Cancel</Button>
-              <Button size="sm" disabled={busy || !formLinesOk || !form.number.trim()} onClick={submit}>{busy ? 'Saving…' : form.id ? 'Save change order' : 'Add change order'}</Button>
+              <Button size="sm" disabled={busy || !formLinesOk || !form.number.trim()} onClick={submit}>{busy ? 'Saving…' : form.id ? 'Save Change Order' : 'Add Change Order'}</Button>
             </div>
           </div>
         </div>

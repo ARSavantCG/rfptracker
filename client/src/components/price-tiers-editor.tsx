@@ -68,8 +68,8 @@ export function PriceTiersEditor({ value, onChange, unit }: { value: PriceTierFo
                       <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unit">Per {u}</SelectItem>
-                        <SelectItem value="flat">Package (flat price)</SelectItem>
-                        <SelectItem value="step">Per package of N {u}</SelectItem>
+                        <SelectItem value="flat">Package (Flat Price)</SelectItem>
+                        <SelectItem value="step">Per Package of N {u}</SelectItem>
                       </SelectContent>
                     </Select>
                   </td>
@@ -86,7 +86,7 @@ export function PriceTiersEditor({ value, onChange, unit }: { value: PriceTierFo
         </div>
       )}
       <div className="flex items-center gap-3 flex-wrap">
-        <Button type="button" size="sm" variant="outline" className="h-8" onClick={add}><Plus className="h-3.5 w-3.5 mr-1" /> {value.length ? 'Add a range' : 'Price by quantity'}</Button>
+        <Button type="button" size="sm" variant="outline" className="h-8" onClick={add}><Plus className="h-3.5 w-3.5 mr-1" /> {value.length ? 'Add a Range' : 'Price by Quantity'}</Button>
         {value.length > 0 && (
           <span className="inline-flex items-center gap-2 text-xs text-gray-600">
             Try a quantity

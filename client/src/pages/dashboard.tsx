@@ -783,7 +783,7 @@ export default function Dashboard() {
                   size="sm"
                   onClick={() => setIsWorkflowCollapsed(false)}
                   className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
-                  title="Show workflow panel"
+                  title="Show Workflow Panel"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Workflow
@@ -799,7 +799,7 @@ export default function Dashboard() {
                   size="lg"
                   onClick={() => setShowMobileWorkflow(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg rounded-full h-14 w-14 p-0"
-                  title="View workflow"
+                  title="View Workflow"
                 >
                   <LayoutGrid className="h-6 w-6" />
                 </Button>

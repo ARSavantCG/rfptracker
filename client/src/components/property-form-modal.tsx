@@ -290,7 +290,7 @@ export function PropertyFormModal({ property, trigger, onSuccess }: PropertyForm
                     }));
                   }}
                 />
-                <Label htmlFor="singleBuilding" className="text-sm">Single building property</Label>
+                <Label htmlFor="singleBuilding" className="text-sm">Single Building Property</Label>
               </div>
               <Label htmlFor="building">{formData.isSingleBuilding ? "Building" : "Building *"}</Label>
               <Input

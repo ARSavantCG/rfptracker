@@ -80,7 +80,7 @@ export function FileIntegrityAuditPanel() {
       refetch();
     },
     onError: (e: Error) =>
-      toast({ title: 'Purge failed', description: e.message, variant: 'destructive' }),
+      toast({ title: 'Purge Failed', description: e.message, variant: 'destructive' }),
   });
 
   const summary = data?.summary;
@@ -112,7 +112,7 @@ export function FileIntegrityAuditPanel() {
             ) : (
               <>
                 <ShieldCheck className="h-4 w-4 mr-2" />
-                {hasRun ? "Run again" : "Run audit"}
+                {hasRun ? "Run Again" : "Run Audit"}
               </>
             )}
           </Button>
@@ -231,7 +231,7 @@ export function FileIntegrityAuditPanel() {
                       URL.revokeObjectURL(url);
                     }}
                   >
-                    Download list as CSV
+                    Download List as CSV
                   </Button>
                   <Button
                     size="sm"
@@ -241,7 +241,7 @@ export function FileIntegrityAuditPanel() {
                         ? new Set()
                         : new Set(data.missingFiles.map(rowKey)))}
                   >
-                    {selected.size === data.missingFiles.length ? 'Clear selection' : 'Select all'}
+                    {selected.size === data.missingFiles.length ? 'Clear Selection' : 'Select All'}
                   </Button>
 
                   {selected.size > 0 && !confirming && (
@@ -263,7 +263,7 @@ export function FileIntegrityAuditPanel() {
                         onClick={() =>
                           purgeMutation.mutate(data.missingFiles.filter((f) => selected.has(rowKey(f))))}
                       >
-                        {purgeMutation.isPending ? 'Removing…' : 'Yes, remove'}
+                        {purgeMutation.isPending ? 'Removing…' : 'Yes, Remove'}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
                     </span>
@@ -282,7 +282,7 @@ export function FileIntegrityAuditPanel() {
                       <tr>
                         <th className="w-8 p-2"></th>
                         <th className="text-left p-2">File</th>
-                        <th className="text-left p-2">Belongs to</th>
+                        <th className="text-left p-2">Belongs To</th>
                         <th className="text-left p-2">Type</th>
                       </tr>
                     </thead>

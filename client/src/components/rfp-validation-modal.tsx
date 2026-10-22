@@ -290,7 +290,7 @@ export function RfpValidationModal({ isOpen, onClose, rfp, onValidationComplete 
       // Strip leading HTTP status code prefix ("400: ") for cleaner display
       const description = raw.replace(/^\d{3}:\s*/, "");
       toast({
-        title: "Cannot advance to next phase",
+        title: "Cannot Advance to Next Phase",
         description,
         variant: "destructive",
         duration: 6000,

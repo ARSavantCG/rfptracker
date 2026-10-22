@@ -497,7 +497,7 @@ export default function LeaseManagementModal({ property, availableBays }: LeaseM
                                     className="ml-2 underline text-blue-700"
                                     onClick={() => field.onChange(suggested)}
                                   >
-                                    Use suggested
+                                    Use Suggested
                                   </button>
                                 )}
                               </div>

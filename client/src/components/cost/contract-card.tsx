@@ -83,12 +83,12 @@ export function ContractCard({
   const removeContract = useMutation({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}`, 'DELETE'),
     onSuccess: () => { refresh(); toast({ title: `${contract.counterparty} deleted` }); },
-    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Deleted', description: e?.message, variant: 'destructive' }),
   });
   const removeCo = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-change-orders/${id}`, 'DELETE'),
-    onSuccess: () => { refresh(); toast({ title: 'Change order deleted' }); },
-    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive', duration: 10000 }),
+    onSuccess: () => { refresh(); toast({ title: 'Change Order Deleted' }); },
+    onError: (e: any) => toast({ title: 'Not Deleted', description: e?.message, variant: 'destructive', duration: 10000 }),
   });
   const confirmDeleteContract = () => {
     const what = [
@@ -101,7 +101,7 @@ export function ContractCard({
     const typed = window.prompt(`To confirm, type the name exactly: ${contract.counterparty}`);
     if (typed == null) return;
     if (typed.trim().toLowerCase() !== contract.counterparty.trim().toLowerCase()) {
-      toast({ title: 'Not deleted', description: 'The name did not match.' });
+      toast({ title: 'Not Deleted', description: 'The name did not match.' });
       return;
     }
     removeContract.mutate();
@@ -118,20 +118,20 @@ export function ContractCard({
         ? { number: coForm!.number, title: coForm!.title, status: 'pending' }
         : { number: coForm!.number, title: coForm!.title, status: 'approved', startAppNumber: Number(coForm!.approvedOn) }),
     onSuccess: () => { refresh(); setCoForm(null); },
-    onError: (e: any) => toast({ title: 'Not added', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }),
   });
   const nextAppNumber = applications.reduce((m, a) => Math.max(m, a.number), 0) + 1;
   const setCoStart = useMutation({
     mutationFn: ({ id, startAppNumber }: { id: number; startAppNumber: number | null }) =>
       apiRequest(`/api/cost-change-orders/${id}`, 'PATCH', { startAppNumber }),
     onSuccess: refresh,
-    onError: (e: any) => toast({ title: 'Not changed', description: e?.message, variant: 'destructive', duration: 10000 }),
+    onError: (e: any) => toast({ title: 'Not Changed', description: e?.message, variant: 'destructive', duration: 10000 }),
   });
   const setCoStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiRequest(`/api/cost-change-orders/${id}`, 'PATCH', { status }),
     onSuccess: refresh,
-    onError: (e: any) => toast({ title: 'Not changed', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Changed', description: e?.message, variant: 'destructive' }),
   });
   /** Map every unmapped line in a group in one go — most of a GC's lines land on one or two budget lines. */
   const bulkMap = useMutation({
@@ -149,7 +149,7 @@ export function ContractCard({
   });
 
   const groups: { id: number | null; label: string; co: ChangeOrderRow | null; lines: SovLineRow[] }[] = [
-    { id: null, label: 'Base contract', co: null, lines: lines.filter((l) => l.changeOrderId == null) },
+    { id: null, label: 'Base Contract', co: null, lines: lines.filter((l) => l.changeOrderId == null) },
     ...changeOrders.map((co) => ({
       id: co.id, label: `${co.number}${co.title ? ` — ${co.title}` : ''}`, co,
       lines: lines.filter((l) => l.changeOrderId === co.id),
@@ -212,9 +212,9 @@ export function ContractCard({
               <th className="px-3 py-1.5 w-14">Item</th>
               <th className="px-3 py-1.5">Description</th>
               <th className="px-3 py-1.5 text-right">Scheduled</th>
-              <th className="px-3 py-1.5 text-right">To date</th>
+              <th className="px-3 py-1.5 text-right">To Date</th>
               <th className="px-3 py-1.5 text-right w-16">%</th>
-              <th className="px-3 py-1.5">Budget line</th>
+              <th className="px-3 py-1.5">Budget Line</th>
             </tr>
           </thead>
           {groups.map((g) => {
@@ -267,7 +267,7 @@ export function ContractCard({
                               <SelectContent className="pm-scope">
                                 <SelectItem value="auto">{auto}</SelectItem>
                                 {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'App'} {a.docNumber}</SelectItem>)}
-                                <SelectItem value={String(next)}>Approved on the next pay app</SelectItem>
+                                <SelectItem value={String(next)}>Approved on the Next Pay App</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -296,7 +296,7 @@ export function ContractCard({
                             </SelectTrigger>
                             <SelectContent className="pm-scope">
                               {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
-                              <SelectItem value="__spread__">Spread with the work</SelectItem>
+                              <SelectItem value="__spread__">Spread with the Work</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -307,7 +307,7 @@ export function ContractCard({
                         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={editing != null}
                                 title={editing != null ? 'Save or cancel the lines you are editing first' : undefined}
                                 onClick={() => setEditing(String(g.id ?? 'base'))}>
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit lines' : 'Enter lines'}
+                          <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit Lines' : 'Enter Lines'}
                         </Button>
                       )}
                     </div>
@@ -351,16 +351,16 @@ export function ContractCard({
             <label className="text-xs text-gray-600" htmlFor={`co-title-${contract.id}`}>For</label>
             <Input id={`co-title-${contract.id}`} value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })}
                    className="h-8 w-56 text-sm" />
-            <label className="text-xs text-gray-600">Approved on</label>
+            <label className="text-xs text-gray-600">Approved On</label>
             <div className="w-48">
               <Select value={coForm.approvedOn} onValueChange={(v) => setCoForm({ ...coForm, approvedOn: v })}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">
-                  <SelectItem value={String(nextAppNumber)}>The next pay app</SelectItem>
+                  <SelectItem value={String(nextAppNumber)}>The Next Pay App</SelectItem>
                   {[...applications].sort((a, b) => b.number - a.number).map((a) => (
                     <SelectItem key={a.id} value={String(a.number)}>{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {a.docNumber}</SelectItem>
                   ))}
-                  <SelectItem value="pending">Not approved yet (pending)</SelectItem>
+                  <SelectItem value="pending">Not Approved Yet (Pending)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -370,7 +370,7 @@ export function ContractCard({
         ) : (
           <Button size="sm" variant="outline" className="h-8"
                   onClick={() => setCoForm({ number: `PCCO #${String(changeOrders.length + 1).padStart(3, '0')}`, title: '', approvedOn: String(nextAppNumber) })}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Change order
+            <Plus className="h-3.5 w-3.5 mr-1" /> Change Order
           </Button>
         )}
       </div>
@@ -401,7 +401,7 @@ export function ContractCard({
             </Button>
             <Button size="sm" className="h-8" disabled={lines.length === 0 && !ai.on}
                     onClick={() => onOpenApplication(contract, null, 'pay_app')}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Pay app
+              <Plus className="h-3.5 w-3.5 mr-1" /> Pay App
             </Button>
           </div>
         </div>
@@ -414,7 +414,7 @@ export function ContractCard({
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                   <th className="py-1 pr-2">No.</th><th className="py-1 pr-2">Invoice</th><th className="py-1 pr-2">Period</th>
-                  <th className="py-1 pr-2 text-right">This period</th><th className="py-1 pr-2 text-right">Payment due</th><th className="py-1 pr-2 text-right">Paid</th><th className="py-1 pr-2 text-right">Open</th><th className="py-1">Files</th>
+                  <th className="py-1 pr-2 text-right">This Period</th><th className="py-1 pr-2 text-right">Payment Due</th><th className="py-1 pr-2 text-right">Paid</th><th className="py-1 pr-2 text-right">Open</th><th className="py-1">Files</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,7 +445,7 @@ export function ContractCard({
                     <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" title="Record a payment: check date, check #, amount"
                               onClick={() => onPay?.(contract, a)}>
-                        <DollarSign className="h-3.5 w-3.5 mr-0.5" /> {payments.some((p) => p.applicationId === a.id) ? 'Payments' : 'Record payment'}
+                        <DollarSign className="h-3.5 w-3.5 mr-0.5" /> {payments.some((p) => p.applicationId === a.id) ? 'Payments' : 'Record Payment'}
                       </Button>
                       <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => onPackage?.(contract, a)}>
                         <FolderOpen className="h-3.5 w-3.5 mr-1" /> Package{docsFor(a.id).length ? ` (${docsFor(a.id).length})` : ''}
@@ -502,7 +502,7 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
   const [drag, setDrag] = useState(false);
   const save = async (patch: Record<string, any>) => {
     try { await apiRequest(`/api/cost-contracts/${contract.id}`, 'PATCH', patch); refresh(); }
-    catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
   const files = documents.filter((d) => d.contractId === contract.id && !d.applicationId && !d.directCostId);
   const upload = async (list: File[]) => {
@@ -513,7 +513,7 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
         await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
       }
       refresh(); toast({ title: list.length === 1 ? 'Contract file saved' : `${list.length} files saved` });
-    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
   const D = ({ label, field }: { label: string; field: 'contractDate' | 'startDate' | 'completionDate' }) => (
     <div className="space-y-1">
@@ -535,16 +535,16 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
           <PercentInput className="h-8 text-sm" value={ret} onValueChange={setRet}
                         onBlur={(e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v) && Math.abs(v - contract.retainagePct) >= 0.005) save({ retainagePct: v }); }} />
         </div>
-        <D label="Contract date" field="contractDate" />
+        <D label="Contract Date" field="contractDate" />
         <D label="Start" field="startDate" />
-        <D label="Substantial completion" field="completionDate" />
+        <D label="Substantial Completion" field="completionDate" />
         <div className="space-y-1">
           <div className="text-xs text-gray-600">Contract documents</div>
           <label className={`h-8 flex items-center gap-1.5 rounded-md border border-dashed px-2 text-xs cursor-pointer ${drag ? 'border-blue-400 bg-blue-50 text-blue-800' : 'border-gray-300 text-gray-600 hover:text-blue-700'}`}
                  onDragOver={(e) => { if (Array.from(e.dataTransfer?.types ?? []).includes('Files')) { e.preventDefault(); setDrag(true); } }}
                  onDragLeave={() => setDrag(false)}
                  onDrop={(e) => { e.preventDefault(); setDrag(false); const l = Array.from(e.dataTransfer.files); if (l.length) upload(l); }}>
-            <Paperclip className="h-3.5 w-3.5" /> Drop or attach
+            <Paperclip className="h-3.5 w-3.5" /> Drop or Attach
             <input type="file" multiple className="hidden" onChange={(e) => { const l = Array.from(e.target.files ?? []); e.target.value = ''; if (l.length) upload(l); }} />
           </label>
         </div>
@@ -561,7 +561,7 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
       <div className="space-y-1">
         <div className="text-xs text-gray-600">Notes on this contract</div>
         <Textarea rows={2} className="text-sm bg-white" value={notes} onChange={(e) => setNotes(e.target.value)}
-                  onBlur={() => { if (notes !== (contract.notes ?? '')) save({ notes }).then(() => toast({ title: 'Notes saved' })); }} />
+                  onBlur={() => { if (notes !== (contract.notes ?? '')) save({ notes }).then(() => toast({ title: 'Notes Saved' })); }} />
       </div>
     </div>
   );

@@ -107,11 +107,11 @@ export default function ScopeItemReview() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       toast({
-        title: "Legacy import complete",
+        title: "Legacy Import Complete",
         description: `${data.imported ?? 0} new entries queued, ${data.skipped ?? 0} already present.`,
       });
     },
-    onError: () => toast({ title: "Import failed", variant: "destructive" }),
+    onError: () => toast({ title: "Import Failed", variant: "destructive" }),
   });
 
   const promoteMutation = useMutation({
@@ -120,9 +120,9 @@ export default function ScopeItemReview() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/promoted"] });
       setPromoteDialog((d) => ({ ...d, open: false }));
-      toast({ title: "Promoted to master list" });
+      toast({ title: "Promoted to Master List" });
     },
-    onError: () => toast({ title: "Promote failed", variant: "destructive" }),
+    onError: () => toast({ title: "Promote Failed", variant: "destructive" }),
   });
 
   const duplicateMutation = useMutation({
@@ -131,9 +131,9 @@ export default function ScopeItemReview() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/duplicates"] });
       setDuplicateDialog((d) => ({ ...d, open: false }));
-      toast({ title: "Marked as duplicate" });
+      toast({ title: "Marked as Duplicate" });
     },
-    onError: () => toast({ title: "Action failed", variant: "destructive" }),
+    onError: () => toast({ title: "Action Failed", variant: "destructive" }),
   });
 
   const rejectMutation = useMutation({
@@ -142,9 +142,9 @@ export default function ScopeItemReview() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scope-item-review/rejected"] });
       setRejectDialog((d) => ({ ...d, open: false }));
-      toast({ title: "Marked as rejected" });
+      toast({ title: "Marked as Rejected" });
     },
-    onError: () => toast({ title: "Action failed", variant: "destructive" }),
+    onError: () => toast({ title: "Action Failed", variant: "destructive" }),
   });
 
   const openPromote = (group: QueueGroup) => {
@@ -416,7 +416,7 @@ export default function ScopeItemReview() {
               />
             </div>
             <div>
-              <Label>Default Unit Price (optional)</Label>
+              <Label>Default Unit Price (Optional)</Label>
               <Input
                 value={promoteDialog.defaultUnitPrice}
                 onChange={(e) => setPromoteDialog((d) => ({ ...d, defaultUnitPrice: e.target.value }))}
@@ -500,7 +500,7 @@ export default function ScopeItemReview() {
               Reject &ldquo;{rejectDialog.group?.displayDescription}&rdquo; — it will not be promoted to the master list.
             </p>
             <div>
-              <Label>Notes (optional)</Label>
+              <Label>Notes (Optional)</Label>
               <Textarea
                 value={rejectDialog.notes}
                 onChange={(e) => setRejectDialog((d) => ({ ...d, notes: e.target.value }))}

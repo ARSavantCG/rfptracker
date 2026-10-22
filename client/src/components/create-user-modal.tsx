@@ -292,7 +292,7 @@ export function CreateUserModal({ isOpen, onClose }: CreateUserModalProps) {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="generatePassword">Auto-generate secure password</Label>
+              <Label htmlFor="generatePassword">Auto-Generate Secure Password</Label>
               <Switch
                 id="generatePassword"
                 checked={formData.generatePassword}

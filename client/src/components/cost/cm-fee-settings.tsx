@@ -39,8 +39,8 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
       cmFeePct: pct.trim() === '' ? null : Math.round(parseFloat(pct) * 100) / 100, cmFeeKey: key || '',
       ...(tShown !== norm(tPct) ? { tenantCmFeePct: tPct.trim() === '' ? null : Math.round(parseFloat(tPct) * 100) / 100 } : {}),
     }),
-    onSuccess: (data: any) => { queryClient.setQueryData([projectKey(projectId)], data); toast({ title: 'CM fee saved' }); },
-    onError: (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }),
+    onSuccess: (data: any) => { queryClient.setQueryData([projectKey(projectId)], data); toast({ title: 'CM Fee Saved' }); },
+    onError: (e: any) => toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }),
   });
 
   return (
@@ -57,22 +57,22 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs text-gray-600" htmlFor="cm-pct" title="What the capital partner pays you">Capital partner rate</label>
+        <label className="text-xs text-gray-600" htmlFor="cm-pct" title="What the capital partner pays you">Capital Partner Rate</label>
         <div className="w-28"><PercentInput id="cm-pct" className="h-9" value={pct} onValueChange={setPct} /></div>
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-600" htmlFor="cm-tpct" title="What the tenant pays on change orders and reimbursable invoices">
-          Tenant rate{tenantSource === 'project' ? <span className="ml-1 text-[10px] font-semibold text-amber-800">Edited</span> : tenantSource === 'line' ? <span className="ml-1 text-[10px] text-gray-500">from the LAF</span> : null}
+          Tenant Rate{tenantSource === 'project' ? <span className="ml-1 text-[10px] font-semibold text-amber-800">Edited</span> : tenantSource === 'line' ? <span className="ml-1 text-[10px] text-gray-500">from the LAF</span> : null}
         </label>
         <div className="w-28"><PercentInput id="cm-tpct" className="h-9" value={tPct} onValueChange={setTPct} /></div>
       </div>
       <div className="space-y-1">
-        <label className="text-xs text-gray-600" htmlFor="cm-line">On budget line</label>
+        <label className="text-xs text-gray-600" htmlFor="cm-line">On Budget Line</label>
         <div className="w-64 max-w-full">
           <Select value={key || '__none__'} onValueChange={(v) => setKey(v === '__none__' ? '' : v)}>
             <SelectTrigger id="cm-line" className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent className="pm-scope">
-              <SelectItem value="__none__">— none —</SelectItem>
+              <SelectItem value="__none__">— None —</SelectItem>
               {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -86,7 +86,7 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
             const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { feeInBudget: e.target.checked });
             queryClient.setQueryData([projectKey(projectId)], data);
             toast({ title: e.target.checked ? 'Budget includes the CM fee' : 'CM fee is on top of the budget' });
-          } catch (err: any) { toast({ title: 'Not saved', description: err?.message, variant: 'destructive' }); }
+          } catch (err: any) { toast({ title: 'Not Saved', description: err?.message, variant: 'destructive' }); }
         }} />
         The approved budget (LAF total) includes the CM fee — back the original fee out of it
         {feeInBudgetSet
@@ -100,7 +100,7 @@ export function CmFeeSettings({ projectId, baseline, cmFee, source, tenantPct, t
             const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { cmUncapped: e.target.checked });
             queryClient.setQueryData([projectKey(projectId)], data);
             toast({ title: e.target.checked ? 'CM fee earned beyond the budget' : 'CM fee capped at the CM fee budget' });
-          } catch (err: any) { toast({ title: 'Not saved', description: err?.message, variant: 'destructive' }); }
+          } catch (err: any) { toast({ title: 'Not Saved', description: err?.message, variant: 'destructive' }); }
         }} />
         Earn the capital partner's fee beyond the CM fee budget (e.g. supplemental funding from a lease amendment)
         <span className="text-[10px] text-gray-500">{cmUncapped ? '' : `(off: the fee stops at ${money(cmFee?.budget ?? 0)})`}</span>

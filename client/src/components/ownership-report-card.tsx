@@ -50,11 +50,11 @@ function UnresolvedList({
     mutationFn: async ({ id, userId }: { id: number; userId: string }) =>
       apiRequest("/api/admin/ownership-reassign", "POST", { table: apiTable, id, userId }),
     onSuccess: () => {
-      toast({ title: "Owner reassigned" });
+      toast({ title: "Owner Reassigned" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ownership-report"] });
     },
     onError: (err: any) => {
-      toast({ title: "Reassign failed", description: String(err?.message || err), variant: "destructive" });
+      toast({ title: "Reassign Failed", description: String(err?.message || err), variant: "destructive" });
     },
   });
 
@@ -190,7 +190,7 @@ export default function OwnershipReportCard() {
               {diag.data && (
                 <>
                   <div>
-                    <h5 className="font-medium mb-1">Known contacts ({diag.data.contacts?.length ?? 0})</h5>
+                    <h5 className="font-medium mb-1">Known Contacts ({diag.data.contacts?.length ?? 0})</h5>
                     <div className="max-h-40 overflow-auto border rounded p-2 space-y-0.5">
                       {(diag.data.contacts || []).map((c: any) => (
                         <div key={c.ownerId} className="text-xs text-gray-700">
@@ -204,7 +204,7 @@ export default function OwnershipReportCard() {
                   {(["rfp_requests", "rom_pilots"] as const).map((tbl) => (
                     <div key={tbl}>
                       <h5 className="font-medium mb-1">
-                        Unmatched values in {tbl} ({(diag.data.tables?.[tbl] || []).length})
+                        Unmatched Values In {tbl} ({(diag.data.tables?.[tbl] || []).length})
                       </h5>
                       <div className="max-h-56 overflow-auto border rounded p-2 space-y-0.5">
                         {(diag.data.tables?.[tbl] || []).map((r: any, i: number) => (

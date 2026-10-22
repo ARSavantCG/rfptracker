@@ -66,7 +66,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
       if (receipt) await upload(receipt, { directCostId: row.id });
       return row;
     },
-    onSuccess: () => { refresh(); setForm(null); setReceipt(null); toast({ title: 'Added to the ledger' }); },
+    onSuccess: () => { refresh(); setForm(null); setReceipt(null); toast({ title: 'Added to the Ledger' }); },
     onError: (e: any) => { refresh(); fail('Not added')(e); },
   });
   const patchDirect = useMutation({
@@ -79,7 +79,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   });
   const removePayment = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-payments/${id}`, 'DELETE'),
-    onSuccess: () => { refresh(); toast({ title: 'Payment removed' }); }, onError: fail('Not removed'),
+    onSuccess: () => { refresh(); toast({ title: 'Payment Removed' }); }, onError: fail('Not removed'),
   });
   const removeDirect = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-direct-costs/${id}`, 'DELETE'),
@@ -94,7 +94,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
     const q = new URLSearchParams();
     if (from) q.set('from', from);
     if (to) q.set('to', to);
-    if (!(await openReport(`/api/reports/job-cost-ledger/${projectId}${q.toString() ? `?${q}` : ''}`))) toast({ title: 'Report failed', variant: 'destructive' });
+    if (!(await openReport(`/api/reports/job-cost-ledger/${projectId}${q.toString() ? `?${q}` : ''}`))) toast({ title: 'Report Failed', variant: 'destructive' });
   };
 
   return (
@@ -116,11 +116,11 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
         Drop it on a line below to attach it to that line instead.</span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        <Stat label="Total paid out" value={money(L.total)} sub={`${L.entries.length} entries`} />
-        <Stat label="Not reconciled" value={money(L.unreconciled)} sub={`${L.unreconciledCount} entr${L.unreconciledCount === 1 ? 'y' : 'ies'}`}
+        <Stat label="Total Paid Out" value={money(L.total)} sub={`${L.entries.length} entries`} />
+        <Stat label="Not Reconciled" value={money(L.unreconciled)} sub={`${L.unreconciledCount} entr${L.unreconciledCount === 1 ? 'y' : 'ies'}`}
               tone={L.unreconciledCount ? 'text-amber-700' : 'text-green-700'} />
-        <Stat label="Direct costs" value={money(bundle.directCosts.reduce((s, d) => s + d.amount, 0))} sub={`${bundle.directCosts.length} with no contract`} />
-        <Stat label="Contract payments" value={money(bundle.payments.reduce((s, p) => s + p.amount, 0))} sub={`${bundle.payments.length} against pay apps`} />
+        <Stat label="Direct Costs" value={money(bundle.directCosts.reduce((s, d) => s + d.amount, 0))} sub={`${bundle.directCosts.length} with no contract`} />
+        <Stat label="Contract Payments" value={money(bundle.payments.reduce((s, p) => s + p.amount, 0))} sub={`${bundle.payments.length} against pay apps`} />
       </div>
 
       <div className="flex items-end justify-between gap-2 flex-wrap">
@@ -128,7 +128,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           {(['all', 'open'] as const).map((k) => (
             <button key={k} onClick={() => setShow(k)}
                     className={`text-sm px-3 py-1 rounded ${show === k ? 'bg-white shadow-sm font-medium' : 'text-gray-600'}`}>
-              {k === 'all' ? 'All' : `Not reconciled (${L.unreconciledCount})`}
+              {k === 'all' ? 'All' : `Not Reconciled (${L.unreconciledCount})`}
             </button>
           ))}
         </div>
@@ -142,7 +142,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           <div className="text-sm font-medium text-gray-900">Add a charge with no contract — a permit fee, parking, reprographics</div>
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
             <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
-            <Field label="Paid to" wide><Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} /></Field>
+            <Field label="Paid To" wide><Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} /></Field>
             <Field label="For" wide><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
             <Field label="Amount"><MoneyInput value={form.amount} onValueChange={(v) => setForm({ ...form, amount: v })} /></Field>
             <Field label="How">
@@ -151,12 +151,12 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                 <SelectContent className="pm-scope">{PAY_METHODS.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Card last 4 / check #"><Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
-            <Field label="Budget line" wide>
+            <Field label="Card Last 4 / Check #"><Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></Field>
+            <Field label="Budget Line" wide>
               <Select value={form.key || NONE} onValueChange={(v) => setForm({ ...form, key: v === NONE ? '' : v })}>
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">
-                  <SelectItem value={NONE}>Unallocated — choose later</SelectItem>
+                  <SelectItem value={NONE}>Unallocated — Choose Later</SelectItem>
                   {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -175,7 +175,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => { setForm(null); setReceipt(null); }}>Cancel</Button>
             <Button disabled={!form.vendor.trim() || !form.amount || !form.date || add.isPending} onClick={() => add.mutate()}>
-              {add.isPending ? 'Adding…' : 'Add to ledger'}
+              {add.isPending ? 'Adding…' : 'Add to Ledger'}
             </Button>
           </div>
         </div>
@@ -186,8 +186,8 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           <thead>
             <tr className="text-xs uppercase tracking-wide text-gray-600 border-b text-left">
               <th className="px-3 py-2 w-10" title="Reconciled">✓</th>
-              <th className="px-3 py-2">Date</th><th className="px-3 py-2">Paid to</th><th className="px-3 py-2">Description</th>
-              <th className="px-3 py-2">How</th><th className="px-3 py-2">Budget line</th>
+              <th className="px-3 py-2">Date</th><th className="px-3 py-2">Paid To</th><th className="px-3 py-2">Description</th>
+              <th className="px-3 py-2">How</th><th className="px-3 py-2">Budget Line</th>
               <th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-right">Running</th><th className="w-20" />
             </tr>
           </thead>
@@ -236,7 +236,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                       return (
                         <button className="mt-0.5 text-[11px] text-gray-600 hover:text-blue-700 inline-flex items-center gap-1 text-left"
                                 onClick={() => setNoteEdit({ id: e.id, text: note || '' })}>
-                          <Pencil className="h-3 w-3 flex-shrink-0" />{note ? <span className="italic">{note}</span> : 'Add note'}
+                          <Pencil className="h-3 w-3 flex-shrink-0" />{note ? <span className="italic">{note}</span> : 'Add Note'}
                         </button>
                       );
                     })())}
@@ -246,7 +246,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                     {e.kind === 'direct' ? (
                       <Select value={(() => { const k = bundle.directCosts.find((d) => d.id === e.id)?.key; return k && baseline.some((b) => b.key === k) ? k : NONE; })()}
                               onValueChange={(v) => patchDirect.mutate({ id: e.id, patch: { key: v === NONE ? null : v } }, {
-                                onSuccess: () => toast({ title: 'Budget line saved', description: v === NONE ? 'Unallocated' : baseline.find((b) => b.key === v)?.description }),
+                                onSuccess: () => toast({ title: 'Budget Line Saved', description: v === NONE ? 'Unallocated' : baseline.find((b) => b.key === v)?.description }),
                               })}>
                         <SelectTrigger className={`h-8 w-full max-w-[220px] text-xs ${e.budgetLine === 'Unallocated' ? 'text-amber-800' : ''}`}>
                           <SelectValue />

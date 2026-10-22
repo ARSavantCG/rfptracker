@@ -851,7 +851,7 @@ export default function CategoryCostBreakdownReport() {
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
               />
               <label htmlFor="leased-only-filter" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
-                Leased only
+                Leased Only
               </label>
             </div>
             <div className="flex items-center gap-2">

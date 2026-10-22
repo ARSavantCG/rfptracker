@@ -219,7 +219,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       setSpecMeta({ propertyResolved: !!res?.propertyResolved, bayCount: res?.bayCount ?? 0 });
       return list;
     } catch (err) {
-      toast({ title: "Couldn't read property specs", description: "The refresh preview failed. Your quantities are unchanged.", variant: "destructive" });
+      toast({ title: "Couldn't Read Property Specs", description: "The refresh preview failed. Your quantities are unchanged.", variant: "destructive" });
       return [];
     } finally {
       setSpecLoading(false);
@@ -242,7 +242,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
     });
     setTenantImprovements(prev => applyTo(prev));
     setDesignSoftCosts(prev => applyTo(prev));
-    toast({ title: "Quantities recomputed", description: `${toApply.length} row${toApply.length === 1 ? "" : "s"} updated from property specs. Review, then Save All Items to commit.` });
+    toast({ title: "Quantities Recomputed", description: `${toApply.length} row${toApply.length === 1 ? "" : "s"} updated from property specs. Review, then Save All Items to commit.` });
   };
 
   const openSpecDialog = async () => {
@@ -262,7 +262,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
       return;
     }
     if (p.proposedQuantity === null || p.proposedQuantity === undefined) {
-      toast({ title: "Property spec unavailable", description: `This row is tagged to ${p.propertySpec}, but that spec isn't populated on the property yet.`, variant: "destructive" });
+      toast({ title: "Property Spec Unavailable", description: `This row is tagged to ${p.propertySpec}, but that spec isn't populated on the property yet.`, variant: "destructive" });
       return;
     }
     applyProposals([p]);
@@ -598,7 +598,7 @@ export function RomPilotScopeModal({ isOpen, onClose, romPilotId, romPilotName }
                                 variant="ghost"
                                 size="sm"
                                 tabIndex={-1}
-                                title="Recompute quantity from property specs"
+                                title="Recompute Quantity from Property Specs"
                                 aria-label="Recompute quantity from property specs"
                                 onClick={() => resetSingleRow(item)}
                                 className="h-7 w-7 p-0 ml-1 text-gray-400 hover:text-purple-700"
@@ -703,7 +703,7 @@ value={(() => {
                                     saveIndividualLineItem.mutate(lineItem);
                                   }}
                                   className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  title="Save this line item"
+                                  title="Save This Line Item"
                                 >
                                   <Save className="h-3 w-3" />
                                 </Button>
@@ -810,7 +810,7 @@ value={(() => {
       <Dialog open={specDialogOpen} onOpenChange={setSpecDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Refresh quantities from property specs</DialogTitle>
+            <DialogTitle>Refresh Quantities from Property Specs</DialogTitle>
           </DialogHeader>
 
           {specMeta && !specMeta.propertyResolved && (
@@ -887,7 +887,7 @@ value={(() => {
                 setSpecDialogOpen(false);
               }}
             >
-              Apply selected
+              Apply Selected
             </Button>
           </div>
         </DialogContent>

@@ -91,7 +91,7 @@ export default function AttentionRequired({ onRfpClick, onShowAll }: AttentionRe
     return (
       <Card className="mb-6 border-destructive">
         <CardHeader>
-          <CardTitle className="text-destructive text-sm">Could not load dashboard metrics</CardTitle>
+          <CardTitle className="text-destructive text-sm">Could Not Load Dashboard Metrics</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{(error as Error)?.message}</p>
@@ -203,7 +203,7 @@ export default function AttentionRequired({ onRfpClick, onShowAll }: AttentionRe
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-blue-500" />
-              Upcoming Deadlines (7 days)
+              Upcoming Deadlines (7 Days)
             </CardTitle>
             <Badge className="bg-blue-500 hover:bg-blue-500 text-white">
               {upcomingDeadlines.length}

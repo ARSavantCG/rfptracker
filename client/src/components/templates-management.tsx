@@ -143,7 +143,7 @@ export function TemplatesManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
       setShowCreateDialog(false);
       resetForm();
-      toast({ title: "Template created successfully", duration: 4000 });
+      toast({ title: "Template Created Successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -157,7 +157,7 @@ export function TemplatesManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
       setEditingTemplate(null);
       resetForm();
-      toast({ title: "Template updated successfully", duration: 4000 });
+      toast({ title: "Template Updated Successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -168,7 +168,7 @@ export function TemplatesManagement() {
     mutationFn: async (id: string) => apiRequest(`/api/templates/${id}/duplicate`, "POST"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
-      toast({ title: "Template duplicated successfully", duration: 4000 });
+      toast({ title: "Template Duplicated Successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -180,7 +180,7 @@ export function TemplatesManagement() {
       apiRequest(`/api/templates/${id}/archive`, "PUT", { archived }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
-      toast({ title: "Template archived successfully", duration: 4000 });
+      toast({ title: "Template Archived Successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -192,7 +192,7 @@ export function TemplatesManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
       setDeletingTemplate(null);
-      toast({ title: "Template deleted successfully", duration: 4000 });
+      toast({ title: "Template Deleted Successfully", duration: 4000 });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive", duration: 6000 });
@@ -346,7 +346,7 @@ export function TemplatesManagement() {
           ) : templates.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No templates found</h3>
+              <h3 className="text-lg font-medium mb-2">No Templates Found</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {searchTerm ? "Try a different search term" : "Create your first template to get started"}
               </p>

@@ -72,13 +72,13 @@ export default function DataScrubbing() {
       queryClient.invalidateQueries({ queryKey: ["/api/bid-line-items/all"] });
       setPendingChanges({});
       toast({
-        title: "Changes saved",
+        title: "Changes Saved",
         description: "Line item clean data status updated successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error saving changes",
+        title: "Error Saving Changes",
         description: error.message,
         variant: "destructive",
       });

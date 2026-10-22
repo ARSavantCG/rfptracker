@@ -52,7 +52,7 @@ export function NotificationSettingsPanel() {
       });
     },
     onError: (e: Error) =>
-      toast({ title: "Could not change setting", description: e.message, variant: "destructive" }),
+      toast({ title: "Could Not Change Setting", description: e.message, variant: "destructive" }),
   });
 
   const recipientMutation = useMutation({
@@ -60,7 +60,7 @@ export function NotificationSettingsPanel() {
       apiRequest("/api/admin/notifications/recipient", "POST", { contactId, receives }),
     onSuccess: () => refetch(),
     onError: (e: Error) =>
-      toast({ title: "Could not update recipient", description: e.message, variant: "destructive" }),
+      toast({ title: "Could Not Update Recipient", description: e.message, variant: "destructive" }),
   });
 
   // Seed the input once data arrives, without clobbering what is being typed.
@@ -81,7 +81,7 @@ export function NotificationSettingsPanel() {
       });
     },
     onError: (e: Error) =>
-      toast({ title: "Could not save", description: e.message, variant: "destructive" }),
+      toast({ title: "Could Not Save", description: e.message, variant: "destructive" }),
   });
 
   const cadenceMutation = useMutation({
@@ -89,10 +89,10 @@ export function NotificationSettingsPanel() {
       apiRequest("/api/admin/notifications/cadence", "POST", { days, hour }),
     onSuccess: () => {
       refetch();
-      toast({ title: "Report schedule updated" });
+      toast({ title: "Report Schedule Updated" });
     },
     onError: (e: Error) =>
-      toast({ title: "Could not update schedule", description: e.message, variant: "destructive" }),
+      toast({ title: "Could Not Update Schedule", description: e.message, variant: "destructive" }),
   });
 
   const setAll = (receives: boolean) => {
@@ -146,7 +146,7 @@ export function NotificationSettingsPanel() {
           <div className="leading-tight">
             <Label htmlFor="mute-notifications" className="cursor-pointer flex items-center gap-1.5">
               {data?.muted ? <BellOff className="h-4 w-4 text-amber-700" /> : <Bell className="h-4 w-4" />}
-              Mute all outbound notifications
+              Mute All Outbound Notifications
             </Label>
             <p className="text-xs text-muted-foreground mt-1">
               Turn on before running test RFPs against live data. Suppresses new-RFP alerts,
@@ -222,7 +222,7 @@ export function NotificationSettingsPanel() {
         )}
 
         <div className="rounded-lg border p-3 space-y-2">
-          <Label className="text-xs font-medium">Always copy</Label>
+          <Label className="text-xs font-medium">Always Copy</Label>
           <p className="text-[11px] text-muted-foreground">
             BCC'd on every automated email — new RFP, publish, and the status report — whether or
             not this address is an Owner. Leave blank to turn off.
@@ -268,7 +268,7 @@ export function NotificationSettingsPanel() {
         <div className="rounded-lg border p-3 space-y-2">
           <Label className="text-xs font-medium flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5" />
-            Status report schedule
+            Status Report Schedule
           </Label>
           <p className="text-[11px] text-muted-foreground">
             A digest of active RFPs, sent to the same recipients. Separate from the per-RFP alerts,
@@ -310,10 +310,10 @@ export function NotificationSettingsPanel() {
               <Label className="text-xs font-medium">Who receives alerts</Label>
               <div className="flex gap-1">
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setAll(true)}>
-                  Select all
+                  Select All
                 </Button>
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setAll(false)}>
-                  Clear all
+                  Clear All
                 </Button>
               </div>
             </div>

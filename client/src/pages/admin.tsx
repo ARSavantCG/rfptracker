@@ -192,7 +192,7 @@ function SystemUsersAndContacts() {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       setContactToHardDelete(null);
       toast({
-        title: "Contact permanently deleted",
+        title: "Contact Permanently Deleted",
         description: "The contact record and login are gone for good.",
         duration: 4000,
       });
@@ -216,7 +216,7 @@ function SystemUsersAndContacts() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({
-        title: "Login deactivated",
+        title: "Login Deactivated",
         description: "The contact's system login has been deactivated. Their contact record was preserved.",
         duration: 4000,
       });
@@ -1472,7 +1472,7 @@ export default function Admin() {
     } catch (err: any) {
       setMigrationState('error');
       toast({
-        title: 'Migration failed',
+        title: 'Migration Failed',
         description: err.message || 'Unknown error',
         variant: 'destructive',
         duration: 6000,

@@ -223,7 +223,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
         }
       } else {
         toast({
-          title: "No tables found",
+          title: "No Tables Found",
           description: "Could not detect any table data in the PDF. Try a different PDF format.",
           variant: "destructive",
         });
@@ -735,7 +735,7 @@ export function PdfBidImportModal({ isOpen, onClose, bidCollectionId, rfpId, con
                 </div>
                 {saveTemplate && (
                   <div className="flex gap-2 items-center pl-6">
-                    <Label className="text-sm text-gray-600 whitespace-nowrap">Template name:</Label>
+                    <Label className="text-sm text-gray-600 whitespace-nowrap">Template Name:</Label>
                     <Input
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}

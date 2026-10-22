@@ -23,7 +23,7 @@ export function AiSettingsPanel() {
       toast({ title: enabled ? 'AI features on' : 'AI features off',
         description: enabled ? 'AI reading buttons are back for admins.' : 'Every AI button is hidden and the server will refuse AI requests.' });
     },
-    onError: (e: any) => toast({ title: 'Could not change setting', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Could Not Change Setting', description: e?.message, variant: 'destructive' }),
   });
 
   const when = data?.updatedAt ? new Date(data.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : null;
@@ -31,7 +31,7 @@ export function AiSettingsPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" />AI features</CardTitle>
+        <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" />AI Features</CardTitle>
         <CardDescription>
           One switch for everything AI reads: RFP Step 2 intake, bid PDF import, bid analysis, and pay app reading in
           Project Management. AI only ever fills in a screen for you to review; nothing is saved without you.

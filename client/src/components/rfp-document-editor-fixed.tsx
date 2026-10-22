@@ -486,7 +486,7 @@ export function RfpDocumentEditor() {
                         size="sm"
                         onClick={() => moveSectionUp(section.id)}
                         disabled={index === 0}
-                        title="Move up"
+                        title="Move Up"
                       >
                         <ChevronUp className="h-4 w-4" />
                       </Button>
@@ -495,7 +495,7 @@ export function RfpDocumentEditor() {
                         size="sm"
                         onClick={() => moveSectionDown(section.id)}
                         disabled={index === documentSections.length - 1}
-                        title="Move down"
+                        title="Move Down"
                       >
                         <ChevronDown className="h-4 w-4" />
                       </Button>

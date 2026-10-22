@@ -295,12 +295,12 @@ export function CreateRfpModal({ isOpen, onClose }: CreateRfpModalProps) {
       // pipeline like any other RFP — same landing page, same navigation; only
       // the workflow content differs. No jarring jump to a standalone page.
       toast({
-        title: "ROM Pilot created",
+        title: "ROM Pilot Created",
         description: `${rfp.rfpNumber || "The RFP"} is in your pipeline at the Evaluation phase — open it to price scope from the catalog. Quantities are yours, rates are locked.`,
         duration: 8000,
       });
     } catch (e: any) {
-      toast({ title: "Allowance path failed", description: e?.message || "Unknown error", variant: "destructive", duration: 8000 });
+      toast({ title: "Allowance Path Failed", description: e?.message || "Unknown error", variant: "destructive", duration: 8000 });
     } finally {
       setRomForkPending(false);
     }

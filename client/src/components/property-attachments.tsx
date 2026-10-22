@@ -72,7 +72,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
     },
     onSuccess: () => {
       toast({
-        title: "Files uploaded successfully",
+        title: "Files Uploaded Successfully",
         description: `${selectedFiles?.length} file(s) uploaded to ${propertyName}`,
         duration: 4000,
       });
@@ -83,7 +83,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
     },
     onError: (error: any) => {
       toast({
-        title: "Upload failed",
+        title: "Upload Failed",
         description: error.message || "Failed to upload files",
         variant: "destructive",
         duration: 6000,
@@ -97,7 +97,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
     },
     onSuccess: () => {
       toast({
-        title: "File deleted",
+        title: "File Deleted",
         description: "Attachment removed successfully",
         duration: 4000,
       });
@@ -105,7 +105,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
     },
     onError: (error: any) => {
       toast({
-        title: "Delete failed",
+        title: "Delete Failed",
         description: error.message || "Failed to delete attachment",
         variant: "destructive",
         duration: 6000,
@@ -116,7 +116,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
   const handleUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) {
       toast({
-        title: "No files selected",
+        title: "No Files Selected",
         description: "Please select files to upload",
         variant: "destructive",
         duration: 5000,
@@ -137,7 +137,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
         toast({
-          title: "Authentication required",
+          title: "Authentication Required",
           description: "Please log in again to download files",
           variant: "destructive",
           duration: 6000,
@@ -153,7 +153,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
 
       if (response.status === 401) {
         toast({
-          title: "Authentication expired",
+          title: "Authentication Expired",
           description: "Please log in again to download files",
           variant: "destructive",
           duration: 6000,
@@ -163,7 +163,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
 
       if (response.status === 404) {
         toast({
-          title: "File not found",
+          title: "File Not Found",
           description: "The requested file could not be found",
           variant: "destructive",
           duration: 6000,
@@ -174,7 +174,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       if (!response.ok) {
         const errorData = await response.text().catch(() => 'Unknown error');
         toast({
-          title: "Download failed",
+          title: "Download Failed",
           description: `Error ${response.status}: ${errorData}`,
           variant: "destructive",
           duration: 6000,
@@ -193,14 +193,14 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
       document.body.removeChild(a);
 
       toast({
-        title: "Download started",
+        title: "Download Started",
         description: `Downloading ${attachment.originalName}`,
         duration: 4000,
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        title: "Download failed",
+        title: "Download Failed",
         description: error instanceof Error ? error.message : "Failed to download file",
         variant: "destructive",
         duration: 6000,
@@ -246,7 +246,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
             <h3 className="font-medium mb-3">Upload New Files</h3>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="file-upload">Files (PDF, DWG supported)</Label>
+                <Label htmlFor="file-upload">Files (PDF, DWG Supported)</Label>
                 <Input
                   id="file-upload"
                   type="file"
@@ -257,7 +257,7 @@ export function PropertyAttachments({ propertyId, propertyName }: PropertyAttach
                 />
               </div>
               <div>
-                <Label htmlFor="description">Description (optional)</Label>
+                <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea
                   id="description"
                   value={description}

@@ -59,7 +59,7 @@ export default function DashboardPortfolioIntelligence() {
       <Card className="mb-6 border-destructive">
         <CardHeader>
           <CardTitle className="text-destructive text-sm">
-            Could not load portfolio intelligence
+            Could Not Load Portfolio Intelligence
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

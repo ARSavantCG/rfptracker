@@ -221,7 +221,7 @@ export default function AuditLogAdmin() {
               </div>
               {(appliedEmail || selectedEventTypes.length > 0 || dateFrom || dateTo) && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-gray-500">
-                  Clear filters
+                  Clear Filters
                 </Button>
               )}
             </div>

@@ -2135,7 +2135,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const sums = (t: ReturnType<typeof waiverTotals>) => [
         `    Subcontractors (${t.subCount})  ${money(t.subs)}`,
         `    GC                  ${money(t.gc)}`,
-        `    GC less subs        ${money(t.gap)}${t.gapPct != null ? `  (${t.gapPct.toFixed(1)}% of the GC's release)` : ''}`,
+        `    GC Less Subs        ${money(t.gap)}${t.gapPct != null ? `  (${t.gapPct.toFixed(1)}% of the GC's release)` : ''}`,
       ];
       for (const w of ck.conditionals) contents.push(`  Conditional   ${tag(w)}  ${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
       for (const m of ck.missing) contents.push(`  Conditional   ${m.party === 'gc' ? 'GC ' : 'Sub'}  ${m.vendor}  MISSING${m.lastAmount != null ? `  (${money(m.lastAmount)} last pay app)` : ''}`);
@@ -2247,7 +2247,7 @@ export function registerCostTrackingRoutes(app: Express): void {
 /** The dashboard for one project (admins): CM fee, vendor billings and schedule, each split to add up. */
 export function dashboardFor(b: any): ProjectDashboard {
   const paid = feePaid(b.cmInvoices as any);
-  const stream = (d: any, p: number) => ({ earned: d.earnedBilled?.fee ?? 0, invoiced: d.feeInvoiced ?? 0, anticipated: d.projected?.fee ?? 0, paid: p });
+  const stream = (d: any, p: number) => ({ earned: d.earnedBilled?.fee ?? 0, earnedOnPaid: d.earnedPaid?.fee ?? 0, invoiced: d.feeInvoiced ?? 0, anticipated: d.projected?.fee ?? 0, paid: p });
   const cap = stream(b.cmInvoiceDrafts.capital, paid.fee);
   const ten = stream(b.cmInvoiceDrafts.tenant, paid.tenant);
   const pctOf = new Map(b.position.contracts.map((c: any) => [c.contractId, c.pctComplete]));

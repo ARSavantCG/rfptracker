@@ -50,7 +50,7 @@ export function PdfTemplateManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       setShowCreateDialog(false);
       toast({
-        title: "Template created",
+        title: "Template Created",
         description: "PDF template has been created successfully.",
         duration: 4000,
       });
@@ -69,7 +69,7 @@ export function PdfTemplateManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       setEditingTemplate(null);
       toast({
-        title: "Template updated",
+        title: "Template Updated",
         description: "PDF template has been updated successfully.",
         duration: 4000,
       });
@@ -85,7 +85,7 @@ export function PdfTemplateManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/pdf-templates'] });
       toast({
-        title: "Template deleted",
+        title: "Template Deleted",
         description: "PDF template has been deleted successfully.",
         duration: 4000,
       });

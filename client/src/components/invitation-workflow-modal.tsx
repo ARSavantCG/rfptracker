@@ -60,7 +60,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rfp-requests/${rfp?.id}/invitations`] });
       toast({
-        title: "Invitations sent",
+        title: "Invitations Sent",
         description: `Successfully sent ${selectedContacts.length} invitation(s)`,
         duration: 4000,
       });
@@ -88,7 +88,7 @@ export function InvitationWorkflowModal({ isOpen, onClose, rfp }: InvitationWork
   const handleSendInvitations = () => {
     if (selectedContacts.length === 0) {
       toast({
-        title: "No contacts selected",
+        title: "No Contacts Selected",
         description: "Please select at least one contact to send invitations.",
         variant: "destructive",
         duration: 6000,

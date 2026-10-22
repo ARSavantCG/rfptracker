@@ -78,7 +78,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
     queryClient.invalidateQueries({ queryKey: ['/api/cost-projects'] });
     toast({ title });
   };
-  const failed = (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' });
+  const failed = (e: any) => toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' });
 
   const save = useMutation({
     mutationFn: (body: any) => apiRequest(`/api/cost-projects/${projectId}/approval`, 'PUT', body),
@@ -105,7 +105,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
 
   const readPaste = () => {
     const parsed = parseSovPaste(paste).lines.map((l) => ({ description: l.description, amount: l.scheduledValue, key: null }));
-    if (!parsed.length) { toast({ title: 'Nothing read', description: 'Each row needs a description and an amount.' }); return; }
+    if (!parsed.length) { toast({ title: 'Nothing Read', description: 'Each row needs a description and an amount.' }); return; }
     setLafLines(matchLafLines(parsed, baseline));
     setPaste('');
     if (!lafTotal.trim()) setLafTotal(fmtMoneyInput(String(r2(parsed.reduce((s, l) => s + l.amount, 0)))));
@@ -116,7 +116,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
       <div className="px-4 py-3 border-b flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-gray-900">Budget approval</h2>
+            <h2 className="font-semibold text-gray-900">Budget Approval</h2>
             {confirmed
               ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 rounded px-2 py-0.5"><Lock className="h-3 w-3" /> Confirmed</span>
               : <span className="text-xs font-semibold text-amber-800 bg-amber-100 rounded px-2 py-0.5">Draft</span>}
@@ -130,7 +130,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
         {confirmed && (
           <Button variant="ghost" size="sm" disabled={reopen.isPending}
                   onClick={() => { if (window.confirm('Put this budget back to draft? The original budget snapshot will be cleared, and you will confirm again.')) reopen.mutate(); }}>
-            Reopen as draft
+            Reopen as Draft
           </Button>
         )}
       </div>
@@ -143,7 +143,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
             <div className="text-lg font-semibold tabular-nums">{money(approval.priced)}</div>
           </div>
           <div>
-            <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF total</label>
+            <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF Total</label>
             <MoneyInput id="laf-total" className="h-9 font-semibold" value={lafTotal} onValueChange={setLafTotal} />
           </div>
           <div>
@@ -159,7 +159,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
         <div className="border rounded-md">
           <button className="w-full flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-800" onClick={() => setShowRollUp(!showRollUp)}>
             {showRollUp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Your budget as the tenant sees it
+            Your Budget as the Tenant Sees It
           </button>
           {showRollUp && (
             <div className="px-3 pb-3 space-y-2">
@@ -172,7 +172,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                   <thead>
                     <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                       <th className="py-1 pr-2">Line</th><th className="py-1 pr-2 text-right">Priced</th>
-                      <th className="py-1 pr-2 text-right">Soft costs</th><th className="py-1 text-right">As the tenant sees it</th>
+                      <th className="py-1 pr-2 text-right">Soft Costs</th><th className="py-1 text-right">As the Tenant Sees It</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -209,7 +209,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
         <div className="border rounded-md">
           <button className="w-full flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-800" onClick={() => setShowLaf(!showLaf)}>
             {showLaf ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Find which line the deal moved <span className="text-gray-500 font-normal">(optional{lafLines.length > 0 ? ` · ${lafLines.length} LAF lines` : ''})</span>
+            Find Which Line the Deal Moved <span className="text-gray-500 font-normal">(optional{lafLines.length > 0 ? ` · ${lafLines.length} LAF lines` : ''})</span>
           </button>
           {showLaf && (
             <div className="px-3 pb-3 space-y-2">
@@ -227,8 +227,8 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                   <table className="w-full text-sm min-w-[640px]">
                     <thead>
                       <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-                        <th className="py-1 pr-2">LAF line</th><th className="py-1 pr-2">Budget line</th>
-                        <th className="py-1 pr-2 text-right">Priced (loaded)</th><th className="py-1 pr-2 text-right">LAF</th>
+                        <th className="py-1 pr-2">LAF Line</th><th className="py-1 pr-2">Budget Line</th>
+                        <th className="py-1 pr-2 text-right">Priced (Loaded)</th><th className="py-1 pr-2 text-right">LAF</th>
                         <th className="py-1 text-right">Difference</th>
                       </tr>
                     </thead>
@@ -267,7 +267,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                     </p>
                     <Button variant="outline" size="sm" disabled={!comparison.suggested.length}
                             onClick={() => setAlloc(Object.fromEntries(comparison.suggested.map((s) => [s.key, fmtMoneyInput(String(s.amount))])))}>
-                      <Wand2 className="h-3.5 w-3.5 mr-1" /> Put the discount where the lines moved
+                      <Wand2 className="h-3.5 w-3.5 mr-1" /> Put the Discount Where the Lines Moved
                     </Button>
                   </div>
                 </div>
@@ -282,8 +282,8 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-                  <th className="py-1 pr-2">Budget line</th><th className="py-1 pr-2 text-right">Priced</th>
-                  <th className="py-1 pr-2 text-right w-40">{discountNow >= 0 ? 'Discount on this line' : 'Premium on this line'}</th>
+                  <th className="py-1 pr-2">Budget Line</th><th className="py-1 pr-2 text-right">Priced</th>
+                  <th className="py-1 pr-2 text-right w-40">{discountNow >= 0 ? 'Discount on This Line' : 'Premium on This Line'}</th>
                   <th className="py-1 text-right">Budget</th>
                 </tr>
               </thead>
@@ -330,7 +330,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
             }}>Discard</Button>
           )}
           <Button size="sm" variant={confirmed ? 'default' : 'outline'} disabled={!dirty || save.isPending} onClick={saveAll}>
-            {save.isPending ? 'Saving…' : confirmed ? 'Save revision' : 'Save'}
+            {save.isPending ? 'Saving…' : confirmed ? 'Save Revision' : 'Save'}
           </Button>
           {!confirmed && (
             <Button size="sm" disabled={dirty || approval.lafTotal == null || confirm.isPending}
@@ -338,7 +338,7 @@ export function ApprovalPanel({ projectId, baseline, approval }: {
                     onClick={() => {
                       if (window.confirm(`Confirm ${money(approval.approvedTotal)} as the original budget? It is locked as of today; later changes show as revisions against it.`)) confirm.mutate();
                     }}>
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirm budget
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirm Budget
             </Button>
           )}
         </div>

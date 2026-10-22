@@ -99,7 +99,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
       
       if (!token) {
         toast({
-          title: "Authentication required",
+          title: "Authentication Required",
           description: "Please log in to generate building specifications report",
           variant: "destructive",
           duration: 6000,
@@ -115,7 +115,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
       
       if (response.status === 401) {
         toast({
-          title: "Authentication expired",
+          title: "Authentication Expired",
           description: "Please log in again to generate the report",
           variant: "destructive",
           duration: 6000,
@@ -135,7 +135,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
       setTimeout(() => window.URL.revokeObjectURL(url), 100);
       
       toast({
-        title: "Report opened",
+        title: "Report Opened",
         description: "Building specifications report opened in new window. Use browser's print function to save as PDF.",
         duration: 4000,
       });
@@ -229,7 +229,7 @@ export function BuildingSpecificationsModal({ property }: BuildingSpecifications
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="buildingDepth">Building Depth (ft)</Label>
+                  <Label htmlFor="buildingDepth">Building Depth (Ft)</Label>
                   <Input
                     id="buildingDepth"
                     type="number"

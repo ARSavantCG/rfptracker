@@ -96,7 +96,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests/stats"] });
       toast({
-        title: "Workflow advanced",
+        title: "Workflow Advanced",
         description: "Project has been moved to the next phase",
         duration: 4000,
       });
@@ -226,7 +226,7 @@ export function WorkflowStatus({ rfp, onAdvanceToInvitation, onEditRfp, onValida
             size="sm"
             onClick={() => handleToggleCollapse(false)}
             className="bg-white shadow-lg border-2 border-blue-300 hover:bg-blue-50"
-            title="Show workflow panel"
+            title="Show Workflow Panel"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Workflow

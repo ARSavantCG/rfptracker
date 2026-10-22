@@ -35,13 +35,13 @@ export function PasteLinesDialog({ target, projectId, onClose }: {
       setText('');
       onClose();
     },
-    onError: (e: any) => toast({ title: 'Not added', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }),
   });
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope sm:max-w-2xl">
-        <DialogHeader><DialogTitle>Add lines — {target?.label}</DialogTitle></DialogHeader>
+      <DialogContent className="pm-scope w-[96vw] sm:max-w-2xl max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
+        <DialogHeader><DialogTitle>Add Lines — {target?.label}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <p className="text-xs text-gray-600">
             Paste rows from Excel or copy them off the G703. Each row needs a description and an amount; an item

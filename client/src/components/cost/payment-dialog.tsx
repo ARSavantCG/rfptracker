@@ -52,12 +52,12 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
       setEditing(null);
       setForm(blank(form.method));
     },
-    onError: (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }),
   });
   const remove = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-payments/${id}`, 'DELETE'),
     onSuccess: refresh,
-    onError: (e: any) => toast({ title: 'Not removed', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }),
   });
 
   const startEdit = (p: PaymentRow) => {
@@ -69,7 +69,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope sm:max-w-xl">
+      <DialogContent className="pm-scope w-[96vw] sm:max-w-xl max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
         <DialogHeader>
           <DialogTitle>
             Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {app?.docNumber}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
@@ -94,7 +94,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase text-gray-500 border-b">
-                <th className="py-1 font-medium">Paid on</th><th className="py-1 font-medium">How</th><th className="py-1 font-medium">Ref #</th>
+                <th className="py-1 font-medium">Paid On</th><th className="py-1 font-medium">How</th><th className="py-1 font-medium">Ref #</th>
                 <th className="py-1 font-medium text-right">Amount</th><th className="w-16" />
               </tr>
             </thead>
@@ -157,14 +157,14 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
         </div>
         <div className="flex justify-end gap-2">
           {editing
-            ? <Button variant="outline" onClick={() => { setEditing(null); setForm(blank(form.method)); }}>Cancel edit</Button>
+            ? <Button variant="outline" onClick={() => { setEditing(null); setForm(blank(form.method)); }}>Cancel Edit</Button>
             : <Button variant="outline" onClick={onClose}>Done</Button>}
           <Button disabled={!form.amount || !form.paidDate || saveP.isPending} onClick={() => {
             const amt = parseFloat(form.amount.replace(/[$,\s]/g, '')) || 0;
             if (amt > openExcluding + 0.005 && !window.confirm(`That is ${money(amt - openExcluding)} more than is open on this pay app. Save it anyway?`)) return;
             saveP.mutate();
           }}>
-            {saveP.isPending ? 'Saving…' : editing ? 'Save changes' : 'Record payment'}
+            {saveP.isPending ? 'Saving…' : editing ? 'Save Changes' : 'Record Payment'}
           </Button>
         </div>
       </DialogContent>

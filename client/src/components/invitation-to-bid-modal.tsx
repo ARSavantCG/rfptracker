@@ -1159,7 +1159,7 @@ const formatQuantityDisplay = (val: any): string => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Issuance to General Contractor and/or Architect
+            Issuance to General Contractor And/or Architect
           </DialogTitle>
           <DialogDescription>
             Configure and generate RFPs for architects and/or general contractors for {rfp.rfpNumber}
@@ -1170,7 +1170,7 @@ const formatQuantityDisplay = (val: any): string => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.warn('[InvitationModal] Form validation failed:', errors);
-            toast({ title: "Form validation failed", description: "One or more fields are invalid — check the browser console for details.", variant: "destructive" });
+            toast({ title: "Form Validation Failed", description: "One or more fields are invalid — check the browser console for details.", variant: "destructive" });
           })} className="space-y-6">
             {/* ROOT CAUSE (2026-07-18, MutationObserver-proven): this form carried
                 key={`itb-form-${Date.now()}`} — a NEW key every render, ordering React
@@ -2273,7 +2273,7 @@ const formatQuantityDisplay = (val: any): string => {
                     const isValid = await form.trigger();
                     if (!isValid) {
                       console.warn('[InvitationModal] Advance button blocked by validation errors:', form.formState.errors);
-                      toast({ title: "Form validation failed", description: "One or more fields are invalid — check the highlighted fields.", variant: "destructive" });
+                      toast({ title: "Form Validation Failed", description: "One or more fields are invalid — check the highlighted fields.", variant: "destructive" });
                       return;
                     }
 
@@ -2282,7 +2282,7 @@ const formatQuantityDisplay = (val: any): string => {
                                         formData.generateArchitectRfpEnhanced || formData.generateContractorRfpEnhanced ||
                                         formData.generateBrokerArchitectRfp || formData.generateBrokerContractorRfp;
                     if (!hasSelection) {
-                      toast({ title: "Selection required", description: "Select at least one RFP type to generate.", variant: "destructive" });
+                      toast({ title: "Selection Required", description: "Select at least one RFP type to generate.", variant: "destructive" });
                       return;
                     }
                     generateAndAdvanceMutation.mutate(formData);

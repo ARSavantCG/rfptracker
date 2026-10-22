@@ -96,7 +96,7 @@ export default function Properties() {
       const opened = window.open(objectUrl, '_blank');
       if (!opened) {
         toast({
-          title: 'Pop-up blocked',
+          title: 'Pop-Up Blocked',
           description: 'Allow pop-ups for this site to open the report.',
           variant: 'destructive',
         });
@@ -104,7 +104,7 @@ export default function Properties() {
     } catch (error) {
       console.error('Report error:', error);
       toast({
-        title: 'Could not open report',
+        title: 'Could Not Open Report',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -256,7 +256,7 @@ export default function Properties() {
               <div className="text-center py-12">
                 <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchTerm ? 'No properties found' : 'No properties yet'}
+                  {searchTerm ? 'No Properties Found' : 'No Properties Yet'}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {searchTerm 

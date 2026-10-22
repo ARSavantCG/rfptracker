@@ -82,7 +82,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         : next.map((k) => { const r = unconds.find((x) => uKey(x) === k)!; return r.id ? { id: r.id } : { fromWaiverId: r.fromWaiverId, vendor: r.vendor, amount: r.amount }; });
       await apiRequest(`/api/cost-applications/${app!.id}/waivers/order`, 'POST', { kind, rows });
       await queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
-    } catch (e: any) { toast({ title: 'Order not saved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Order Not Saved', description: e?.message, variant: 'destructive' }); }
     finally { setOverride(null); }
   };
   /** Row props: reorder by the grip, and keep dropping files on the row. */
@@ -130,7 +130,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const call = async (fn: () => Promise<any>, ok?: string) => {
     setBusy(true);
     try { await fn(); refresh(); if (ok) toast({ title: ok }); return true; }
-    catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); refresh(); return false; }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); refresh(); return false; }
     finally { setBusy(false); }
   };
   const upload = (file: File, extra: Record<string, string>, appId?: number) => {
@@ -188,7 +188,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const download = async () => {
     const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
     const res = await fetch(`/api/cost-applications/${app!.id}/package`, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
-    if (!res.ok) { toast({ title: 'No package', description: (await res.json().catch(() => ({})))?.message, variant: 'destructive' }); return; }
+    if (!res.ok) { toast({ title: 'No Package', description: (await res.json().catch(() => ({})))?.message, variant: 'destructive' }); return; }
     const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'package.zip';
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a'); a.href = url; a.download = name; a.click();
@@ -200,18 +200,22 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Fits the window: the title, status and download stay put; the lists scroll beneath them. */}
+      <DialogContent className="pm-scope w-[96vw] max-w-[min(1200px,96vw)] h-auto max-h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <div className="px-6 pt-5 pb-3 border-b pr-12 space-y-2 flex-shrink-0">
         <DialogHeader>
-          <DialogTitle>{target.contract.counterparty} — {label} {nn(app.docNumber)} package</DialogTitle>
+          <DialogTitle>{target.contract.counterparty} — {label} {nn(app.docNumber)} Package</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center justify-between gap-2 flex-wrap -mt-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-xs text-gray-600">
             {ck.outstanding ? <span className="text-red-700 font-medium">{ck.outstanding} waiver{ck.outstanding === 1 ? '' : 's'} outstanding{ck.missing.length ? ` (${ck.missing.length} conditional${ck.missing.length === 1 ? '' : 's'} not entered)` : ''}.</span> : <span className="text-green-700 font-medium">All waivers in.</span>}
             {earlier.length > 0 && <span className="text-red-700 font-medium"> {earlier.length} more from earlier pay apps.</span>}
             {' '}Download gives one zip, sorted into folders, with a contents sheet.
           </p>
-          <Button onClick={download} disabled={!files.length}><Download className="h-4 w-4 mr-1" /> Download package</Button>
+          <Button onClick={download} disabled={!files.length}><Download className="h-4 w-4 mr-1" /> Download Package</Button>
         </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
 
         {/* Files */}
         <section className="space-y-2">
@@ -265,11 +269,11 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         {/* Conditional waivers for this pay app */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional waivers — {label} {nn(app.docNumber)}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional Waivers — {label} {nn(app.docNumber)}</h3>
             {!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewC({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}
           </div>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
-          <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} payment due (G702 line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
+          <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} Payment Due (G702 Line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
             {conds.map((w) => {
               const key = `c${w.id}`;
               return (
@@ -321,14 +325,14 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-              Unconditional waivers {prevLabel ? `— for ${prevLabel}` : ''}
+              Unconditional Waivers {prevLabel ? `— For ${prevLabel}` : ''}
             </h3>
             {!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewU({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}
           </div>
           <p className="text-xs text-gray-600">
             {prevLabel ? `Expected from every vendor that gave a conditional on ${prevLabel}, for the same amount, in the same order. Type over anything that's different — it's marked Edited.` : 'This is the first pay app on the contract, so none are expected yet.'}
           </p>
-          <WaiverTable footer={ck.unconditionals.length ? <TotalsRows t={waiverTotals(ck.unconditionals, gcName)} gcName={gcName} check={prevApp ? { label: `${prevLabel} payment due (G702 line 8)`, amount: prevApp.g702.currentPaymentDue } : undefined} /> : null}>
+          <WaiverTable footer={ck.unconditionals.length ? <TotalsRows t={waiverTotals(ck.unconditionals, gcName)} gcName={gcName} check={prevApp ? { label: `${prevLabel} Payment Due (G702 Line 8)`, amount: prevApp.g702.currentPaymentDue } : undefined} /> : null}>
             {unconds.map((r) => {
               const key = uKey(r);
               return (
@@ -347,7 +351,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
-                      {r.edited && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title={`Expected: ${r.expectedVendor} ${money(r.expectedAmount ?? 0)}`}>Edited — expected {r.expectedVendor !== r.vendor ? `${r.expectedVendor} ` : ''}{money(r.expectedAmount ?? 0)}</span>}
+                      {r.edited && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title={`Expected: ${r.expectedVendor} ${money(r.expectedAmount ?? 0)}`}>Edited — Expected {r.expectedVendor !== r.vendor ? `${r.expectedVendor} ` : ''}{money(r.expectedAmount ?? 0)}</span>}
                     </div>
                   </td>
                   <td className="px-1 align-top pt-1.5"><PartyPill row={r} gcName={gcName} onSet={(p) => saveU(r, { party: p })} /></td>
@@ -388,12 +392,12 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         {/* Anything still owed from pay apps before the last one */}
         {earlier.length > 0 && (
           <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-red-700">Still outstanding from earlier pay apps ({earlier.length})</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-red-700">Still Outstanding from Earlier Pay Apps ({earlier.length})</h3>
             <p className="text-xs text-gray-600">Waivers owed on pay apps before {prevLabel}. Tick them off here as they come in.</p>
             <div className="border border-red-200 rounded-md overflow-x-auto">
               <table className="w-full text-sm min-w-[640px]">
                 <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-red-50/60">
-                  <th className="px-2 py-1.5">Pay app</th><th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 text-right">Amount</th>
+                  <th className="px-2 py-1.5">Pay App</th><th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 text-right">Amount</th>
                   <th className="px-2 py-1.5">Missing</th><th className="px-2 py-1.5 w-20 text-center">Received</th><th className="px-2 py-1.5">File</th><th className="px-2 py-1.5 w-24" />
                 </tr></thead>
                 <tbody>
@@ -417,7 +421,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                         )}
                       </td>
                       <td className="px-2 text-right">
-                        <button className="text-xs text-gray-500 hover:text-gray-900 hover:underline" onClick={() => markEarlier(r, { notNeeded: true })}>Not needed</button>
+                        <button className="text-xs text-gray-500 hover:text-gray-900 hover:underline" onClick={() => markEarlier(r, { notNeeded: true })}>Not Needed</button>
                       </td>
                     </tr>
                   ))}
@@ -426,6 +430,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             </div>
           </section>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -434,12 +439,12 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 function WaiverTable({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div className="border rounded-md overflow-x-auto">
-      <table className="w-full text-sm min-w-[760px]">
+      <table className="w-full text-sm min-w-[720px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
             <th className="w-6" /><th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-16">GC / Sub</th><th className="px-2 py-1.5 w-40 text-right">Amount</th>
-            <th className="px-2 py-1.5 w-20 text-center">Received</th><th className="px-2 py-1.5">File (drop it on the row)</th>
-            <th className="px-2 py-1.5 w-20 text-center">Not needed</th><th className="w-9" />
+            <th className="px-2 py-1.5 w-20 text-center">Received</th><th className="px-2 py-1.5">File (Drop It on the Row)</th>
+            <th className="px-2 py-1.5 w-20 text-center">Not Needed</th><th className="w-9" />
           </tr>
         </thead>
         <tbody>{children}</tbody>
@@ -476,7 +481,7 @@ function TotalsRows({ t, gcName, check }: { t: WaiverTotals; gcName: string; che
     <>
       {row(`Subcontractors (${t.subCount})`, t.subs)}
       {row(<span title={gcName}>GC{t.gcCount > 1 ? ` (${t.gcCount} releases)` : ''}</span>, t.gc, !t.gcCount ? <span className="text-red-700">No GC release</span> : null)}
-      {t.gcCount > 0 && row('GC less subs', t.gap,
+      {t.gcCount > 0 && row('GC Less Subs', t.gap,
         <>{t.gapPct != null && <span className="tabular-nums">{t.gapPct.toFixed(1)}% of the GC's release — </span>}the GC's own work, fee and general conditions, or sub releases not in yet{t.gap < -0.005 ? <span className="text-red-700 font-medium"> · subs exceed the GC's release</span> : null}</>, true)}
       {check && t.gcCount > 0 && row(check.label, check.amount,
         Math.abs(diff) < 0.01 ? <span className="text-green-700 font-medium">GC release matches</span> : <span className="text-amber-700 font-medium">GC release is {money(Math.abs(diff))} {diff > 0 ? 'more' : 'less'}</span>)}
@@ -499,7 +504,7 @@ function MissingRow({ m, busy, start, onAdd, onSkip }: { m: MissingConditional; 
       <td className="px-1 py-1"><MoneyInput className="h-8" value={amount} aria-label={`${m.vendor} amount`} onValueChange={setAmount} /></td>
       <td colSpan={4} className="px-2">
         <div className="flex gap-2 justify-end">
-          <Button size="sm" variant="ghost" className="h-7 text-gray-600" disabled={busy} onClick={onSkip} title="They aren't being paid on this pay app">Not this pay app</Button>
+          <Button size="sm" variant="ghost" className="h-7 text-gray-600" disabled={busy} onClick={onSkip} title="They aren't being paid on this pay app">Not This Pay App</Button>
           <Button size="sm" className="h-7" disabled={busy} onClick={() => onAdd(amount.replace(/[$,\s]/g, ''))}>Add</Button>
         </div>
       </td>
@@ -521,7 +526,7 @@ function FileCell({ name, id, onPick }: { name?: string; id: number | null; onPi
     </button>
   ) : (
     <label className="text-gray-500 hover:text-blue-700 cursor-pointer inline-flex items-center gap-1">
-      <Paperclip className="h-3 w-3" /> Attach or drop
+      <Paperclip className="h-3 w-3" /> Attach or Drop
       <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(f); }} />
     </label>
   );

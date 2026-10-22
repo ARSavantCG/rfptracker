@@ -182,8 +182,8 @@ export function registerBudgetReconciliationReport(app: Express): void {
            <th style="width:10%">RFP</th>
            <th style="width:20%">Project</th>
            <th style="width:16%">Property</th>
-           <th style="width:12%">Saved total</th>
-           <th style="width:12%">Sum of lines</th>
+           <th style="width:12%">Saved Total</th>
+           <th style="width:12%">Sum of Lines</th>
            <th style="width:10%">Gap</th>
            <th style="width:20%">Cause</th>
          </tr></thead>

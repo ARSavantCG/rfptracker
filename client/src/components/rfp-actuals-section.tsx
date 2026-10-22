@@ -212,7 +212,7 @@ export function RfpActualsSection({ rfpId, rfpIsLeased }: RfpActualsSectionProps
             />
           </div>
           <div>
-            <label className="text-gray-500 block mb-0.5">Vendor (optional)</label>
+            <label className="text-gray-500 block mb-0.5">Vendor (Optional)</label>
             <Input
               value={form.vendorName}
               onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
@@ -232,7 +232,7 @@ export function RfpActualsSection({ rfpId, rfpIsLeased }: RfpActualsSectionProps
         </div>
         {romLines.length > 0 && (
           <div>
-            <label className="text-gray-500 block mb-1">Link ROM lines covered</label>
+            <label className="text-gray-500 block mb-1">Link ROM Lines Covered</label>
             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
               {romLines.map((r) => {
                 const taken = takenByOther(r.masterItemId, exceptLineId);

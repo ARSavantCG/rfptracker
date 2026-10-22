@@ -68,9 +68,9 @@ export function CostBenchmarks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rom-scope-items"] });
       setUpdateModal({ open: false, benchmark: null, romItem: null });
-      toast({ title: "ROM price updated to historical average" });
+      toast({ title: "ROM Price Updated to Historical Average" });
     },
-    onError: () => toast({ title: "Failed to update ROM price", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Update ROM Price", variant: "destructive" }),
   });
 
   const categories = useMemo(() => {
@@ -231,7 +231,7 @@ export function CostBenchmarks() {
                           size="sm"
                           variant="ghost"
                           className="h-7 px-2 text-xs"
-                          title="Update ROM price to historical average"
+                          title="Update ROM Price to Historical Average"
                           onClick={() => setUpdateModal({ open: true, benchmark: b, romItem })}
                         >
                           <RefreshCw className="h-3 w-3" />

@@ -154,7 +154,7 @@ export function BidTaggingModal({
       toast({ title: `${count} quote${count !== 1 ? "s" : ""} saved to pricing database` });
     },
     onError: () => {
-      toast({ title: "Failed to save tags", variant: "destructive" });
+      toast({ title: "Failed to Save Tags", variant: "destructive" });
     },
   });
 

@@ -1,20 +1,18 @@
 /** All active projects at a glance (admins): totals, CM fee, vendor billings, schedule. Starts simple. */
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { ProjectDashboard, FeeDonut, VendorDonut } from '@shared/cost-dashboard';
+import { feeDonut, type ProjectDashboard, type FeeDonut, type VendorDonut } from '@shared/cost-dashboard';
 import { money } from './types';
 import { FeeDonutCard, VendorDonutCard, ScheduleCard, Tile } from './dashboard-widgets';
 
 type Row = { id: number; name: string; projectNumber?: string | null; status?: string | null; dashboard?: ProjectDashboard };
 
-const addFee = (a: FeeDonut, b: FeeDonut): FeeDonut => ({
-  paid: a.paid + b.paid, invoicedUnpaid: a.invoicedUnpaid + b.invoicedUnpaid, earnedNotInvoiced: a.earnedNotInvoiced + b.earnedNotInvoiced,
-  notYetEarned: a.notYetEarned + b.notYetEarned, anticipated: a.anticipated + b.anticipated, earned: a.earned + b.earned, invoiced: a.invoiced + b.invoiced,
-});
+const addFee = (a: FeeDonut, b: FeeDonut): FeeDonut =>
+  Object.fromEntries((Object.keys(a) as Array<keyof FeeDonut>).map((k) => [k, (a[k] ?? 0) + (b[k] ?? 0)])) as FeeDonut;
 const addVendor = (a: VendorDonut, b: VendorDonut): VendorDonut => ({
   contractSum: a.contractSum + b.contractSum, earned: a.earned + b.earned, paid: a.paid + b.paid, owed: a.owed + b.owed, retainage: a.retainage + b.retainage, notBilled: a.notBilled + b.notBilled,
 });
-const zeroFee: FeeDonut = { paid: 0, invoicedUnpaid: 0, earnedNotInvoiced: 0, notYetEarned: 0, anticipated: 0, earned: 0, invoiced: 0 };
+const zeroFee: FeeDonut = feeDonut([]);
 const zeroVendor: VendorDonut = { contractSum: 0, earned: 0, paid: 0, owed: 0, retainage: 0, notBilled: 0 };
 
 export function PortfolioDashboard({ projects }: { projects: Row[] }) {
@@ -31,23 +29,23 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
     <div className="space-y-3">
       <button className="flex items-center gap-1.5" onClick={toggle} aria-expanded={open}>
         {open ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Portfolio — {live.length} active project{live.length === 1 ? '' : 's'}</span>
-        {!open && <span className="text-xs text-gray-600 ml-2 tabular-nums">fee billable {money(fee.earnedNotInvoiced)} · vendors owed {money(vendor.owed)}{behind ? ` · ${behind} behind schedule` : ''}</span>}
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Portfolio — {live.length} Active Project{live.length === 1 ? '' : 's'}</span>
+        {!open && <span className="text-xs text-gray-600 ml-2 tabular-nums">Earned, Not Invoiced {money(fee.earnedNotInvoiced)} · Vendors Owed {money(vendor.owed)}{behind ? ` · ${behind} Behind Schedule` : ''}</span>}
       </button>
       {open && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
-            <Tile label="Revised budget" value={money(sum((d) => d.budget))} />
+            <Tile label="Revised Budget" value={money(sum((d) => d.budget))} />
             <Tile label="Committed" value={money(sum((d) => d.committed))} />
-            <Tile label="Spent to date" value={money(sum((d) => d.spent))} />
-            <Tile label="Vendors owed" value={money(vendor.owed)} tone={vendor.owed > 0.005 ? 'text-red-700' : undefined} sub={`retainage held ${money(vendor.retainage)}`} />
-            <Tile label="CM fee billable now" value={money(fee.earnedNotInvoiced)} tone="text-amber-700" sub={`invoiced, not paid ${money(fee.invoicedUnpaid)}`} />
+            <Tile label="Spent to Date" value={money(sum((d) => d.spent))} />
+            <Tile label="Vendors Owed" value={money(vendor.owed)} tone={vendor.owed > 0.005 ? 'text-red-700' : undefined} sub={`Retainage Held ${money(vendor.retainage)}`} />
+            <Tile label="Earned, Not Invoiced" value={money(fee.earnedNotInvoiced)} tone="text-amber-700" sub={`Costs Paid ${money(fee.earnedNotInvoicedPaid)} · Invoiced, Not Paid ${money(fee.invoicedUnpaid)}`} />
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             <FeeDonutCard d={fee} subtitle="All active projects, capital partner and tenant" />
-            <VendorDonutCard d={vendor} title="Vendor billings — all projects" />
+            <VendorDonutCard d={vendor} title="Vendor Billings — All Projects" />
           </div>
-          <ScheduleCard rows={schedule} showProject title="Schedule — all contracts" />
+          <ScheduleCard rows={schedule} showProject title="Schedule — All Contracts" />
         </>
       )}
     </div>

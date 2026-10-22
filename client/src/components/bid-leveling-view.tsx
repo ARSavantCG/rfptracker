@@ -101,11 +101,11 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfp-requests", rfpId, "bid-leveling"] });
-      toast({ title: "Adjustment saved successfully" });
+      toast({ title: "Adjustment Saved Successfully" });
       setAdjustmentDialog(null);
     },
     onError: () => {
-      toast({ title: "Failed to save adjustment", variant: "destructive" });
+      toast({ title: "Failed to Save Adjustment", variant: "destructive" });
     },
   });
 
@@ -120,7 +120,7 @@ export function BidLevelingView({ rfpId, onSelectPrimaryBidder }: BidLevelingVie
       onSelectPrimaryBidder?.(bidCollectionId);
     },
     onError: () => {
-      toast({ title: "Failed to select primary bidder", variant: "destructive" });
+      toast({ title: "Failed to Select Primary Bidder", variant: "destructive" });
     },
   });
 

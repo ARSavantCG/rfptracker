@@ -50,18 +50,18 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
       allocations: mode === 'direct' ? filled.map((r) => ({ baselineKey: r.baselineKey, pct: parseFloat(r.pct) })) : [],
     }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); onClose(); },
-    onError: (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }),
   });
   const remove = useMutation({
     mutationFn: () => apiRequest(`/api/cost-sov-lines/${line!.id}`, 'DELETE'),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); onClose(); },
-    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Deleted', description: e?.message, variant: 'destructive' }),
   });
 
   return (
     <Dialog open={!!line} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope sm:max-w-lg">
-        <DialogHeader><DialogTitle>{line?.itemNo ? `${line.itemNo} · ` : ''}{line?.code || 'SOV line'}</DialogTitle></DialogHeader>
+      <DialogContent className="pm-scope w-[96vw] sm:max-w-lg max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
+        <DialogHeader><DialogTitle>{line?.itemNo ? `${line.itemNo} · ` : ''}{line?.code || 'SOV Line'}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="sm:col-span-2 space-y-1">
@@ -69,13 +69,13 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
               <Input value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label>Scheduled value</Label>
+              <Label>Scheduled Value</Label>
               <MoneyInput value={value} onValueChange={setValue} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Where this money goes</Label>
+            <Label>Where This Money Goes</Label>
             <div className="flex flex-wrap gap-2">
               {([
                 ['direct', 'To budget lines'],
@@ -134,7 +134,7 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
         <DialogFooter className="gap-2 sm:justify-between">
           <Button type="button" variant="ghost" className="text-red-700" disabled={remove.isPending}
                   onClick={() => remove.mutate()}>
-            Delete line
+            Delete Line
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>

@@ -100,7 +100,7 @@ export default function CostProjects() {
             </h1>
             <p className="text-gray-600 mt-1 text-sm">What each job is actually costing, against what it was budgeted.</p>
           </div>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> New project</Button>
+          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> New Project</Button>
         </div>
 
         {isAdmin && <PortfolioDashboard projects={all as any} />}
@@ -132,7 +132,7 @@ export default function CostProjects() {
                   <th className="px-3 py-2">Tenant</th>
                   <th className="px-3 py-2 text-right">Budget</th>
                   <th className="px-3 py-2 text-right">Committed</th>
-                  <th className="px-3 py-2 text-right">Spent to date</th>
+                  <th className="px-3 py-2 text-right">Spent to Date</th>
                   <th className="px-3 py-2 text-right">Variance</th>
                 </tr>
               </thead>
@@ -167,8 +167,8 @@ export default function CostProjects() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="pm-scope sm:max-w-2xl">
-          <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
+        <DialogContent className="pm-scope w-[96vw] sm:max-w-2xl max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
+          <DialogHeader><DialogTitle>New Project</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
               <Button type="button" variant={source === 'rfp' ? 'default' : 'outline'} size="sm" onClick={() => setSource('rfp')}>From an RFP</Button>
@@ -222,7 +222,7 @@ export default function CostProjects() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button disabled={create.isPending || (source === 'rfp' ? !rfpId : !name.trim())} onClick={() => create.mutate()}>
-              {create.isPending ? 'Opening…' : 'Open project'}
+              {create.isPending ? 'Opening…' : 'Open Project'}
             </Button>
           </DialogFooter>
         </DialogContent>

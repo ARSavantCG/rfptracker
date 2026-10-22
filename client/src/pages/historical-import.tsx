@@ -103,11 +103,11 @@ export default function HistoricalImport() {
     mutationFn: (data: any) => apiRequest("/api/project-actuals", "POST", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/project-actuals"] });
-      toast({ title: "Project actual saved successfully" });
+      toast({ title: "Project Actual Saved Successfully" });
       setForm({ projectName: "", tenantName: "", propertyName: "", completedDate: "", officeAreaSf: "", warehouseAreaSf: "", totalActualCost: "", notes: "" });
       setLineItems([{ id: "1", category: "", customCategory: "", areaType: "combined", totalCost: "", notes: "" }]);
     },
-    onError: () => toast({ title: "Failed to save project actual", variant: "destructive" }),
+    onError: () => toast({ title: "Failed to Save Project Actual", variant: "destructive" }),
   });
 
   const handleSave = () => {
@@ -182,7 +182,7 @@ export default function HistoricalImport() {
       setCsvFile(null);
       if (fileRef.current) fileRef.current.value = "";
     },
-    onError: () => toast({ title: "CSV import failed", variant: "destructive" }),
+    onError: () => toast({ title: "CSV Import Failed", variant: "destructive" }),
   });
 
   const downloadTemplate = () => {
@@ -411,7 +411,7 @@ export default function HistoricalImport() {
 
                   {csvPreview && csvPreview.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Preview (first {csvPreview.length} rows):</h4>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Preview (First {csvPreview.length} rows):</h4>
                       <div className="overflow-x-auto rounded border">
                         <table className="w-full text-xs border-collapse">
                           <thead>

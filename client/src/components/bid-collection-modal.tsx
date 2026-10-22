@@ -445,7 +445,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
         
         // Show success feedback
         toast({
-          title: "Line item saved",
+          title: "Line Item Saved",
           description: "Line item has been saved successfully.",
           duration: 4000,
         });
@@ -465,7 +465,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
       },
       onError: (error) => {
         toast({
-          title: "Save failed",
+          title: "Save Failed",
           description: "Failed to save line item. Please try again.",
           variant: "destructive",
           duration: 6000,
@@ -756,7 +756,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                     onClick={() => {
                       if (!bidCollection) {
                         toast({
-                          title: "Save bid first",
+                          title: "Save Bid First",
                           description: "Please save the bid collection before importing from PDF. Fill in the respondent and save, then import.",
                           variant: "destructive",
                         });
@@ -1254,7 +1254,7 @@ export function BidCollectionModal({ isOpen, onClose, rfp, bidCollection }: BidC
                             window.open(downloadUrl, '_blank');
                           }}
                           className="h-3 w-3 p-0 hover:bg-blue-100"
-                          title="Download file"
+                          title="Download File"
                         >
                           <Download className="h-2 w-2" />
                         </Button>

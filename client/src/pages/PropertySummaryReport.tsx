@@ -25,14 +25,14 @@ export function PropertySummaryReport() {
       const newWindow = window.open(blobUrl, '_blank');
       if (!newWindow) {
         toast({
-          title: "Popup blocked",
+          title: "Popup Blocked",
           description: "Please allow popups for this site to view the report.",
           variant: "destructive"
         });
       }
     } catch (error) {
       toast({
-        title: "Failed to load report",
+        title: "Failed to Load Report",
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive"
       });

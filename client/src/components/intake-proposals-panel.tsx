@@ -51,7 +51,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         description: data?.meta ? `${data.meta.filesIncluded} file(s) read, ${data.meta.rulesApplied} rule(s) applied.` : undefined,
       });
     },
-    onError: (e: any) => toast({ title: "Parse failed", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Parse Failed", description: e?.message, variant: "destructive" }),
   });
 
   const commitToScope = useMutation({
@@ -68,7 +68,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
     },
     onError: (e: any) => {
       setCommitInfo(`last write FAILED: ${e?.message || "unknown error"}`);
-      toast({ title: "Failed to add to scope", description: e?.message, variant: "destructive" });
+      toast({ title: "Failed to Add to Scope", description: e?.message, variant: "destructive" });
     },
   });
 
@@ -82,7 +82,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         commitToScope.mutate();
       }
     },
-    onError: (e: any) => toast({ title: "Update failed", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Update Failed", description: e?.message, variant: "destructive" }),
   });
 
   const retract = useMutation({
@@ -98,7 +98,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
           : `moved back to review (item was not in scope, nothing removed)`
       );
     },
-    onError: (e: any) => toast({ title: "Undo failed", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Undo Failed", description: e?.message, variant: "destructive" }),
   });
 
   const acceptAll = () => {
@@ -127,7 +127,7 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
         {ai.on && (
         <Button size="sm" onClick={() => runParse.mutate()} disabled={runParse.isPending} className="flex items-center gap-1">
           {runParse.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {proposals.length ? "Re-run parse" : "Run AI parse"}
+          {proposals.length ? "Re-Run Parse" : "Run AI Parse"}
         </Button>
         )}
       </div>
@@ -184,10 +184,10 @@ export function IntakeProposalsPanel({ rfpId }: IntakeProposalsPanelProps) {
       {pendingCount > 0 && (
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={acceptAll} className="flex items-center gap-1">
-            <Check className="h-4 w-4" /> Accept all ({pendingCount})
+            <Check className="h-4 w-4" /> Accept All ({pendingCount})
           </Button>
           <Button size="sm" variant="outline" onClick={rejectAll} className="flex items-center gap-1">
-            <X className="h-4 w-4" /> Reject all
+            <X className="h-4 w-4" /> Reject All
           </Button>
         </div>
       )}

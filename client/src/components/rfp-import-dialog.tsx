@@ -238,7 +238,7 @@ export function RfpImportDialog({ open, onOpenChange, currentRfpId, onImport, on
           {/* Category Selection */}
           {selectedRfp && (
             <div className="border rounded-md p-4 bg-gray-50">
-              <Label className="text-sm font-medium mb-3 block">Select categories to import:</Label>
+              <Label className="text-sm font-medium mb-3 block">Select Categories to Import:</Label>
               <div className="space-y-2">
                 {selectedRfp.tenantImprovementsCount > 0 && (
                   <div className="flex items-center space-x-2">

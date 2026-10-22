@@ -90,7 +90,7 @@ export default function DataMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bid-line-items/unmapped"] });
       toast({
-        title: "Item updated",
+        title: "Item Updated",
         description: "Line item has been mapped and saved.",
       });
     },
@@ -112,7 +112,7 @@ export default function DataMapping() {
       setSelectedRows(new Set());
       setBulkCategoryId(null);
       toast({
-        title: "Bulk update complete",
+        title: "Bulk Update Complete",
         description: "Selected line items have been mapped.",
       });
     },
@@ -177,7 +177,7 @@ export default function DataMapping() {
   const handleBulkApply = () => {
     if (bulkCategoryId === null || selectedRows.size === 0) {
       toast({
-        title: "Cannot apply",
+        title: "Cannot Apply",
         description: "Please select rows and a category first.",
         variant: "destructive",
       });

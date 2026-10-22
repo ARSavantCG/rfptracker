@@ -49,7 +49,7 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
             {money(unallocated.committed)} of contract value isn't mapped to a budget line yet, so it shows as
             Unallocated below.{' '}
             {onShowUnallocated && (
-              <button className="underline font-medium" onClick={onShowUnallocated}>Map those lines</button>
+              <button className="underline font-medium" onClick={onShowUnallocated}>Map Those Lines</button>
             )}
           </span>
         </div>
@@ -60,16 +60,16 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
         <table className={`w-full text-sm ${showOrig ? 'min-w-[1080px]' : 'min-w-[720px]'}`}>
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-gray-600 border-b">
-              <th className="px-3 py-2">Budget line</th>
+              <th className="px-3 py-2">Budget Line</th>
               {showOrig && <th className="px-3 py-2 text-right">Original</th>}
               {showRev && <th className="px-3 py-2 text-right">Revisions</th>}
               {showTx && <th className="px-3 py-2 text-right">Transfers</th>}
               {showCo && <th className="px-3 py-2 text-right">Approved COs</th>}
-              <th className="px-3 py-2 text-right">{showOrig ? 'Revised budget' : 'Budget'}</th>
+              <th className="px-3 py-2 text-right">{showOrig ? 'Revised Budget' : 'Budget'}</th>
               <th className="px-3 py-2 text-right">Committed</th>
               {hasPending && <th className="px-3 py-2 text-right" title="Change orders not yet approved">Pending COs</th>}
-              <th className="px-3 py-2 text-right">Spent to date</th>
-              <th className="px-3 py-2 text-right">% spent</th>
+              <th className="px-3 py-2 text-right">Spent to Date</th>
+              <th className="px-3 py-2 text-right">% Spent</th>
               <th className="px-3 py-2 text-right" title="Budget less committed. In parentheses when over.">Variance</th>
             </tr>
           </thead>
@@ -125,16 +125,16 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
 
       {/* Who pays. Committed cost split the way each budget line is split. */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 ${cmFee?.supplemental ? 'lg:grid-cols-5' : cmFee ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2`}>
-        <Stat label="Retainage held" value={money(totals.retainageHeld)} />
-        <Stat label="Tenant share of committed" value={money(totals.committedTenant)} />
-        <Stat label="Outstanding share (absorbed)" value={money(totals.committedOutstanding)}
+        <Stat label="Retainage Held" value={money(totals.retainageHeld)} />
+        <Stat label="Tenant Share of Committed" value={money(totals.committedTenant)} />
+        <Stat label="Outstanding Share (Absorbed)" value={money(totals.committedOutstanding)}
               tone={totals.committedOutstanding > 0 ? 'text-red-800' : undefined} />
         {cmFee && (
           <Stat label={`${cmFee.supplemental ? 'Original ' : ''}CM fee earned (${cmFee.pct.toFixed(2)}%)`} value={money(cmFee.earned)}
                 sub={`of ${money(cmFee.budget)} · ${money(cmFee.earnedOnPaid)} on payments made`} />
         )}
         {cmFee?.supplemental && (
-          <Stat label="Supplemental CM fee earned" value={money(cmFee.supplemental.earned + cmFee.supplemental.earnedCp)}
+          <Stat label="Supplemental CM Fee Earned" value={money(cmFee.supplemental.earned + cmFee.supplemental.earnedCp)}
                 sub={`of ${money(cmFee.supplemental.budget)} · on ${money(cmFee.supplemental.work)} change order work${cmFee.supplemental.earnedCp ? ` · ${money(cmFee.supplemental.earnedCp)} from the owner` : ''}`} />
         )}
       </div>

@@ -62,7 +62,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       toast({
-        title: "Contact created",
+        title: "Contact Created",
         description: "Contact has been successfully created.",
         duration: 4000,
       });
@@ -86,7 +86,7 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       toast({
-        title: "Contact updated",
+        title: "Contact Updated",
         description: "Contact has been successfully updated.",
         duration: 4000,
       });
@@ -110,13 +110,13 @@ export function ContactFormModal({ contact, trigger, onSuccess }: ContactFormMod
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       if (response?.deactivated) {
         toast({
-          title: "Login deactivated",
+          title: "Login Deactivated",
           description: "This contact has a system login — their account was deactivated and the contact record was preserved.",
           duration: 6000,
         });
       } else {
         toast({
-          title: "Contact deleted",
+          title: "Contact Deleted",
           description: "Contact has been successfully deleted.",
           duration: 4000,
         });

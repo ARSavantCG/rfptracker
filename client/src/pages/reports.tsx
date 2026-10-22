@@ -160,7 +160,7 @@ export default function Reports() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
-              Pipeline{hasFilters ? " (filtered)" : ""}
+              Pipeline{hasFilters ? " (Filtered)" : ""}
             </CardTitle>
             <p className="text-xs text-gray-600">
               By status — these add up to {metrics.total}.
@@ -183,7 +183,7 @@ export default function Reports() {
                   checked={includeArchived}
                   onChange={(e) => setIncludeArchived(e.target.checked)}
                 />
-                Include archived
+                Include Archived
                 {!includeArchived && archiveFilter.excludedCount > 0 && (
                   <span className="text-gray-500">
                     — {archiveFilter.excludedCount} archived RFP

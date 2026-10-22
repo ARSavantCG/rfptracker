@@ -45,8 +45,8 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
         budget: r.budget.replace(/,/g, ''), tenantSharePct: parseFloat(r.tenantSharePct), masterItemId: r.masterItemId ?? null,
       })),
     }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); toast({ title: 'Budget saved' }); },
-    onError: (e: any) => toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); toast({ title: 'Budget Saved' }); },
+    onError: (e: any) => toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }),
   });
 
   const update = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -63,10 +63,10 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-              <th className="px-2 py-1.5">Budget line</th>
+              <th className="px-2 py-1.5">Budget Line</th>
               <th className="px-2 py-1.5 w-40">Contract</th>
               <th className="px-2 py-1.5 w-40 text-right">Budget</th>
-              <th className="px-2 py-1.5 w-28 text-right">Tenant pays</th>
+              <th className="px-2 py-1.5 w-28 text-right">Tenant Pays</th>
               <th className="w-10" />
             </tr>
           </thead>
@@ -108,11 +108,11 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
         <Button variant="outline" size="sm" onClick={() => setRows([...rows, {
           key: `b-${Date.now().toString(36)}`, description: '', bucket: 'contractor', budget: '0.00', tenantSharePct: '100.00',
         }])}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Budget line
+          <Plus className="h-3.5 w-3.5 mr-1" /> Budget Line
         </Button>
         <div className="flex gap-2">
           {dirty && <Button variant="ghost" size="sm" onClick={() => setRows(toRows(baseline))}>Discard</Button>}
-          <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save budget'}</Button>
+          <Button size="sm" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save Budget'}</Button>
         </div>
       </div>
     </div>

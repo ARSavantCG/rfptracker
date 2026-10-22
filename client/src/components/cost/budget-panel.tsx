@@ -78,16 +78,16 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers`, 'POST', { ...xForm, amount: xForm.amount.replace(/,/g, '') });
       queryClient.setQueryData([projectKey(projectId)], data);
-      toast({ title: 'Money moved', description: `${lineName(xForm.fromKey)} → ${lineName(xForm.toKey)}` });
+      toast({ title: 'Money Moved', description: `${lineName(xForm.fromKey)} → ${lineName(xForm.toKey)}` });
       setXForm(null);
-    } catch (e: any) { toast({ title: 'Not moved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Moved', description: e?.message, variant: 'destructive' }); }
   };
   const undoTransfer = async (id: string) => {
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers/${id}`, 'DELETE');
       queryClient.setQueryData([projectKey(projectId)], data);
-      toast({ title: 'Transfer undone' });
-    } catch (e: any) { toast({ title: 'Not undone', description: e?.message, variant: 'destructive' }); }
+      toast({ title: 'Transfer Undone' });
+    } catch (e: any) { toast({ title: 'Not Undone', description: e?.message, variant: 'destructive' }); }
   };
 
   const priced = r2(rows.reduce((s, r) => s + num(r.priced), 0));
@@ -128,7 +128,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
       queryClient.invalidateQueries({ queryKey: ['/api/cost-projects'] });
       toast({ title: confirmed ? 'Revision saved' : 'Budget saved' });
     } catch (e: any) {
-      toast({ title: 'Not saved', description: e?.message, variant: 'destructive' });
+      toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' });
       queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
     } finally { setSaving(false); }
   };
@@ -137,7 +137,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
       const data = await apiRequest(`/api/cost-projects/${projectId}/approval/${path}`, 'POST', {});
       queryClient.setQueryData([projectKey(projectId)], data);
       toast({ title: ok });
-    } catch (e: any) { toast({ title: 'Not done', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Done', description: e?.message, variant: 'destructive' }); }
   };
 
 
@@ -165,12 +165,12 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
         <div className="flex gap-2">
           {confirmed ? (
             <Button variant="ghost" size="sm" onClick={() => { if (window.confirm('Put this budget back to draft? The original budget snapshot is cleared and you confirm again.')) post('reopen', 'Budget back to draft'); }}>
-              Reopen as draft
+              Reopen as Draft
             </Button>
           ) : (
             <Button size="sm" disabled={dirty || a.lafTotal == null} title={dirty ? 'Save first' : a.lafTotal == null ? 'Enter and save the LAF total first' : undefined}
                     onClick={() => { if (window.confirm(`Confirm ${money(a.approvedTotal)} as the original budget?`)) post('confirm', 'Budget confirmed'); }}>
-              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirm budget
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Confirm Budget
             </Button>
           )}
         </div>
@@ -180,19 +180,19 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
         <div className={`grid grid-cols-2 ${hasCos ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-3`}>
           <Stat label="Priced" value={money(priced)} />
           <div>
-            <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF total</label>
+            <label className="text-[11px] uppercase tracking-wide text-gray-500" htmlFor="laf-total">LAF Total</label>
             <MoneyInput id="laf-total" className="h-9 font-semibold" value={laf} onValueChange={setLaf} />
           </div>
-          <Stat label={discount >= 0 ? 'Deal discount' : 'Deal premium'} value={typedLaf == null ? '—' : money(Math.abs(discount))} tone="text-indigo-800" />
+          <Stat label={discount >= 0 ? 'Deal Discount' : 'Deal Premium'} value={typedLaf == null ? '—' : money(Math.abs(discount))} tone="text-indigo-800" />
           {hasCos && <Stat label="Approved COs" value={signedMoney(a.coSummary.approved)} />}
-          {hasCos && <Stat label={confirmed ? 'Revised budget' : 'Budget with COs'} value={money(current)} />}
+          {hasCos && <Stat label={confirmed ? 'Revised Budget' : 'Budget with COs'} value={money(current)} />}
         </div>
 
         <div className="overflow-x-auto border rounded-md">
           <table className={`w-full text-sm ${confirmed ? 'min-w-[1180px]' : 'min-w-[900px]'}`}>
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
-                <th className="px-2 py-1.5 min-w-[220px]">Budget line</th>
+                <th className="px-2 py-1.5 min-w-[220px]">Budget Line</th>
                 <th className="px-2 py-1.5 w-40">Contract</th>
                 <th className="px-2 py-1.5 w-36 text-right">Priced</th>
                 {showDiscount && <th className="px-2 py-1.5 w-36 text-right">Discount</th>}
@@ -200,8 +200,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 {hasRev && <th className="px-2 py-1.5 w-28 text-right" title="Lines edited after the budget was confirmed">Revisions</th>}
                 {hasXfer && <th className="px-2 py-1.5 w-32 text-right">Transfers</th>}
                 {hasCos && <th className="px-2 py-1.5 w-32 text-right">Approved COs</th>}
-                <th className="px-2 py-1.5 w-36 text-right">{confirmed ? 'Revised budget' : 'Budget'}</th>
-                <th className="px-2 py-1.5 w-28 text-right">Tenant pays</th>
+                <th className="px-2 py-1.5 w-36 text-right">{confirmed ? 'Revised Budget' : 'Budget'}</th>
+                <th className="px-2 py-1.5 w-28 text-right">Tenant Pays</th>
                 <th className="w-9" />
               </tr>
             </thead>
@@ -281,18 +281,18 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
           <Button variant="outline" size="sm" onClick={() => setRows([...rows, {
             key: `b-${Date.now().toString(36)}`, description: '', bucket: 'contractor', priced: '0.00', discount: '', tenantSharePct: '100.00',
           }])}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Budget line
+            <Plus className="h-3.5 w-3.5 mr-1" /> Budget Line
           </Button>
           {!xForm && baseline.length > 1 && (
             <Button variant="outline" size="sm" disabled={dirty} title={dirty ? 'Save the budget first' : 'Move money between lines; the total stays the same'}
                     onClick={() => setXForm({ fromKey: '', toKey: '', amount: '', note: '' })}>
-              <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Move money
+              <ArrowRightLeft className="h-3.5 w-3.5 mr-1" /> Move Money
             </Button>
           )}
           <div className="flex gap-2">
             {dirty && <Button variant="ghost" size="sm" onClick={() => { setRows(fromServer()); setLaf(serverLaf()); }}>Discard</Button>}
             <Button size="sm" disabled={!dirty || saving || rows.some((r) => !r.description.trim())} onClick={save}>
-              {saving ? 'Saving…' : confirmed ? 'Save revision' : 'Save budget'}
+              {saving ? 'Saving…' : confirmed ? 'Save Revision' : 'Save Budget'}
             </Button>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             </div>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setXForm(null)}>Cancel</Button>
-              <Button size="sm" disabled={!xForm.fromKey || !xForm.toKey || !(num(xForm.amount) > 0)} onClick={moveMoney}>Move money</Button>
+              <Button size="sm" disabled={!xForm.fromKey || !xForm.toKey || !(num(xForm.amount) > 0)} onClick={moveMoney}>Move Money</Button>
             </div>
           </div>
         )}
@@ -383,7 +383,7 @@ export function TeamRollUp({ baseline }: { baseline: ProjectBundle['project']['b
   return (
     <div className="bg-white border rounded-lg">
                   <button className="w-full flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-800" onClick={() => setShowRollUp(!showRollUp)}>
-            {showRollUp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />} Team roll-up
+            {showRollUp ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />} Team Roll-Up
             <span className="ml-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 bg-gray-100 border border-gray-300 rounded px-1.5 py-0.5">Reference only</span>
           </button>
           {showRollUp && (
@@ -396,7 +396,7 @@ export function TeamRollUp({ baseline }: { baseline: ProjectBundle['project']['b
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
                     <th className="py-1 pr-2">Line</th><th className="py-1 pr-2 text-right">Priced</th>
-                    <th className="py-1 pr-2 text-right">Soft costs</th><th className="py-1 text-right">Rolled up</th>
+                    <th className="py-1 pr-2 text-right">Soft Costs</th><th className="py-1 text-right">Rolled Up</th>
                   </tr>
                 </thead>
                 <tbody>

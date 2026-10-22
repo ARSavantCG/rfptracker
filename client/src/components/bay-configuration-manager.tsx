@@ -1572,7 +1572,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 size="sm"
                                 onClick={() => copyBayConfiguration(bay)}
                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
-                                title="Copy bay"
+                                title="Copy Bay"
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
@@ -1581,7 +1581,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                 size="sm"
                                 onClick={() => editBayConfiguration(bay)}
                                 className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 h-8 w-8 p-0"
-                                title="Edit bay"
+                                title="Edit Bay"
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>
@@ -1591,7 +1591,7 @@ export default function BayConfigurationManager({ property }: BayConfigurationMa
                                   size="sm"
                                   onClick={() => removeBayConfiguration(bay.id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                                  title="Delete bay"
+                                  title="Delete Bay"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>

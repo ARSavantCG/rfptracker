@@ -284,7 +284,7 @@ export function ItbSendPanel({ rfpId, projectName, rfpNumber }: {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Send className="h-4 w-4 mr-2" />
-              {sendMutation.isPending ? 'Sending…' : 'Send invitation'}
+              {sendMutation.isPending ? 'Sending…' : 'Send Invitation'}
             </Button>
           </div>
 

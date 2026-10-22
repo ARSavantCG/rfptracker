@@ -69,7 +69,7 @@ export default function CostProject() {
       retainagePct: parseFloat(newContract!.retainagePct), contractNumber: newContract!.contractNumber,
     }),
     onSuccess: () => { refresh(); setNewContract(null); },
-    onError: (e: any) => toast({ title: 'Not added', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }),
   });
   const setStatus = useMutation({
     mutationFn: (status: 'active' | 'closed') => apiRequest(`/api/cost-projects/${id}`, 'PATCH', { status }),
@@ -81,26 +81,26 @@ export default function CostProject() {
       fd.append('file', file);
       return apiRequest(`/api/cost-projects/${id}/documents`, 'POST', fd, 120_000);
     },
-    onSuccess: () => { refresh(); toast({ title: 'File saved' }); },
-    onError: (e: any) => toast({ title: 'File not saved', description: e?.message, variant: 'destructive', duration: 10000 }),
+    onSuccess: () => { refresh(); toast({ title: 'File Saved' }); },
+    onError: (e: any) => toast({ title: 'File Not Saved', description: e?.message, variant: 'destructive', duration: 10000 }),
   });
 
   const printReport = async () => {
-    if (!(await openReport(`/api/reports/budget-vs-actual/${id}`))) toast({ title: 'Report failed', variant: 'destructive' });
+    if (!(await openReport(`/api/reports/budget-vs-actual/${id}`))) toast({ title: 'Report Failed', variant: 'destructive' });
   };
   const removeFile = useMutation({
     mutationFn: (docId: number) => apiRequest(`/api/cost-documents/${docId}`, 'DELETE'),
-    onSuccess: () => { refresh(); toast({ title: 'File removed' }); },
-    onError: (e: any) => toast({ title: 'Not removed', description: e?.message, variant: 'destructive' }),
+    onSuccess: () => { refresh(); toast({ title: 'File Removed' }); },
+    onError: (e: any) => toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }),
   });
   const deleteProject = useMutation({
     mutationFn: (confirmText: string) => apiRequest(`/api/cost-projects/${id}`, 'DELETE', { confirm: confirmText }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cost-projects'] });
-      toast({ title: 'Project deleted' });
+      toast({ title: 'Project Deleted' });
       navigate('/projects');
     },
-    onError: (e: any) => toast({ title: 'Not deleted', description: e?.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Not Deleted', description: e?.message, variant: 'destructive' }),
   });
 
   if (isLoading) return <div className="min-h-screen bg-gray-50"><Navigation /><div className="p-6 text-sm text-gray-600">Loading…</div></div>;
@@ -131,7 +131,7 @@ export default function CostProject() {
           {[
             ['Budget', money(b.summary.totals.budget), ''],
             ['Committed', money(b.summary.totals.committed), ''],
-            ['Spent to date', money(b.summary.totals.toDate), ''],
+            ['Spent to Date', money(b.summary.totals.toDate), ''],
             ['Paid', money(b.position.totals.paid), ''],
             ['Owed', money(b.position.totals.owed), b.position.totals.owed > 0.005 ? 'text-red-700' : ''],
             ['Variance', signedMoney(b.summary.totals.variance), b.summary.totals.variance < -0.005 ? 'text-red-700' : 'text-green-700'],
@@ -264,7 +264,7 @@ export default function CostProject() {
               </div>
             )}
             <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-blue-700">
-              <Paperclip className="h-4 w-4" /> {uploadFile.isPending ? 'Saving…' : 'Add a file (contract, change order, invoice)'}
+              <Paperclip className="h-4 w-4" /> {uploadFile.isPending ? 'Saving…' : 'Add a File (Contract, Change Order, Invoice)'}
               <input type="file" className="hidden" disabled={uploadFile.isPending}
                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile.mutate(f); e.target.value = ''; }} />
             </label>
@@ -304,13 +304,13 @@ export default function CostProject() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setStatus.mutate(p.status === 'closed' ? 'active' : 'closed')}>
-              {p.status === 'closed' ? 'Reopen project' : 'Close project'}
+              {p.status === 'closed' ? 'Reopen Project' : 'Close Project'}
             </Button>
             <Button variant="ghost" size="sm" className="text-red-700 hover:text-red-800 hover:bg-red-50"
                     onClick={() => {
                       if (window.confirm(`Delete ${p.projectNumber} — ${p.name}?\n\nIts contracts, change orders, pay apps, payments and file records all go with it. This cannot be undone.`)) setDeleting('');
                     }}>
-              <Trash2 className="h-4 w-4 mr-1" /> Delete project
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Project
             </Button>
           </div>
         </div>
@@ -321,7 +321,7 @@ export default function CostProject() {
       <PackageDialog target={pkgTarget} bundle={b} projectId={id} onClose={() => setPkgTarget(null)} />
       <PaymentDialog target={payTarget} payments={b.payments} projectId={id} onClose={() => setPayTarget(null)} />
         <Dialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
-          <DialogContent className="pm-scope sm:max-w-md">
+          <DialogContent className="pm-scope w-[96vw] sm:max-w-md max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
             <DialogHeader><DialogTitle>Delete {p.projectNumber}?</DialogTitle></DialogHeader>
             <p className="text-sm text-gray-700">
               This removes the project, its {b.contracts.length} contract{b.contracts.length === 1 ? '' : 's'}, {b.applications.length} pay
@@ -333,7 +333,7 @@ export default function CostProject() {
               <Button variant="outline" onClick={() => setDeleting(null)}>Cancel</Button>
               <Button variant="destructive" disabled={(deleting ?? '').trim().toUpperCase() !== p.projectNumber.toUpperCase() || deleteProject.isPending}
                       onClick={() => deleteProject.mutate((deleting ?? '').trim())}>
-                {deleteProject.isPending ? 'Deleting…' : 'Delete project'}
+                {deleteProject.isPending ? 'Deleting…' : 'Delete Project'}
               </Button>
             </DialogFooter>
           </DialogContent>

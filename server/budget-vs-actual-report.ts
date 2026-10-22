@@ -132,7 +132,7 @@ function cmFeeTable(fee: CmFeeView | null | undefined): string {
     <tr><td>On work billed to date</td>${cell(fee.base)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earned)}${cell(fee.budget)}${cell(fee.remaining, negCls(fee.remaining))}</tr>
     <tr><td>On payments made to date</td>${cell(fee.paidBase)}<td class="num">${fmtPct(fee.pct)}</td>${cell(fee.earnedOnPaid)}${cell(fee.budget)}${cell(fee.budget - fee.earnedOnPaid, negCls(fee.budget - fee.earnedOnPaid))}</tr>
   </tbody></table>
-  ${fee.supplemental ? `<table class="t" style="margin-top:6px"><thead><tr><th class="l">Supplemental CM Fee (change orders)</th><th>Change Order Work</th><th>Earned — Capital Partner</th><th>Budget</th><th>Remaining</th></tr></thead><tbody>
+  ${fee.supplemental ? `<table class="t" style="margin-top:6px"><thead><tr><th class="l">Supplemental CM Fee (Change Orders)</th><th>Change Order Work</th><th>Earned — Capital Partner</th><th>Budget</th><th>Remaining</th></tr></thead><tbody>
     <tr><td>On work billed to date</td>${cell(fee.supplemental.work)}${cell(fee.supplemental.earned + fee.supplemental.earnedCp)}${cell(fee.supplemental.budget)}${cell(fee.supplemental.remaining, negCls(fee.supplemental.remaining))}</tr>
   </tbody></table>
   <div class="legend">The capital partner's fee: the original CM fee on the original scope, and the supplemental fee on change order work linked to tenant change orders, at each change order's partner rate. The tenant's fee on change orders is billed on the tenant invoice.</div>` : ""}`;
@@ -657,7 +657,7 @@ export function renderWaiverLogHtml(input: {
   const subtotal = (appId: number) => {
     const t = input.totals?.(appId);
     if (!t || !t.count) return "";
-    return `<tr class="sub"><td></td><td colspan="5" class="muted" style="font-size:10px">Subs (${t.subCount}) ${money2(t.subs)} · GC ${money2(t.gc)} · GC less subs ${money2(t.gap)}${t.gapPct != null ? ` (${t.gapPct.toFixed(1)}% of the GC's release)` : ""}</td></tr>`;
+    return `<tr class="sub"><td></td><td colspan="5" class="muted" style="font-size:10px">Subs (${t.subCount}) ${money2(t.subs)} · GC ${money2(t.gc)} · GC Less Subs ${money2(t.gap)}${t.gapPct != null ? ` (${t.gapPct.toFixed(1)}% of the GC's release)` : ""}</td></tr>`;
   };
   const body = Array.from(byContract).map(([cid, rows]) => `
     <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
@@ -678,7 +678,7 @@ export function renderWaiverLogHtml(input: {
     <li>Each pay app's conditional waivers are answered by unconditional waivers delivered with the following pay app, for the same vendor and amount.</li>
     <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
     <li>"Conditional missing": the GC owes one with every pay app, and each vendor on the pay app before is expected again unless marked not needed.</li>
-    <li>GC less subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>
+    <li>GC Less Subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
@@ -736,7 +736,7 @@ export function renderBudgetLogHtml(input: {
   ${a.coSummary.pending ? `<div class="legend">Pending change orders of ${money2(a.coSummary.pending)} are not in the budget until approved.</div>` : ""}
 
   <h3 class="sec">Log</h3>
-  <table class="t"><thead><tr><th class="l">Date</th><th class="l">What changed</th><th class="l">By</th><th>Budget After</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">What Changed</th><th class="l">By</th><th>Budget After</th></tr></thead><tbody>
     ${events.length ? events.map((e) => `<tr><td style="white-space:nowrap">${escapeHtml(longDate(e.at))}</td><td>${escapeHtml(e.what)}</td><td style="white-space:nowrap">${escapeHtml(e.by || "")}</td><td class="num">${e.total == null ? "—" : money2(e.total)}</td></tr>`).join("")
       : `<tr><td colspan="4" class="muted">Nothing logged yet. Confirm the budget on the Budget tab to start the log.</td></tr>`}
   </tbody></table>
@@ -1059,7 +1059,7 @@ export function renderTenantCoHtml(input: {
     <tr><td>This change order</td>${cell(co.total)}</tr>
     <tr class="total"><td>Total approved change orders with this one</td>${cell(input.previousApproved + co.total)}</tr>
   </tbody></table>
-  ${co.backup.length ? `<h3 class="sec">Backup attached</h3><ol class="notes">${co.backup.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ol>` : ""}
+  ${co.backup.length ? `<h3 class="sec">Backup Attached</h3><ol class="notes">${co.backup.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ol>` : ""}
   <p style="font-size:11px;margin:16px 0 22px">Signing below approves this change order and the amount above, to be billed with the project's costs.</p>
   <div style="display:flex;gap:40px">${sig("Approved by (Tenant)")}${sig("Submitted by")}</div>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}

@@ -28,7 +28,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
       const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { supplementalLabel: label });
       queryClient.setQueryData([projectKey(projectId)], data);
       setLabel(null);
-    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
 
   const Row = ({ name, sub, value, strong, tone }: { name: React.ReactNode; sub?: string; value: number; strong?: boolean; tone?: string }) => (

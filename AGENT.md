@@ -203,3 +203,9 @@ and live test output are proof. The gold standard is: click the button and watch
 - `missingConditionals`: GC every pay app + every vendor on the previous pay app; a conditional entered here (even not needed = "Not this pay app") answers it. Tracking starts at the first pay app on the contract with any waiver.
 - Dialog: totals (subs, GC, GC less subs, GC vs G702 line 8), missing rows (GC prefilled with payment due), "Still outstanding from earlier pay apps" with tick/attach/not needed.
 - Log: Received column, missing rows, per-pay-app GC/subs subtotal. CM invoice backup: Retainage Held (G702 held now less held before). DRAFT watermark via `reportHeaderHtml({ draft })`: unissued CM invoices, unconfirmed budget (BvA, Budget Log). Tenant COs not watermarked (they go out for signature).
+
+## Capitalization + fit (2026-10-22)
+- Adolfo wants Title Case on every label, heading, column, button, tab, option, tag and toast title ("Invoiced, Not Paid"); full sentences / help text / tooltips stay sentence case. Small words (a, an, the, and, or, of, on, in, at, to, by, vs, per, for, with, from) lowercase mid-label; acronyms kept (CM, GC, CO, SOV, G702, LAF, ROM, RFP).
+- Swept with a TS-AST script (labels in th/h*/Button/SelectItem/TabsTrigger/label/DialogTitle, label=/title= on Card-like components, label: props, ?: branches). New UI text should follow the rule by hand.
+- CM fee donut: Earned, Not Invoiced split into "— Costs Paid" (ready to invoice) and "— Costs Not Yet Paid" (`earnedOnPaid` per stream from draft.earnedPaid.fee).
+- Dialogs fit the window: `w-[96vw] max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]` (wide tables scroll in their own box). Package dialog: header pinned, body scrolls.

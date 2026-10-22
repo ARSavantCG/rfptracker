@@ -57,25 +57,25 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
               <Select value={scope} onValueChange={setScope}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">
-                  <SelectItem value="all">All contracts and direct costs</SelectItem>
+                  <SelectItem value="all">All Contracts and Direct Costs</SelectItem>
                   {bundle.contracts.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
-                  {bundle.directCosts.length > 0 && <SelectItem value="direct">Direct costs only</SelectItem>}
+                  {bundle.directCosts.length > 0 && <SelectItem value="direct">Direct Costs Only</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
           </div>
         <Button variant="outline" onClick={async () => {
-          if (!(await openReport(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}&contract=${scope}`))) toast({ title: 'Report failed', variant: 'destructive' });
+          if (!(await openReport(`/api/reports/pay-app-status/${projectId}?asOf=${asOf}&contract=${scope}`))) toast({ title: 'Report Failed', variant: 'destructive' });
         }}>
           <Printer className="h-4 w-4 mr-1" /> Print Pay App Status
         </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        <Stat label="Billed to date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(2)}% of ${money(t.contractSum)}`} />
+        <Stat label="Billed to Date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(2)}% of ${money(t.contractSum)}`} />
         <Stat label="Paid" value={money(t.paid)} />
-        <Stat label="Owed (billed, unpaid)" value={money(t.owed)} tone={t.owed > 0.005 ? 'text-red-700' : undefined} />
-        <Stat label="Retainage held" value={money(t.retainageHeld)} sub={`Left to pay ${money(t.leftToPay)}`} />
+        <Stat label="Owed (Billed, Unpaid)" value={money(t.owed)} tone={t.owed > 0.005 ? 'text-red-700' : undefined} />
+        <Stat label="Retainage Held" value={money(t.retainageHeld)} sub={`Left to pay ${money(t.leftToPay)}`} />
       </div>
 
       {overpaid.length > 0 && (

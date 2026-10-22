@@ -70,7 +70,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({
-        title: "Contact created",
+        title: "Contact Created",
         description: "New contact has been added successfully",
         duration: 4000,
       });
@@ -97,13 +97,13 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
       queryClient.invalidateQueries({ queryKey: ["/api/admin/authorized-contacts"] });
       if (response?.deactivated) {
         toast({
-          title: "Login deactivated",
+          title: "Login Deactivated",
           description: "This contact has a system login — their account was deactivated and the contact record was preserved.",
           duration: 6000,
         });
       } else {
         toast({
-          title: "Contact deleted",
+          title: "Contact Deleted",
           description: "Contact has been removed successfully",
           duration: 4000,
         });
@@ -127,7 +127,7 @@ export function ContactManagementModal({ isOpen, onClose }: ContactManagementMod
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       toast({
-        title: "Contact updated",
+        title: "Contact Updated",
         description: "Contact has been updated successfully",
         duration: 4000,
       });

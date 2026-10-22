@@ -40,25 +40,25 @@ export function InferenceRulesModal({ open, onClose }: InferenceRulesModalProps)
       setTriggerValue("");
       setImpliedScope("");
       setNotes("");
-      toast({ title: "Rule added" });
+      toast({ title: "Rule Added" });
     },
-    onError: (e: any) => toast({ title: "Failed to add rule", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Add Rule", description: e?.message, variant: "destructive" }),
   });
 
   const deleteRule = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/inference-rules/${id}`, "DELETE"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inference-rules"] });
-      toast({ title: "Rule deleted" });
+      toast({ title: "Rule Deleted" });
     },
-    onError: (e: any) => toast({ title: "Failed to delete rule", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Delete Rule", description: e?.message, variant: "destructive" }),
   });
 
   const toggleActive = useMutation({
     mutationFn: (rule: ScopeInferenceRule) =>
       apiRequest(`/api/inference-rules/${rule.id}`, "PUT", { isActive: !rule.isActive }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/inference-rules"] }),
-    onError: (e: any) => toast({ title: "Failed to update rule", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to Update Rule", description: e?.message, variant: "destructive" }),
   });
 
   if (!open) return null;
@@ -89,7 +89,7 @@ export function InferenceRulesModal({ open, onClose }: InferenceRulesModalProps)
             <div className="font-medium text-sm text-gray-700">Add a rule</div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Trigger type</Label>
+                <Label className="text-xs">Trigger Type</Label>
                 <select
                   value={triggerType}
                   onChange={(e) => setTriggerType(e.target.value)}
@@ -104,12 +104,12 @@ export function InferenceRulesModal({ open, onClose }: InferenceRulesModalProps)
                 <Input value={triggerValue} onChange={(e) => setTriggerValue(e.target.value)} placeholder="partial building" />
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <Label className="text-xs">Implies (scope to propose)</Label>
+                <Label className="text-xs">Implies (Scope to Propose)</Label>
                 <Input value={impliedScope} onChange={(e) => setImpliedScope(e.target.value)} placeholder="Demising Wall, Electrical Reconfig, Fire Alarm Reconfig, Sprinkler Reconfig" />
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Notes (optional)</Label>
+              <Label className="text-xs">Notes (Optional)</Label>
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="why / context" />
             </div>
             <Button
@@ -118,7 +118,7 @@ export function InferenceRulesModal({ open, onClose }: InferenceRulesModalProps)
               onClick={() => createRule.mutate()}
               className="flex items-center gap-1"
             >
-              <Plus className="h-4 w-4" /> Add rule
+              <Plus className="h-4 w-4" /> Add Rule
             </Button>
           </div>
 

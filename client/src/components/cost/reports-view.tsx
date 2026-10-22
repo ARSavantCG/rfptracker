@@ -32,16 +32,16 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', patch);
       queryClient.setQueryData([projectKey(projectId)], data);
       toast({ title: ok });
-    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
 
-  const open = async (url: string) => { if (!(await openReport(url))) toast({ title: 'Report failed', variant: 'destructive' }); };
+  const open = async (url: string) => { if (!(await openReport(url))) toast({ title: 'Report Failed', variant: 'destructive' }); };
   const cap = b.cmInvoiceDrafts.capital, ten = b.cmInvoiceDrafts.tenant;
 
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cost reports</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cost Reports</h3>
       <Card id="bva" title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (
@@ -66,7 +66,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
                 <SelectContent className="pm-scope">
                   <SelectItem value="all">All</SelectItem>
                   {b.contracts.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
-                  {b.directCosts.length > 0 && <SelectItem value="direct">Direct costs only</SelectItem>}
+                  {b.directCosts.length > 0 && <SelectItem value="direct">Direct Costs Only</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
@@ -110,7 +110,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-fees/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {(() => {
           const earned = (d: CmInvoiceDraft) => d.earned + d.suppFee;
-          const rows = [['Capital partner', cap], ['Tenant', ten]] as const;
+          const rows = [['Capital Partner', cap], ['Tenant', ten]] as const;
           const sum = (f: (d: CmInvoiceDraft) => number) => money(f(cap) + f(ten));
           const pend = (v: number) => (v > 0.005 ? <div className="text-[11px] text-amber-700">+ {money(v)} pending</div> : null);
           const th = 'py-1 pl-3 text-right align-bottom';
@@ -120,11 +120,11 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
               <table className="w-full text-sm min-w-[1000px]">
                 <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
                   <th className="py-1 text-left align-bottom">Party</th><th className={th}>Rate</th>
-                  <th className={th} title="The original budget (before change orders) with the CM fee backed out at this rate — what the fee is figured on">Original budget</th>
-                  <th className={th}>Original fee</th>
+                  <th className={th} title="The original budget (before change orders) with the CM fee backed out at this rate — what the fee is figured on">Original Budget</th>
+                  <th className={th}>Original Fee</th>
                   <th className={th} title="Approved change order amounts the fee is figured on">Approved COs<div className="normal-case font-normal">subject to fee</div></th>
-                  <th className={th}>CO fees</th><th className={th}>Total anticipated</th>
-                  <th className={th}>Earned to date</th><th className={th}>Invoiced</th><th className={th}>Billable</th><th className={th}>Remaining to bill</th>
+                  <th className={th}>CO Fees</th><th className={th}>Total Anticipated</th>
+                  <th className={th}>Earned to Date</th><th className={th}>Invoiced</th><th className={th}>Billable</th><th className={th}>Remaining to Bill</th>
                 </tr></thead>
                 <tbody className="tabular-nums">
                   {rows.map(([label, d]) => (
@@ -163,17 +163,17 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         <p className="text-sm text-gray-700">Project costs incurred to date <strong className="tabular-nums">{money(cap.incurred)}</strong> · paid <strong className="tabular-nums">{money(cap.paidToDate)}</strong> <span className="text-xs text-gray-500">(excluding the CM fee line)</span></p>
         <table className="w-full max-w-2xl text-sm">
           <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1 text-left" /><th className="py-1 text-right">Capital partner{cap.billTo ? <div className="normal-case font-normal">{cap.billTo}</div> : null}</th>
+            <th className="py-1 text-left" /><th className="py-1 text-right">Capital Partner{cap.billTo ? <div className="normal-case font-normal">{cap.billTo}</div> : null}</th>
             <th className="py-1 text-right">Tenant{ten.billTo ? <div className="normal-case font-normal">{ten.billTo}</div> : null}</th>
           </tr></thead>
           <tbody className="tabular-nums">
-            <SumRow label="Billable costs" a="—" b={money(ten.base)} />
-            <SumRow label="CM fee — original scope" a={money(cap.earned)} b={money(ten.earned)} subA={`${cap.pct.toFixed(2)}% on costs ${cap.basis}`} subB={`${ten.pct.toFixed(2)}%`} />
-            {(cap.suppFee || ten.suppFee) ? <SumRow label="Supplemental CM fee — change orders" a={money(cap.suppFee)} b={money(ten.suppFee)} /> : null}
-            <SumRow label="Billable to date" a={money(cap.toDate)} b={money(ten.toDate)} strong />
-            <SumRow label="Invoiced to date" a={money(cap.invoicedToDate)} b={money(ten.invoicedToDate)} subA={`${cap.invoices} invoice${cap.invoices === 1 ? '' : 's'}`} subB={`${ten.invoices} invoice${ten.invoices === 1 ? '' : 's'}`} />
-            <SumRow label="Not yet invoiced" a={money(cap.due)} b={money(ten.due)} strong />
-            <SumRow label="Projected at completion" a={money(cap.projected.fee)} b={money(ten.projected.total ?? ten.projected.fee)}
+            <SumRow label="Billable Costs" a="—" b={money(ten.base)} />
+            <SumRow label="CM Fee — Original Scope" a={money(cap.earned)} b={money(ten.earned)} subA={`${cap.pct.toFixed(2)}% on costs ${cap.basis}`} subB={`${ten.pct.toFixed(2)}%`} />
+            {(cap.suppFee || ten.suppFee) ? <SumRow label="Supplemental CM Fee — Change Orders" a={money(cap.suppFee)} b={money(ten.suppFee)} /> : null}
+            <SumRow label="Billable to Date" a={money(cap.toDate)} b={money(ten.toDate)} strong />
+            <SumRow label="Invoiced to Date" a={money(cap.invoicedToDate)} b={money(ten.invoicedToDate)} subA={`${cap.invoices} invoice${cap.invoices === 1 ? '' : 's'}`} subB={`${ten.invoices} invoice${ten.invoices === 1 ? '' : 's'}`} />
+            <SumRow label="Not Yet Invoiced" a={money(cap.due)} b={money(ten.due)} strong />
+            <SumRow label="Projected at Completion" a={money(cap.projected.fee)} b={money(ten.projected.total ?? ten.projected.fee)}
                     subA={cap.projected.pending > 0.005 ? `+ ${money(cap.projected.pending)} pending` : 'CM fee'}
                     subB={(ten.projected.pendingTotal ?? 0) > 0.005 ? `+ ${money(ten.projected.pendingTotal ?? 0)} pending` : 'approved change orders'} />
           </tbody>
@@ -209,7 +209,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       queryClient.setQueryData([projectKey(projectId)], data);
       toast({ title: `${invNo} issued` });
       open(`/api/reports/cm-invoice/${projectId}?invoice=${encodeURIComponent(invNo)}`);
-    } catch (e: any) { toast({ title: 'Not issued', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Issued', description: e?.message, variant: 'destructive' }); }
     finally { setBusy(false); }
   };
   const withdraw = async (n: string) => {
@@ -218,7 +218,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(n)}`, 'DELETE');
       queryClient.setQueryData([projectKey(projectId)], data);
       toast({ title: `${n} withdrawn` });
-    } catch (e: any) { toast({ title: 'Not withdrawn', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Withdrawn', description: e?.message, variant: 'destructive' }); }
   };
   const basisKey = tenant ? 'invoiceBasisTenant' : 'invoiceBasisCapital';
   const billKey = tenant ? 'billToTenant' : 'billToCapital';
@@ -229,17 +229,17 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
             ? `${d.tenantCosOnly ? 'Their change orders as the work is done' : "The tenant's share of costs"} (${d.basis} to date), markups and their CM fee at ${d.pct.toFixed(2)}%, less credits and what's been invoiced. Every pay app, invoice and charge itemized.`
             : `The CM fee at ${d.pct.toFixed(2)}% on costs ${d.basis} to date, less what's been invoiced. Costs incurred and paid listed as backup.`}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pb-2 border-b">
-        <Labeled label={tenant ? 'Costs counted' : 'Fee figured on'}>
+        <Labeled label={tenant ? 'Costs Counted' : 'Fee Figured On'}>
           <Select value={d.basis} onValueChange={(v) => saveSetting({ [basisKey]: v }, 'Saved')}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent className="pm-scope">
-              <SelectItem value="paid">What we've paid</SelectItem>
-              <SelectItem value="billed">What's been billed (completed & stored)</SelectItem>
+              <SelectItem value="paid">What We've Paid</SelectItem>
+              <SelectItem value="billed">What's Been Billed (Completed & Stored)</SelectItem>
             </SelectContent>
           </Select>
         </Labeled>
         {tenant && (
-          <Labeled label="Tenant pays for">
+          <Labeled label="Tenant Pays For">
             <Select value={d.tenantCosOnly ? 'cos' : 'all'} onValueChange={(v) => saveSetting({ tenantBills: v }, 'Saved')}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="pm-scope">
@@ -249,7 +249,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
             </Select>
           </Labeled>
         )}
-        <Labeled label="Bill to">
+        <Labeled label="Bill To">
           <div className="flex gap-2">
             <Input className="h-9" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
             {billTo !== d.billTo && <Button className="h-9" variant="outline" onClick={() => saveSetting({ [billKey]: billTo }, 'Bill to saved')}>Save</Button>}
@@ -257,12 +257,12 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
         </Labeled>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-        {tenant ? <Fig label={`Billable costs ${d.basis}`} value={money(d.base)} /> : <Fig label="Costs incurred · paid" value={`${money(d.incurred)} · ${money(d.paidToDate)}`} />}
-        <Fig label={`CM fee (${d.pct.toFixed(2)}%)${d.suppFee ? ' — original' : ''}`} value={money(d.earned)} />
-        {d.suppFee ? <Fig label="Supplemental CM fee" value={money(d.suppFee)} /> : null}
-        <Fig label={tenant ? 'Costs + fee to date' : 'CM fees to date'} value={money(d.toDate)} />
-        <Fig label="Previously invoiced" value={money(d.previous)} />
-        <Fig label="Due now" value={money(d.due)} strong />
+        {tenant ? <Fig label={`Billable Costs ${d.basis}`} value={money(d.base)} /> : <Fig label="Costs Incurred · Paid" value={`${money(d.incurred)} · ${money(d.paidToDate)}`} />}
+        <Fig label={`CM Fee (${d.pct.toFixed(2)}%)${d.suppFee ? ' — Original' : ''}`} value={money(d.earned)} />
+        {d.suppFee ? <Fig label="Supplemental CM Fee" value={money(d.suppFee)} /> : null}
+        <Fig label={tenant ? 'Costs + Fee to Date' : 'CM Fees to Date'} value={money(d.toDate)} />
+        <Fig label="Previously Invoiced" value={money(d.previous)} />
+        <Fig label="Due Now" value={money(d.due)} strong />
       </div>
       <p className="text-xs text-gray-600">{d.items.length} item{d.items.length === 1 ? '' : 's'} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
       <div className="flex items-end gap-2 flex-wrap">
@@ -274,7 +274,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       {mine.length > 0 && (
         <table className="w-full text-sm">
           <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued by</th><th className="py-1 pl-4">Paid</th><th className="w-28" />
+            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued By</th><th className="py-1 pl-4">Paid</th><th className="w-28" />
           </tr></thead>
           <tbody>
             {mine.map((inv, i) => (
@@ -312,7 +312,7 @@ function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) 
       queryClient.setQueryData([projectKey(projectId)], data);
       setEditing(false);
       toast({ title: clear ? `${inv.number} marked unpaid` : `Payment recorded on ${inv.number}` });
-    } catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
   if (editing) return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -328,7 +328,7 @@ function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) 
         <span className="text-green-700 font-medium tabular-nums">{money(inv.paidAmount ?? 0)}</span> <span className="text-gray-600">on {shortDate(inv.paidDate)}</span>
         {inv.paidAmount != null && inv.paidAmount + 0.005 < inv.due && <span className="text-amber-700"> · short {money(inv.due - inv.paidAmount)}</span>}
       </button>
-    : <button className="text-blue-700 hover:underline text-xs" onClick={() => setEditing(true)}>Record payment</button>;
+    : <button className="text-blue-700 hover:underline text-xs" onClick={() => setEditing(true)}>Record Payment</button>;
 }
 function SumRow({ label, a, b, subA, subB, strong }: { label: string; a: string; b: string; subA?: string; subB?: string; strong?: boolean }) {
   return (

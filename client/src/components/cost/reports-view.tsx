@@ -387,7 +387,7 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
                       {g.compliant
                         ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Compliant</span>
                         : <span className="text-[10px] font-semibold text-red-800 bg-red-100 rounded px-1">{g.outstanding} Outstanding</span>}
-                      {g.awaiting > 0 && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Unconditionals for a pay app we haven't paid in full">{g.awaiting} Awaiting Our Payment</span>}
+                      {g.awaiting > 0 && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Unconditionals for a pay app we haven't paid in full">{g.awaiting} Pending Funding</span>}
                     </label>
                   );
                 })}

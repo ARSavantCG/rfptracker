@@ -651,9 +651,9 @@ export function renderWaiverLogHtml(input: {
       nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
       nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
       nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
-    ].filter(Boolean).join(", ")}.` : ""}${nWait ? ` ${nWait} unconditional${nWait === 1 ? "" : "s"} awaiting our payment — not the contractor's to give yet.` : ""}`,
+    ].filter(Boolean).join(", ")}.` : ""}${nWait ? ` ${nWait} unconditional${nWait === 1 ? "" : "s"} pending funding — not the contractor's to give yet.` : ""}`,
   ];
-  const STATUS: Record<string, string> = { received: "Received", outstanding: "Outstanding", missing: "Not Entered", "not needed": "Not Needed", "awaiting payment": "Awaiting Our Payment" };
+  const STATUS: Record<string, string> = { received: "Received", outstanding: "Outstanding", missing: "Not Entered", "not needed": "Not Needed", "awaiting payment": "Pending Funding" };
   const byContract = new Map<number, PayAppWaivers[]>();
   for (const g of input.groups) byContract.set(g.contractId, [...(byContract.get(g.contractId) ?? []), g]);
   const row = (r: PayAppWaiverRow) => {
@@ -671,7 +671,7 @@ export function renderWaiverLogHtml(input: {
         ${g.compliant
           ? '<span style="margin-left:8px;font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">Compliant</span>'
           : `<span style="margin-left:8px;font-size:10px;font-weight:700;color:#991b1b;background:#fee2e2;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.outstanding} Outstanding</span>`}
-        ${g.awaiting ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.awaiting} Awaiting Our Payment</span>` : ""}
+        ${g.awaiting ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.awaiting} Pending Funding</span>` : ""}
         ${g.totals.count ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${g.totals.subCount}) ${money2(g.totals.subs)} · GC ${money2(g.totals.gc)} · GC Less Subs ${money2(g.totals.gap)}${g.totals.gapPct != null ? ` (${g.totals.gapPct.toFixed(1)}% of the GC's release)` : ""}</span>` : ""}</td></tr>
       ${[...g.rows].filter((r) => !(r.kind === "conditional" && r.status === "not needed" && !(r.amount && Math.abs(r.amount) >= 0.005))).map((r, i) => ({ r, i }))
         // The GC leads each kind, its subs indented beneath in the order arranged.
@@ -685,15 +685,15 @@ export function renderWaiverLogHtml(input: {
   return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
-  ${reportHeaderHtml({ title: "Lien Waiver Log", eyebrow: "Cost Report", info, notes })}
+  ${reportHeaderHtml({ title: "Lien Waiver Log", info, notes })}
   <table class="t"><thead><tr><th class="l" style="width:4%"></th><th class="l">Vendor</th><th class="l">Waiver</th><th>Amount</th><th class="l">Status</th></tr></thead><tbody>
     ${body || `<tr><td colspan="5" class="muted">No waivers recorded yet.</td></tr>`}
   </tbody></table>
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     <li>A pay app is compliant when its conditional waivers are in and so are the unconditional waivers it carries for the pay app before. A pay app's own unconditionals come with the next pay app and are listed there.</li>
-    <li>"Awaiting Our Payment": the pay app that unconditional releases hasn't been paid in full yet, so the contractor can't give it. It isn't held against the contractor's compliance.</li>
-    <li>"Not Entered": the GC gives a conditional with every pay app, and each vendor on the pay app before is expected again unless marked not needed.</li>
+    <li>"Pending Funding": the pay app that unconditional releases hasn't been paid in full yet, so the contractor can't give it. It isn't held against the contractor's compliance.</li>
+    <li>"Not Entered": the GC gives a conditional with every pay app. Subs are listed only on the pay apps they bill.</li>
     <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
     <li>GC Less Subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>
   </ol>

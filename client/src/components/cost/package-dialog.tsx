@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -220,6 +220,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     const due = r.party === 'gc' ? app.g702.currentPaymentDue : cond?.payAppDue ?? null;
     return { cond, due, diff: cond && due != null ? Math.round((due - cond.amount) * 100) / 100 : null };
   };
+  // Subs from the pay app before who aren't here: a one-click add, not a requirement.
+  const carried = carriedVendors(apps.find((a) => a.id === app.id)!, apps, bundle.waivers, gcName);
   /** A sub marked not needed with nothing on it: not billing this pay app — one quiet line, not a row. */
   const notBilling = (w: { notNeeded: boolean; amount: number }) => w.notNeeded && Math.abs(w.amount) < 0.005;
   /** An expected unconditional for a pay app we haven't paid in full. */
@@ -236,7 +238,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     if (u?.notNeeded) return <div className="text-[10px] text-gray-500 mt-0.5">Unconditional: not needed</div>;
     if (u?.received) return <div className="text-[10px] text-green-700 mt-0.5">Unconditional: received with {nextLabel}{u.documentId ? ` · ${short(docName(u.documentId) ?? '')}` : ''}</div>;
     const mine = paidOf(app.id);
-    if (unpaid(mine)) return <div className="text-[10px] text-amber-700 mt-0.5" title={`Due with ${nextLabel}, once we pay this pay app in full`}>Unconditional: after we pay this one ({money(mine!.paid)} of {money(mine!.due)} paid)</div>;
+    if (unpaid(mine)) return <div className="text-[10px] text-amber-700 mt-0.5" title={`Due with ${nextLabel}, once we pay this pay app in full`}>Unconditional: pending funding of this pay app ({money(mine!.paid)} of {money(mine!.due)} paid)</div>;
     return (
       <div className="text-[10px] mt-0.5 flex items-center gap-2 flex-wrap">
         <span className="text-amber-700">Unconditional: due with {nextLabel}</span>
@@ -305,7 +307,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-xs text-gray-600">
             {outNow ? <span className="text-red-700 font-medium">{outNow} waiver{outNow === 1 ? '' : 's'} outstanding{ck.missing.length ? ` (${ck.missing.length} conditional${ck.missing.length === 1 ? '' : 's'} not entered)` : ''}.</span> : <span className="text-green-700 font-medium">All waivers in.</span>}
-            {waitCount > 0 && <span className="text-amber-700 font-medium"> {waitCount} awaiting our payment of {prevLabel}.</span>}
+            {waitCount > 0 && <span className="text-amber-700 font-medium"> {waitCount} pending funding of {prevLabel}.</span>}
             {earlier.length > 0 && <span className="text-red-700 font-medium"> {earlier.length} more from earlier pay apps.</span>}
             {' '}Download gives one zip, sorted into folders, with a contents sheet.
           </p>
@@ -504,6 +506,20 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 </td>
               </tr>
             )}
+            {carried.length > 0 && (
+              <tr className="border-b">
+                <td />
+                <td colSpan={7} className="px-2 py-1.5 text-xs text-gray-600">
+                  <span className="text-gray-500">Also on {prevLabel}:</span>{' '}
+                  {carried.map((c, i) => (
+                    <span key={c.vendor}>{i > 0 && ' · '}{c.vendor}{' '}
+                      <button className="text-blue-700 hover:underline" onClick={() => { setNewC({ vendor: c.vendor, amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}>(Add)</button>
+                    </span>
+                  ))}
+                  <span className="text-gray-400"> — only if they're billing this pay app</span>
+                </td>
+              </tr>
+            )}
             {ck.missing.map((m) => (
               <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? app.g702.currentPaymentDue : null}
                           onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}
@@ -533,7 +549,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 
         {/* Unconditional waivers for the pay app before */}
         <Fold title={`Unconditional Waivers${prevLabel ? ` — For ${prevLabel}` : ''}`}
-              badge={uncondOut ? { tone: 'bad', text: `${uncondOut} Outstanding` } : uncondWait ? { tone: 'warn', text: `${uncondWait} Awaiting Our Payment` } : unconds.length ? { tone: 'ok', text: 'Compliant' } : null} open={isOpen('uncond', uncondOpen)} onToggle={() => toggle('uncond', uncondOpen)}
+              badge={uncondOut ? { tone: 'bad', text: `${uncondOut} Outstanding` } : uncondWait ? { tone: 'warn', text: `${uncondWait} Pending Funding` } : unconds.length ? { tone: 'ok', text: 'Compliant' } : null} open={isOpen('uncond', uncondOpen)} onToggle={() => toggle('uncond', uncondOpen)}
               summary={uncondSummary}
               action={!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewU({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, uncond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}>
           <p className="text-xs text-gray-600">
@@ -558,7 +574,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
-                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Not the contractor's to give yet">Awaiting Our Payment — {paidNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!)}</span>}
+                      {awaitingRow(r) && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Not the contractor's to give yet">Pending Funding — {paidNote(ck.previous!.docNumber || ck.previous!.number, prevPaid!)}</span>}
                       {(() => {
                         // Entered on the pay app it releases: it belongs with the next one, answering this one's conditional.
                         const c = r.source === 'added' && r.id && nextRef ? conds.find((x) => sameVendor(x.vendor, r.vendor)) : null;

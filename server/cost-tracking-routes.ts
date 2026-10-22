@@ -2186,7 +2186,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const bundleForPaid = await loadProjectBundle(c.projectId).catch(() => null);
       const paidOf = bundleForPaid ? paidOfFrom(bundleForPaid.payments, (aid) => bundleForPaid.applications.find((x: any) => x.id === aid)?.g702?.currentPaymentDue ?? null) : undefined;
       const prevPaid = prev && paidOf ? paidOf(prev.id) : null;
-      const waitNote = prev && unpaid(prevPaid) ? `AWAITING OUR PAYMENT (${paidNote(dn.get(prev.id)!, prevPaid!)})` : null;
+      const waitNote = prev && unpaid(prevPaid) ? `PENDING FUNDING (${paidNote(dn.get(prev.id)!, prevPaid!)})` : null;
       for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : (waitNote && u.source === 'expected' ? waitNote : 'OUTSTANDING')}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
       if (ck.unconditionals.length) contents.push(...sums(waiverTotals(ck.unconditionals, c.counterparty)));
       const earlier = waiverLog(allApps.map((x) => ({ ...x, docNumber: dn.get(x.id) ?? x.number })), waivers, () => c.counterparty, paidOf)

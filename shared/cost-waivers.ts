@@ -215,10 +215,22 @@ export function missingConditionals(app: AppRef, apps: readonly AppRef[], waiver
     const last = before.find((w) => partyOf(w, contractName) === 'gc');
     out.push({ vendor: last?.vendor ?? contractName, party: 'gc', lastAmount: last ? r2(last.amount) : null, why: 'gc' });
   }
-  for (const w of before) {
+  // Subs aren't required every pay app — one that didn't bill isn't missing anything (Adolfo, 2026-10-22).
+  // They're offered as suggestions instead: carriedVendors().
+  void has;
+  return out;
+}
+
+/** Subs on the pay app before who aren't on this one: offered to add with one click, never counted as outstanding. */
+export function carriedVendors(app: AppRef, apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: string): Array<{ vendor: string; lastAmount: number }> {
+  const here = waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional');
+  const prev = previousApp(app, apps);
+  if (!prev) return [];
+  const out: Array<{ vendor: string; lastAmount: number }> = [];
+  for (const w of byOrder(waivers.filter((x) => x.applicationId === prev.id && x.kind === 'conditional' && !x.notNeeded && x.amount > 0.005))) {
     if (contractName && partyOf(w, contractName) === 'gc') continue;
-    if (has(w.vendor) || out.some((m) => sameVendor(m.vendor, w.vendor))) continue;
-    out.push({ vendor: w.vendor, party: w.party ?? 'sub', lastAmount: r2(w.amount), why: 'was on the previous pay app' });
+    if (here.some((x) => sameVendor(x.vendor, w.vendor)) || out.some((x) => sameVendor(x.vendor, w.vendor))) continue;
+    out.push({ vendor: w.vendor, lastAmount: r2(w.amount) });
   }
   return out;
 }

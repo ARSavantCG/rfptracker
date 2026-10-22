@@ -656,7 +656,7 @@ export function renderWaiverLogHtml(input: {
     const bad = r.status === "outstanding" || r.status === "missing";
     const what = r.kind === "conditional" ? "Conditional" : r.releases != null ? `Unconditional — for Pay App ${nn(r.releases)}` : "Unconditional";
     const amt = r.status === "missing" ? `<td class="num muted">${r.amount ? `last ${money2(r.amount)}` : "—"}</td>` : cell(r.amount ?? 0);
-    return `<tr${bad ? ' style="background:#fef2f2"' : ""}><td></td><td>${escapeHtml(r.vendor)}${r.party === "gc" ? ' <span class="muted" style="font-size:9px">GC</span>' : ""}</td>
+    return `<tr${bad ? ' style="background:#fef2f2"' : ""}><td></td><td${r.party === "gc" ? "" : ' style="padding-left:22px"'}>${escapeHtml(r.vendor)}</td>
       <td>${what}${r.edited ? " — edited" : ""}</td>${amt}<td style="${bad ? "color:#991b1b;font-weight:600" : r.status === "received" ? "color:#166534" : "color:#6b7280"}">${STATUS[r.status]}</td></tr>`;
   };
   const body = Array.from(byContract).map(([cid, groups]) => `
@@ -667,7 +667,10 @@ export function renderWaiverLogHtml(input: {
           ? '<span style="margin-left:8px;font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">Compliant</span>'
           : `<span style="margin-left:8px;font-size:10px;font-weight:700;color:#991b1b;background:#fee2e2;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.outstanding} Outstanding</span>`}
         ${g.totals.count ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${g.totals.subCount}) ${money2(g.totals.subs)} · GC ${money2(g.totals.gc)} · GC Less Subs ${money2(g.totals.gap)}${g.totals.gapPct != null ? ` (${g.totals.gapPct.toFixed(1)}% of the GC's release)` : ""}</span>` : ""}</td></tr>
-      ${g.rows.map(row).join("")}`).join("")}`).join("");
+      ${[...g.rows].map((r, i) => ({ r, i }))
+        // The GC leads each kind, its subs indented beneath in the order arranged.
+        .sort((a, b) => (a.r.kind === b.r.kind ? 0 : a.r.kind === "conditional" ? -1 : 1) || (a.r.kind === b.r.kind ? (a.r.party === "gc" ? 0 : 1) - (b.r.party === "gc" ? 0 : 1) : 0) || a.i - b.i)
+        .map(({ r }) => row(r)).join("")}`).join("")}`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>

@@ -2170,16 +2170,17 @@ export function registerCostTrackingRoutes(app: Express): void {
         contents.push(zipPath);
       }
       contents.push('', 'Lien waivers');
-      const tag = (r: { vendor: string; party?: 'gc' | 'sub' | null }) => (partyOf(r, c.counterparty) === 'gc' ? 'GC ' : 'Sub');
+      // Subs indented under the GC (no GC/Sub tag — Adolfo, 2026-10-22).
+      const tag = (r: { vendor: string; party?: 'gc' | 'sub' | null }) => (partyOf(r, c.counterparty) === 'gc' ? '' : '    ');
       const sums = (t: ReturnType<typeof waiverTotals>) => [
         `    Subcontractors (${t.subCount})  ${money(t.subs)}`,
         `    GC                  ${money(t.gc)}`,
         `    GC Less Subs        ${money(t.gap)}${t.gapPct != null ? `  (${t.gapPct.toFixed(1)}% of the GC's release)` : ''}`,
       ];
-      for (const w of ck.conditionals) contents.push(`  Conditional   ${tag(w)}  ${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
-      for (const m of ck.missing) contents.push(`  Conditional   ${m.party === 'gc' ? 'GC ' : 'Sub'}  ${m.vendor}  MISSING${m.lastAmount != null ? `  (${money(m.lastAmount)} last pay app)` : ''}`);
+      for (const w of ck.conditionals) contents.push(`  Conditional   ${tag(w)}${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
+      for (const m of ck.missing) contents.push(`  Conditional   ${m.party === 'gc' ? '' : '    '}${m.vendor}  MISSING${m.lastAmount != null ? `  (${money(m.lastAmount)} last pay app)` : ''}`);
       if (ck.conditionals.length) contents.push(...sums(waiverTotals(ck.conditionals, c.counterparty)));
-      for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}  ${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : 'OUTSTANDING'}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
+      for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : 'OUTSTANDING'}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
       if (ck.unconditionals.length) contents.push(...sums(waiverTotals(ck.unconditionals, c.counterparty)));
       const earlier = waiverLog(allApps.map((x) => ({ ...x, docNumber: dn.get(x.id) ?? x.number })), waivers, () => c.counterparty)
         .filter((r) => waiverOutstanding(r.status) && prev && (allApps.find((x) => x.id === r.appId)?.number ?? 0) < prev.number);

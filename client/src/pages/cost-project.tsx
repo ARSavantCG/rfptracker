@@ -22,7 +22,7 @@ import { FundingSummary } from '@/components/cost/funding-summary';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
-import { ReportsView } from '@/components/cost/reports-view';
+import { ReportsView, LenderPackagesCard } from '@/components/cost/reports-view';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
@@ -160,6 +160,7 @@ export default function CostProject() {
               Ledger{b.ledger.unreconciledCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">{b.ledger.unreconciledCount}</span>}
             </TabsTrigger>
             <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Reports</TabsTrigger>
+            <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Documents</TabsTrigger>
           </TabsList>
 
           {isAdmin && (
@@ -169,6 +170,57 @@ export default function CostProject() {
           )}
           <TabsContent value="reports" className="mt-4">
             <ReportsView bundle={b} projectId={id} onShowUnallocated={() => setTab('contracts')} onShowBudget={() => setTab('budget')} />
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-4 space-y-3">
+            <LenderPackagesCard b={b} projectId={id} />
+          {/* Every file on the project in one list — pay apps, receipts, contracts. */}
+          <div className="bg-white border rounded-lg px-4 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Project Files ({b.documents.length})
+            </div>
+            <div className="mt-3 space-y-3">
+              {localFiles > 0 && (
+                <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-3 flex gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5" />
+                  {localFiles} file{localFiles === 1 ? ' is' : 's are'} stored on this server's disk only, because Object Storage isn't
+                  configured here. They will be lost on the next publish.
+                </div>
+              )}
+              <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-blue-700">
+                <Paperclip className="h-4 w-4" /> {uploadFile.isPending ? 'Saving…' : 'Add a File (Contract, Change Order, Invoice)'}
+                <input type="file" className="hidden" disabled={uploadFile.isPending}
+                       onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile.mutate(f); e.target.value = ''; }} />
+              </label>
+              {b.documents.length === 0 ? (
+                <p className="text-sm text-gray-600">No files yet. Attach pay apps when you record them.</p>
+              ) : (
+                <div className="bg-white border rounded-lg divide-y">
+                  {b.documents.map((d) => {
+                    const appRow = b.applications.find((a) => a.id === d.applicationId);
+                    const contract = b.contracts.find((c) => c.id === (appRow?.contractId ?? d.contractId));
+                    return (
+                      <div key={d.id} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                        <button className="text-blue-700 hover:underline text-left break-all" onClick={() => openDocument(d.id)}>{d.originalName}</button>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-xs text-gray-500 text-right">
+                            {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.docNumber}` : ''}
+                            {d.directCostId ? 'Ledger receipt' : ''}
+                            {d.changeOrderId ? ` · ${b.changeOrders.find((co) => co.id === d.changeOrderId)?.number ?? 'Change order'} (executed)` : ''}
+                            <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
+                          </div>
+                          <button className="text-gray-400 hover:text-red-700" title="Remove this file"
+                                  onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+                      </div>
+          </div>
           </TabsContent>
 
           <TabsContent value="contracts" className="mt-4 space-y-4">
@@ -251,52 +303,7 @@ export default function CostProject() {
 
         <ProjectNotes projectId={id} notes={p.notes} />
 
-        {/* Every file on the project in one list — pay apps, receipts, contracts. */}
-        <details className="bg-white border rounded-lg px-4 py-3 group">
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Project files ({b.documents.length})
-          </summary>
-          <div className="mt-3 space-y-3">
-            {localFiles > 0 && (
-              <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-3 flex gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5" />
-                {localFiles} file{localFiles === 1 ? ' is' : 's are'} stored on this server's disk only, because Object Storage isn't
-                configured here. They will be lost on the next publish.
-              </div>
-            )}
-            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-blue-700">
-              <Paperclip className="h-4 w-4" /> {uploadFile.isPending ? 'Saving…' : 'Add a File (Contract, Change Order, Invoice)'}
-              <input type="file" className="hidden" disabled={uploadFile.isPending}
-                     onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile.mutate(f); e.target.value = ''; }} />
-            </label>
-            {b.documents.length === 0 ? (
-              <p className="text-sm text-gray-600">No files yet. Attach pay apps when you record them.</p>
-            ) : (
-              <div className="bg-white border rounded-lg divide-y">
-                {b.documents.map((d) => {
-                  const appRow = b.applications.find((a) => a.id === d.applicationId);
-                  const contract = b.contracts.find((c) => c.id === (appRow?.contractId ?? d.contractId));
-                  return (
-                    <div key={d.id} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
-                      <button className="text-blue-700 hover:underline text-left break-all" onClick={() => openDocument(d.id)}>{d.originalName}</button>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-xs text-gray-500 text-right">
-                          {contract ? contract.counterparty : ''}{appRow ? ` · ${appRow.kind === 'invoice' ? 'Inv' : 'App'} ${appRow.docNumber}` : ''}
-                          {d.directCostId ? 'Ledger receipt' : ''}
-                          <div>{new Date(d.createdAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{d.storage === 'local' ? ' · not backed up' : ''}</div>
-                        </div>
-                        <button className="text-gray-400 hover:text-red-700" title="Remove this file"
-                                onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-                    </div>
-        </details>
+
 
         {/* Rarely used, so out of the way. */}
         <div className="border-t pt-4 flex items-center justify-between gap-3 flex-wrap">

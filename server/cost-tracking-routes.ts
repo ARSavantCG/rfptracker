@@ -41,6 +41,7 @@ import { requireAi } from './lib/ai-switch';
 import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
+import { coLog, cosOnPayApp } from '@shared/co-log';
 import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, gcPaymentDue, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
@@ -2115,7 +2116,15 @@ export function registerCostTrackingRoutes(app: Express): void {
       const extra = waiverDocIds.size
         ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(waiverDocIds)))).filter((d) => !docs.some((x) => x.id === d.id))
         : [];
-      const all = [...docs, ...extra];
+      // Change orders approved on this pay app (its G702 "this period"): their executed copies go in too.
+      const bundleForPaid = await loadProjectBundle(c.projectId).catch(() => null);
+      const coRows = bundleForPaid ? cosOnPayApp(coLog(bundleForPaid.changeOrders as any, bundleForPaid.sovLines as any, bundleForPaid.documents as any), c.id, a.number) : [];
+      const coDocOf = new Map<number, (typeof coRows)[number]>();
+      for (const r of coRows) for (const f of r.files) coDocOf.set(f.id, r);
+      const coDocs = coDocOf.size
+        ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(coDocOf.keys())))).filter((d) => !docs.some((x) => x.id === d.id) && !extra.some((x) => x.id === d.id))
+        : [];
+      const all = [...docs, ...extra, ...coDocs];
       if (!all.length) return { error: 'No files on this pay app yet.', status: 404 };
 
       const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -2131,6 +2140,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         unconditional: `3 Unconditional Waivers (${prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior'})`,
         invoice: '4 Invoices & Backup',
         other: '5 Other',
+        change_order: '6 Change Orders',
       };
 
       const folderName = safe(`${label} ${nn(dn.get(a.id)!)}`);
@@ -2146,6 +2156,17 @@ export function registerCostTrackingRoutes(app: Express): void {
       const missing: string[] = [];
       for (const d of all) {
         const w = waivers.find((x) => x.documentId === d.id && x.applicationId === a.id);
+        const coOf = coDocOf.get(d.id);
+        if (coOf) {
+          const zipPath = unique(`${root}${folder.change_order}/${safe(coOf.number)}${coOf.title ? ` - ${safe(coOf.title)}` : ''} - ${money(coOf.amount)}${ext(d.originalName)}`);
+          let buf: Buffer | null = null;
+          if (d.storage === 'object') buf = await downloadFromObjectStorage(d.storageKey);
+          else buf = await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+          if (!buf) { missing.push(d.originalName); continue; }
+          zip.append(buf, { name: zipPath });
+          contents.push(zipPath);
+          continue;
+        }
         const type = w ? w.kind : (d.docType === 'conditional' || d.docType === 'unconditional' ? 'other' : (d.docType || 'g702'));
         let name: string;
         if (w) {
@@ -2182,7 +2203,6 @@ export function registerCostTrackingRoutes(app: Express): void {
       for (const m of ck.missing) contents.push(`  Conditional   ${m.party === 'gc' ? '' : '    '}${m.vendor}  MISSING${m.lastAmount != null ? `  (${money(m.lastAmount)} last pay app)` : ''}`);
       if (ck.conditionals.length) contents.push(...sums(waiverTotals(ck.conditionals, c.counterparty)));
       // Unconditionals for a pay app we haven't paid in full yet can't exist — say so rather than OUTSTANDING.
-      const bundleForPaid = await loadProjectBundle(c.projectId).catch(() => null);
       const paidOf = bundleForPaid ? paidOfFrom(bundleForPaid.payments, (aid) => { const x: any = bundleForPaid.applications.find((y: any) => y.id === aid); return x ? gcPaymentDue(x, bundleForPaid.waivers, c.counterparty).due : null; }) : undefined;
       const prevPaid = prev && paidOf ? paidOf(prev.id) : null;
       const waitNote = prev && unpaid(prevPaid) ? `PENDING FUNDING (${paidNote(dn.get(prev.id)!, prevPaid!)})` : null;
@@ -2193,6 +2213,10 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (earlier.length) {
         contents.push('', 'Still outstanding from earlier pay apps');
         for (const r of earlier) contents.push(`  Pay App ${nn(r.appNumber)}  ${r.vendor}  ${money(r.conditionalAmount)}  ${r.status.toUpperCase()}`);
+      }
+      if (coRows.length) {
+        contents.push('', `Change orders approved on this pay app`);
+        for (const r of coRows) contents.push(`  ${r.number}${r.title ? ` — ${r.title}` : ''}  ${money(r.amount)}  ${r.executed ? 'executed' : 'NOT EXECUTED (no signed copy on file)'}`);
       }
       if (missing.length) contents.push('', 'Could not be included (file not found in storage):', ...missing.map((m) => `  ${m}`));
       zip.append(contents.join('\r\n'), { name: `${root}00 Contents.txt` });
@@ -2247,6 +2271,34 @@ export function registerCostTrackingRoutes(app: Express): void {
       const zip = archiver('zip', { zlib: { level: 6 } });
       zip.on('error', (err) => { console.error('[cost] packages zip error', err); try { res.end(); } catch {} });
       zip.pipe(res);
+      // Every executed change order on the job, in one folder, when asked for.
+      const allCos = String(req.query.cos || '') === '1';
+      const coLines: string[] = [];
+      const bnd = allCos ? await loadProjectBundle(id) : null;
+      if (bnd) {
+        const rowsCo = coLog(bnd.changeOrders as any, bnd.sovLines as any, bnd.documents as any).filter((r) => r.status === 'approved');
+        const ids = rowsCo.flatMap((r) => r.files.map((f) => f.id));
+        const docRows = ids.length ? await db.select().from(costDocuments).where(inArray(costDocuments.id, ids)) : [];
+        const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
+        const used = new Set<string>();
+        for (const r of rowsCo) {
+          const cName = bnd.contracts.find((x: any) => x.id === r.contractId)?.counterparty ?? '';
+          coLines.push(`  ${cName} — ${r.number}${r.title ? ` — ${r.title}` : ''}  ${money(r.amount)}  ${r.executed ? 'executed' : 'NOT EXECUTED (no signed copy on file)'}`);
+          for (const f of r.files) {
+            const d = docRows.find((x) => x.id === f.id); if (!d) continue;
+            let buf: Buffer | null = null;
+            if (d.storage === 'object') buf = await downloadFromObjectStorage(d.storageKey);
+            else buf = await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+            if (!buf) continue;
+            let nm = `Change Orders/${safe(r.number)}${r.title ? ` - ${safe(r.title)}` : ''} - ${money(r.amount)}${ext(d.originalName)}`;
+            let i = 2; while (used.has(nm.toLowerCase())) nm = nm.replace(/(\.[^.]*)?$/, ` (${i++})$1`);
+            used.add(nm.toLowerCase());
+            zip.append(buf, { name: nm });
+          }
+        }
+        if (coLines.length) zip.append(['Change orders — all approved to date', '', ...coLines].join('\r\n'), { name: 'Change Orders/00 Change Order Log.txt' });
+      }
       if (ready.length === 1) await ready[0].write(zip, '');
       else {
         const used = new Set<string>();
@@ -2257,6 +2309,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           await p.write(zip, `${f}/`);
         }
         zip.append([zipName.replace(/\.zip$/, ''), '', 'One folder per pay app, each with its own contents sheet:', ...ready.map((p) => `  ${p.folderName}`),
+          ...(allCos ? ['', 'Change Orders/ — every approved change order to date, with its executed copy'] : []),
           ...(skipped.length ? ['', 'Left out (no files yet):', ...skipped.map((x) => `  Pay App ${x}`)] : [])].join('\r\n'), { name: '00 Contents.txt' });
       }
       await zip.finalize();

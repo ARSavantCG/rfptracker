@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { coLog, cosOnPayApp } from '@shared/co-log';
 import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
@@ -222,6 +223,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     const due = r.party === 'gc' ? dueOf(app.id).due : cond?.payAppDue ?? null;
     return { cond, due, diff: cond && due != null ? Math.round((due - cond.amount) * 100) / 100 : null };
   };
+  // Change orders this pay app's G702 carries as approved this period.
+  const cosHere = cosOnPayApp(coLog(bundle.changeOrders as any, bundle.sovLines as any, bundle.documents as any), app.contractId, app.number);
   // Subs from the pay app before who aren't here: a one-click add, not a requirement.
   const carried = carriedVendors(apps.find((a) => a.id === app.id)!, apps, bundle.waivers, gcName);
   /** A sub marked not needed with nothing on it: not billing this pay app — one quiet line, not a row. */
@@ -478,6 +481,56 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             </table>
           </div>
         </Fold>
+
+        {/* Change orders approved on this pay app — their executed copies go in the package. */}
+        {cosHere.length > 0 && (
+          <Fold title={`Change Orders — Approved on ${label} ${nn(app.docNumber)}`}
+                badge={cosHere.every((r) => r.executed) ? { tone: 'ok', text: 'All Executed' } : { tone: 'warn', text: `${cosHere.filter((r) => !r.executed).length} Not Executed` }}
+                open={isOpen('cos', cosHere.some((r) => !r.executed))} onToggle={() => toggle('cos', cosHere.some((r) => !r.executed))}
+                summary={`${cosHere.length} change order${cosHere.length === 1 ? '' : 's'} · ${money(cosHere.reduce((t, r) => t + r.amount, 0))}`}>
+            <p className="text-xs text-gray-600">The change orders this pay app's G702 carries as approved this period. Attach each signed copy — here or on the Contracts tab.</p>
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
+                  <th className="px-2 py-1.5">Change Order</th><th className="px-2 py-1.5 w-36 text-right">Amount</th><th className="px-2 py-1.5">Executed Copy (Drop It on the Row)</th>
+                </tr></thead>
+                <tbody>
+                  {cosHere.map((r) => {
+                    const key = `co${r.id}`;
+                    const addCo = (list: File[]) => call(async () => {
+                      for (const f of list) {
+                        const fd = new FormData();
+                        fd.append('file', f); fd.append('contractId', String(r.contractId)); fd.append('changeOrderId', String(r.id));
+                        await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
+                      }
+                    }, `${r.number}: Executed Copy Saved`);
+                    return (
+                      <tr key={key} className={`border-b last:border-0 ${drag === key ? 'bg-blue-100' : !r.executed ? 'bg-amber-50/60' : ''}`}
+                          onDragOver={(e) => { if (isFileDrag(e)) { e.preventDefault(); e.stopPropagation(); setDrag(key); } }}
+                          onDragLeave={() => setDrag((d) => (d === key ? null : d))}
+                          onDrop={(e) => { if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); setDrag(null); addCo(Array.from(e.dataTransfer.files)); }}>
+                        <td className="px-2 py-1.5">{r.number}{r.title ? <span className="text-gray-600"> — {r.title}</span> : null}</td>
+                        <td className="px-2 text-right tabular-nums">{money(r.amount)}</td>
+                        <td className="px-2 py-1 text-xs">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            {r.executed ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Executed</span> : <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">Not Executed</span>}
+                            {r.files.map((f) => (
+                              <button key={f.id} className="text-blue-700 hover:underline inline-flex items-center gap-1 text-left break-all" onClick={() => openDocument(f.id)}><Paperclip className="h-3 w-3 flex-shrink-0" />{short(f.originalName)}</button>
+                            ))}
+                            <label className="text-gray-500 hover:text-blue-700 cursor-pointer inline-flex items-center gap-1">
+                              <Paperclip className="h-3 w-3" /> {r.files.length ? 'Add Another' : 'Attach or Drop'}
+                              <input type="file" multiple className="hidden" onChange={(e) => { const l = Array.from(e.target.files ?? []); e.target.value = ''; if (l.length) addCo(l); }} />
+                            </label>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Fold>
+        )}
 
         {/* Conditional waivers for this pay app */}
         <Fold title={`Conditional Waivers — ${label} ${nn(app.docNumber)}`}

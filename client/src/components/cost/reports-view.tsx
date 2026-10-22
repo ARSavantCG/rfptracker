@@ -5,6 +5,7 @@
  */
 import { useMemo, useState } from 'react';
 import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue } from '@shared/cost-waivers';
+import { coLog } from '@shared/co-log';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       </Card>
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
-      <LenderPackagesCard b={b} projectId={projectId} />
+      <CoLogCard b={b} projectId={projectId} open={open} />
       </div>
 
       <div className="space-y-2">
@@ -462,15 +463,37 @@ function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
   );
 }
 
+/** Change Order Log: every vendor change order with its amount, approval pay app and executed copy. */
+function CoLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const rows = useMemo(() => coLog(b.changeOrders as any, b.sovLines as any, b.documents as any), [b.changeOrders, b.sovLines, b.documents]);
+  const approved = rows.filter((r) => r.status === 'approved');
+  const missing = approved.filter((r) => !r.executed).length;
+  return (
+    <Card id="co-log" title="Change Order Log" what="Every vendor change order: amount, the pay app it was approved on, and whether the executed (signed) copy is on file. Attach signed copies on the Contracts tab or in a pay app's Package."
+          summary={approved.length ? `${approved.length - missing} of ${approved.length} Executed` : undefined}
+          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/co-log/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      <p className="text-sm text-gray-700">
+        {!rows.length ? 'No change orders yet.' : <>{approved.length} approved ({money(approved.reduce((t, r) => t + r.amount, 0))}){missing ? <span className="text-amber-700 font-medium"> · {missing} without an executed copy</span> : <span className="text-green-700"> · all executed copies on file</span>}{rows.some((r) => r.status === 'pending') ? ` · ${rows.filter((r) => r.status === 'pending').length} pending` : ''}.</>}
+      </p>
+    </Card>
+  );
+}
+
 /** Pay app packages as zips for the lender: one, several, or all — a folder per pay app. */
-function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: number }) {
+export function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: number }) {
   const { toast } = useToast();
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [withCos, setWithCos] = useState(false);
   const nn = (n: number) => String(n).padStart(2, '0');
   const apps = [...b.applications].sort((x, y) => x.contractId - y.contractId || x.number - y.number);
-  const fileCount = (aid: number) => b.documents.filter((d) => d.applicationId === aid).length
-    + b.waivers.filter((w) => w.applicationId === aid && w.documentId && !b.documents.some((d) => d.id === w.documentId && d.applicationId === aid)).length;
+  const coRows = useMemo(() => coLog(b.changeOrders as any, b.sovLines as any, b.documents as any), [b.changeOrders, b.sovLines, b.documents]);
+  const fileCount = (aid: number) => {
+    const a = b.applications.find((x) => x.id === aid);
+    const coFiles = a ? coRows.filter((r) => r.contractId === a.contractId && r.status === 'approved' && r.startApp === a.number).reduce((t, r) => t + r.files.length, 0) : 0;
+    return b.documents.filter((d) => d.applicationId === aid).length + coFiles
+      + b.waivers.filter((w) => w.applicationId === aid && w.documentId && !b.documents.some((d) => d.id === w.documentId && d.applicationId === aid)).length;
+  };
   const withFiles = apps.filter((a) => fileCount(a.id) > 0);
   const contracts = Array.from(new Set(apps.map((a) => a.contractId)));
   const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -480,7 +503,7 @@ function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: num
     setBusy(true);
     try {
       const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
-      const res = await fetch(`/api/cost-projects/${projectId}/packages?apps=${ids.join(',')}`, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
+      const res = await fetch(`/api/cost-projects/${projectId}/packages?apps=${ids.join(',')}${withCos ? '&cos=1' : ''}`, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
       if (!res.ok) { toast({ title: 'No Package', description: (await res.json().catch(() => ({})))?.message, variant: 'destructive' }); return; }
       const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'packages.zip';
       const url = URL.createObjectURL(await res.blob());
@@ -490,7 +513,7 @@ function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: num
     finally { setBusy(false); }
   };
   return (
-    <Card id="lender-packages" title="Lender Packages" what="Download pay app packages as a zip — one pay app, or several in one zip with a folder each (pay applications, conditional and unconditional waivers, invoices), each with a contents sheet."
+    <Card id="lender-packages" defaultOpen title="Lender Packages" what="Download pay app packages as a zip — one pay app, or several in one zip with a folder each (pay applications, conditional and unconditional waivers, invoices), each with a contents sheet."
           summary={`${withFiles.length} of ${apps.length} pay apps have files`}
           action={<Button className="h-9" disabled={!picked.size || busy} onClick={download}><Download className="h-4 w-4 mr-1" /> {busy ? 'Building…' : picked.size > 1 ? `Download Zip (${picked.size})` : 'Download Zip'}</Button>}>
       {!apps.length ? <p className="text-sm text-gray-700">No pay apps yet.</p> : (
@@ -500,6 +523,9 @@ function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: num
             <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(withFiles.map((a) => a.id)))}>Select All</button>
             {withFiles.length > 0 && <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set([withFiles[withFiles.length - 1].id]))}>Latest Only</button>}
             {picked.size > 0 && <button className="text-gray-600 hover:underline" onClick={() => setPicked(new Set())}>Clear</button>}
+            <label className="flex items-center gap-2 cursor-pointer ml-auto text-sm" title="Adds a Change Orders folder with every approved change order's executed copy, and a log of them">
+              <input type="checkbox" className="h-4 w-4" checked={withCos} onChange={(e) => setWithCos(e.target.checked)} /> Include All Executed Change Orders to Date
+            </label>
           </div>
           {contracts.map((cid) => (
             <div key={cid} className="space-y-1">
@@ -527,9 +553,9 @@ function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: num
 }
 
 /** A report, rolled up to one line; open it to set its filters and print. Remembers what was left open. */
-function Card({ id, title, what, summary, action, children }: { id: string; title: string; what: string; summary?: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Card({ id, title, what, summary, action, children, defaultOpen = false }: { id: string; title: string; what: string; summary?: string; action?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) {
   const storeKey = `pm-report-open-${id}`;
-  const [isOpen, setOpen] = useState(() => { try { return localStorage.getItem(storeKey) === '1'; } catch { return false; } });
+  const [isOpen, setOpen] = useState(() => { try { const v = localStorage.getItem(storeKey); return v == null ? defaultOpen : v === '1'; } catch { return defaultOpen; } });
   const toggle = () => setOpen((v) => { try { localStorage.setItem(storeKey, v ? '0' : '1'); } catch { /* private mode */ } return !v; });
   return (
     <div className="bg-white border rounded-lg">

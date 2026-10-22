@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput } from './inputs';
 import { fmtPctText } from '@shared/format';
@@ -273,6 +273,7 @@ export function ContractCard({
                           </div>
                         );
                       })()}
+                      {g.co && <CoExecuted co={g.co} docs={documents.filter((d) => d.changeOrderId === g.co!.id)} contractId={contract.id} projectId={projectId} onDone={refresh} />}
                       {g.co && (
                         <button className="text-gray-400 hover:text-red-700" title="Delete this change order"
                                 onClick={() => {
@@ -504,7 +505,7 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
     try { await apiRequest(`/api/cost-contracts/${contract.id}`, 'PATCH', patch); refresh(); }
     catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
-  const files = documents.filter((d) => d.contractId === contract.id && !d.applicationId && !d.directCostId);
+  const files = documents.filter((d) => d.contractId === contract.id && !d.applicationId && !d.directCostId && !d.changeOrderId);
   const upload = async (list: File[]) => {
     try {
       for (const f of list) {
@@ -563,6 +564,57 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
         <Textarea rows={2} className="text-sm bg-white" value={notes} onChange={(e) => setNotes(e.target.value)}
                   onBlur={() => { if (notes !== (contract.notes ?? '')) save({ notes }).then(() => toast({ title: 'Notes Saved' })); }} />
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * A change order's executed (signed) copy: attach or drop it here. Approved with a copy on file = Executed —
+ * it goes in the lender package for the pay app it was approved on.
+ */
+function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrderRow; docs: DocumentRow[]; contractId: number; projectId: number; onDone: () => void }) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [over, setOver] = useState(false);
+  const add = async (list: File[]) => {
+    if (!list.length) return;
+    setBusy(true);
+    try {
+      for (const f of list) {
+        const fd = new FormData();
+        fd.append('file', f); fd.append('contractId', String(contractId)); fd.append('changeOrderId', String(co.id));
+        await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
+      }
+      onDone(); toast({ title: `${co.number}: Executed Copy Saved` });
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+    finally { setBusy(false); }
+  };
+  const remove = async (d: DocumentRow) => {
+    if (!window.confirm(`Remove ${d.originalName} from ${co.number}?`)) return;
+    try { await apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'); onDone(); } catch (e: any) { toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }); }
+  };
+  const executed = co.status === 'approved' && docs.length > 0;
+  return (
+    <div className={`flex items-center gap-1.5 flex-wrap text-xs rounded px-1 ${over ? 'bg-blue-100' : ''}`}
+         onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setOver(true); } }}
+         onDragLeave={() => setOver(false)}
+         onDrop={(e) => { if (!Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); setOver(false); add(Array.from(e.dataTransfer.files)); }}>
+      {co.status === 'approved' && (executed
+        ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Executed</span>
+        : <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Attach the signed change order">Not Executed</span>)}
+      {docs.map((d) => (
+        <span key={d.id} className="inline-flex items-center gap-1">
+          <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => openDocument(d.id)} title={d.originalName}>
+            <Paperclip className="h-3 w-3" />{d.originalName.length > 26 ? `${d.originalName.slice(0, 24)}…` : d.originalName}
+          </button>
+          <button className="text-gray-400 hover:text-red-700" title="Remove this file" onClick={() => remove(d)}><X className="h-3 w-3" /></button>
+        </span>
+      ))}
+      <label className="text-gray-500 hover:text-blue-700 cursor-pointer inline-flex items-center gap-1" title="Attach the executed (signed) change order — or drop it here">
+        <Paperclip className="h-3 w-3" /> {busy ? 'Saving…' : docs.length ? 'Add' : 'Attach Executed'}
+        <input type="file" multiple className="hidden" disabled={busy} onChange={(e) => { const l = Array.from(e.target.files ?? []); e.target.value = ''; add(l); }} />
+      </label>
     </div>
   );
 }

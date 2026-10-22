@@ -2456,6 +2456,8 @@ export const costWaivers = pgTable("cost_waivers", {
   notNeeded: boolean("not_needed").notNull().default(false),
   documentId: integer("document_id"),
   notes: text("notes"),
+  sortOrder: integer("sort_order"),            // as arranged by hand; null = order entered
+  party: text("party"),                        // 'gc' | 'sub' set by hand; null = from the contract's name
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => [index("cost_waivers_application_idx").on(t.applicationId)]);

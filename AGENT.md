@@ -196,3 +196,10 @@ and live test output are proof. The gold standard is: click the button and watch
 - CM fee donut: paid / invoiced not paid / earned not invoiced (on work billed) / not yet earned; centre = anticipated. "Paid" comes from `paidDate`/`paidAmount` on CM invoices — recorded on Reports → invoice card → "Record payment" (`PATCH /api/cost-projects/:id/cm-invoices/:number/payment`, `{amount:null}` clears).
 - Vendor donut: paid / approved not paid (owed) / retainage / not yet billed = contract sum.
 - Schedule: bar = % billed, line = % of start→completion elapsed; late = past completion, behind = billed trails time by >10 pts. Needs contract start + completion dates; undated contracts fold into one "Show N" line.
+
+## Lien waivers: order, GC vs subs, missing (2026-10-22)
+- `cost_waivers.sort_order` (drag by the grip; `POST /api/cost-applications/:id/waivers/order {kind, rows}` — expected-only unconditionals are saved first) and `cost_waivers.party` ('gc'|'sub'; null = `isGcVendor(vendor, contract.counterparty)`, a 10-letter shared start).
+- Unconditionals follow the previous pay app's conditional order unless reordered. Package zip numbers waiver files in that order.
+- `missingConditionals`: GC every pay app + every vendor on the previous pay app; a conditional entered here (even not needed = "Not this pay app") answers it. Tracking starts at the first pay app on the contract with any waiver.
+- Dialog: totals (subs, GC, GC less subs, GC vs G702 line 8), missing rows (GC prefilled with payment due), "Still outstanding from earlier pay apps" with tick/attach/not needed.
+- Log: Received column, missing rows, per-pay-app GC/subs subtotal. CM invoice backup: Retainage Held (G702 held now less held before). DRAFT watermark via `reportHeaderHtml({ draft })`: unissued CM invoices, unconfirmed budget (BvA, Budget Log). Tenant COs not watermarked (they go out for signature).

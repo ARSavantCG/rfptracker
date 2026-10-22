@@ -23,7 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
-import { waiverLog, type WaiverLogRow } from "@shared/cost-waivers";
+import { waiverLog, waiverTotals, type WaiverLogRow, type WaiverTotals } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -360,7 +360,7 @@ export function renderBudgetVsActualHtml(input: {
     ${REPORT_SHELL_CSS}${TABLE_CSS}
     ${showOriginal ? "@page { size: Letter landscape; margin: 0.5in; }" : ""}
   </style></head><body>
-  ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes })}
+  ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes, draft: !!approval && approval.status !== "confirmed" })}
   ${fundingBox(input.funding, input.story)}
   <table class="t"><thead><tr>
     <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}${showRev ? "<th>Revisions</th>" : ""}${showTx ? "<th>Transfers</th>" : ""}${showCo ? "<th>Approved COs</th>" : ""}<th>${showOriginal ? "Revised Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
@@ -528,7 +528,7 @@ export interface CmInvoiceView {
   base: number; pct: number; earned: number; previous: number; due: number;
   lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
-  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }>;
+  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number; retainage?: number }>;
   /** fee: the CM fee only. reimbursable: the billable costs plus the CM fee. */
   type?: 'fee' | 'reimbursable';
   basis?: 'paid' | 'billed';
@@ -564,6 +564,7 @@ export function renderCmInvoiceHtml(input: {
   ];
   const title = reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
   const costWord = paid ? "paid" : "billed";
+  const showRet = !!inv.items?.some((i) => i.retainage !== undefined && Math.abs(i.retainage) >= 0.005);
   return `<!doctype html><html><head><meta charset="utf-8"><title>${reimb ? "Reimbursement Invoice" : "CM Fee Invoice"}</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
     .due { margin-top: 10px; margin-left: auto; width: 55%; border-collapse: collapse; font-size: 12px; }
@@ -572,16 +573,16 @@ export function renderCmInvoiceHtml(input: {
     .due tr.big td { font-size: 14px; font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
     .draft-mark { color: #b45309; font-weight: 700; }
   </style></head><body>
-  ${reportHeaderHtml({ title, eyebrow: "Invoice", info,
+  ${reportHeaderHtml({ title, eyebrow: "Invoice", info, draft: !inv.number,
     notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
   ${!reimb && inv.items && inv.items.length && inv.items.some((i) => i.paid !== undefined) ? `<h3 class="sec">Costs Incurred and Paid to Date</h3>
-  <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Cost Incurred</th><th>Paid</th><th class="l"></th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Cost Incurred</th>${showRet ? "<th>Retainage Held</th>" : ""}<th>Paid</th><th class="l"></th></tr></thead><tbody>
     ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
-      <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${cell(it.paid ?? 0)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
-    <tr class="total"><td colspan="3">Total</td>${cell(inv.items.reduce((s, i) => s + i.amount, 0))}${cell(inv.items.reduce((s, i) => s + (i.paid ?? 0), 0))}<td></td></tr>
+      <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${showRet ? (it.retainage ? cell(it.retainage) : '<td class="num muted">—</td>') : ""}${cell(it.paid ?? 0)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
+    <tr class="total"><td colspan="3">Total</td>${cell(inv.items.reduce((s, i) => s + i.amount, 0))}${showRet ? cell(inv.items.reduce((s, i) => s + (i.retainage ?? 0), 0)) : ""}${cell(inv.items.reduce((s, i) => s + (i.paid ?? 0), 0))}<td></td></tr>
   </tbody></table>
-  <div class="legend">Shown for reference: this invoice is for the construction management fee only. The fee is figured on the costs ${paid ? "paid" : "billed"} to date.</div>`
+  <div class="legend">Shown for reference: this invoice is for the construction management fee only. The fee is figured on the costs ${paid ? "paid" : "billed"} to date.${showRet ? " Retainage held is the part of each pay app withheld until the contractor's work is complete — cost incurred less retainage is what the pay app certified for payment." : ""}</div>`
   : inv.items && inv.items.length ? `<h3 class="sec">Costs ${paid ? "Paid" : "Billed"} to Date</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Amount</th><th>Billable to Tenant</th><th class="l"></th></tr></thead><tbody>
     ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
@@ -631,36 +632,53 @@ export function renderWaiverLogHtml(input: {
   rentableSf?: number;
   rows: WaiverLogRow[];
   contractName: (id: number) => string;
+  /** The GC / subs split of a pay app's conditionals. */
+  totals?: (appId: number) => WaiverTotals;
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const out = input.rows.filter((r) => r.status === "unconditional outstanding" || r.status === "conditional outstanding");
-  const notes = out.length ? [`${out.length} waiver${out.length === 1 ? "" : "s"} outstanding, shaded.`] : [];
+  const out = input.rows.filter((r) => r.status === "unconditional outstanding" || r.status === "conditional outstanding" || r.status === "conditional missing");
+  const nMissing = out.filter((r) => r.status === "conditional missing").length;
+  const nCond = out.filter((r) => r.status === "conditional outstanding").length;
+  const nUncond = out.filter((r) => r.status === "unconditional outstanding").length;
+  const notes = out.length ? [`${out.length} waiver${out.length === 1 ? "" : "s"} outstanding, shaded: ${[
+    nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
+    nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
+    nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
+  ].filter(Boolean).join(", ")}.`] : [];
   const nn = (n: number) => String(n).padStart(2, "0");
   const STATUS: Record<string, string> = {
     complete: "Complete", "unconditional outstanding": "Unconditional outstanding", "conditional outstanding": "Conditional outstanding",
+    "conditional missing": "Conditional missing",
     "not needed": "Not needed", "awaiting next pay app": "Unconditional due with next pay app",
   };
   const byContract = new Map<number, WaiverLogRow[]>();
   for (const r of input.rows) byContract.set(r.contractId, [...(byContract.get(r.contractId) ?? []), r]);
+  const subtotal = (appId: number) => {
+    const t = input.totals?.(appId);
+    if (!t || !t.count) return "";
+    return `<tr class="sub"><td></td><td colspan="5" class="muted" style="font-size:10px">Subs (${t.subCount}) ${money2(t.subs)} · GC ${money2(t.gc)} · GC less subs ${money2(t.gap)}${t.gapPct != null ? ` (${t.gapPct.toFixed(1)}% of the GC's release)` : ""}</td></tr>`;
+  };
   const body = Array.from(byContract).map(([cid, rows]) => `
     <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
-    ${rows.map((r) => `<tr${r.status.includes("outstanding") ? ' style="background:#fef2f2"' : ""}>
-      <td>Pay App ${nn(r.appNumber)}</td><td>${escapeHtml(r.vendor)}</td>${cell(r.conditionalAmount)}
-      <td>${r.conditionalReceived ? "Received" : "—"}</td>
-      <td>${r.unconditionalDueWith == null ? "—" : `${r.unconditionalReceived ? "Received" : "Due"} with Pay App ${nn(r.unconditionalDueWith)}${r.unconditionalAmount != null && Math.abs(r.unconditionalAmount - r.conditionalAmount) >= 0.005 ? ` (${money2(r.unconditionalAmount)})` : ""}${r.edited ? " — edited" : ""}`}</td>
-      <td>${STATUS[r.status]}</td></tr>`).join("")}`).join("");
+    ${rows.map((r, i) => `<tr${r.status === "conditional missing" || r.status.includes("outstanding") ? ' style="background:#fef2f2"' : ""}>
+      <td>Pay App ${nn(r.appNumber)}</td><td>${escapeHtml(r.vendor)}${r.party === "gc" ? ' <span class="muted" style="font-size:9px">GC</span>' : ""}</td>${r.status === "conditional missing" ? `<td class="num muted">${r.conditionalAmount ? `last ${money2(r.conditionalAmount)}` : "—"}</td>` : cell(r.conditionalAmount)}
+      <td>${r.status === "conditional missing" ? "Not entered" : r.conditionalReceived ? "Received" : "—"}</td>
+      <td>${r.unconditionalDueWith == null || r.status === "not needed" ? "—" : `${r.unconditionalReceived ? "Received" : "Due"} with Pay App ${nn(r.unconditionalDueWith)}${r.unconditionalAmount != null && Math.abs(r.unconditionalAmount - r.conditionalAmount) >= 0.005 ? ` (${money2(r.unconditionalAmount)})` : ""}${r.edited ? " — edited" : ""}`}</td>
+      <td>${STATUS[r.status]}</td></tr>${rows[i + 1]?.appId !== r.appId ? subtotal(r.appId) : ""}`).join("")}`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
   ${reportHeaderHtml({ title: "Lien Waiver Log", eyebrow: "Cost Report", info, notes })}
-  <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Vendor</th><th>Conditional</th><th class="l">Conditional</th><th class="l">Unconditional</th><th class="l">Status</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Vendor</th><th>Conditional</th><th class="l">Received</th><th class="l">Unconditional</th><th class="l">Status</th></tr></thead><tbody>
     ${body || `<tr><td colspan="6" class="muted">No waivers recorded yet.</td></tr>`}
   </tbody></table>
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     <li>Each pay app's conditional waivers are answered by unconditional waivers delivered with the following pay app, for the same vendor and amount.</li>
     <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
+    <li>"Conditional missing": the GC owes one with every pay app, and each vendor on the pay app before is expected again unless marked not needed.</li>
+    <li>GC less subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
@@ -707,7 +725,7 @@ export function renderBudgetLogHtml(input: {
     .sum td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .sum tr.big td { font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
   </style></head><body>
-  ${reportHeaderHtml({ title: "Budget Log", eyebrow: "Cost Report", info })}
+  ${reportHeaderHtml({ title: "Budget Log", eyebrow: "Cost Report", info, draft: a.status !== "confirmed" })}
   <table class="sum"><tbody>
     <tr><td>Original budget${a.status === "confirmed" ? "" : " (draft)"}</td><td class="num">${money2(a.originalTotal ?? a.approvedTotal)}</td></tr>
     ${a.status === "confirmed" && Math.abs(a.approvedTotal - (a.originalTotal ?? a.approvedTotal)) >= 0.005 ? `<tr><td>Budget edits since confirmation</td><td class="num">${fmt(a.approvedTotal - (a.originalTotal ?? 0))}</td></tr>` : ""}
@@ -848,11 +866,16 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const apps = b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number }));
+      const apps = b.applications.map((a: any) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber }));
+      const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderWaiverLogHtml({
         project: b.project, ...(await propertyFacts(b.project)),
-        rows: waiverLog(apps, b.waivers),
+        rows: waiverLog(apps, b.waivers, cname),
+        totals: (appId) => {
+          const a = apps.find((x) => x.id === appId)!;
+          return waiverTotals(b.waivers.filter((w) => w.applicationId === appId && w.kind === "conditional"), cname(a.contractId));
+        },
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         generatedBy: generatedByName((req as any).user),
       }));
@@ -903,7 +926,10 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (want) {
         const rec = b.cmInvoices.find((i) => i.number === want);
         if (!rec) return res.status(404).json({ message: "Invoice not found" });
-        invoice = rec;
+        // Issued before retainage was kept on the backup: a pay app's retainage doesn't change, so take today's.
+        const held = new Map<string, number>();
+        for (const it of [...(b.cmInvoiceDrafts.capital.items || []), ...(b.cmInvoiceDrafts.tenant.items || [])] as any[]) if (it.retainage !== undefined) held.set(it.ref, it.retainage);
+        invoice = { ...rec, items: rec.items?.map((it: any) => (it.retainage === undefined && held.has(it.ref) ? { ...it, retainage: held.get(it.ref) } : it)) } as any;
       } else {
         const stream = String(req.query.stream || "");
         const d = stream === "tenant" ? b.cmInvoiceDrafts.tenant : stream === "capital" ? b.cmInvoiceDrafts.capital : b.cmInvoiceDraft;

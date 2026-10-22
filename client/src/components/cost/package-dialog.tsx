@@ -15,14 +15,19 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Download, Paperclip, Plus, Trash2, Upload } from 'lucide-react';
-import { waiverChecklist, DOC_TYPES, type UnconditionalRow } from '@shared/cost-waivers';
+import { Download, GripVertical, Paperclip, Plus, Trash2, Upload } from 'lucide-react';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
 import { money, projectKey, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
 
 const isFileDrag = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+/** Reordering a waiver row (not a file being dropped on it). */
+const ROW_MIME = 'application/x-waiver-row';
+const isRowDrag = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes(ROW_MIME);
+const uKey = (r: UnconditionalRow) => (r.id ? `u${r.id}` : `ux${r.fromWaiverId}`);
+type Kind = 'conditional' | 'unconditional';
 const nn = (n: number) => String(n).padStart(2, '0');
 
 export function PackageDialog({ target, bundle, projectId, onClose }: {
@@ -43,7 +48,82 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const app = target?.app;
   const label = app?.kind === 'invoice' ? 'Invoice' : 'Pay App';
   const apps = useMemo(() => bundle.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })), [bundle.applications]);
-  const ck = useMemo(() => (app ? waiverChecklist(app.id, apps, bundle.waivers) : null), [app?.id, apps, bundle.waivers]);
+  const gcName = target?.contract.counterparty ?? '';
+  const ck = useMemo(() => (app ? waiverChecklist(app.id, apps, bundle.waivers, gcName) : null), [app?.id, apps, bundle.waivers, gcName]);
+  // Owed on pay apps before the previous one (that one's are the unconditionals below).
+  const earlier = useMemo(() => {
+    if (!app || !ck?.previous) return [] as WaiverLogRow[];
+    const before = ck.previous.number;
+    return waiverLog(apps.filter((a) => a.contractId === app.contractId), bundle.waivers, () => gcName)
+      .filter((r) => waiverOutstanding(r.status) && (apps.find((a) => a.id === r.appId)?.number ?? 0) < before);
+  }, [app?.id, ck, apps, bundle.waivers, gcName]);
+  const prevApp = ck?.previous ? bundle.applications.find((a) => a.id === ck.previous!.id) : undefined;
+
+  // Reordering: drag by the grip; the new order shows at once and is saved behind it.
+  const [armed, setArmed] = useState<string | null>(null);
+  const [moving, setMoving] = useState<{ kind: Kind; key: string } | null>(null);
+  const [dropAt, setDropAt] = useState<{ kind: Kind; key: string; after: boolean } | null>(null);
+  const [override, setOverride] = useState<{ kind: Kind; keys: string[] } | null>(null);
+  const arrange = <T,>(kind: Kind, list: T[], keyOf: (x: T) => string) =>
+    override?.kind === kind ? [...list].sort((a, b) => override.keys.indexOf(keyOf(a)) - override.keys.indexOf(keyOf(b))) : list;
+  const conds = ck ? arrange('conditional', ck.conditionals, (w) => `c${w.id}`) : [];
+  const unconds = ck ? arrange('unconditional', ck.unconditionals, uKey) : [];
+  const reorder = async (kind: Kind, from: string, to: string, after: boolean) => {
+    const keys = kind === 'conditional' ? conds.map((w) => `c${w.id}`) : unconds.map(uKey);
+    const rest = keys.filter((k) => k !== from);
+    let at = rest.indexOf(to); if (at < 0) return;
+    if (after) at++;
+    const next = [...rest.slice(0, at), from, ...rest.slice(at)];
+    if (next.join() === keys.join()) return;
+    setOverride({ kind, keys: next });
+    try {
+      const rows = kind === 'conditional'
+        ? next.map((k) => ({ id: Number(k.slice(1)) }))
+        : next.map((k) => { const r = unconds.find((x) => uKey(x) === k)!; return r.id ? { id: r.id } : { fromWaiverId: r.fromWaiverId, vendor: r.vendor, amount: r.amount }; });
+      await apiRequest(`/api/cost-applications/${app!.id}/waivers/order`, 'POST', { kind, rows });
+      await queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
+    } catch (e: any) { toast({ title: 'Order not saved', description: e?.message, variant: 'destructive' }); }
+    finally { setOverride(null); }
+  };
+  /** Row props: reorder by the grip, and keep dropping files on the row. */
+  const rowDnd = (kind: Kind, key: string, files: { onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: (e: React.DragEvent) => void }) => ({
+    draggable: armed === key,
+    onDragStart: (e: React.DragEvent) => { e.dataTransfer.setData(ROW_MIME, key); e.dataTransfer.effectAllowed = 'move'; setMoving({ kind, key }); },
+    onDragEnd: () => { setArmed(null); setMoving(null); setDropAt(null); },
+    onDragOver: (e: React.DragEvent) => {
+      if (isRowDrag(e)) {
+        if (moving?.kind !== kind) return;
+        e.preventDefault();
+        const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const after = e.clientY > box.top + box.height / 2;
+        if (dropAt?.key !== key || dropAt.after !== after) setDropAt({ kind, key, after });
+        return;
+      }
+      files.onDragOver(e);
+    },
+    onDragLeave: files.onDragLeave,
+    onDrop: (e: React.DragEvent) => {
+      if (isRowDrag(e)) {
+        e.preventDefault();
+        const from = e.dataTransfer.getData(ROW_MIME);
+        const at = dropAt;
+        setArmed(null); setMoving(null); setDropAt(null);
+        if (from && at && from !== key && moving?.kind === kind) reorder(kind, from, key, at.after);
+        return;
+      }
+      files.onDrop(e);
+    },
+  });
+  const dropLine = (kind: Kind, key: string) =>
+    dropAt?.kind === kind && dropAt.key === key && moving?.key !== key ? (dropAt.after ? 'shadow-[inset_0_-2px_0_0_#2563eb]' : 'shadow-[inset_0_2px_0_0_#2563eb]') : moving?.key === key ? 'opacity-40' : '';
+  const grip = (key: string, top?: boolean) => (
+    <td className={`pl-1 w-6 ${top ? 'align-top pt-2.5' : ''}`}>
+      <span className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 inline-flex" title="Drag to reorder"
+            onMouseDown={() => setArmed(key)} onMouseUp={() => setArmed(null)} onTouchStart={() => setArmed(key)}>
+        <GripVertical className="h-4 w-4" />
+      </span>
+    </td>
+  );
   const files = app ? bundle.documents.filter((d) => d.applicationId === app.id) : [];
   const docName = (id: number | null) => bundle.documents.find((d) => d.id === id)?.originalName;
 
@@ -53,10 +133,10 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     catch (e: any) { toast({ title: 'Not saved', description: e?.message, variant: 'destructive' }); refresh(); return false; }
     finally { setBusy(false); }
   };
-  const upload = (file: File, extra: Record<string, string>) => {
+  const upload = (file: File, extra: Record<string, string>, appId?: number) => {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('applicationId', String(app!.id));
+    fd.append('applicationId', String(appId ?? app!.id));
     fd.append('contractId', String(target!.contract.id));
     Object.entries(extra).forEach(([k, v]) => fd.append(k, v));
     return apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
@@ -91,6 +171,20 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     await upload(f, { docType: 'unconditional', waiverId: String(id) });
   };
 
+  /** An earlier pay app's unconditional: saved on the pay app it's due with (created if only expected). */
+  const ensureEarlierU = async (r: WaiverLogRow) => {
+    if (r.unconditionalId) return r.unconditionalId;
+    const row: any = await apiRequest(`/api/cost-applications/${r.unconditionalAppId}/waivers`, 'POST', {
+      kind: 'unconditional', vendor: r.vendor, amount: r.conditionalAmount, fromWaiverId: r.conditionalId, received: false,
+    });
+    return row.id as number;
+  };
+  const markEarlier = (r: WaiverLogRow, patch: { received?: boolean; notNeeded?: boolean }) => call(async () => {
+    if (r.status === 'unconditional outstanding') return apiRequest(`/api/cost-waivers/${await ensureEarlierU(r)}`, 'PATCH', patch);
+    if (r.status === 'conditional outstanding') return apiRequest(`/api/cost-waivers/${r.conditionalId}`, 'PATCH', patch);
+    return apiRequest(`/api/cost-applications/${r.appId}/waivers`, 'POST', { kind: 'conditional', vendor: r.vendor, amount: 0, received: false, notNeeded: true });
+  }, patch.received ? `${r.vendor}: received` : `${r.vendor}: not needed`);
+
   const download = async () => {
     const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
     const res = await fetch(`/api/cost-applications/${app!.id}/package`, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
@@ -112,7 +206,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </DialogHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap -mt-2">
           <p className="text-xs text-gray-600">
-            {ck.outstanding ? <span className="text-red-700 font-medium">{ck.outstanding} waiver{ck.outstanding === 1 ? '' : 's'} outstanding.</span> : <span className="text-green-700 font-medium">All waivers in.</span>}
+            {ck.outstanding ? <span className="text-red-700 font-medium">{ck.outstanding} waiver{ck.outstanding === 1 ? '' : 's'} outstanding{ck.missing.length ? ` (${ck.missing.length} conditional${ck.missing.length === 1 ? '' : 's'} not entered)` : ''}.</span> : <span className="text-green-700 font-medium">All waivers in.</span>}
+            {earlier.length > 0 && <span className="text-red-700 font-medium"> {earlier.length} more from earlier pay apps.</span>}
             {' '}Download gives one zip, sorted into folders, with a contents sheet.
           </p>
           <Button onClick={download} disabled={!files.length}><Download className="h-4 w-4 mr-1" /> Download package</Button>
@@ -173,27 +268,39 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">Conditional waivers — {label} {nn(app.docNumber)}</h3>
             {!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewC({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}
           </div>
-          <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Next pay app, the app expects an unconditional from each of them.</p>
-          <WaiverTable>
-            {ck.conditionals.map((w) => (
-              <tr key={w.id} {...dz(`c${w.id}`, { docType: 'conditional', waiverId: String(w.id) })}
-                  className={`border-b last:border-0 ${drag === `c${w.id}` ? 'bg-blue-100' : w.notNeeded ? 'opacity-50' : ''}`}>
-                <td className="px-1 py-1"><Input className="h-8" defaultValue={w.vendor} aria-label="Vendor"
-                       onBlur={(e) => e.target.value.trim() && e.target.value !== w.vendor && call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { vendor: e.target.value }))} /></td>
-                <td className="px-1 py-1"><BlurMoney value={w.amount} onSave={(v) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { amount: v }))} /></td>
-                <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={w.received}
-                       onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { received: e.target.checked }))} /></td>
-                <td className="px-2 text-xs"><FileCell name={docName(w.documentId)} id={w.documentId}
-                       onPick={(f) => call(() => upload(f, { docType: 'conditional', waiverId: String(w.id) }), 'Waiver saved')} /></td>
-                <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4" checked={w.notNeeded} title="Not needed"
-                       onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { notNeeded: e.target.checked }))} /></td>
-                <td className="px-1 text-center"><button className="p-1 text-gray-400 hover:text-red-700" title="Remove"
-                       onClick={() => { if (window.confirm(`Remove ${w.vendor}'s conditional?`)) call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'DELETE')); }}><Trash2 className="h-4 w-4" /></button></td>
-              </tr>
+          <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
+          <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} payment due (G702 line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
+            {conds.map((w) => {
+              const key = `c${w.id}`;
+              return (
+                <tr key={w.id} {...rowDnd('conditional', key, dz(key, { docType: 'conditional', waiverId: String(w.id) }))}
+                    className={`border-b last:border-0 ${dropLine('conditional', key)} ${drag === key ? 'bg-blue-100' : w.notNeeded ? 'opacity-50' : ''}`}>
+                  {grip(key)}
+                  <td className="px-1 py-1"><Input className="h-8" defaultValue={w.vendor} aria-label="Vendor"
+                         onBlur={(e) => e.target.value.trim() && e.target.value !== w.vendor && call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { vendor: e.target.value }))} /></td>
+                  <td className="px-1"><PartyPill row={w} gcName={gcName} onSet={(p) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { party: p }))} /></td>
+                  <td className="px-1 py-1"><BlurMoney value={w.amount} onSave={(v) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { amount: v }))} /></td>
+                  <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={w.received}
+                         onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { received: e.target.checked }))} /></td>
+                  <td className="px-2 text-xs"><FileCell name={docName(w.documentId)} id={w.documentId}
+                         onPick={(f) => call(() => upload(f, { docType: 'conditional', waiverId: String(w.id) }), 'Waiver saved')} /></td>
+                  <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4" checked={w.notNeeded} title="Not needed"
+                         onChange={(e) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { notNeeded: e.target.checked }))} /></td>
+                  <td className="px-1 text-center"><button className="p-1 text-gray-400 hover:text-red-700" title="Remove"
+                         onClick={() => { if (window.confirm(`Remove ${w.vendor}'s conditional?`)) call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'DELETE')); }}><Trash2 className="h-4 w-4" /></button></td>
+                </tr>
+              );
+            })}
+            {ck.missing.map((m) => (
+              <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? app.g702.currentPaymentDue : null}
+                          onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}
+                          onSkip={() => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount: 0, received: false, notNeeded: true }), `${m.vendor}: not this pay app`)} />
             ))}
             {newC && (
               <tr className="border-t bg-blue-50/40">
+                <td />
                 <td className="px-1 py-1"><Input autoFocus className="h-8" value={newC.vendor} aria-label="Vendor" onChange={(e) => setNewC({ ...newC, vendor: e.target.value })} /></td>
+                <td className="px-1 text-[11px] text-gray-500">{newC.vendor.trim() ? (isGcVendor(newC.vendor, gcName) ? 'GC' : 'Sub') : ''}</td>
                 <td className="px-1 py-1"><MoneyInput className="h-8" value={newC.amount} aria-label="Amount" onValueChange={(v) => setNewC({ ...newC, amount: v })} /></td>
                 <td colSpan={4} className="px-2">
                   <div className="flex gap-2 justify-end">
@@ -206,7 +313,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 </td>
               </tr>
             )}
-            {!ck.conditionals.length && !newC && <tr><td colSpan={6} className="px-3 py-2 text-sm text-gray-500">None yet.</td></tr>}
+            {!ck.conditionals.length && !ck.missing.length && !newC && <tr><td colSpan={8} className="px-3 py-2 text-sm text-gray-500">None yet.</td></tr>}
           </WaiverTable>
         </section>
 
@@ -219,19 +326,22 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             {!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => setNewU({ vendor: '', amount: '' })}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}
           </div>
           <p className="text-xs text-gray-600">
-            {prevLabel ? `Expected from every vendor that gave a conditional on ${prevLabel}, for the same amount. Type over anything that's different — it's marked Edited.` : 'This is the first pay app on the contract, so none are expected yet.'}
+            {prevLabel ? `Expected from every vendor that gave a conditional on ${prevLabel}, for the same amount, in the same order. Type over anything that's different — it's marked Edited.` : 'This is the first pay app on the contract, so none are expected yet.'}
           </p>
-          <WaiverTable>
-            {ck.unconditionals.map((r, i) => {
-              const key = `u${r.id ?? `x${i}`}`;
+          <WaiverTable footer={ck.unconditionals.length ? <TotalsRows t={waiverTotals(ck.unconditionals, gcName)} gcName={gcName} check={prevApp ? { label: `${prevLabel} payment due (G702 line 8)`, amount: prevApp.g702.currentPaymentDue } : undefined} /> : null}>
+            {unconds.map((r) => {
+              const key = uKey(r);
               return (
-                <tr key={key} className={`border-b last:border-0 ${drag === key ? 'bg-blue-100' : r.notNeeded ? 'opacity-50' : !r.received ? 'bg-red-50/40' : ''}`}
-                    onDragOver={(e) => { if (isFileDrag(e)) { e.preventDefault(); e.stopPropagation(); setDrag(key); } }}
-                    onDragLeave={() => setDrag((d) => (d === key ? null : d))}
-                    onDrop={(e) => {
-                      if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); setDrag(null);
-                      const f = e.dataTransfer.files[0]; if (f) call(() => uploadToU(r, f), 'Waiver saved');
-                    }}>
+                <tr key={key} className={`border-b last:border-0 ${dropLine('unconditional', key)} ${drag === key ? 'bg-blue-100' : r.notNeeded ? 'opacity-50' : !r.received ? 'bg-red-50/40' : ''}`}
+                    {...rowDnd('unconditional', key, {
+                      onDragOver: (e: React.DragEvent) => { if (isFileDrag(e)) { e.preventDefault(); e.stopPropagation(); setDrag(key); } },
+                      onDragLeave: () => setDrag((d) => (d === key ? null : d)),
+                      onDrop: (e: React.DragEvent) => {
+                        if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); setDrag(null);
+                        const f = e.dataTransfer.files[0]; if (f) call(() => uploadToU(r, f), 'Waiver saved');
+                      },
+                    })}>
+                  {grip(key, true)}
                   <td className="px-1 py-1">
                     <Input className="h-8" defaultValue={r.vendor} key={`${key}-${r.vendor}`} aria-label="Vendor"
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
@@ -240,6 +350,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                       {r.edited && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title={`Expected: ${r.expectedVendor} ${money(r.expectedAmount ?? 0)}`}>Edited — expected {r.expectedVendor !== r.vendor ? `${r.expectedVendor} ` : ''}{money(r.expectedAmount ?? 0)}</span>}
                     </div>
                   </td>
+                  <td className="px-1 align-top pt-1.5"><PartyPill row={r} gcName={gcName} onSet={(p) => saveU(r, { party: p })} /></td>
                   <td className="px-1 py-1 align-top"><BlurMoney value={r.amount} key={`${key}-${r.amount}`} onSave={(v) => saveU(r, { amount: v })} /></td>
                   <td className="px-2 text-center align-top pt-2"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={r.received} onChange={(e) => saveU(r, { received: e.target.checked })} /></td>
                   <td className="px-2 text-xs align-top pt-2"><FileCell name={docName(r.documentId)} id={r.documentId} onPick={(f) => call(() => uploadToU(r, f), 'Waiver saved')} /></td>
@@ -255,7 +366,9 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             })}
             {newU && (
               <tr className="border-t bg-blue-50/40">
+                <td />
                 <td className="px-1 py-1"><Input autoFocus className="h-8" value={newU.vendor} aria-label="Vendor" onChange={(e) => setNewU({ ...newU, vendor: e.target.value })} /></td>
+                <td className="px-1 text-[11px] text-gray-500">{newU.vendor.trim() ? (isGcVendor(newU.vendor, gcName) ? 'GC' : 'Sub') : ''}</td>
                 <td className="px-1 py-1"><MoneyInput className="h-8" value={newU.amount} aria-label="Amount" onValueChange={(v) => setNewU({ ...newU, amount: v })} /></td>
                 <td colSpan={4} className="px-2">
                   <div className="flex gap-2 justify-end">
@@ -268,28 +381,129 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 </td>
               </tr>
             )}
-            {!ck.unconditionals.length && !newU && <tr><td colSpan={6} className="px-3 py-2 text-sm text-gray-500">None expected.</td></tr>}
+            {!ck.unconditionals.length && !newU && <tr><td colSpan={8} className="px-3 py-2 text-sm text-gray-500">None expected.</td></tr>}
           </WaiverTable>
         </section>
+
+        {/* Anything still owed from pay apps before the last one */}
+        {earlier.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-red-700">Still outstanding from earlier pay apps ({earlier.length})</h3>
+            <p className="text-xs text-gray-600">Waivers owed on pay apps before {prevLabel}. Tick them off here as they come in.</p>
+            <div className="border border-red-200 rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-red-50/60">
+                  <th className="px-2 py-1.5">Pay app</th><th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 text-right">Amount</th>
+                  <th className="px-2 py-1.5">Missing</th><th className="px-2 py-1.5 w-20 text-center">Received</th><th className="px-2 py-1.5">File</th><th className="px-2 py-1.5 w-24" />
+                </tr></thead>
+                <tbody>
+                  {earlier.map((r) => (
+                    <tr key={`${r.appId}-${r.conditionalId ?? r.vendor}-${r.status}`} className="border-b last:border-0">
+                      <td className="px-2 py-1.5 whitespace-nowrap">Pay App {nn(r.appNumber)}</td>
+                      <td className="px-2 py-1.5">{r.vendor}{r.party === 'gc' && <span className="ml-1 text-[10px] font-semibold text-blue-800 bg-blue-100 rounded px-1">GC</span>}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{r.status === 'conditional missing' ? (r.conditionalAmount ? <span className="text-gray-500">last {money(r.conditionalAmount)}</span> : '—') : money(r.unconditionalAmount ?? r.conditionalAmount)}</td>
+                      <td className="px-2 py-1.5 text-red-700 text-xs">
+                        {r.status === 'unconditional outstanding' ? `Unconditional (due with Pay App ${nn(r.unconditionalDueWith ?? 0)})` : r.status === 'conditional outstanding' ? 'Conditional not received' : 'Conditional never entered'}
+                      </td>
+                      <td className="px-2 text-center">
+                        {r.status !== 'conditional missing' && <input type="checkbox" className="h-4 w-4 accent-green-600" checked={false} onChange={() => markEarlier(r, { received: true })} />}
+                      </td>
+                      <td className="px-2 text-xs">
+                        {r.status === 'unconditional outstanding' && r.unconditionalAppId && (
+                          <FileCell name={undefined} id={null} onPick={(f) => call(async () => { const wid = await ensureEarlierU(r); await upload(f, { docType: 'unconditional', waiverId: String(wid) }, r.unconditionalAppId!); }, 'Waiver saved')} />
+                        )}
+                        {r.status === 'conditional outstanding' && r.conditionalId && (
+                          <FileCell name={undefined} id={null} onPick={(f) => call(() => upload(f, { docType: 'conditional', waiverId: String(r.conditionalId) }, r.appId), 'Waiver saved')} />
+                        )}
+                      </td>
+                      <td className="px-2 text-right">
+                        <button className="text-xs text-gray-500 hover:text-gray-900 hover:underline" onClick={() => markEarlier(r, { notNeeded: true })}>Not needed</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function WaiverTable({ children }: { children: React.ReactNode }) {
+function WaiverTable({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div className="border rounded-md overflow-x-auto">
-      <table className="w-full text-sm min-w-[680px]">
+      <table className="w-full text-sm min-w-[760px]">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
-            <th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-40 text-right">Amount</th>
+            <th className="w-6" /><th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-16">GC / Sub</th><th className="px-2 py-1.5 w-40 text-right">Amount</th>
             <th className="px-2 py-1.5 w-20 text-center">Received</th><th className="px-2 py-1.5">File (drop it on the row)</th>
             <th className="px-2 py-1.5 w-20 text-center">Not needed</th><th className="w-9" />
           </tr>
         </thead>
         <tbody>{children}</tbody>
+        {footer && <tfoot className="border-t-2 border-gray-300 bg-gray-50/70">{footer}</tfoot>}
       </table>
     </div>
+  );
+}
+
+/** GC or sub: worked out from the contract's name until set by hand. Click to switch. */
+function PartyPill({ row, gcName, onSet }: { row: { vendor: string; party?: WaiverParty | null }; gcName: string; onSet: (p: WaiverParty | null) => void }) {
+  const p = partyOf(row, gcName);
+  const auto = isGcVendor(row.vendor, gcName) ? 'gc' : 'sub';
+  return (
+    <button type="button" onClick={() => { const next: WaiverParty = p === 'gc' ? 'sub' : 'gc'; onSet(next === auto ? null : next); }}
+            title={`${p === 'gc' ? 'The general contractor' : 'A subcontractor or supplier'}${row.party ? ' — set by hand' : ' — from the contract name'}. Click to switch.`}
+            className={`text-[11px] font-semibold rounded px-1.5 py-0.5 ${p === 'gc' ? 'text-blue-800 bg-blue-100' : 'text-gray-700 bg-gray-100'} ${row.party ? 'ring-1 ring-amber-400' : ''}`}>
+      {p === 'gc' ? 'GC' : 'Sub'}
+    </button>
+  );
+}
+
+/** Subs, GC and the gap between them; and the GC's release against the G702. */
+function TotalsRows({ t, gcName, check }: { t: WaiverTotals; gcName: string; check?: { label: string; amount: number } }) {
+  const row = (label: React.ReactNode, amount: number, note?: React.ReactNode, strong?: boolean) => (
+    <tr className={strong ? 'font-semibold' : ''}>
+      <td /><td colSpan={2} className="px-2 py-1 text-gray-700">{label}</td>
+      <td className="px-2 py-1 text-right tabular-nums">{money(amount)}</td>
+      <td colSpan={4} className="px-2 py-1 text-xs text-gray-600">{note}</td>
+    </tr>
+  );
+  const diff = check ? Math.round((t.gc - check.amount) * 100) / 100 : 0;
+  return (
+    <>
+      {row(`Subcontractors (${t.subCount})`, t.subs)}
+      {row(<span title={gcName}>GC{t.gcCount > 1 ? ` (${t.gcCount} releases)` : ''}</span>, t.gc, !t.gcCount ? <span className="text-red-700">No GC release</span> : null)}
+      {t.gcCount > 0 && row('GC less subs', t.gap,
+        <>{t.gapPct != null && <span className="tabular-nums">{t.gapPct.toFixed(1)}% of the GC's release — </span>}the GC's own work, fee and general conditions, or sub releases not in yet{t.gap < -0.005 ? <span className="text-red-700 font-medium"> · subs exceed the GC's release</span> : null}</>, true)}
+      {check && t.gcCount > 0 && row(check.label, check.amount,
+        Math.abs(diff) < 0.01 ? <span className="text-green-700 font-medium">GC release matches</span> : <span className="text-amber-700 font-medium">GC release is {money(Math.abs(diff))} {diff > 0 ? 'more' : 'less'}</span>)}
+    </>
+  );
+}
+
+/** A conditional this pay app should have and doesn't. */
+function MissingRow({ m, busy, start, onAdd, onSkip }: { m: MissingConditional; busy: boolean; start: number | null; onAdd: (amount: string) => void; onSkip: () => void }) {
+  // The GC's starts at this pay app's payment due; a sub's is typed from their waiver.
+  const [amount, setAmount] = useState(start != null && start > 0 ? fmtMoneyText(start.toFixed(2)) : '');
+  return (
+    <tr className="border-b last:border-0 bg-red-50/60">
+      <td />
+      <td className="px-2 py-1.5">
+        <div className="text-gray-900">{m.vendor}</div>
+        <div className="text-[10px] text-red-700 font-medium">Missing — {m.why === 'gc' ? 'the GC gives one with every pay app' : `was on the previous pay app${m.lastAmount != null ? ` (${money(m.lastAmount)})` : ''}`}</div>
+      </td>
+      <td className="px-1"><span className={`text-[11px] font-semibold rounded px-1.5 py-0.5 ${m.party === 'gc' ? 'text-blue-800 bg-blue-100' : 'text-gray-700 bg-gray-100'}`}>{m.party === 'gc' ? 'GC' : 'Sub'}</span></td>
+      <td className="px-1 py-1"><MoneyInput className="h-8" value={amount} aria-label={`${m.vendor} amount`} onValueChange={setAmount} /></td>
+      <td colSpan={4} className="px-2">
+        <div className="flex gap-2 justify-end">
+          <Button size="sm" variant="ghost" className="h-7 text-gray-600" disabled={busy} onClick={onSkip} title="They aren't being paid on this pay app">Not this pay app</Button>
+          <Button size="sm" className="h-7" disabled={busy} onClick={() => onAdd(amount.replace(/[$,\s]/g, ''))}>Add</Button>
+        </div>
+      </td>
+    </tr>
   );
 }
 

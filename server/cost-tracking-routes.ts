@@ -26,7 +26,7 @@ import {
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
-import { eq, inArray, like, desc } from 'drizzle-orm';
+import { and, eq, inArray, like, desc } from 'drizzle-orm';
 import { feePaid, feeDonut, vendorDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
 import {
   budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
@@ -41,7 +41,7 @@ import { requireAi } from './lib/ai-switch';
 import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
-import { waiverChecklist, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
 
@@ -485,7 +485,17 @@ export async function loadProjectBundle(projectId: number) {
       };
       const earnedBilled = earnedOn(items), earnedPaid = earnedOn(paidList);
       const inv = capFee(invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous }));
-      const withPaid = (it: typeof items[number]) => ({ ...it, paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
+      // Retainage held back on each pay app (its G702: held now less held before) — why what was paid is less than the cost.
+      const heldOn = (ref: string) => {
+        if (!ref.startsWith('app-')) return 0;
+        const a = apps.find((x) => `app-${x.id}` === ref);
+        if (!a) return 0;
+        const prior = apps.filter((x) => x.contractId === a.contractId && x.number < a.number).sort((x, y) => y.number - x.number)[0];
+        const now = g702For(a.contractId, a.number, { lines, changeOrders, applications }).retainage;
+        const before = prior ? g702For(prior.contractId, prior.number, { lines, changeOrders, applications }).retainage : 0;
+        return r2c(now - before);
+      };
+      const withPaid = (it: typeof items[number]) => ({ ...it, retainage: heldOn(it.ref), paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
       // The capital partner sees every cost incurred (with what's been paid), whatever the fee is counted on.
       const shown = type === 'fee' ? items.map(withPaid) : chosen.map(withPaid);
       return {
@@ -526,6 +536,7 @@ export async function loadProjectBundle(projectId: number) {
       id: w.id, contractId: w.contractId, applicationId: w.applicationId, kind: w.kind as Waiver['kind'],
       vendor: w.vendor, amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null,
       received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null, notes: w.notes,
+      sortOrder: w.sortOrder ?? null, party: (w.party === 'gc' || w.party === 'sub') ? (w.party as 'gc' | 'sub') : null,
     })),
     ledger: buildLedger({
       payments: payRows.map((p) => ({
@@ -1927,8 +1938,47 @@ export function registerCostTrackingRoutes(app: Express): void {
     if (b.notNeeded !== undefined) out.notNeeded = !!b.notNeeded;
     if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;
     if (b.documentId !== undefined) out.documentId = b.documentId == null ? null : Number(b.documentId);
+    if (b.party !== undefined) out.party = b.party === 'gc' || b.party === 'sub' ? b.party : null;
     return out;
   };
+
+  /**
+   * Put one pay app's conditionals, or its unconditionals, in the order given.
+   * An unconditional that is only expected so far is saved first, unchanged.
+   */
+  app.post('/api/cost-applications/:id/waivers/order', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [a] = await db.select().from(costApplications).where(eq(costApplications.id, id));
+      if (!a) return res.status(404).json({ message: 'Pay app not found' });
+      const [c] = await db.select().from(costContracts).where(eq(costContracts.id, a.contractId));
+      const kind = req.body?.kind === 'unconditional' ? 'unconditional' : 'conditional';
+      const rows: any[] = Array.isArray(req.body?.rows) ? req.body.rows.slice(0, 500) : [];
+      const mine = await db.select({ id: costWaivers.id }).from(costWaivers)
+        .where(and(eq(costWaivers.applicationId, id), eq(costWaivers.kind, kind)));
+      const ok = new Set(mine.map((w) => w.id));
+      let i = 0;
+      for (const r of rows) {
+        let wid = Number(r?.id) || null;
+        if (wid && !ok.has(wid)) return res.status(400).json({ message: 'That waiver is not on this pay app.' });
+        if (!wid) {
+          if (kind !== 'unconditional') continue;
+          const [row] = await db.insert(costWaivers).values({
+            projectId: c.projectId, contractId: a.contractId, applicationId: id, kind,
+            fromWaiverId: r?.fromWaiverId ? Number(r.fromWaiverId) : null, received: false,
+            ...waiverValues({ vendor: r?.vendor, amount: r?.amount ?? 0 }, false), createdBy: who(req),
+          }).returning();
+          wid = row.id;
+        }
+        await db.update(costWaivers).set({ sortOrder: i++ }).where(eq(costWaivers.id, wid));
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'reorder the waivers');
+    }
+  });
 
   app.post('/api/cost-applications/:id/waivers', ...canEdit, async (req, res) => {
     try {
@@ -2017,9 +2067,10 @@ export function registerCostTrackingRoutes(app: Express): void {
       const waivers = (await db.select().from(costWaivers).where(eq(costWaivers.contractId, a.contractId))).map((w) => ({
         id: w.id, contractId: w.contractId, applicationId: w.applicationId, kind: w.kind as Waiver['kind'], vendor: w.vendor,
         amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null, received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null,
+        sortOrder: w.sortOrder ?? null, party: (w.party === 'gc' || w.party === 'sub') ? w.party as 'gc' | 'sub' : null,
       }));
       const prev = previousApp({ id: a.id, contractId: a.contractId, number: a.number }, allApps);
-      const ck = waiverChecklist(a.id, allApps, waivers);
+      const ck = waiverChecklist(a.id, allApps, waivers, c.counterparty);
       const docs = await db.select().from(costDocuments).where(eq(costDocuments.applicationId, a.id));
       const waiverDocIds = new Set(waivers.filter((w) => w.applicationId === a.id && w.documentId).map((w) => w.documentId!));
       const extra = waiverDocIds.size
@@ -2062,7 +2113,10 @@ export function registerCostTrackingRoutes(app: Express): void {
         let name: string;
         if (w) {
           const covers = w.kind === 'conditional' ? `${label} ${nn(dn.get(a.id)!)}` : prev ? `Pay App ${nn(dn.get(prev.id)!)}` : 'prior';
-          name = `${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
+          // Numbered as arranged in the app, so the folder lists in the same order.
+          const list: Array<{ id: number | null }> = w.kind === 'conditional' ? ck.conditionals : ck.unconditionals;
+          const pos = list.findIndex((x) => x.id === w.id);
+          name = `${pos >= 0 ? `${nn(pos + 1)} ` : ''}${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
         } else if (type === 'g702') {
           name = `${safe(c.counterparty)} - ${label} ${nn(dn.get(a.id)!)} - G702-G703${ext(d.originalName)}`;
         } else {
@@ -2077,8 +2131,23 @@ export function registerCostTrackingRoutes(app: Express): void {
         contents.push(zipPath);
       }
       contents.push('', 'Lien waivers');
-      for (const w of ck.conditionals) contents.push(`  Conditional   ${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
-      for (const u of ck.unconditionals) contents.push(`  Unconditional ${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : 'OUTSTANDING'}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
+      const tag = (r: { vendor: string; party?: 'gc' | 'sub' | null }) => (partyOf(r, c.counterparty) === 'gc' ? 'GC ' : 'Sub');
+      const sums = (t: ReturnType<typeof waiverTotals>) => [
+        `    Subcontractors (${t.subCount})  ${money(t.subs)}`,
+        `    GC                  ${money(t.gc)}`,
+        `    GC less subs        ${money(t.gap)}${t.gapPct != null ? `  (${t.gapPct.toFixed(1)}% of the GC's release)` : ''}`,
+      ];
+      for (const w of ck.conditionals) contents.push(`  Conditional   ${tag(w)}  ${w.vendor}  ${money(w.amount)}  ${w.notNeeded ? 'not needed' : w.received ? 'received' : 'OUTSTANDING'}`);
+      for (const m of ck.missing) contents.push(`  Conditional   ${m.party === 'gc' ? 'GC ' : 'Sub'}  ${m.vendor}  MISSING${m.lastAmount != null ? `  (${money(m.lastAmount)} last pay app)` : ''}`);
+      if (ck.conditionals.length) contents.push(...sums(waiverTotals(ck.conditionals, c.counterparty)));
+      for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}  ${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : 'OUTSTANDING'}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);
+      if (ck.unconditionals.length) contents.push(...sums(waiverTotals(ck.unconditionals, c.counterparty)));
+      const earlier = waiverLog(allApps.map((x) => ({ ...x, docNumber: dn.get(x.id) ?? x.number })), waivers, () => c.counterparty)
+        .filter((r) => waiverOutstanding(r.status) && prev && (allApps.find((x) => x.id === r.appId)?.number ?? 0) < prev.number);
+      if (earlier.length) {
+        contents.push('', 'Still outstanding from earlier pay apps');
+        for (const r of earlier) contents.push(`  Pay App ${nn(r.appNumber)}  ${r.vendor}  ${money(r.conditionalAmount)}  ${r.status.toUpperCase()}`);
+      }
       if (missing.length) contents.push('', 'Could not be included (file not found in storage):', ...missing.map((m) => `  ${m}`));
       zip.append(contents.join('\r\n'), { name: '00 Contents.txt' });
       await zip.finalize();

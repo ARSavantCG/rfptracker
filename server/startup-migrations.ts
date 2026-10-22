@@ -58,6 +58,8 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'rom_scope_items', column: 'spec_tags', type: "json DEFAULT '[]'::json" },
   // Pricing by quantity on ONE catalog item (replaces separate tier items). See shared/line-total.ts.
   { table: 'rom_scope_items', column: 'price_tiers', type: "json DEFAULT '[]'::json" },
+  { table: 'cost_waivers', column: 'sort_order', type: 'integer' },
+  { table: 'cost_waivers', column: 'party', type: 'text' },
   // Ownership scoping (slice 0b, DESIGN-rom-mode-on-rfp.md): the REAL owner id.
   // rfp_requests never had created_by at all; rom_pilots.created_by is a display
   // name. Backfilled below in runPermissionAndOwnershipBackfill(); NULL after

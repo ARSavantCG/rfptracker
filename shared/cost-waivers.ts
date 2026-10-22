@@ -29,7 +29,13 @@ export interface Waiver {
   received: boolean;
   notNeeded: boolean;
   documentId: number | null;
+  /** Position in its pay app's list, as arranged by hand; null = in the order entered. */
+  sortOrder?: number | null;
+  /** 'gc' or 'sub' as set by hand; null = worked out from the contract's name. */
+  party?: WaiverParty | null;
 }
+
+export type WaiverParty = 'gc' | 'sub';
 
 export interface AppRef {
   id: number;
@@ -55,6 +61,8 @@ export interface UnconditionalRow {
   source: 'expected' | 'added';
   /** Differs from what was expected — vendor or amount typed over. */
   edited: boolean;
+  /** As set by hand on this row or, failing that, on the conditional it answers; null = work it out. */
+  party: WaiverParty | null;
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -72,22 +80,111 @@ export function nextApp(app: AppRef, apps: readonly AppRef[]): AppRef | null {
   return later.length ? later.reduce((m, a) => (a.number < m.number ? a : m), later[0]) : null;
 }
 
+/** As arranged by hand, then in the order entered. */
+const byOrder = <T extends Waiver>(list: T[]) =>
+  [...list].sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id);
+
+/**
+ * Is this vendor the GC — the contract's own counterparty? Names are typed
+ * loosely ("Nova Construction Management, I" for "…, LLC"), so they match on
+ * a shared start of at least ten letters, or the whole of the shorter one.
+ */
+export function isGcVendor(vendor: string, contractName: string): boolean { return sameVendor(vendor, contractName); }
+
+/** Same vendor, allowing for how names get typed: a shared start of ten letters, or all of the shorter. */
+export function sameVendor(x: string, y: string): boolean {
+  const a = vendorKey(x), b = vendorKey(y);
+  if (!a || !b) return false;
+  const need = Math.min(10, a.length, b.length);
+  let n = 0;
+  while (n < a.length && n < b.length && a[n] === b[n]) n++;
+  return n >= need;
+}
+
+export const partyOf = (row: { vendor: string; party?: WaiverParty | null }, contractName: string): WaiverParty =>
+  row.party ?? (isGcVendor(row.vendor, contractName) ? 'gc' : 'sub');
+
+export interface WaiverTotals {
+  all: number; count: number;
+  gc: number; gcCount: number;
+  subs: number; subCount: number;
+  /** GC's release less the subs' — the GC's own work, fee and general conditions, or sub releases not in yet. */
+  gap: number;
+  /** Gap as a share of the GC's release; null with no GC release. */
+  gapPct: number | null;
+}
+
+/** Totals for a waiver list, leaving out rows marked not needed. */
+export function waiverTotals(rows: ReadonlyArray<{ vendor: string; amount: number; notNeeded: boolean; party?: WaiverParty | null }>, contractName: string): WaiverTotals {
+  let gc = 0, subs = 0, gcCount = 0, subCount = 0;
+  for (const r of rows) {
+    if (r.notNeeded) continue;
+    if (partyOf(r, contractName) === 'gc') { gc += r.amount; gcCount++; } else { subs += r.amount; subCount++; }
+  }
+  const gap = r2(gc - subs);
+  return { all: r2(gc + subs), count: gcCount + subCount, gc: r2(gc), gcCount, subs: r2(subs), subCount, gap, gapPct: gc > 0.005 ? Math.round((gap / gc) * 10000) / 100 : null };
+}
+
 /**
  * The checklist for one pay app: its conditionals as entered, and the
  * unconditionals it should carry for the previous pay app — every
  * conditional from that one (not marked not needed), matched to what has
  * been saved here by link first, then by vendor name; plus any added by hand.
  */
-export function waiverChecklist(appId: number, apps: readonly AppRef[], waivers: readonly Waiver[]) {
-  const app = apps.find((a) => a.id === appId);
-  if (!app) return { conditionals: [], unconditionals: [] as UnconditionalRow[], previous: null as AppRef | null, outstanding: 0 };
+export interface MissingConditional {
+  vendor: string;
+  party: WaiverParty;
+  /** What they released on the pay app before, if they were on it. */
+  lastAmount: number | null;
+  why: 'gc' | 'was on the previous pay app';
+}
+
+/**
+ * Tracking starts with the first pay app on the contract that has any waiver
+ * on it — the ones before were paid before waivers were kept here.
+ */
+export function trackingStarts(contractId: number, apps: readonly AppRef[], waivers: readonly Waiver[]): number | null {
+  const ids = new Set(waivers.filter((w) => w.contractId === contractId).map((w) => w.applicationId));
+  const nums = apps.filter((a) => a.contractId === contractId && ids.has(a.id)).map((a) => a.number);
+  return nums.length ? Math.min(...nums) : null;
+}
+
+/**
+ * Conditionals this pay app should have and doesn't: the GC's always, and
+ * every vendor that gave one on the pay app before. One entered here — even
+ * marked not needed ("not this month") — answers it.
+ */
+export function missingConditionals(app: AppRef, apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: string): MissingConditional[] {
+  const start = trackingStarts(app.contractId, apps, waivers);
+  if (start == null || app.number < start) return [];
+  const here = waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional');
   const prev = previousApp(app, apps);
-  const conditionals = waivers.filter((w) => w.applicationId === appId && w.kind === 'conditional');
+  const before = prev ? byOrder(waivers.filter((w) => w.applicationId === prev.id && w.kind === 'conditional' && !w.notNeeded && w.amount > 0.005)) : [];
+  const out: MissingConditional[] = [];
+  const has = (v: string) => here.some((w) => sameVendor(w.vendor, v));
+  if (contractName && !here.some((w) => partyOf(w, contractName) === 'gc')) {
+    const last = before.find((w) => partyOf(w, contractName) === 'gc');
+    out.push({ vendor: last?.vendor ?? contractName, party: 'gc', lastAmount: last ? r2(last.amount) : null, why: 'gc' });
+  }
+  for (const w of before) {
+    if (contractName && partyOf(w, contractName) === 'gc') continue;
+    if (has(w.vendor) || out.some((m) => sameVendor(m.vendor, w.vendor))) continue;
+    out.push({ vendor: w.vendor, party: w.party ?? 'sub', lastAmount: r2(w.amount), why: 'was on the previous pay app' });
+  }
+  return out;
+}
+
+export function waiverChecklist(appId: number, apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: string) {
+  const app = apps.find((a) => a.id === appId);
+  if (!app) return { conditionals: [], unconditionals: [] as UnconditionalRow[], previous: null as AppRef | null, outstanding: 0, missing: [] as MissingConditional[] };
+  const prev = previousApp(app, apps);
+  const conditionals = byOrder(waivers.filter((w) => w.applicationId === appId && w.kind === 'conditional'));
   const mine = waivers.filter((w) => w.applicationId === appId && w.kind === 'unconditional');
-  const expected = prev ? waivers.filter((w) => w.applicationId === prev.id && w.kind === 'conditional' && !w.notNeeded) : [];
+  const expected = prev ? byOrder(waivers.filter((w) => w.applicationId === prev.id && w.kind === 'conditional' && !w.notNeeded)) : [];
+  const rank = new Map<UnconditionalRow, number>();
 
   const used = new Set<number>();
-  const rows: UnconditionalRow[] = expected.map((c) => {
+  const rows: UnconditionalRow[] = expected.map((c, i) => {
     const hit = mine.find((u) => !used.has(u.id) && u.fromWaiverId === c.id)
       ?? mine.find((u) => !used.has(u.id) && u.fromWaiverId == null && vendorKey(u.vendor) === vendorKey(c.vendor));
     if (hit) used.add(hit.id);
@@ -99,17 +196,24 @@ export function waiverChecklist(appId: number, apps: readonly AppRef[], waivers:
       received: hit?.received ?? false, notNeeded: hit?.notNeeded ?? false, documentId: hit?.documentId ?? null,
       source: 'expected',
       edited: !!hit && (vendorKey(hit.vendor) !== vendorKey(c.vendor) || Math.abs(hit.amount - c.amount) >= 0.005),
+      party: hit?.party ?? c.party ?? null,
     };
   });
+  // Arranged by hand wins; otherwise the previous pay app's order, then anything added.
+  rows.forEach((r, i) => rank.set(r, mine.find((u) => u.id === r.id)?.sortOrder ?? 1e6 + i));
   for (const u of mine.filter((w) => !used.has(w.id))) {
-    rows.push({
+    const row: UnconditionalRow = {
       id: u.id, vendor: u.vendor, amount: r2(u.amount), expectedVendor: null, expectedAmount: null, fromWaiverId: u.fromWaiverId,
-      received: u.received, notNeeded: u.notNeeded, documentId: u.documentId, source: 'added', edited: false,
-    });
+      received: u.received, notNeeded: u.notNeeded, documentId: u.documentId, source: 'added', edited: false, party: u.party ?? null,
+    };
+    rank.set(row, u.sortOrder ?? 2e6 + u.id);
+    rows.push(row);
   }
+  rows.sort((a, b) => rank.get(a)! - rank.get(b)!);
+  const missing = missingConditionals(app, apps, waivers, contractName);
   const outstanding = conditionals.filter((c) => !c.received && !c.notNeeded).length
-    + rows.filter((r) => !r.received && !r.notNeeded).length;
-  return { conditionals, unconditionals: rows, previous: prev, outstanding };
+    + rows.filter((r) => !r.received && !r.notNeeded).length + missing.length;
+  return { conditionals, unconditionals: rows, previous: prev, outstanding, missing };
 }
 
 export interface WaiverLogRow {
@@ -123,21 +227,31 @@ export interface WaiverLogRow {
   unconditionalDueWith: number | null;
   unconditionalAmount: number | null;
   unconditionalReceived: boolean;
-  status: 'complete' | 'unconditional outstanding' | 'conditional outstanding' | 'not needed' | 'awaiting next pay app';
+  status: 'complete' | 'unconditional outstanding' | 'conditional outstanding' | 'conditional missing' | 'not needed' | 'awaiting next pay app';
   edited: boolean;
+  /** The conditional's id (null for a missing one). */
+  conditionalId: number | null;
+  /** Where the unconditional lives: the next pay app, and its saved row if any. */
+  unconditionalAppId: number | null;
+  unconditionalId: number | null;
+  party: WaiverParty;
 }
+
+const isOutstanding = (s: WaiverLogRow['status']) => s === 'unconditional outstanding' || s === 'conditional outstanding' || s === 'conditional missing';
+export { isOutstanding as waiverOutstanding };
 
 /**
  * One row per conditional waiver: was it received, and has its
  * unconditional come in with the following pay app.
  */
-export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[]): WaiverLogRow[] {
+export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: (contractId: number) => string): WaiverLogRow[] {
   const out: WaiverLogRow[] = [];
   const sorted = [...apps].sort((a, b) => a.contractId - b.contractId || a.number - b.number);
   for (const app of sorted) {
     const next = nextApp(app, apps);
-    const nextList = next ? waiverChecklist(next.id, apps, waivers).unconditionals : [];
-    for (const c of waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional')) {
+    const name = contractName?.(app.contractId);
+    const nextList = next ? waiverChecklist(next.id, apps, waivers, name).unconditionals : [];
+    for (const c of byOrder(waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional'))) {
       const u = nextList.find((r) => r.fromWaiverId === c.id);
       const status: WaiverLogRow['status'] = c.notNeeded || u?.notNeeded ? 'not needed'
         : !c.received ? 'conditional outstanding'
@@ -148,6 +262,16 @@ export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[]): 
         conditionalAmount: r2(c.amount), conditionalReceived: c.received,
         unconditionalDueWith: next ? (next.docNumber || next.number) : null, unconditionalAmount: u ? r2(u.amount) : null,
         unconditionalReceived: !!u?.received, status, edited: !!u?.edited,
+        conditionalId: c.id, unconditionalAppId: next?.id ?? null, unconditionalId: u?.id ?? null,
+        party: name ? partyOf(u ?? c, name) : (c.party ?? 'sub'),
+      });
+    }
+    for (const m of missingConditionals(app, apps, waivers, name)) {
+      out.push({
+        contractId: app.contractId, appId: app.id, appNumber: app.docNumber || app.number, vendor: m.vendor,
+        conditionalAmount: m.lastAmount ?? 0, conditionalReceived: false, unconditionalDueWith: null, unconditionalAmount: null,
+        unconditionalReceived: false, status: 'conditional missing', edited: false,
+        conditionalId: null, unconditionalAppId: null, unconditionalId: null, party: m.party,
       });
     }
   }

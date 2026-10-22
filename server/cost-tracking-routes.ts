@@ -2007,6 +2007,24 @@ export function registerCostTrackingRoutes(app: Express): void {
       const id = intParam(req, 'id');
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       const patch = waiverValues(req.body || {}, true);
+      // Moved to the pay app it belongs with (an unconditional entered on the pay app it releases).
+      if (req.body?.applicationId !== undefined || req.body?.fromWaiverId !== undefined) {
+        const [cur] = await db.select().from(costWaivers).where(eq(costWaivers.id, id));
+        if (!cur) return res.status(404).json({ message: 'Waiver not found' });
+        if (req.body?.applicationId !== undefined) {
+          const [to] = await db.select().from(costApplications).where(eq(costApplications.id, Number(req.body.applicationId)));
+          if (!to || to.contractId !== cur.contractId) return res.status(400).json({ message: 'That pay app is not on this contract.' });
+          patch.applicationId = to.id; patch.sortOrder = null;
+        }
+        if (req.body?.fromWaiverId !== undefined) {
+          const fid = req.body.fromWaiverId == null ? null : Number(req.body.fromWaiverId);
+          if (fid) {
+            const [from] = await db.select().from(costWaivers).where(eq(costWaivers.id, fid));
+            if (!from || from.contractId !== cur.contractId || from.kind !== 'conditional') return res.status(400).json({ message: 'That conditional is not on this contract.' });
+          }
+          patch.fromWaiverId = fid;
+        }
+      }
       if (!Object.keys(patch).length) return res.status(400).json({ message: 'Nothing to change.' });
       if (patch.documentId !== undefined) {
         if (patch.documentId == null) {

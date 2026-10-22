@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -58,6 +58,10 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
       .filter((r) => waiverOutstanding(r.status) && (apps.find((a) => a.id === r.appId)?.number ?? 0) < before);
   }, [app?.id, ck, apps, bundle.waivers, gcName]);
   const prevApp = ck?.previous ? bundle.applications.find((a) => a.id === ck.previous!.id) : undefined;
+  // The pay app after this one: where this pay app's conditionals are answered by unconditionals.
+  const nextRef = app ? nextApp(apps.find((a) => a.id === app.id)!, apps) : null;
+  const nextLabel = nextRef ? `Pay App ${nn(nextRef.docNumber || nextRef.number)}` : 'the next pay app';
+  const nextList = useMemo(() => (nextRef ? waiverChecklist(nextRef.id, apps, bundle.waivers, gcName).unconditionals : []), [nextRef?.id, apps, bundle.waivers, gcName]);
   // Every vendor name already used on this project, to pick from.
   const vendorListId = `vendors-${projectId}`;
   const vendors = useMemo(() => knownVendors(
@@ -207,6 +211,25 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 
   if (!target || !app || !ck) return null;
 
+  /** Under a conditional: has its unconditional come in (with the next pay app)? Tick or attach it from here. */
+  const AnswerLine = ({ w }: { w: { id: number; vendor: string; amount: number } }) => {
+    if (!nextRef) return <div className="text-[10px] text-gray-500 mt-0.5">Unconditional: due with the next pay app</div>;
+    const u = nextList.find((x) => x.fromWaiverId === w.id);
+    const ensure = async () => u?.id ?? ((await apiRequest(`/api/cost-applications/${nextRef.id}/waivers`, 'POST', {
+      kind: 'unconditional', vendor: w.vendor, amount: w.amount, fromWaiverId: w.id, received: false })) as any).id as number;
+    if (u?.notNeeded) return <div className="text-[10px] text-gray-500 mt-0.5">Unconditional: not needed</div>;
+    if (u?.received) return <div className="text-[10px] text-green-700 mt-0.5">Unconditional: received with {nextLabel}{u.documentId ? ` · ${short(docName(u.documentId) ?? '')}` : ''}</div>;
+    return (
+      <div className="text-[10px] mt-0.5 flex items-center gap-2 flex-wrap">
+        <span className="text-amber-700">Unconditional: due with {nextLabel}</span>
+        <button className="text-blue-700 hover:underline" onClick={() => call(async () => apiRequest(`/api/cost-waivers/${await ensure()}`, 'PATCH', { received: true }), `Unconditional received — saved on ${nextLabel}`)}>Mark Received</button>
+        <label className="text-blue-700 hover:underline cursor-pointer">Attach
+          <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) call(async () => upload(f, { docType: 'unconditional', waiverId: String(await ensure()) }, nextRef.id), `Unconditional saved on ${nextLabel}`); }} />
+        </label>
+      </div>
+    );
+  };
+
   // Pay applications: one row per vendor (the GC first if it has no conditional yet).
   const payRows = payAppVendors(conds, gcName);
   const payFiles = (r: { vendor: string; party: WaiverParty }) => files.filter((d) => !bundle.waivers.some((w) => w.documentId === d.id) && isPayAppOf(d, r));
@@ -241,7 +264,11 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     return `${live.length} ${noun}${live.length === 1 ? '' : 's'} · ${live.filter((r) => r.received).length} of ${live.length} Received · Subs ${money(t.subs)} · GC ${money(t.gc)} · GC Less Subs ${money(t.gap)}`;
   };
   const condOpen = !!newC || ck.missing.length > 0 || !ck.conditionals.length || conds.some((w) => !w.received && !w.notNeeded);
-  const condSummary = ck.conditionals.length ? sumLine(conds, 'Conditional') : 'None Yet';
+  const liveConds = conds.filter((w) => !w.notNeeded);
+  const answered = liveConds.filter((w) => nextList.some((u) => u.fromWaiverId === w.id && (u.received || u.notNeeded))).length;
+  const condSummary = ck.conditionals.length
+    ? `${sumLine(conds, 'Conditional')}${nextRef && liveConds.length ? ` · Unconditionals ${answered} of ${liveConds.length} In (${nextLabel})` : ''}`
+    : 'None Yet';
   const uncondOpen = !!newU || unconds.some((r) => !r.received && !r.notNeeded);
   const uncondSummary = unconds.length ? sumLine(unconds, 'Unconditional') : 'None Expected';
   const prevLabel = ck.previous ? `Pay App ${nn(ck.previous.docNumber || ck.previous.number)}` : null;
@@ -383,7 +410,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                     className={`border-b last:border-0 ${dropLine('conditional', key)} ${drag === key ? 'bg-blue-100' : w.notNeeded ? 'opacity-50' : ''}`}>
                   {grip(key)}
                   <td className="px-1 py-1"><Input className="h-8" defaultValue={w.vendor} aria-label="Vendor" list={vendorListId} autoComplete="off"
-                         onBlur={(e) => e.target.value.trim() && e.target.value !== w.vendor && call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { vendor: e.target.value }))} /></td>
+                         onBlur={(e) => e.target.value.trim() && e.target.value !== w.vendor && call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { vendor: e.target.value }))} />
+                    {!w.notNeeded && <AnswerLine w={w} />}</td>
                   <td className="px-1"><PartyPill row={w} gcName={gcName} onSet={(p) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { party: p }))} /></td>
                   <td className="px-1 py-1"><BlurMoney value={w.amount} onSave={(v) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { amount: v }))} /></td>
                   <td className="px-2 text-center"><input type="checkbox" className="h-4 w-4 accent-green-600" checked={w.received}
@@ -451,6 +479,18 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
+                      {(() => {
+                        // Entered on the pay app it releases: it belongs with the next one, answering this one's conditional.
+                        const c = r.source === 'added' && r.id && nextRef ? conds.find((x) => sameVendor(x.vendor, r.vendor)) : null;
+                        const before = ck.previous && bundle.waivers.some((x) => x.applicationId === ck.previous!.id && x.kind === 'conditional' && sameVendor(x.vendor, r.vendor));
+                        if (!c || before) return null;
+                        return (
+                          <span className="block mt-0.5 text-amber-800">
+                            Looks like the release for this pay app's conditional — it belongs with {nextLabel}.{' '}
+                            <button className="text-blue-700 hover:underline font-medium" onClick={() => call(() => apiRequest(`/api/cost-waivers/${r.id}`, 'PATCH', { applicationId: nextRef!.id, fromWaiverId: c.id }), `Moved to ${nextLabel}`)}>Move to {nextLabel}</button>
+                          </span>
+                        );
+                      })()}
                       {r.edited && <span className="ml-1 font-semibold text-amber-800 bg-amber-100 rounded px-1" title={`Expected: ${r.expectedVendor} ${money(r.expectedAmount ?? 0)}`}>Edited — Expected {r.expectedVendor !== r.vendor ? `${r.expectedVendor} ` : ''}{money(r.expectedAmount ?? 0)}</span>}
                     </div>
                   </td>

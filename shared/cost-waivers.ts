@@ -95,10 +95,41 @@ export function isGcVendor(vendor: string, contractName: string): boolean { retu
 export function sameVendor(x: string, y: string): boolean {
   const a = vendorKey(x), b = vendorKey(y);
   if (!a || !b) return false;
-  const need = Math.min(10, a.length, b.length);
+  const short = Math.min(a.length, b.length);
   let n = 0;
   while (n < a.length && n < b.length && a[n] === b[n]) n++;
-  return n >= need;
+  // All of the shorter ("Nova Construction" / "…, LLC"), or nearly all of it with ten letters at least
+  // ("…Management, I" / "…Management, LLC") — not just a shared first word ("Centerline Plumbing" / "Centerline Electric").
+  return n === short || (n >= 10 && n >= 0.8 * short);
+}
+
+/**
+ * The vendor names already used on a project, one spelling each (the one used most),
+ * for picking from so names stay the same from one pay app to the next.
+ */
+export function knownVendors(names: ReadonlyArray<string | null | undefined>, preferred: ReadonlyArray<string | null | undefined> = []): string[] {
+  const prefer = preferred.map((x) => String(x ?? '').trim()).filter(Boolean);
+  const groups: Array<{ names: Map<string, number> }> = [];
+  for (const raw of [...prefer, ...names]) {
+    const name = String(raw ?? '').trim();
+    if (!name || !vendorKey(name)) continue;
+    // Spellings of the same vendor ("…Management, I" / "…Management, LLC") are one entry.
+    let g = groups.find((x) => Array.from(x.names.keys()).some((n) => sameVendor(n, name)));
+    if (!g) { g = { names: new Map() }; groups.push(g); }
+    g.names.set(name, (g.names.get(name) ?? 0) + 1);
+  }
+  // The contract's own spelling wins; otherwise the one used most, then the longest.
+  return groups.map((g) => prefer.find((p) => g.names.has(p))
+    ?? Array.from(g.names).sort((p, q) => q[1] - p[1] || q[0].length - p[0].length)[0][0])
+    .sort((p, q) => p.localeCompare(q));
+}
+
+/** A known spelling close to what was typed but not the same — to offer instead. */
+export function closeVendor(typed: string, known: readonly string[]): string | null {
+  const t = typed.trim();
+  if (vendorKey(t).length < 4) return null;
+  if (known.some((k) => k === t)) return null;
+  return known.find((k) => sameVendor(k, t)) ?? null;
 }
 
 export const partyOf = (row: { vendor: string; party?: WaiverParty | null }, contractName: string): WaiverParty =>

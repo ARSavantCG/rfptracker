@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -58,6 +58,12 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
       .filter((r) => waiverOutstanding(r.status) && (apps.find((a) => a.id === r.appId)?.number ?? 0) < before);
   }, [app?.id, ck, apps, bundle.waivers, gcName]);
   const prevApp = ck?.previous ? bundle.applications.find((a) => a.id === ck.previous!.id) : undefined;
+  // Every vendor name already used on this project, to pick from.
+  const vendorListId = `vendors-${projectId}`;
+  const vendors = useMemo(() => knownVendors(
+    [...bundle.waivers.map((w) => w.vendor), ...bundle.documents.map((d) => d.vendor)],
+    bundle.contracts.map((c) => c.counterparty),
+  ), [bundle.waivers, bundle.documents, bundle.contracts]);
 
   // Reordering: drag by the grip; the new order shows at once and is saved behind it.
   const [armed, setArmed] = useState<string | null>(null);
@@ -258,6 +264,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
+        <datalist id={vendorListId}>{vendors.map((v) => <option key={v} value={v} />)}</datalist>
 
         {/* Files: drop anything here, then say what each one is — or drop it on its row below. */}
         <section className="space-y-2">
@@ -375,7 +382,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 <tr key={w.id} {...rowDnd('conditional', key, dz(key, { docType: 'conditional', waiverId: String(w.id) }))}
                     className={`border-b last:border-0 ${dropLine('conditional', key)} ${drag === key ? 'bg-blue-100' : w.notNeeded ? 'opacity-50' : ''}`}>
                   {grip(key)}
-                  <td className="px-1 py-1"><Input className="h-8" defaultValue={w.vendor} aria-label="Vendor"
+                  <td className="px-1 py-1"><Input className="h-8" defaultValue={w.vendor} aria-label="Vendor" list={vendorListId} autoComplete="off"
                          onBlur={(e) => e.target.value.trim() && e.target.value !== w.vendor && call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { vendor: e.target.value }))} /></td>
                   <td className="px-1"><PartyPill row={w} gcName={gcName} onSet={(p) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { party: p }))} /></td>
                   <td className="px-1 py-1"><BlurMoney value={w.amount} onSave={(v) => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'PATCH', { amount: v }))} /></td>
@@ -399,7 +406,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             {newC && (
               <tr className="border-t bg-blue-50/40">
                 <td />
-                <td className="px-1 py-1"><Input autoFocus className="h-8" value={newC.vendor} aria-label="Vendor" onChange={(e) => setNewC({ ...newC, vendor: e.target.value })} /></td>
+                <td className="px-1 py-1"><Input autoFocus className="h-8" value={newC.vendor} aria-label="Vendor" list={vendorListId} autoComplete="off" onChange={(e) => setNewC({ ...newC, vendor: e.target.value })} />
+                  <UseKnown typed={newC.vendor} known={vendors} onUse={(v) => setNewC({ ...newC, vendor: v })} /></td>
                 <td className="px-1 text-[11px] text-gray-500">{newC.vendor.trim() ? (isGcVendor(newC.vendor, gcName) ? 'GC' : 'Sub') : ''}</td>
                 <td className="px-1 py-1"><MoneyInput className="h-8" value={newC.amount} aria-label="Amount" onValueChange={(v) => setNewC({ ...newC, amount: v })} /></td>
                 <td colSpan={4} className="px-2">
@@ -439,7 +447,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                     })}>
                   {grip(key, true)}
                   <td className="px-1 py-1">
-                    <Input className="h-8" defaultValue={r.vendor} key={`${key}-${r.vendor}`} aria-label="Vendor"
+                    <Input className="h-8" defaultValue={r.vendor} key={`${key}-${r.vendor}`} aria-label="Vendor" list={vendorListId} autoComplete="off"
                            onBlur={(e) => e.target.value.trim() && e.target.value !== r.vendor && saveU(r, { vendor: e.target.value })} />
                     <div className="text-[10px] mt-0.5">
                       {r.source === 'expected' ? <span className="text-gray-500">Expected from {prevLabel}</span> : <span className="text-gray-500">Added</span>}
@@ -464,7 +472,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             {newU && (
               <tr className="border-t bg-blue-50/40">
                 <td />
-                <td className="px-1 py-1"><Input autoFocus className="h-8" value={newU.vendor} aria-label="Vendor" onChange={(e) => setNewU({ ...newU, vendor: e.target.value })} /></td>
+                <td className="px-1 py-1"><Input autoFocus className="h-8" value={newU.vendor} aria-label="Vendor" list={vendorListId} autoComplete="off" onChange={(e) => setNewU({ ...newU, vendor: e.target.value })} />
+                  <UseKnown typed={newU.vendor} known={vendors} onUse={(v) => setNewU({ ...newU, vendor: v })} /></td>
                 <td className="px-1 text-[11px] text-gray-500">{newU.vendor.trim() ? (isGcVendor(newU.vendor, gcName) ? 'GC' : 'Sub') : ''}</td>
                 <td className="px-1 py-1"><MoneyInput className="h-8" value={newU.amount} aria-label="Amount" onValueChange={(v) => setNewU({ ...newU, amount: v })} /></td>
                 <td colSpan={4} className="px-2">
@@ -602,6 +611,17 @@ function MissingRow({ m, busy, start, onAdd, onSkip }: { m: MissingConditional; 
         </div>
       </td>
     </tr>
+  );
+}
+
+/** "Use Nova Construction Management, LLC" — when what's typed is close to a name already on the project. */
+function UseKnown({ typed, known, onUse }: { typed: string; known: readonly string[]; onUse: (v: string) => void }) {
+  const near = closeVendor(typed, known);
+  if (!near) return null;
+  return (
+    <button type="button" className="mt-0.5 text-[11px] text-blue-700 hover:underline text-left" onClick={() => onUse(near)}>
+      Use “{near}” (already on this project)
+    </button>
   );
 }
 

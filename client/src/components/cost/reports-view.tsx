@@ -3,7 +3,8 @@
  * line: open one to set its filters and print. Cost reports first, then CM
  * fees and billing (the capital partner's and the tenant's invoices).
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { waiversByPayApp } from '@shared/cost-waivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,15 +93,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
             : 'The log starts once the budget is confirmed on the Budget tab.'}
         </p>
       </Card>
-      <Card id="waivers" title="Lien Waiver Log" what="Every conditional waiver by contract and pay app, and whether its unconditional has come in with the next one. Outstanding ones shaded."
-            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/lien-waivers/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
-        <p className="text-sm text-gray-700">
-          {(() => {
-            const cond = b.waivers.filter((w) => w.kind === 'conditional').length;
-            return cond ? `${cond} conditional waiver${cond === 1 ? '' : 's'} recorded. Open a pay app's Package to add or check off waivers.` : 'No waivers recorded yet — add them from each pay app\'s Package (Contracts or Pay Apps tab).';
-          })()}
-        </p>
-      </Card>
+      <WaiverLogCard b={b} projectId={projectId} open={open} />
       </div>
 
       <div className="space-y-2">
@@ -337,6 +330,66 @@ function SumRow({ label, a, b, subA, subB, strong }: { label: string; a: string;
       <td className="py-1.5 text-right">{a}{subA && <div className="text-[11px] text-gray-500 font-normal">{subA}</div>}</td>
       <td className="py-1.5 text-right">{b}{subB && <div className="text-[11px] text-gray-500 font-normal">{subB}</div>}</td>
     </tr>
+  );
+}
+
+/** The Lien Waiver Log: all pay apps, or the ones ticked; outstanding only if wanted. */
+function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [outOnly, setOutOnly] = useState(false);
+  const groups = useMemo(() => waiversByPayApp(
+    b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
+    b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? ''), [b.applications, b.waivers, b.contracts]);
+  const contracts = Array.from(new Set(groups.map((g) => g.contractId)));
+  const nn = (n: number) => String(n).padStart(2, '0');
+  const ok = groups.filter((g) => g.compliant).length;
+  const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const url = () => {
+    const q = new URLSearchParams();
+    if (picked.size) q.set('apps', Array.from(picked).join(','));
+    if (outOnly) q.set('outstanding', '1');
+    const s = q.toString();
+    return `/api/reports/lien-waivers/${projectId}${s ? `?${s}` : ''}`;
+  };
+  return (
+    <Card id="waivers" title="Lien Waiver Log" what="By pay app: its conditional waivers, and the unconditionals it carries for the pay app before. Compliant when both are in. Print all pay apps or the ones you tick."
+          summary={groups.length ? `${ok} of ${groups.length} Compliant` : undefined}
+          action={<Button variant="outline" className="h-9" onClick={() => open(url())}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!groups.length ? (
+        <p className="text-sm text-gray-700">No waivers recorded yet — add them from each pay app's Package (Contracts or Pay Apps tab).</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-4 flex-wrap text-sm">
+            <span className="text-gray-700">{picked.size ? `${picked.size} of ${groups.length} pay apps selected` : `All ${groups.length} pay apps`}</span>
+            {picked.size > 0 && <button className="text-blue-700 hover:underline text-xs" onClick={() => setPicked(new Set())}>Show All</button>}
+            {picked.size < groups.length && <button className="text-blue-700 hover:underline text-xs" onClick={() => setPicked(new Set(groups.filter((g) => !g.compliant).map((g) => g.appId)))}>Select Not Compliant</button>}
+            <label className="flex items-center gap-2 cursor-pointer ml-auto">
+              <input type="checkbox" className="h-4 w-4" checked={outOnly} onChange={(e) => setOutOnly(e.target.checked)} /> Outstanding Only
+            </label>
+          </div>
+          {contracts.map((cid) => (
+            <div key={cid} className="space-y-1">
+              {contracts.length > 1 && <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">{b.contracts.find((c) => c.id === cid)?.counterparty}</div>}
+              <div className="flex flex-wrap gap-2">
+                {groups.filter((g) => g.contractId === cid).map((g) => {
+                  const on = picked.has(g.appId);
+                  return (
+                    <label key={g.appId} className={`flex items-center gap-2 border rounded-md px-2.5 py-1.5 text-sm cursor-pointer ${on ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                      <input type="checkbox" className="h-4 w-4" checked={on} onChange={() => flip(g.appId)} />
+                      Pay App {nn(g.appNumber)}
+                      {g.compliant
+                        ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Compliant</span>
+                        : <span className="text-[10px] font-semibold text-red-800 bg-red-100 rounded px-1">{g.outstanding} Outstanding</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-gray-500">None ticked prints every pay app. Open a pay app's Package to add or check off waivers.</p>
+        </>
+      )}
+    </Card>
   );
 }
 

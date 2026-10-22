@@ -632,6 +632,8 @@ export function renderWaiverLogHtml(input: {
   rentableSf?: number;
   groups: PayAppWaivers[];
   contractName: (id: number) => string;
+  /** What's been left out, said on the report ("Showing pay apps 01, 06 only"). */
+  filter?: string;
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
@@ -643,7 +645,8 @@ export function renderWaiverLogHtml(input: {
   const okApps = input.groups.filter((g) => g.compliant).length;
   const outN = nMissing + nCond + nUncond;
   const notes = [
-    `${okApps} of ${input.groups.length} pay app${input.groups.length === 1 ? "" : "s"} compliant.${outN ? ` ${outN} waiver${outN === 1 ? "" : "s"} outstanding, shaded: ${[
+    ...(input.filter ? [input.filter.charAt(0).toUpperCase() + input.filter.slice(1)] : []),
+    `${input.filter?.includes("outstanding waivers only") ? "" : `${okApps} of ${input.groups.length} pay app${input.groups.length === 1 ? "" : "s"} compliant.`}${outN ? ` ${outN} waiver${outN === 1 ? "" : "s"} outstanding, shaded: ${[
       nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
       nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
       nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
@@ -876,7 +879,22 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderWaiverLogHtml({
         project: b.project, ...(await propertyFacts(b.project)),
-        groups: waiversByPayApp(apps, b.waivers, cname),
+        groups: (() => {
+          // Only the pay apps asked for (?apps=12,15), and only what's outstanding (?outstanding=1).
+          const want = new Set(String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0));
+          const outOnly = String(req.query.outstanding || "") === "1";
+          return waiversByPayApp(apps, b.waivers, cname)
+            .filter((g) => !want.size || want.has(g.appId))
+            .map((g) => (outOnly ? { ...g, rows: g.rows.filter((r) => r.status === "outstanding" || r.status === "missing") } : g))
+            .filter((g) => !outOnly || g.rows.length);
+        })(),
+        filter: (() => {
+          const want = String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
+          const parts: string[] = [];
+          if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(2, "0")).join(", ")} only`);
+          if (String(req.query.outstanding || "") === "1") parts.push("outstanding waivers only");
+          return parts.length ? `${parts.join("; ")}.` : "";
+        })(),
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         generatedBy: generatedByName((req as any).user),
       }));

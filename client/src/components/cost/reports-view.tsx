@@ -346,7 +346,8 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
   const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const url = () => {
     const q = new URLSearchParams();
-    if (picked.size) q.set('apps', Array.from(picked).join(','));
+    // Every one ticked is the same as all — the report shouldn't say "only".
+    if (picked.size && picked.size < groups.length) q.set('apps', Array.from(picked).join(','));
     if (outOnly) q.set('outstanding', '1');
     const s = q.toString();
     return `/api/reports/lien-waivers/${projectId}${s ? `?${s}` : ''}`;
@@ -361,8 +362,13 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
         <>
           <div className="flex items-center gap-4 flex-wrap text-sm">
             <span className="text-gray-700">{picked.size ? `${picked.size} of ${groups.length} pay apps selected` : `All ${groups.length} pay apps`}</span>
-            {picked.size > 0 && <button className="text-blue-700 hover:underline text-xs" onClick={() => setPicked(new Set())}>Show All</button>}
-            {picked.size < groups.length && <button className="text-blue-700 hover:underline text-xs" onClick={() => setPicked(new Set(groups.filter((g) => !g.compliant).map((g) => g.appId)))}>Select Not Compliant</button>}
+            {/* Quick picks: all of them, or just the compliant / not compliant ones; Clear un-ticks (which prints all). */}
+            <span className="flex items-center gap-3 text-xs">
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.map((g) => g.appId)))}>Select All</button>
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.filter((g) => g.compliant).map((g) => g.appId)))}>Select Compliant</button>
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.filter((g) => !g.compliant).map((g) => g.appId)))}>Select Not Compliant</button>
+              {picked.size > 0 && <button className="text-gray-600 hover:underline" onClick={() => setPicked(new Set())}>Clear</button>}
+            </span>
             <label className="flex items-center gap-2 cursor-pointer ml-auto">
               <input type="checkbox" className="h-4 w-4" checked={outOnly} onChange={(e) => setOutOnly(e.target.checked)} /> Outstanding Only
             </label>
@@ -386,7 +392,7 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
               </div>
             </div>
           ))}
-          <p className="text-xs text-gray-500">None ticked prints every pay app. Open a pay app's Package to add or check off waivers.</p>
+          <p className="text-xs text-gray-500">None ticked prints every pay app too. Open a pay app's Package to add or check off waivers.</p>
         </>
       )}
     </Card>

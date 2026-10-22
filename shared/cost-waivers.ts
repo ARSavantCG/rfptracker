@@ -331,3 +331,51 @@ export function isPayAppOf(doc: { docType: string | null; vendor?: string | null
   if (row.party === 'gc') return doc.docType === 'g702' && (!doc.vendor || sameVendor(doc.vendor, row.vendor));
   return doc.docType === 'sub_pay_app' && !!doc.vendor && sameVendor(doc.vendor, row.vendor);
 }
+
+export interface PayAppWaiverRow {
+  kind: 'conditional' | 'unconditional';
+  vendor: string;
+  party: WaiverParty;
+  /** For a missing conditional: what they released last pay app, if anything. */
+  amount: number | null;
+  status: 'received' | 'outstanding' | 'missing' | 'not needed';
+  /** An unconditional: the pay app it releases (the one before), or null when added by hand with nothing before. */
+  releases: number | null;
+  edited: boolean;
+}
+export interface PayAppWaivers {
+  contractId: number;
+  appId: number;
+  appNumber: number;
+  rows: PayAppWaiverRow[];
+  outstanding: number;
+  /** Nothing outstanding — its conditionals in, and the unconditionals it owes for the pay app before. */
+  compliant: boolean;
+  totals: WaiverTotals;
+}
+
+/**
+ * The log by pay app, the way a package is assembled: each pay app's
+ * conditionals, then the unconditionals it carries for the pay app before.
+ * A pay app is compliant once both are in — its own unconditionals are the
+ * next pay app's to bring (Adolfo, 2026-10-22).
+ */
+export function waiversByPayApp(apps: readonly AppRef[], waivers: readonly Waiver[], contractName: (contractId: number) => string): PayAppWaivers[] {
+  const sorted = [...apps].sort((a, b) => a.contractId - b.contractId || a.number - b.number);
+  const out: PayAppWaivers[] = [];
+  for (const app of sorted) {
+    const name = contractName(app.contractId);
+    const ck = waiverChecklist(app.id, apps, waivers, name);
+    if (!ck.conditionals.length && !ck.unconditionals.length && !ck.missing.length) continue;
+    const prevNo = ck.previous ? (ck.previous.docNumber || ck.previous.number) : null;
+    const st = (w: { received: boolean; notNeeded: boolean }): PayAppWaiverRow['status'] => (w.notNeeded ? 'not needed' : w.received ? 'received' : 'outstanding');
+    const rows: PayAppWaiverRow[] = [
+      ...ck.conditionals.map((c) => ({ kind: 'conditional' as const, vendor: c.vendor, party: partyOf(c, name), amount: r2(c.amount), status: st(c), releases: null, edited: false })),
+      ...ck.missing.map((m) => ({ kind: 'conditional' as const, vendor: m.vendor, party: m.party, amount: m.lastAmount, status: 'missing' as const, releases: null, edited: false })),
+      ...ck.unconditionals.map((u) => ({ kind: 'unconditional' as const, vendor: u.vendor, party: partyOf(u, name), amount: r2(u.amount), status: st(u), releases: u.source === 'expected' ? prevNo : null, edited: u.edited })),
+    ];
+    const outstanding = rows.filter((r) => r.status === 'outstanding' || r.status === 'missing').length;
+    out.push({ contractId: app.contractId, appId: app.id, appNumber: app.docNumber || app.number, rows, outstanding, compliant: outstanding === 0, totals: waiverTotals(ck.conditionals, name) });
+  }
+  return out;
+}

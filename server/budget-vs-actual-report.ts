@@ -23,7 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
-import { waiverLog, waiverTotals, type WaiverLogRow, type WaiverTotals } from "@shared/cost-waivers";
+import { waiversByPayApp, type PayAppWaivers, type PayAppWaiverRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -630,54 +630,56 @@ export function renderWaiverLogHtml(input: {
   project: CostReportProject;
   propertyLabel?: string;
   rentableSf?: number;
-  rows: WaiverLogRow[];
+  groups: PayAppWaivers[];
   contractName: (id: number) => string;
-  /** The GC / subs split of a pay app's conditionals. */
-  totals?: (appId: number) => WaiverTotals;
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const out = input.rows.filter((r) => r.status === "unconditional outstanding" || r.status === "conditional outstanding" || r.status === "conditional missing");
-  const nMissing = out.filter((r) => r.status === "conditional missing").length;
-  const nCond = out.filter((r) => r.status === "conditional outstanding").length;
-  const nUncond = out.filter((r) => r.status === "unconditional outstanding").length;
-  const notes = out.length ? [`${out.length} waiver${out.length === 1 ? "" : "s"} outstanding, shaded: ${[
-    nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
-    nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
-    nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
-  ].filter(Boolean).join(", ")}.`] : [];
   const nn = (n: number) => String(n).padStart(2, "0");
-  const STATUS: Record<string, string> = {
-    complete: "Complete", "unconditional outstanding": "Unconditional outstanding", "conditional outstanding": "Conditional outstanding",
-    "conditional missing": "Conditional missing",
-    "not needed": "Not needed", "awaiting next pay app": "Unconditional due with next pay app",
+  const all = input.groups.flatMap((g) => g.rows);
+  const nMissing = all.filter((r) => r.status === "missing").length;
+  const nCond = all.filter((r) => r.kind === "conditional" && r.status === "outstanding").length;
+  const nUncond = all.filter((r) => r.kind === "unconditional" && r.status === "outstanding").length;
+  const okApps = input.groups.filter((g) => g.compliant).length;
+  const outN = nMissing + nCond + nUncond;
+  const notes = [
+    `${okApps} of ${input.groups.length} pay app${input.groups.length === 1 ? "" : "s"} compliant.${outN ? ` ${outN} waiver${outN === 1 ? "" : "s"} outstanding, shaded: ${[
+      nMissing ? `${nMissing} conditional${nMissing === 1 ? "" : "s"} not entered` : "",
+      nCond ? `${nCond} conditional${nCond === 1 ? "" : "s"} not received` : "",
+      nUncond ? `${nUncond} unconditional${nUncond === 1 ? "" : "s"} not received` : "",
+    ].filter(Boolean).join(", ")}.` : ""}`,
+  ];
+  const STATUS: Record<string, string> = { received: "Received", outstanding: "Outstanding", missing: "Not Entered", "not needed": "Not Needed" };
+  const byContract = new Map<number, PayAppWaivers[]>();
+  for (const g of input.groups) byContract.set(g.contractId, [...(byContract.get(g.contractId) ?? []), g]);
+  const row = (r: PayAppWaiverRow) => {
+    const bad = r.status === "outstanding" || r.status === "missing";
+    const what = r.kind === "conditional" ? "Conditional" : r.releases != null ? `Unconditional — for Pay App ${nn(r.releases)}` : "Unconditional";
+    const amt = r.status === "missing" ? `<td class="num muted">${r.amount ? `last ${money2(r.amount)}` : "—"}</td>` : cell(r.amount ?? 0);
+    return `<tr${bad ? ' style="background:#fef2f2"' : ""}><td></td><td>${escapeHtml(r.vendor)}${r.party === "gc" ? ' <span class="muted" style="font-size:9px">GC</span>' : ""}</td>
+      <td>${what}${r.edited ? " — edited" : ""}</td>${amt}<td style="${bad ? "color:#991b1b;font-weight:600" : r.status === "received" ? "color:#166534" : "color:#6b7280"}">${STATUS[r.status]}</td></tr>`;
   };
-  const byContract = new Map<number, WaiverLogRow[]>();
-  for (const r of input.rows) byContract.set(r.contractId, [...(byContract.get(r.contractId) ?? []), r]);
-  const subtotal = (appId: number) => {
-    const t = input.totals?.(appId);
-    if (!t || !t.count) return "";
-    return `<tr class="sub"><td></td><td colspan="5" class="muted" style="font-size:10px">Subs (${t.subCount}) ${money2(t.subs)} · GC ${money2(t.gc)} · GC Less Subs ${money2(t.gap)}${t.gapPct != null ? ` (${t.gapPct.toFixed(1)}% of the GC's release)` : ""}</td></tr>`;
-  };
-  const body = Array.from(byContract).map(([cid, rows]) => `
-    <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
-    ${rows.map((r, i) => `<tr${r.status === "conditional missing" || r.status.includes("outstanding") ? ' style="background:#fef2f2"' : ""}>
-      <td>Pay App ${nn(r.appNumber)}</td><td>${escapeHtml(r.vendor)}${r.party === "gc" ? ' <span class="muted" style="font-size:9px">GC</span>' : ""}</td>${r.status === "conditional missing" ? `<td class="num muted">${r.conditionalAmount ? `last ${money2(r.conditionalAmount)}` : "—"}</td>` : cell(r.conditionalAmount)}
-      <td>${r.status === "conditional missing" ? "Not entered" : r.conditionalReceived ? "Received" : "—"}</td>
-      <td>${r.unconditionalDueWith == null || r.status === "not needed" ? "—" : `${r.unconditionalReceived ? "Received" : "Due"} with Pay App ${nn(r.unconditionalDueWith)}${r.unconditionalAmount != null && Math.abs(r.unconditionalAmount - r.conditionalAmount) >= 0.005 ? ` (${money2(r.unconditionalAmount)})` : ""}${r.edited ? " — edited" : ""}`}</td>
-      <td>${STATUS[r.status]}</td></tr>${rows[i + 1]?.appId !== r.appId ? subtotal(r.appId) : ""}`).join("")}`).join("");
+  const body = Array.from(byContract).map(([cid, groups]) => `
+    <tr class="grp"><td colspan="5">${escapeHtml(input.contractName(cid))}</td></tr>
+    ${groups.map((g) => `
+      <tr><td colspan="5" style="padding-top:8px;border-bottom:1px solid #d1d5db"><strong>Pay App ${nn(g.appNumber)}</strong>
+        ${g.compliant
+          ? '<span style="margin-left:8px;font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">Compliant</span>'
+          : `<span style="margin-left:8px;font-size:10px;font-weight:700;color:#991b1b;background:#fee2e2;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.outstanding} Outstanding</span>`}
+        ${g.totals.count ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${g.totals.subCount}) ${money2(g.totals.subs)} · GC ${money2(g.totals.gc)} · GC Less Subs ${money2(g.totals.gap)}${g.totals.gapPct != null ? ` (${g.totals.gapPct.toFixed(1)}% of the GC's release)` : ""}</span>` : ""}</td></tr>
+      ${g.rows.map(row).join("")}`).join("")}`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
   ${reportHeaderHtml({ title: "Lien Waiver Log", eyebrow: "Cost Report", info, notes })}
-  <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Vendor</th><th>Conditional</th><th class="l">Received</th><th class="l">Unconditional</th><th class="l">Status</th></tr></thead><tbody>
-    ${body || `<tr><td colspan="6" class="muted">No waivers recorded yet.</td></tr>`}
+  <table class="t"><thead><tr><th class="l" style="width:4%"></th><th class="l">Vendor</th><th class="l">Waiver</th><th>Amount</th><th class="l">Status</th></tr></thead><tbody>
+    ${body || `<tr><td colspan="5" class="muted">No waivers recorded yet.</td></tr>`}
   </tbody></table>
   <h3 class="sec">Notes</h3>
   <ol class="notes">
-    <li>Each pay app's conditional waivers are answered by unconditional waivers delivered with the following pay app, for the same vendor and amount.</li>
+    <li>A pay app is compliant when its conditional waivers are in and so are the unconditional waivers it carries for the pay app before. A pay app's own unconditionals come with the next pay app and are listed there.</li>
+    <li>"Not Entered": the GC gives a conditional with every pay app, and each vendor on the pay app before is expected again unless marked not needed.</li>
     <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
-    <li>"Conditional missing": the GC owes one with every pay app, and each vendor on the pay app before is expected again unless marked not needed.</li>
     <li>GC Less Subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
@@ -871,11 +873,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderWaiverLogHtml({
         project: b.project, ...(await propertyFacts(b.project)),
-        rows: waiverLog(apps, b.waivers, cname),
-        totals: (appId) => {
-          const a = apps.find((x) => x.id === appId)!;
-          return waiverTotals(b.waivers.filter((w) => w.applicationId === appId && w.kind === "conditional"), cname(a.contractId));
-        },
+        groups: waiversByPayApp(apps, b.waivers, cname),
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         generatedBy: generatedByName((req as any).user),
       }));

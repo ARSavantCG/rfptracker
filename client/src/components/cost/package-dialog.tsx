@@ -425,7 +425,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                                                 if (n != null && v.cond!.payAppDue == null && fallback != null && Math.abs(n - fallback) < 0.005) return;
                                                 call(() => apiRequest(`/api/cost-waivers/${v.cond!.id}`, 'PATCH', { payAppDue: n }));
                                               }} />
-                                    <div className="text-[10px] text-gray-500">{d.source === 'typed' ? 'As entered' : d.source === 'contractor' ? "From the GC's G702" : 'Calculated — type theirs to change'}</div>
+                                    <div className="text-[10px] text-gray-500">{d.source === 'typed' ? 'As entered' : d.source === 'contractor' ? "From the GC's G702" : 'Calculated from this pay app (work less retainage) — type theirs to change'}</div>
                                   </>);
                                 })()
                               : r.party === 'gc'

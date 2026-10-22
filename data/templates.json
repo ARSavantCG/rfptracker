@@ -18,7 +18,7 @@
             "tenant-improvements"
           ],
           "notes": "(> 3,000 sf; up to 5,000 sf)",
-          "romScopeItemId": 37,
+          "romScopeItemId": 36,
           "sourceType": "rom",
           "snapshot": {
             "label": "Office Area",
@@ -231,7 +231,7 @@
       "metadata": {
         "createdBy": "AReutlinger@bridgeindustrial.com",
         "createdAt": "2025-11-17T00:43:12.269Z",
-        "updatedAt": "2025-11-17T04:07:59.606Z",
+        "updatedAt": "2026-10-22T16:56:50.055Z",
         "isArchived": false,
         "updatedBy": "AReutlinger@bridgeindustrial.com"
       }

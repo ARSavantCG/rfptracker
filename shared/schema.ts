@@ -2459,6 +2459,7 @@ export const costWaivers = pgTable("cost_waivers", {
   documentId: integer("document_id"),
   notes: text("notes"),
   sortOrder: integer("sort_order"),            // as arranged by hand; null = order entered
+  payAppDueCents: bigint("pay_app_due_cents", { mode: "number" }), // the vendor's own pay app, line 8 — checked against the conditional
   party: text("party"),                        // 'gc' | 'sub' set by hand; null = from the contract's name
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -214,6 +214,12 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   };
 
   if (!target || !app || !ck) return null;
+  /** A pay app row: its payment due (GC from the G702, a sub's as typed) against its conditional. */
+  const payCheck = (r: { vendor: string; party: WaiverParty }) => {
+    const cond = conds.find((w) => !w.notNeeded && (r.party === 'gc' ? partyOf(w, gcName) === 'gc' : sameVendor(w.vendor, r.vendor)));
+    const due = r.party === 'gc' ? app.g702.currentPaymentDue : cond?.payAppDue ?? null;
+    return { cond, due, diff: cond && due != null ? Math.round((due - cond.amount) * 100) / 100 : null };
+  };
   /** A sub marked not needed with nothing on it: not billing this pay app — one quiet line, not a row. */
   const notBilling = (w: { notNeeded: boolean; amount: number }) => w.notNeeded && Math.abs(w.amount) < 0.005;
   /** An expected unconditional for a pay app we haven't paid in full. */
@@ -375,13 +381,21 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
 
         {/* Pay applications: the GC's G702/G703 and each sub's own, one row per vendor. */}
         <Fold title={`Pay Applications — ${label} ${nn(app.docNumber)}`}
-              badge={(() => { const n = payRows.filter((r) => payFiles(r).length).length; return n === payRows.length ? { tone: 'ok' as const, text: 'All Attached' } : { tone: 'muted' as const, text: `${n} of ${payRows.length} Attached` }; })()} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
+              badge={(() => {
+                const off = payRows.map(payCheck).filter((v) => v.diff != null && Math.abs(v.diff) >= 0.01).length;
+                if (off) return { tone: 'warn' as const, text: `${off} Don't Match` };
+                const n = payRows.filter((r) => payFiles(r).length).length;
+                return n === payRows.length ? { tone: 'ok' as const, text: 'All Attached' } : { tone: 'muted' as const, text: `${n} of ${payRows.length} Attached` };
+              })()} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
               summary={`${payRows.filter((r) => payFiles(r).length).length} of ${payRows.length} attached`}>
           <p className="text-xs text-gray-600">The GC's pay application and each sub's, as backup. Vendors come from the conditional waivers below. Drop a file on its row.</p>
           <div className="border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[860px]">
               <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
-                <th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-16">GC / Sub</th><th className="px-2 py-1.5">Pay Application (Drop It on the Row)</th>
+                <th className="px-2 py-1.5">Vendor</th><th className="px-2 py-1.5 w-16">GC / Sub</th>
+                <th className="px-2 py-1.5 w-36 text-right" title="Current Payment Due on the vendor's own pay application (G702 line 8)">Payment Due (Line 8)</th>
+                <th className="px-2 py-1.5 w-28 text-right">Conditional</th><th className="px-2 py-1.5 w-28">Check</th>
+                <th className="px-2 py-1.5">Pay Application (Drop It on the Row)</th>
               </tr></thead>
               <tbody>
                 {payRows.map((r, i) => {
@@ -391,6 +405,23 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                     <tr key={key} {...dz(key, extra)} className={`border-b last:border-0 ${drag === key ? 'bg-blue-100' : ''}`}>
                       <td className="px-2 py-1.5">{r.vendor}</td>
                       <td className="px-2"><span className={`text-[11px] font-semibold rounded px-1.5 py-0.5 ${r.party === 'gc' ? 'text-blue-800 bg-blue-100' : 'text-gray-700 bg-gray-100'}`}>{r.party === 'gc' ? 'GC' : 'Sub'}</span></td>
+                      {(() => {
+                        const v = payCheck(r);
+                        return (<>
+                          <td className="px-1 py-1 text-right tabular-nums">
+                            {r.party === 'gc'
+                              ? <span title="From this pay app's G702">{money(v.due ?? 0)}<div className="text-[10px] text-gray-500">From G702</div></span>
+                              : v.cond ? <OptMoney value={v.cond.payAppDue ?? null} label={`${r.vendor} payment due`} onSave={(n) => call(() => apiRequest(`/api/cost-waivers/${v.cond!.id}`, 'PATCH', { payAppDue: n }))} />
+                              : <span className="text-gray-400 text-xs">Add the conditional</span>}
+                          </td>
+                          <td className="px-2 text-right tabular-nums">{v.cond ? money(v.cond.amount) : '—'}</td>
+                          <td className="px-2 text-xs whitespace-nowrap">
+                            {v.diff == null ? <span className="text-gray-400">—</span>
+                              : Math.abs(v.diff) < 0.01 ? <span className="text-green-700 font-medium">Matches</span>
+                              : <span className="text-amber-700 font-medium" title={v.diff > 0 ? 'Pay app is more than the conditional' : 'Pay app is less than the conditional'}>Off by {money(Math.abs(v.diff))}</span>}
+                          </td>
+                        </>);
+                      })()}
                       <td className="px-2 py-1 text-xs">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           {mine.map((d) => (
@@ -410,6 +441,21 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   );
                 })}
               </tbody>
+              {(() => {
+                // Subs together: their pay apps against their conditionals.
+                const subs = payRows.filter((r) => r.party === 'sub').map(payCheck).filter((v) => v.cond);
+                if (!subs.length) return null;
+                const due = subs.reduce((t, v) => t + (v.due ?? 0), 0), cond = subs.reduce((t, v) => t + v.cond!.amount, 0);
+                const typed = subs.filter((v) => v.due != null).length;
+                const diff = Math.round((due - cond) * 100) / 100;
+                return (
+                  <tfoot className="border-t-2 border-gray-300 bg-gray-50/70"><tr className="font-medium">
+                    <td colSpan={2} className="px-2 py-1.5 text-gray-700">Subcontractors ({subs.length}){typed < subs.length ? <span className="text-[11px] font-normal text-gray-500"> · {typed} of {subs.length} entered</span> : null}</td>
+                    <td className="px-2 text-right tabular-nums">{money(due)}</td><td className="px-2 text-right tabular-nums">{money(cond)}</td>
+                    <td className="px-2 text-xs">{typed < subs.length ? '' : Math.abs(diff) < 0.01 ? <span className="text-green-700">Matches</span> : <span className="text-amber-700">Off by {money(Math.abs(diff))}</span>}</td><td />
+                  </tr></tfoot>
+                );
+              })()}
             </table>
           </div>
         </Fold>
@@ -719,6 +765,17 @@ function Fold({ title, badge, summary, open, onToggle, action, children }: { tit
       {open && children}
     </section>
   );
+}
+
+/** A money box that may be left blank (not entered yet); saves when you leave it. */
+function OptMoney({ value, label, onSave }: { value: number | null; label: string; onSave: (v: number | null) => void }) {
+  const [v, setV] = useState(value == null ? '' : fmtMoneyText(String(value)));
+  return <MoneyInput className="h-8 text-right" value={v} aria-label={label} onValueChange={setV}
+                     onBlur={(e) => {
+                       const t = e.target.value.replace(/[$,\s]/g, '');
+                       const n = t === '' ? null : parseFloat(t) || 0;
+                       if (n === null ? value !== null : value === null || Math.abs(n - value) >= 0.005) onSave(n);
+                     }} />;
 }
 
 /** A money box that saves when you leave it. */

@@ -33,6 +33,8 @@ export interface Waiver {
   sortOrder?: number | null;
   /** 'gc' or 'sub' as set by hand; null = worked out from the contract's name. */
   party?: WaiverParty | null;
+  /** A sub's own pay app: its current payment due (line 8), typed to check against the conditional. */
+  payAppDue?: number | null;
 }
 
 export type WaiverParty = 'gc' | 'sub';

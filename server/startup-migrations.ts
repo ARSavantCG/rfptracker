@@ -61,6 +61,7 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_waivers', column: 'sort_order', type: 'integer' },
   { table: 'cost_waivers', column: 'party', type: 'text' },
   { table: 'cost_documents', column: 'vendor', type: 'text' },
+  { table: 'cost_waivers', column: 'pay_app_due_cents', type: 'bigint' },
   // Ownership scoping (slice 0b, DESIGN-rom-mode-on-rfp.md): the REAL owner id.
   // rfp_requests never had created_by at all; rom_pilots.created_by is a display
   // name. Backfilled below in runPermissionAndOwnershipBackfill(); NULL after

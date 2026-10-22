@@ -537,6 +537,7 @@ export async function loadProjectBundle(projectId: number) {
       vendor: w.vendor, amount: dollars(w.amountCents), fromWaiverId: w.fromWaiverId ?? null,
       received: w.received, notNeeded: w.notNeeded, documentId: w.documentId ?? null, notes: w.notes,
       sortOrder: w.sortOrder ?? null, party: (w.party === 'gc' || w.party === 'sub') ? (w.party as 'gc' | 'sub') : null,
+      payAppDue: w.payAppDueCents == null ? null : dollars(w.payAppDueCents),
     })),
     ledger: buildLedger({
       payments: payRows.map((p) => ({
@@ -1939,6 +1940,7 @@ export function registerCostTrackingRoutes(app: Express): void {
     if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;
     if (b.documentId !== undefined) out.documentId = b.documentId == null ? null : Number(b.documentId);
     if (b.party !== undefined) out.party = b.party === 'gc' || b.party === 'sub' ? b.party : null;
+    if (b.payAppDue !== undefined) out.payAppDueCents = b.payAppDue === null || b.payAppDue === '' ? null : toCents(b.payAppDue);
     return out;
   };
 

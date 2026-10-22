@@ -673,10 +673,15 @@ export function renderWaiverLogHtml(input: {
           : `<span style="margin-left:8px;font-size:10px;font-weight:700;color:#991b1b;background:#fee2e2;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.outstanding} Outstanding</span>`}
         ${g.awaiting ? `<span style="margin-left:6px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.awaiting} Awaiting Our Payment</span>` : ""}
         ${g.totals.count ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${g.totals.subCount}) ${money2(g.totals.subs)} · GC ${money2(g.totals.gc)} · GC Less Subs ${money2(g.totals.gap)}${g.totals.gapPct != null ? ` (${g.totals.gapPct.toFixed(1)}% of the GC's release)` : ""}</span>` : ""}</td></tr>
-      ${[...g.rows].map((r, i) => ({ r, i }))
+      ${[...g.rows].filter((r) => !(r.kind === "conditional" && r.status === "not needed" && !(r.amount && Math.abs(r.amount) >= 0.005))).map((r, i) => ({ r, i }))
         // The GC leads each kind, its subs indented beneath in the order arranged.
         .sort((a, b) => (a.r.kind === b.r.kind ? 0 : a.r.kind === "conditional" ? -1 : 1) || (a.r.kind === b.r.kind ? (a.r.party === "gc" ? 0 : 1) - (b.r.party === "gc" ? 0 : 1) : 0) || a.i - b.i)
-        .map(({ r }) => row(r)).join("")}`).join("")}`).join("");
+        .map(({ r }) => row(r)).join("")}
+      ${(() => {
+        // Subs not billing this pay app (marked not needed, nothing on it): one line, not $0.00 rows.
+        const quiet = g.rows.filter((r) => r.kind === "conditional" && r.status === "not needed" && !(r.amount && Math.abs(r.amount) >= 0.005));
+        return quiet.length ? `<tr><td></td><td colspan="4" class="muted" style="font-size:10px;padding-left:22px">Not billing this pay app: ${quiet.map((r) => escapeHtml(r.vendor)).join(", ")}</td></tr>` : "";
+      })()}`).join("")}`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Lien Waiver Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>

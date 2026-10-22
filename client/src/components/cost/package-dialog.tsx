@@ -214,6 +214,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   };
 
   if (!target || !app || !ck) return null;
+  /** A sub marked not needed with nothing on it: not billing this pay app — one quiet line, not a row. */
+  const notBilling = (w: { notNeeded: boolean; amount: number }) => w.notNeeded && Math.abs(w.amount) < 0.005;
   /** An expected unconditional for a pay app we haven't paid in full. */
   const awaitingRow = (r: UnconditionalRow) => prevWaiting && r.source === 'expected' && !r.received && !r.notNeeded;
   const waitCount = ck.unconditionals.filter(awaitingRow).length;
@@ -228,7 +230,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     if (u?.notNeeded) return <div className="text-[10px] text-gray-500 mt-0.5">Unconditional: not needed</div>;
     if (u?.received) return <div className="text-[10px] text-green-700 mt-0.5">Unconditional: received with {nextLabel}{u.documentId ? ` · ${short(docName(u.documentId) ?? '')}` : ''}</div>;
     const mine = paidOf(app.id);
-    if (unpaid(mine)) return <div className="text-[10px] text-amber-700 mt-0.5">Unconditional: once we pay {label} {nn(app.docNumber)} ({paidNote(app.docNumber, mine!).replace(/^Pay App \d+ /, '')}), due with {nextLabel}</div>;
+    if (unpaid(mine)) return <div className="text-[10px] text-amber-700 mt-0.5" title={`Due with ${nextLabel}, once we pay this pay app in full`}>Unconditional: after we pay this one ({money(mine!.paid)} of {money(mine!.due)} paid)</div>;
     return (
       <div className="text-[10px] mt-0.5 flex items-center gap-2 flex-wrap">
         <span className="text-amber-700">Unconditional: due with {nextLabel}</span>
@@ -419,7 +421,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
               action={!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewC({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
           <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} Payment Due (G702 Line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
-            {conds.map((w) => {
+            {conds.filter((w) => !notBilling(w)).map((w) => {
               const key = `c${w.id}`;
               return (
                 <tr key={w.id} {...rowDnd('conditional', key, dz(key, { docType: 'conditional', waiverId: String(w.id) }))}
@@ -442,6 +444,20 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 </tr>
               );
             })}
+            {conds.some(notBilling) && (
+              <tr className="border-b bg-gray-50/70">
+                <td />
+                <td colSpan={7} className="px-2 py-1.5 text-xs text-gray-600">
+                  <span className="font-medium text-gray-700">Not Billing This Pay App:</span>{' '}
+                  {conds.filter(notBilling).map((w, i) => (
+                    <span key={w.id}>{i > 0 && ', '}{w.vendor}{' '}
+                      <button className="text-blue-700 hover:underline" title={`${w.vendor} is billing after all — put them back on the list`}
+                              onClick={() => call(() => apiRequest(`/api/cost-waivers/${w.id}`, 'DELETE'), `${w.vendor} back on the list`)}>(Undo)</button>
+                    </span>
+                  ))}
+                </td>
+              </tr>
+            )}
             {ck.missing.map((m) => (
               <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? app.g702.currentPaymentDue : null}
                           onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}

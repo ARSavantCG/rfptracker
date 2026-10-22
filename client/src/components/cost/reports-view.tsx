@@ -4,7 +4,7 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useMemo, useState } from 'react';
-import { waiversByPayApp, paidOfFrom, payAppLog } from '@shared/cost-waivers';
+import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue } from '@shared/cost-waivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -342,7 +342,7 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
   const groups = useMemo(() => waiversByPayApp(
     b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
     b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
-    paidOfFrom(b.payments, (aid) => b.applications.find((a) => a.id === aid)?.g702.currentPaymentDue ?? null)), [b.applications, b.waivers, b.contracts, b.payments]);
+    paidOfFrom(b.payments, (aid) => (() => { const a = b.applications.find((x) => x.id === aid); return a ? gcPaymentDue(a as any, b.waivers, b.contracts.find((c) => c.id === a.contractId)?.counterparty ?? '').due : null; })())), [b.applications, b.waivers, b.contracts, b.payments]);
   const contracts = Array.from(new Set(groups.map((g) => g.contractId)));
   const nn = (n: number) => String(n).padStart(2, '0');
   const ok = groups.filter((g) => g.compliant).length;
@@ -410,7 +410,7 @@ function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
   const groups = useMemo(() => payAppLog(
     b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
     b.waivers, b.documents, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
-    (aid) => b.applications.find((a) => a.id === aid)?.g702.currentPaymentDue ?? null), [b.applications, b.waivers, b.documents, b.contracts]);
+    (aid) => (() => { const a = b.applications.find((x) => x.id === aid); return a ? gcPaymentDue(a as any, b.waivers, b.contracts.find((c) => c.id === a.contractId)?.counterparty ?? '').due : null; })()), [b.applications, b.waivers, b.documents, b.contracts]);
   const nn = (n: number) => String(n).padStart(2, '0');
   const done = groups.filter((g) => g.complete).length;
   const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });

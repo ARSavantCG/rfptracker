@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, paidNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -50,7 +50,9 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const apps = useMemo(() => bundle.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })), [bundle.applications]);
   const gcName = target?.contract.counterparty ?? '';
   const ck = useMemo(() => (app ? waiverChecklist(app.id, apps, bundle.waivers, gcName) : null), [app?.id, apps, bundle.waivers, gcName]);
-  const paidOf = useMemo(() => paidOfFrom(bundle.payments, (aid) => bundle.applications.find((a) => a.id === aid)?.g702.currentPaymentDue ?? null), [bundle.payments, bundle.applications]);
+  /** Line 8 as the paperwork says it (typed, the GC's G702, or ours). */
+  const dueOf = (aid: number) => { const a = bundle.applications.find((x) => x.id === aid); const c = bundle.contracts.find((x) => x.id === a?.contractId); return a ? gcPaymentDue(a as any, bundle.waivers, c?.counterparty ?? '') : { due: null, source: null }; };
+  const paidOf = useMemo(() => paidOfFrom(bundle.payments, (aid) => dueOf(aid).due), [bundle.payments, bundle.applications, bundle.waivers, bundle.contracts]);
   // Owed on pay apps before the previous one (that one's are the unconditionals below).
   const earlier = useMemo(() => {
     if (!app || !ck?.previous) return [] as WaiverLogRow[];
@@ -217,7 +219,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   /** A pay app row: its payment due (GC from the G702, a sub's as typed) against its conditional. */
   const payCheck = (r: { vendor: string; party: WaiverParty }) => {
     const cond = conds.find((w) => !w.notNeeded && (r.party === 'gc' ? partyOf(w, gcName) === 'gc' : sameVendor(w.vendor, r.vendor)));
-    const due = r.party === 'gc' ? app.g702.currentPaymentDue : cond?.payAppDue ?? null;
+    const due = r.party === 'gc' ? dueOf(app.id).due : cond?.payAppDue ?? null;
     return { cond, due, diff: cond && due != null ? Math.round((due - cond.amount) * 100) / 100 : null };
   };
   // Subs from the pay app before who aren't here: a one-click add, not a requirement.
@@ -411,8 +413,23 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                         const v = payCheck(r);
                         return (<>
                           <td className="px-1 py-1 text-right tabular-nums">
-                            {r.party === 'gc'
-                              ? <span title="From this pay app's G702">{money(v.due ?? 0)}<div className="text-[10px] text-gray-500">From G702</div></span>
+                            {r.party === 'gc' && v.cond
+                              ? (() => {
+                                  const d = dueOf(app.id);
+                                  const fallback = d.source === 'typed' ? (app.contractorG702 as any)?.currentPaymentDue ?? app.g702.currentPaymentDue : d.due;
+                                  return (<>
+                                    {/* Type what their G702 says; clear it to go back to theirs / ours. */}
+                                    <OptMoney key={`gc-${v.cond.id}-${v.cond.payAppDue ?? 'x'}-${d.due}`} value={d.due} label={`${r.vendor} payment due`}
+                                              onSave={(n) => {
+                                                // Same as the G702 figure it already showed: nothing to save. Cleared: back to theirs / ours.
+                                                if (n != null && v.cond!.payAppDue == null && fallback != null && Math.abs(n - fallback) < 0.005) return;
+                                                call(() => apiRequest(`/api/cost-waivers/${v.cond!.id}`, 'PATCH', { payAppDue: n }));
+                                              }} />
+                                    <div className="text-[10px] text-gray-500">{d.source === 'typed' ? 'As entered' : d.source === 'contractor' ? "From the GC's G702" : 'Calculated — type theirs to change'}</div>
+                                  </>);
+                                })()
+                              : r.party === 'gc'
+                              ? <span title="Add the GC's conditional to type over it">{money(v.due ?? 0)}<div className="text-[10px] text-gray-500">Calculated</div></span>
                               : v.cond ? <OptMoney value={v.cond.payAppDue ?? null} label={`${r.vendor} payment due`} onSave={(n) => call(() => apiRequest(`/api/cost-waivers/${v.cond!.id}`, 'PATCH', { payAppDue: n }))} />
                               : <span className="text-gray-400 text-xs">Add the conditional</span>}
                           </td>
@@ -468,7 +485,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
               summary={condSummary}
               action={!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewC({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
-          <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} Payment Due (G702 Line 8)`, amount: app.g702.currentPaymentDue }} /> : null}>
+          <WaiverTable footer={ck.conditionals.length ? <TotalsRows t={waiverTotals(ck.conditionals, gcName)} gcName={gcName} check={{ label: `${label} ${nn(app.docNumber)} Payment Due (G702 Line 8)`, amount: dueOf(app.id).due ?? app.g702.currentPaymentDue }} /> : null}>
             {conds.filter((w) => !notBilling(w)).map((w) => {
               const key = `c${w.id}`;
               return (
@@ -521,7 +538,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
               </tr>
             )}
             {ck.missing.map((m) => (
-              <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? app.g702.currentPaymentDue : null}
+              <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? dueOf(app.id).due : null}
                           onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}
                           onSkip={() => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount: 0, received: false, notNeeded: true }), `${m.vendor}: not this pay app`)} />
             ))}
@@ -555,7 +572,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
           <p className="text-xs text-gray-600">
             {prevLabel ? `Expected from every vendor that gave a conditional on ${prevLabel}, for the same amount, in the same order. Type over anything that's different — it's marked Edited.` : 'This is the first pay app on the contract, so none are expected yet.'}
           </p>
-          <WaiverTable footer={ck.unconditionals.length ? <TotalsRows t={waiverTotals(ck.unconditionals, gcName)} gcName={gcName} check={prevApp ? { label: `${prevLabel} Payment Due (G702 Line 8)`, amount: prevApp.g702.currentPaymentDue } : undefined} /> : null}>
+          <WaiverTable footer={ck.unconditionals.length ? <TotalsRows t={waiverTotals(ck.unconditionals, gcName)} gcName={gcName} check={prevApp ? { label: `${prevLabel} Payment Due (G702 Line 8)`, amount: dueOf(prevApp.id).due ?? prevApp.g702.currentPaymentDue } : undefined} /> : null}>
             {unconds.map((r) => {
               const key = uKey(r);
               return (

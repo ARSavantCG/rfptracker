@@ -483,3 +483,21 @@ export function payAppLog(
   }
   return out;
 }
+
+/**
+ * A pay app's payment due (G702 line 8) as the paperwork says it: typed on the
+ * GC's row, else the contractor's own G702 (typed or read), else our calculation —
+ * which can be a penny off theirs from rounding.
+ */
+export function gcPaymentDue(
+  app: { id: number; contractId: number; g702?: { currentPaymentDue: number } | null; contractorG702?: { currentPaymentDue?: number | null } | null },
+  waivers: readonly Waiver[],
+  contractName: string,
+): { due: number | null; source: 'typed' | 'contractor' | 'calculated' | null } {
+  const gc = waivers.find((w) => w.applicationId === app.id && w.kind === 'conditional' && !w.notNeeded && partyOf(w, contractName) === 'gc');
+  if (gc?.payAppDue != null) return { due: r2(gc.payAppDue), source: 'typed' };
+  const theirs = app.contractorG702?.currentPaymentDue;
+  if (theirs != null && Number.isFinite(theirs)) return { due: r2(theirs), source: 'contractor' };
+  if (app.g702) return { due: r2(app.g702.currentPaymentDue), source: 'calculated' };
+  return { due: null, source: null };
+}

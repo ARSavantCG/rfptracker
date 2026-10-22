@@ -23,7 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
-import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
+import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -965,7 +965,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "";
       const want = String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
       const issuesOnly = String(req.query.issues || "") === "1";
-      const groups = payAppLog(apps, b.waivers, b.documents as any, cname, (aid) => b.applications.find((a: any) => a.id === aid)?.g702?.currentPaymentDue ?? null)
+      const groups = payAppLog(apps, b.waivers, b.documents as any, cname, (aid) => { const a: any = b.applications.find((x: any) => x.id === aid); return a ? gcPaymentDue(a, b.waivers, cname(a.contractId)).due : null; })
         .filter((g) => !want.length || want.includes(g.appId))
         .map((g) => (issuesOnly ? { ...g, rows: g.rows.filter((r) => !r.files.length || (r.diff != null && Math.abs(r.diff) >= 0.01)) } : g))
         .filter((g) => !issuesOnly || g.rows.length);
@@ -1000,7 +1000,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
           // Only the pay apps asked for (?apps=12,15), and only what's outstanding (?outstanding=1).
           const want = new Set(String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0));
           const outOnly = String(req.query.outstanding || "") === "1";
-          const paidOf = paidOfFrom(b.payments, (aid) => b.applications.find((a: any) => a.id === aid)?.g702?.currentPaymentDue ?? null);
+          const paidOf = paidOfFrom(b.payments, (aid) => { const a: any = b.applications.find((x: any) => x.id === aid); return a ? gcPaymentDue(a, b.waivers, cname(a.contractId)).due : null; });
           return waiversByPayApp(apps, b.waivers, cname, paidOf)
             .filter((g) => !want.size || want.has(g.appId))
             .map((g) => (outOnly ? { ...g, rows: g.rows.filter((r) => r.status === "outstanding" || r.status === "missing" || r.status === "awaiting payment") } : g))

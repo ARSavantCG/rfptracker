@@ -41,7 +41,7 @@ import { requireAi } from './lib/ai-switch';
 import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, gcPaymentDue, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
 
@@ -2183,7 +2183,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (ck.conditionals.length) contents.push(...sums(waiverTotals(ck.conditionals, c.counterparty)));
       // Unconditionals for a pay app we haven't paid in full yet can't exist — say so rather than OUTSTANDING.
       const bundleForPaid = await loadProjectBundle(c.projectId).catch(() => null);
-      const paidOf = bundleForPaid ? paidOfFrom(bundleForPaid.payments, (aid) => bundleForPaid.applications.find((x: any) => x.id === aid)?.g702?.currentPaymentDue ?? null) : undefined;
+      const paidOf = bundleForPaid ? paidOfFrom(bundleForPaid.payments, (aid) => { const x: any = bundleForPaid.applications.find((y: any) => y.id === aid); return x ? gcPaymentDue(x, bundleForPaid.waivers, c.counterparty).due : null; }) : undefined;
       const prevPaid = prev && paidOf ? paidOf(prev.id) : null;
       const waitNote = prev && unpaid(prevPaid) ? `PENDING FUNDING (${paidNote(dn.get(prev.id)!, prevPaid!)})` : null;
       for (const u of ck.unconditionals) contents.push(`  Unconditional ${tag(u)}${u.vendor}  ${money(u.amount)}  ${u.notNeeded ? 'not needed' : u.received ? 'received' : (waitNote && u.source === 'expected' ? waitNote : 'OUTSTANDING')}${u.edited ? `  (edited — expected ${u.expectedVendor} ${money(u.expectedAmount ?? 0)})` : ''}`);

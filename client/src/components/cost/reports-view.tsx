@@ -4,7 +4,7 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useMemo, useState } from 'react';
-import { waiversByPayApp } from '@shared/cost-waivers';
+import { waiversByPayApp, paidOfFrom } from '@shared/cost-waivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -339,7 +339,8 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
   const [outOnly, setOutOnly] = useState(false);
   const groups = useMemo(() => waiversByPayApp(
     b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
-    b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? ''), [b.applications, b.waivers, b.contracts]);
+    b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
+    paidOfFrom(b.payments, (aid) => b.applications.find((a) => a.id === aid)?.g702.currentPaymentDue ?? null)), [b.applications, b.waivers, b.contracts, b.payments]);
   const contracts = Array.from(new Set(groups.map((g) => g.contractId)));
   const nn = (n: number) => String(n).padStart(2, '0');
   const ok = groups.filter((g) => g.compliant).length;
@@ -386,6 +387,7 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
                       {g.compliant
                         ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Compliant</span>
                         : <span className="text-[10px] font-semibold text-red-800 bg-red-100 rounded px-1">{g.outstanding} Outstanding</span>}
+                      {g.awaiting > 0 && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Unconditionals for a pay app we haven't paid in full">{g.awaiting} Awaiting Our Payment</span>}
                     </label>
                   );
                 })}

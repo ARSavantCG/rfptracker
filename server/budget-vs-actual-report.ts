@@ -742,24 +742,37 @@ export function renderPayAppLogHtml(input: {
       return `
       <tr><td colspan="6" style="padding-top:8px;border-bottom:1px solid #d1d5db"><strong>Pay App ${nn(g.appNumber)}</strong>
         ${g.complete ? tag("Complete", "#166534", "#dcfce7") : ""}${g.missingFiles ? tag(`${g.missingFiles} Missing`, "#92400e", "#fef3c7") : ""}${g.mismatched ? tag(`${g.mismatched} Don't Match`, "#92400e", "#fef3c7") : ""}
-        ${subs.length ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${subs.length}) payment due ${money2(subDue)} · conditionals ${money2(subCond)}</span>` : ""}</td></tr>
+        ${subs.length ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${subs.length}) conditionals ${money2(subCond)} · ${(() => {
+          const ent = subs.filter((r) => r.due != null);
+          return ent.length ? `payment due ${money2(subDue)}${ent.length < subs.length ? ` (${ent.length} of ${subs.length} entered)` : ""}` : "payment due not entered";
+        })()}</span>` : ""}</td></tr>
       ${g.rows.map(row).join("")}`;
     }).join("")}`).join("");
   // By vendor, across every pay app shown.
-  type V = { vendor: string; party: string; apps: number; due: number; cond: number; dueMissing: number; filesMissing: number };
+  // Conditionals across every pay app shown; payment due and the difference only where line 8 has
+  // been entered — a pay app with no amount yet isn't a $0 pay app (Adolfo, 2026-10-22).
+  type V = { vendor: string; party: string; apps: number; cond: number; entered: number; due: number; condEntered: number; dueMissing: number; filesMissing: number };
   const vend: V[] = [];
   for (const g of input.groups) for (const r of g.rows) {
     let v = vend.find((x) => vendorKey(x.vendor) === vendorKey(r.vendor));
-    if (!v) { v = { vendor: r.vendor, party: r.party, apps: 0, due: 0, cond: 0, dueMissing: 0, filesMissing: 0 }; vend.push(v); }
-    v.apps++; v.due += r.due ?? 0; v.cond += r.conditional ?? 0;
-    if (r.due == null) v.dueMissing++;
+    if (!v) { v = { vendor: r.vendor, party: r.party, apps: 0, cond: 0, entered: 0, due: 0, condEntered: 0, dueMissing: 0, filesMissing: 0 }; vend.push(v); }
+    v.apps++; v.cond += r.conditional ?? 0;
+    if (r.due != null) { v.entered++; v.due += r.due; v.condEntered += r.conditional ?? 0; } else v.dueMissing++;
     if (!r.files.length) v.filesMissing++;
   }
   vend.sort((a, b) => (a.party === "gc" ? -1 : b.party === "gc" ? 1 : 0));
-  const vendTable = vend.length ? `<h3 class="sec">By Vendor</h3>
-  <table class="t"><thead><tr><th class="l">Vendor</th><th>Pay Apps</th><th>Payment Due</th><th>Conditionals</th><th>Difference</th><th class="l">Missing</th></tr></thead><tbody>
-    ${vend.map((v) => `<tr><td${v.party === "gc" ? "" : ' style="padding-left:22px"'}>${escapeHtml(v.vendor)}</td><td class="num">${v.apps}</td>${cell(v.due)}${cell(v.cond)}${cell(v.due - v.cond)}
-      <td class="muted">${[v.filesMissing ? `${v.filesMissing} file${v.filesMissing === 1 ? "" : "s"}` : "", v.dueMissing ? `${v.dueMissing} amount${v.dueMissing === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "—"}</td></tr>`).join("")}
+  // The heading sits in the table head, so it can't be left alone at the foot of a page.
+  const vendTable = vend.length ? `
+  <table class="t" style="margin-top:14px"><thead>
+    <tr><th colspan="6" class="l" style="background:none;border:0;padding:6px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#374151">By Vendor</th></tr>
+    <tr><th class="l">Vendor</th><th>Pay Apps</th><th>Conditionals</th><th title="Line 8 on the pay apps where it's been entered">Payment Due (Entered)</th><th title="Payment due less conditionals, on those same pay apps">Difference</th><th class="l">Missing</th></tr></thead><tbody>
+    ${vend.map((v) => {
+      const diff = Math.round((v.due - v.condEntered) * 100) / 100;
+      return `<tr><td${v.party === "gc" ? "" : ' style="padding-left:22px"'}>${escapeHtml(v.vendor)}</td><td class="num">${v.apps}</td>${cell(v.cond)}
+      ${v.entered ? `<td class="num">${money2(v.due)}${v.entered < v.apps ? `<div class="muted" style="font-size:9px">${v.entered} of ${v.apps} pay apps</div>` : ""}</td>` : '<td class="num muted">Not entered</td>'}
+      ${!v.entered ? '<td class="num muted">—</td>' : Math.abs(diff) < 0.005 ? '<td class="num" style="color:#166534">Matches</td>' : `<td class="num" style="color:#92400e;font-weight:600">${fmt(diff)}</td>`}
+      <td class="muted">${[v.filesMissing ? `${v.filesMissing} file${v.filesMissing === 1 ? "" : "s"}` : "", v.dueMissing ? `${v.dueMissing} amount${v.dueMissing === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "—"}</td></tr>`;
+    }).join("")}
   </tbody></table>` : "";
   return `<!doctype html><html><head><meta charset="utf-8"><title>Pay Application Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
@@ -774,6 +787,7 @@ export function renderPayAppLogHtml(input: {
     <li>Each pay app's vendors come from its conditional waivers: the GC and every sub billing that pay app. Subs not billing are left out.</li>
     <li>Payment Due is line 8 (Current Payment Due) of the vendor's own pay application — the GC's from this pay app's G702, each sub's as entered from theirs — checked against that vendor's conditional waiver.</li>
     <li>Shaded: the vendor's pay application isn't attached yet.</li>
+    <li>By Vendor: conditionals across every pay app shown; payment due and the difference only on the pay apps where line 8 has been entered.</li>
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;

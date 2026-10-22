@@ -263,6 +263,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
     const t = waiverTotals(rows, gcName);
     return `${live.length} ${noun}${live.length === 1 ? '' : 's'} · ${live.filter((r) => r.received).length} of ${live.length} Received · Subs ${money(t.subs)} · GC ${money(t.gc)} · GC Less Subs ${money(t.gap)}`;
   };
+  const condOut = conds.filter((w) => !w.received && !w.notNeeded).length + ck.missing.length;
+  const uncondOut = unconds.filter((r) => !r.received && !r.notNeeded).length;
   const condOpen = !!newC || ck.missing.length > 0 || !ck.conditionals.length || conds.some((w) => !w.received && !w.notNeeded);
   const liveConds = conds.filter((w) => !w.notNeeded);
   const answered = liveConds.filter((w) => nextList.some((u) => u.fromWaiverId === w.id && (u.received || u.notNeeded))).length;
@@ -314,7 +316,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             <span className="text-xs text-gray-500">Pay apps and waivers are better dropped on their row below — they're named by vendor.</span>
           </div>
           {files.length > 0 && (
-            <Fold title={`Files (${files.length})`} open={isOpen('files', unassigned.length > 0)} onToggle={() => toggle('files', unassigned.length > 0)}
+            <Fold title={`Files (${files.length})`} badge={unassigned.length ? { tone: 'warn', text: `${unassigned.length} Not Assigned` } : null} open={isOpen('files', unassigned.length > 0)} onToggle={() => toggle('files', unassigned.length > 0)}
                   summary={unassigned.length ? <span className="text-amber-700 font-medium">{unassigned.length} not assigned</span> : 'All assigned'}>
               <div className="border rounded-md divide-y">
                 {files.map((d) => {
@@ -358,7 +360,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </section>
 
         {/* Pay applications: the GC's G702/G703 and each sub's own, one row per vendor. */}
-        <Fold title={`Pay Applications — ${label} ${nn(app.docNumber)}`} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
+        <Fold title={`Pay Applications — ${label} ${nn(app.docNumber)}`}
+              badge={(() => { const n = payRows.filter((r) => payFiles(r).length).length; return n === payRows.length ? { tone: 'ok' as const, text: 'All Attached' } : { tone: 'muted' as const, text: `${n} of ${payRows.length} Attached` }; })()} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
               summary={`${payRows.filter((r) => payFiles(r).length).length} of ${payRows.length} attached`}>
           <p className="text-xs text-gray-600">The GC's pay application and each sub's, as backup. Vendors come from the conditional waivers below. Drop a file on its row.</p>
           <div className="border rounded-md overflow-x-auto">
@@ -398,7 +401,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </Fold>
 
         {/* Conditional waivers for this pay app */}
-        <Fold title={`Conditional Waivers — ${label} ${nn(app.docNumber)}`} open={isOpen('cond', condOpen)} onToggle={() => toggle('cond', condOpen)}
+        <Fold title={`Conditional Waivers — ${label} ${nn(app.docNumber)}`}
+              badge={condOut ? { tone: 'bad', text: `${condOut} Outstanding` } : ck.conditionals.length ? { tone: 'ok', text: 'Compliant' } : null} open={isOpen('cond', condOpen)} onToggle={() => toggle('cond', condOpen)}
               summary={condSummary}
               action={!newC && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewC({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Conditional</Button>}>
           <p className="text-xs text-gray-600">One per vendor being paid from this pay app — the GC and each sub. Drag <GripVertical className="h-3 w-3 inline -mt-0.5" /> to reorder. Next pay app, the app expects an unconditional from each of them.</p>
@@ -454,7 +458,8 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
         </Fold>
 
         {/* Unconditional waivers for the pay app before */}
-        <Fold title={`Unconditional Waivers${prevLabel ? ` — For ${prevLabel}` : ''}`} open={isOpen('uncond', uncondOpen)} onToggle={() => toggle('uncond', uncondOpen)}
+        <Fold title={`Unconditional Waivers${prevLabel ? ` — For ${prevLabel}` : ''}`}
+              badge={uncondOut ? { tone: 'bad', text: `${uncondOut} Outstanding` } : unconds.length ? { tone: 'ok', text: 'Compliant' } : null} open={isOpen('uncond', uncondOpen)} onToggle={() => toggle('uncond', uncondOpen)}
               summary={uncondSummary}
               action={!newU && <Button size="sm" variant="outline" className="h-7" onClick={() => { setNewU({ vendor: '', amount: '' }); setFolds((f) => ({ ...f, uncond: true })); }}><Plus className="h-3.5 w-3.5 mr-1" /> Unconditional</Button>}>
           <p className="text-xs text-gray-600">
@@ -666,16 +671,21 @@ function UseKnown({ typed, known, onUse }: { typed: string; known: readonly stri
 }
 
 /** A section that rolls up to one line: title, a summary while closed, and its action button. */
-function Fold({ title, summary, open, onToggle, action, children }: { title: string; summary?: React.ReactNode; open: boolean; onToggle: () => void; action?: React.ReactNode; children: React.ReactNode }) {
+type Badge = { tone: 'ok' | 'bad' | 'warn' | 'muted'; text: string };
+const BADGE: Record<Badge['tone'], string> = {
+  ok: 'text-green-800 bg-green-100', bad: 'text-red-800 bg-red-100', warn: 'text-amber-800 bg-amber-100', muted: 'text-gray-600 bg-gray-100',
+};
+function Fold({ title, badge, summary, open, onToggle, action, children }: { title: string; badge?: Badge | null; summary?: React.ReactNode; open: boolean; onToggle: () => void; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <button type="button" className="flex items-center gap-1.5 min-w-0 text-left" onClick={onToggle} aria-expanded={open}>
+        <button type="button" className="flex items-center gap-1.5 min-w-0 flex-1 text-left" onClick={onToggle} aria-expanded={open}>
           <ChevronRight className={`h-4 w-4 flex-shrink-0 text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} />
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600">{title}</h3>
-          {!open && summary && <span className="text-xs text-gray-600 ml-2 truncate normal-case">{summary}</span>}
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600 whitespace-nowrap">{title}</h3>
+          {badge && <span className={`ml-1 text-[10px] font-semibold rounded px-1.5 py-0.5 whitespace-nowrap ${BADGE[badge.tone]}`}>{badge.text}</span>}
+          {!open && summary && <span className="block min-w-0 text-xs text-gray-600 ml-2 truncate normal-case" title={typeof summary === 'string' ? summary : undefined}>{summary}</span>}
         </button>
-        {action}
+        {action && <div className="flex-shrink-0">{action}</div>}
       </div>
       {open && children}
     </section>

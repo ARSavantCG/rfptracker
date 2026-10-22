@@ -23,7 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
-import { waiversByPayApp, paidOfFrom, type PayAppWaivers, type PayAppWaiverRow } from "@shared/cost-waivers";
+import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -702,6 +702,84 @@ export function renderWaiverLogHtml(input: {
 }
 
 /**
+ * Pay Application Log: each pay app's GC and sub pay applications — line 8
+ * against the vendor's conditional, and whether the file is in — then the
+ * same by vendor across the job.
+ */
+export function renderPayAppLogHtml(input: {
+  project: CostReportProject;
+  propertyLabel?: string;
+  rentableSf?: number;
+  groups: PayAppLogGroup[];
+  contractName: (id: number) => string;
+  filter?: string;
+  generatedBy?: string | null;
+}): string {
+  const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
+  const nn = (n: number) => String(n).padStart(2, "0");
+  const done = input.groups.filter((g) => g.complete).length;
+  const miss = input.groups.reduce((t, g) => t + g.missingFiles, 0);
+  const off = input.groups.reduce((t, g) => t + g.mismatched, 0);
+  const notes = [
+    ...(input.filter ? [input.filter.charAt(0).toUpperCase() + input.filter.slice(1)] : []),
+    `${done} of ${input.groups.length} pay app${input.groups.length === 1 ? "" : "s"} complete.${miss ? ` ${miss} pay application${miss === 1 ? "" : "s"} not attached.` : ""}${off ? ` ${off} amount${off === 1 ? "" : "s"} not matching the conditional.` : ""}`,
+  ];
+  const tag = (txt: string, fg: string, bg: string) => `<span style="margin-left:8px;font-size:10px;font-weight:700;color:${fg};background:${bg};border-radius:3px;padding:1px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${txt}</span>`;
+  const row = (r: PayAppLogRow) => {
+    const bad = r.diff != null && Math.abs(r.diff) >= 0.01;
+    return `<tr${!r.files.length ? ' style="background:#fffbeb"' : ""}><td></td><td${r.party === "gc" ? "" : ' style="padding-left:22px"'}>${escapeHtml(r.vendor)}</td>
+      ${r.due == null ? '<td class="num muted">Not entered</td>' : cell(r.due)}${r.conditional == null ? '<td class="num muted">—</td>' : cell(r.conditional)}
+      <td style="${bad ? "color:#92400e;font-weight:600" : r.diff == null ? "color:#6b7280" : "color:#166534"}">${r.diff == null ? "—" : bad ? `Off by ${money2(Math.abs(r.diff))}` : "Matches"}</td>
+      <td style="${r.files.length ? "color:#166534" : "color:#92400e;font-weight:600"}">${r.files.length ? `Attached${r.files.length > 1 ? ` (${r.files.length})` : ""}` : "Missing"}</td></tr>`;
+  };
+  const byContract = new Map<number, PayAppLogGroup[]>();
+  for (const g of input.groups) byContract.set(g.contractId, [...(byContract.get(g.contractId) ?? []), g]);
+  const body = Array.from(byContract).map(([cid, groups]) => `
+    <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
+    ${groups.map((g) => {
+      const subs = g.rows.filter((r) => r.party === "sub");
+      const subDue = subs.reduce((t, r) => t + (r.due ?? 0), 0), subCond = subs.reduce((t, r) => t + (r.conditional ?? 0), 0);
+      return `
+      <tr><td colspan="6" style="padding-top:8px;border-bottom:1px solid #d1d5db"><strong>Pay App ${nn(g.appNumber)}</strong>
+        ${g.complete ? tag("Complete", "#166534", "#dcfce7") : ""}${g.missingFiles ? tag(`${g.missingFiles} Missing`, "#92400e", "#fef3c7") : ""}${g.mismatched ? tag(`${g.mismatched} Don't Match`, "#92400e", "#fef3c7") : ""}
+        ${subs.length ? `<span class="muted" style="font-size:10px;margin-left:10px">Subs (${subs.length}) payment due ${money2(subDue)} · conditionals ${money2(subCond)}</span>` : ""}</td></tr>
+      ${g.rows.map(row).join("")}`;
+    }).join("")}`).join("");
+  // By vendor, across every pay app shown.
+  type V = { vendor: string; party: string; apps: number; due: number; cond: number; dueMissing: number; filesMissing: number };
+  const vend: V[] = [];
+  for (const g of input.groups) for (const r of g.rows) {
+    let v = vend.find((x) => vendorKey(x.vendor) === vendorKey(r.vendor));
+    if (!v) { v = { vendor: r.vendor, party: r.party, apps: 0, due: 0, cond: 0, dueMissing: 0, filesMissing: 0 }; vend.push(v); }
+    v.apps++; v.due += r.due ?? 0; v.cond += r.conditional ?? 0;
+    if (r.due == null) v.dueMissing++;
+    if (!r.files.length) v.filesMissing++;
+  }
+  vend.sort((a, b) => (a.party === "gc" ? -1 : b.party === "gc" ? 1 : 0));
+  const vendTable = vend.length ? `<h3 class="sec">By Vendor</h3>
+  <table class="t"><thead><tr><th class="l">Vendor</th><th>Pay Apps</th><th>Payment Due</th><th>Conditionals</th><th>Difference</th><th class="l">Missing</th></tr></thead><tbody>
+    ${vend.map((v) => `<tr><td${v.party === "gc" ? "" : ' style="padding-left:22px"'}>${escapeHtml(v.vendor)}</td><td class="num">${v.apps}</td>${cell(v.due)}${cell(v.cond)}${cell(v.due - v.cond)}
+      <td class="muted">${[v.filesMissing ? `${v.filesMissing} file${v.filesMissing === 1 ? "" : "s"}` : "", v.dueMissing ? `${v.dueMissing} amount${v.dueMissing === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "—"}</td></tr>`).join("")}
+  </tbody></table>` : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Pay Application Log</title><style>
+    ${REPORT_SHELL_CSS}${TABLE_CSS}
+  </style></head><body>
+  ${reportHeaderHtml({ title: "Pay Application Log", info, notes })}
+  <table class="t"><thead><tr><th class="l" style="width:4%"></th><th class="l">Vendor</th><th>Payment Due (Line 8)</th><th>Conditional</th><th class="l">Check</th><th class="l">Pay App</th></tr></thead><tbody>
+    ${body || `<tr><td colspan="6" class="muted">No pay applications recorded yet.</td></tr>`}
+  </tbody></table>
+  ${vendTable}
+  <h3 class="sec">Notes</h3>
+  <ol class="notes">
+    <li>Each pay app's vendors come from its conditional waivers: the GC and every sub billing that pay app. Subs not billing are left out.</li>
+    <li>Payment Due is line 8 (Current Payment Due) of the vendor's own pay application — the GC's from this pay app's G702, each sub's as entered from theirs — checked against that vendor's conditional waiver.</li>
+    <li>Shaded: the vendor's pay application isn't attached yet.</li>
+  </ol>
+  ${reportFooterHtml({ generatedBy: input.generatedBy })}
+  </body></html>`;
+}
+
+/**
  * Why the budget is what it is: when it was confirmed and at what, every
  * change since in date order (transfers, change orders, edits) with the
  * budget after each, and the change orders and transfers in full.
@@ -873,6 +951,36 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Budget log error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  app.get("/api/reports/pay-app-log/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const apps = b.applications.map((a: any) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber }));
+      const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "";
+      const want = String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
+      const issuesOnly = String(req.query.issues || "") === "1";
+      const groups = payAppLog(apps, b.waivers, b.documents as any, cname, (aid) => b.applications.find((a: any) => a.id === aid)?.g702?.currentPaymentDue ?? null)
+        .filter((g) => !want.length || want.includes(g.appId))
+        .map((g) => (issuesOnly ? { ...g, rows: g.rows.filter((r) => !r.files.length || (r.diff != null && Math.abs(r.diff) >= 0.01)) } : g))
+        .filter((g) => !issuesOnly || g.rows.length);
+      const parts: string[] = [];
+      if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(2, "0")).join(", ")} only`);
+      if (issuesOnly) parts.push("missing files and amounts that don't match only");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderPayAppLogHtml({
+        project: b.project, ...(await propertyFacts(b.project)), groups,
+        contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
+        filter: parts.length ? `${parts.join("; ")}.` : "",
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Pay app log error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

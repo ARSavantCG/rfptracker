@@ -425,3 +425,61 @@ export function waiversByPayApp(apps: readonly AppRef[], waivers: readonly Waive
   }
   return out;
 }
+
+export interface PayAppLogRow {
+  vendor: string;
+  party: WaiverParty;
+  /** Line 8 of their pay app: the GC's from our G702, a sub's as typed. Null = not entered. */
+  due: number | null;
+  conditional: number | null;
+  /** due − conditional, when both are known. */
+  diff: number | null;
+  files: string[];
+}
+export interface PayAppLogGroup {
+  contractId: number;
+  appId: number;
+  appNumber: number;
+  rows: PayAppLogRow[];
+  missingFiles: number;
+  mismatched: number;
+  /** Every vendor's pay app attached and every entered amount matching its conditional. */
+  complete: boolean;
+}
+
+/**
+ * The pay applications behind each pay app — the GC's and each sub's — with
+ * line 8 against the vendor's conditional and whether the file is in.
+ * Vendors come from the conditional waivers (subs not billing are left out).
+ */
+export function payAppLog(
+  apps: readonly AppRef[],
+  waivers: readonly Waiver[],
+  docs: ReadonlyArray<{ applicationId: number | null; docType: string | null; vendor?: string | null; originalName: string; id: number }>,
+  contractName: (contractId: number) => string,
+  gcDue: (appId: number) => number | null,
+): PayAppLogGroup[] {
+  const sorted = [...apps].sort((a, b) => a.contractId - b.contractId || a.number - b.number);
+  const out: PayAppLogGroup[] = [];
+  for (const app of sorted) {
+    const name = contractName(app.contractId);
+    const conds = byOrder(waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional'));
+    const mine = docs.filter((d) => d.applicationId === app.id && !waivers.some((w) => w.documentId === d.id));
+    const vendorRows = payAppVendors(conds, name);
+    if (!conds.length && !mine.some((d) => d.docType === 'g702' || d.docType === 'sub_pay_app')) continue;
+    const rows: PayAppLogRow[] = vendorRows.map((r) => {
+      const c = conds.find((w) => !w.notNeeded && (r.party === 'gc' ? partyOf(w, name) === 'gc' : sameVendor(w.vendor, r.vendor)));
+      const due = r.party === 'gc' ? gcDue(app.id) : c?.payAppDue ?? null;
+      const conditional = c ? r2(c.amount) : null;
+      return {
+        vendor: r.vendor, party: r.party, due: due == null ? null : r2(due), conditional,
+        diff: due != null && conditional != null ? r2(due - conditional) : null,
+        files: mine.filter((d) => isPayAppOf(d, r)).map((d) => d.originalName),
+      };
+    });
+    const missingFiles = rows.filter((r) => !r.files.length).length;
+    const mismatched = rows.filter((r) => r.diff != null && Math.abs(r.diff) >= 0.01).length;
+    out.push({ contractId: app.contractId, appId: app.id, appNumber: app.docNumber || app.number, rows, missingFiles, mismatched, complete: !missingFiles && !mismatched });
+  }
+  return out;
+}

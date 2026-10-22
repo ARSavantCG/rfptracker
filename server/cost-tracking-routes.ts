@@ -2088,12 +2088,14 @@ export function registerCostTrackingRoutes(app: Express): void {
    *   5 Other/
    *   00 Contents.txt   — what's in it, and any waiver still outstanding
    */
-  app.get('/api/cost-applications/:id/package', ...canEdit, async (req, res) => {
-    try {
-      const id = intParam(req, 'id');
-      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+  /**
+   * One pay app's package, ready to write into a zip (at its root, or under a folder when several
+   * go to the lender together). { error } when there's nothing to package.
+   */
+  async function preparePackage(id: number): Promise<{ error: string; status: number } | { zipName: string; folderName: string; write: (zip: archiver.Archiver, root: string) => Promise<void> }> {
+    {
       const [a] = await db.select().from(costApplications).where(eq(costApplications.id, id));
-      if (!a) return res.status(404).json({ message: 'Pay app not found' });
+      if (!a) return { error: 'Pay app not found', status: 404 };
       const [c] = await db.select().from(costContracts).where(eq(costContracts.id, a.contractId));
       const [project] = await db.select().from(costProjects).where(eq(costProjects.id, c.projectId));
       const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
@@ -2114,7 +2116,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(waiverDocIds)))).filter((d) => !docs.some((x) => x.id === d.id))
         : [];
       const all = [...docs, ...extra];
-      if (!all.length) return res.status(404).json({ message: 'No files on this pay app yet.' });
+      if (!all.length) return { error: 'No files on this pay app yet.', status: 404 };
 
       const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
       const nn = (n: number) => String(n).padStart(2, '0');
@@ -2131,11 +2133,8 @@ export function registerCostTrackingRoutes(app: Express): void {
         other: '5 Other',
       };
 
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="${zipName.replace(/"/g, '')}"`);
-      const zip = archiver('zip', { zlib: { level: 6 } });
-      zip.on('error', (err) => { console.error('[cost] package zip error', err); try { res.end(); } catch {} });
-      zip.pipe(res);
+      const folderName = safe(`${label} ${nn(dn.get(a.id)!)}`);
+      const write = async (zip: archiver.Archiver, root: string) => {
       const used = new Set<string>();
       const unique = (p: string) => {
         let out = p; let i = 2;
@@ -2163,7 +2162,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         } else {
           name = `${label} ${nn(dn.get(a.id)!)} - ${safe(d.originalName)}`;
         }
-        const zipPath = unique(`${folder[type] ?? folder.other}/${name}`);
+        const zipPath = unique(`${root}${folder[type] ?? folder.other}/${name}`);
         let buf: Buffer | null = null;
         if (d.storage === 'object') buf = await downloadFromObjectStorage(d.storageKey);
         else buf = await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
@@ -2196,9 +2195,72 @@ export function registerCostTrackingRoutes(app: Express): void {
         for (const r of earlier) contents.push(`  Pay App ${nn(r.appNumber)}  ${r.vendor}  ${money(r.conditionalAmount)}  ${r.status.toUpperCase()}`);
       }
       if (missing.length) contents.push('', 'Could not be included (file not found in storage):', ...missing.map((m) => `  ${m}`));
-      zip.append(contents.join('\r\n'), { name: '00 Contents.txt' });
+      zip.append(contents.join('\r\n'), { name: `${root}00 Contents.txt` });
+      };
+      return { zipName, folderName, write };
+    }
+  }
+
+  app.get('/api/cost-applications/:id/package', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const p = await preparePackage(id);
+      if ('error' in p) return res.status(p.status).json({ message: p.error });
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${p.zipName.replace(/"/g, '')}"`);
+      const zip = archiver('zip', { zlib: { level: 6 } });
+      zip.on('error', (err) => { console.error('[cost] package zip error', err); try { res.end(); } catch {} });
+      zip.pipe(res);
+      await p.write(zip, '');
       await zip.finalize();
     } catch (e) { if (!res.headersSent) fail(res, e, 'build the package'); }
+  });
+
+  /**
+   * Several pay apps' packages in one zip for the lender: a folder each ("Pay App 05/…"),
+   * each sorted the same way as a single package, with a contents sheet at the top.
+   */
+  app.get('/api/cost-projects/:id/packages', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [project] = await db.select().from(costProjects).where(eq(costProjects.id, id));
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const want = String(req.query.apps || '').split(',').map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
+      const rows = await db.select({ id: costApplications.id, contractId: costApplications.contractId, number: costApplications.number })
+        .from(costApplications).innerJoin(costContracts, eq(costContracts.id, costApplications.contractId)).where(eq(costContracts.projectId, id));
+      const ids = rows.filter((r) => !want.length || want.includes(r.id)).sort((x, y) => x.contractId - y.contractId || x.number - y.number).map((r) => r.id);
+      const ready: Array<{ zipName: string; folderName: string; write: (zip: archiver.Archiver, root: string) => Promise<void> }> = [];
+      const skipped: string[] = [];
+      for (const aid of ids) {
+        const p = await preparePackage(aid);
+        if ('error' in p) skipped.push(`${rows.find((r) => r.id === aid)?.number ?? aid}: ${p.error}`); else ready.push(p);
+      }
+      if (!ready.length) return res.status(404).json({ message: 'None of those pay apps have files yet.' });
+      const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
+      const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
+      const span = ready.length === 1 ? ready[0].folderName : `${ready[0].folderName} to ${ready[ready.length - 1].folderName.replace(/^Pay App |^Invoice /, '')}`;
+      const zipName = ready.length === 1 ? ready[0].zipName : safe([project.tenantName, property?.name, 'Pay App Packages', span].filter(Boolean).join(' - ')) + '.zip';
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${zipName.replace(/"/g, '')}"`);
+      const zip = archiver('zip', { zlib: { level: 6 } });
+      zip.on('error', (err) => { console.error('[cost] packages zip error', err); try { res.end(); } catch {} });
+      zip.pipe(res);
+      if (ready.length === 1) await ready[0].write(zip, '');
+      else {
+        const used = new Set<string>();
+        for (const p of ready) {
+          let f = p.folderName; let i = 2;
+          while (used.has(f)) f = `${p.folderName} (${i++})`;
+          used.add(f);
+          await p.write(zip, `${f}/`);
+        }
+        zip.append([zipName.replace(/\.zip$/, ''), '', 'One folder per pay app, each with its own contents sheet:', ...ready.map((p) => `  ${p.folderName}`),
+          ...(skipped.length ? ['', 'Left out (no files yet):', ...skipped.map((x) => `  Pay App ${x}`)] : [])].join('\r\n'), { name: '00 Contents.txt' });
+      }
+      await zip.finalize();
+    } catch (e) { if (!res.headersSent) fail(res, e, 'build the packages'); }
   });
 
   // ---- documents

@@ -4,13 +4,13 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useMemo, useState } from 'react';
-import { waiversByPayApp, paidOfFrom } from '@shared/cost-waivers';
+import { waiversByPayApp, paidOfFrom, payAppLog } from '@shared/cost-waivers';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Printer, FileText, Trash2, ChevronRight } from 'lucide-react';
+import { Printer, FileText, Trash2, ChevronRight, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
 import { FundingSummary } from './funding-summary';
@@ -94,6 +94,8 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         </p>
       </Card>
       <WaiverLogCard b={b} projectId={projectId} open={open} />
+      <PayAppLogCard b={b} projectId={projectId} open={open} />
+      <LenderPackagesCard b={b} projectId={projectId} />
       </div>
 
       <div className="space-y-2">
@@ -395,6 +397,129 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
             </div>
           ))}
           <p className="text-xs text-gray-500">None ticked prints every pay app too. Open a pay app's Package to add or check off waivers.</p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Pay Application Log: the GC's and each sub's pay app per pay app — line 8 vs the conditional, and the file. */
+function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [issues, setIssues] = useState(false);
+  const groups = useMemo(() => payAppLog(
+    b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
+    b.waivers, b.documents, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
+    (aid) => b.applications.find((a) => a.id === aid)?.g702.currentPaymentDue ?? null), [b.applications, b.waivers, b.documents, b.contracts]);
+  const nn = (n: number) => String(n).padStart(2, '0');
+  const done = groups.filter((g) => g.complete).length;
+  const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const url = () => {
+    const q = new URLSearchParams();
+    if (picked.size && picked.size < groups.length) q.set('apps', Array.from(picked).join(','));
+    if (issues) q.set('issues', '1');
+    const s = q.toString();
+    return `/api/reports/pay-app-log/${projectId}${s ? `?${s}` : ''}`;
+  };
+  return (
+    <Card id="payapp-log" title="Pay Application Log" what="The GC's and each sub's pay application behind every pay app: payment due (line 8) against the vendor's conditional, and whether the file is in. Then the same by vendor across the job."
+          summary={groups.length ? `${done} of ${groups.length} Complete` : undefined}
+          action={<Button variant="outline" className="h-9" onClick={() => open(url())}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!groups.length ? (
+        <p className="text-sm text-gray-700">Nothing yet — attach pay applications and enter amounts in each pay app's Package (Pay Applications section).</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-4 flex-wrap text-sm">
+            <span className="text-gray-700">{picked.size ? `${picked.size} of ${groups.length} pay apps selected` : `All ${groups.length} pay apps`}</span>
+            <span className="flex items-center gap-3 text-xs">
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.map((g) => g.appId)))}>Select All</button>
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.filter((g) => g.complete).map((g) => g.appId)))}>Select Complete</button>
+              <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(groups.filter((g) => !g.complete).map((g) => g.appId)))}>Select Incomplete</button>
+              {picked.size > 0 && <button className="text-gray-600 hover:underline" onClick={() => setPicked(new Set())}>Clear</button>}
+            </span>
+            <label className="flex items-center gap-2 cursor-pointer ml-auto">
+              <input type="checkbox" className="h-4 w-4" checked={issues} onChange={(e) => setIssues(e.target.checked)} /> Issues Only
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {groups.map((g) => {
+              const on = picked.has(g.appId);
+              return (
+                <label key={g.appId} className={`flex items-center gap-2 border rounded-md px-2.5 py-1.5 text-sm cursor-pointer ${on ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                  <input type="checkbox" className="h-4 w-4" checked={on} onChange={() => flip(g.appId)} />
+                  Pay App {nn(g.appNumber)}
+                  {g.complete && <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Complete</span>}
+                  {g.missingFiles > 0 && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">{g.missingFiles} Missing</span>}
+                  {g.mismatched > 0 && <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1">{g.mismatched} Don't Match</span>}
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-500">None ticked prints every pay app. Attach files and enter amounts in each pay app's Package.</p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Pay app packages as zips for the lender: one, several, or all — a folder per pay app. */
+function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; projectId: number }) {
+  const { toast } = useToast();
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const nn = (n: number) => String(n).padStart(2, '0');
+  const apps = [...b.applications].sort((x, y) => x.contractId - y.contractId || x.number - y.number);
+  const fileCount = (aid: number) => b.documents.filter((d) => d.applicationId === aid).length
+    + b.waivers.filter((w) => w.applicationId === aid && w.documentId && !b.documents.some((d) => d.id === w.documentId && d.applicationId === aid)).length;
+  const withFiles = apps.filter((a) => fileCount(a.id) > 0);
+  const contracts = Array.from(new Set(apps.map((a) => a.contractId)));
+  const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const download = async () => {
+    const ids = Array.from(picked);
+    if (!ids.length) return;
+    setBusy(true);
+    try {
+      const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
+      const res = await fetch(`/api/cost-projects/${projectId}/packages?apps=${ids.join(',')}`, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
+      if (!res.ok) { toast({ title: 'No Package', description: (await res.json().catch(() => ({})))?.message, variant: 'destructive' }); return; }
+      const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || 'packages.zip';
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e: any) { toast({ title: 'Download Failed', description: e?.message, variant: 'destructive' }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Card id="lender-packages" title="Lender Packages" what="Download pay app packages as a zip — one pay app, or several in one zip with a folder each (pay applications, conditional and unconditional waivers, invoices), each with a contents sheet."
+          summary={`${withFiles.length} of ${apps.length} pay apps have files`}
+          action={<Button className="h-9" disabled={!picked.size || busy} onClick={download}><Download className="h-4 w-4 mr-1" /> {busy ? 'Building…' : picked.size > 1 ? `Download Zip (${picked.size})` : 'Download Zip'}</Button>}>
+      {!apps.length ? <p className="text-sm text-gray-700">No pay apps yet.</p> : (
+        <>
+          <div className="flex items-center gap-3 flex-wrap text-xs">
+            <span className="text-sm text-gray-700">{picked.size ? `${picked.size} selected` : 'Tick the pay apps to send'}</span>
+            <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set(withFiles.map((a) => a.id)))}>Select All</button>
+            {withFiles.length > 0 && <button className="text-blue-700 hover:underline" onClick={() => setPicked(new Set([withFiles[withFiles.length - 1].id]))}>Latest Only</button>}
+            {picked.size > 0 && <button className="text-gray-600 hover:underline" onClick={() => setPicked(new Set())}>Clear</button>}
+          </div>
+          {contracts.map((cid) => (
+            <div key={cid} className="space-y-1">
+              {contracts.length > 1 && <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">{b.contracts.find((c) => c.id === cid)?.counterparty}</div>}
+              <div className="flex flex-wrap gap-2">
+                {apps.filter((a) => a.contractId === cid).map((a) => {
+                  const n = fileCount(a.id); const on = picked.has(a.id);
+                  return (
+                    <label key={a.id} className={`flex items-center gap-2 border rounded-md px-2.5 py-1.5 text-sm ${n ? 'cursor-pointer' : 'opacity-50'} ${on ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                           title={n ? `${n} file${n === 1 ? '' : 's'}` : 'No files on this pay app yet'}>
+                      <input type="checkbox" className="h-4 w-4" disabled={!n} checked={on} onChange={() => flip(a.id)} />
+                      {a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {nn(a.docNumber)}
+                      <span className="text-[10px] text-gray-500">{n} file{n === 1 ? '' : 's'}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-gray-500">Pay apps with no files can't be ticked. Each folder is the same as that pay app's own Download Package.</p>
         </>
       )}
     </Card>

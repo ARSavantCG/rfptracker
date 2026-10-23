@@ -399,7 +399,9 @@ export function renderCostPositionHtml(input: {
   /** "Nova Construction #300088" or "Direct costs only" when filtered; empty for everything. */
   scope?: string;
   /** Each pay app checked against the contractor's G702. */
-  checks?: Map<number, { status: string; dueDiff: number | null } | undefined>;
+  checks?: Map<number, { status: string; dueDiff: number | null; theirs?: number | null } | undefined>;
+  /** Payments made on each pay app (on or before the as-of date). */
+  payments?: Map<number, Array<{ paidDate: string; method?: string | null; reference?: string | null; amount: number }>>;
   /** Budget line names, for the direct costs listed. */
   lineNames?: Map<string, string>;
   generatedBy?: string | null;
@@ -408,47 +410,58 @@ export function renderCostPositionHtml(input: {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
   if (input.scope) info.push({ label: "Contract", value: input.scope });
   info.push({ label: "As Of", value: longDate(p.asOf) });
+  // Our line 8 against the contractor's own G702 line 8 (or every line, when the G702 was entered in full).
   const checkCell = (id: number) => {
     const c = input.checks?.get(id);
-    if (!c || c.status === "none") return `<td class="muted">Not checked</td>`;
-    if (c.status === "match") return `<td style="color:#15803d">✓ Matches</td>`;
-    return `<td class="neg">⚠ Off${c.dueDiff != null ? ` ${money2(Math.abs(c.dueDiff))}` : ""}</td>`;
+    if (!c || c.status === "none") return `<td class="l muted">Not Entered</td>`;
+    if (c.status === "match") return `<td class="l" style="color:#15803d">✓ Matches</td>`;
+    return `<td class="l neg">⚠ Off${c.dueDiff != null ? ` ${money2(Math.abs(c.dueDiff))}` : ""}${c.theirs != null ? `<div style="font-size:9px;font-weight:400">G702 ${money2(c.theirs)}</div>` : ""}</td>`;
   };
   const name = new Map(input.contracts.map((c) => [c.id, c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : "")]));
   const t = p.totals;
-
-  const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
-    <td class="num">${fmt(c.contractSum)}${c.pendingChanges ? `<div style="font-size:9px;color:#b45309">+ ${money2(c.pendingChanges)} pending CO</div>` : ""}</td>${cell(c.billedToDate)}<td class="num">${fmtPct(c.pctComplete)}</td>${cell(c.retainageHeld)}
-    ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("")
-    + (p.direct && p.direct.count > 0 ? `<tr><td>Direct costs — no contract <span style="color:#6b7280">(${p.direct.count}, listed below)</span></td>
-    ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.00%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
-
-  // Costs with no contract: spelled out one by one, under headings that fit them.
+  // How something was paid: Wire 12345, Card 7026.
   const METHOD: Record<string, string> = { card: "Card", check: "Check", ach: "ACH", wire: "Wire", other: "Other" };
   const paidBy = (d: { method?: string | null; reference?: string | null }) => {
     const m = d.method ? METHOD[d.method] || d.method : "";
     const ref = d.reference || "";
     return m && ref.toLowerCase().startsWith(m.toLowerCase()) ? ref : [m, ref].filter(Boolean).join(" ");
   };
+  const shortDate = (iso: string) => { const d = new Date(String(iso).slice(0, 10) + "T12:00:00"); return isNaN(+d) ? String(iso) : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
+  const paidCell = (id: number) => {
+    const ps = input.payments?.get(id) ?? [];
+    if (!ps.length) return `<td class="l"></td>`;
+    return `<td class="l">${ps.map((x) => `<div>${escapeHtml(shortDate(x.paidDate))}${paidBy(x) ? ` · ${escapeHtml(paidBy(x))}` : ""}${ps.length > 1 ? ` <span class="muted">(${money2(x.amount)})</span>` : ""}</div>`).join("")}</td>`;
+  };
+
+  const contractRows = p.contracts.map((c) => `<tr><td>${escapeHtml(name.get(c.contractId) || "")}</td>
+    <td class="num">${fmt(c.contractSum)}${c.pendingChanges ? `<div style="font-size:9px;color:#b45309">+ ${money2(c.pendingChanges)} pending CO</div>` : ""}</td>${cell(c.billedToDate)}<td class="num">${fmtPct(c.pctComplete)}</td>${cell(c.retainageHeld)}
+    ${cell(c.netBilled)}${cell(c.paid)}${cell(c.owed, c.owed > 0.005 || c.owed < -0.005 ? "neg" : "")}${cell(c.leftToPay)}</tr>`).join("")
+    + (p.direct && p.direct.count > 0 ? `<tr><td>Direct Costs <span style="color:#6b7280">(${p.direct.count}, listed below)</span></td>
+    ${cell(p.direct.total)}${cell(p.direct.total)}<td class="num">100.00%</td>${cell(0)}${cell(p.direct.total)}${cell(p.direct.total)}${cell(0)}${cell(0)}</tr>` : "");
+
   const directRows = p.direct?.rows ?? [];
   const directTable = directRows.length === 0 ? "" : `
-  <h3 class="sec">Direct Costs (No Contract)</h3>
+  <h3 class="sec">Direct Costs</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">Budget Line</th><th class="l">Paid By</th><th>Amount</th></tr></thead><tbody>
     ${directRows.map((d) => `<tr><td class="l">${escapeHtml(longDate(d.date))}</td><td class="l">${escapeHtml(d.vendor || "")}</td><td class="l">${escapeHtml(d.description || "")}</td>
       <td class="l">${escapeHtml(d.key ? input.lineNames?.get(d.key) ?? "Removed line" : "Unallocated")}</td><td class="l">${escapeHtml(paidBy(d))}</td>${cell(d.amount)}</tr>`).join("")}
-    <tr class="total"><td class="l" colspan="5">Total direct costs</td>${cell(p.direct.total)}</tr>
+    <tr class="total"><td class="l" colspan="5">Total Direct Costs</td>${cell(p.direct.total)}</tr>
   </tbody></table>
   <div class="legend">Paid directly, with no contract or pay app behind them — billed and paid in one go, so nothing is owed or held.</div>`;
 
+  // Grouped under each contract, so the columns start at the left instead of after a repeated name.
+  const byContract = new Map<number, typeof p.applications[number][]>();
+  for (const a of p.applications) byContract.set(a.contractId, [...(byContract.get(a.contractId) ?? []), a]);
   const appRows = p.applications.length === 0
     ? `<tr><td colspan="7" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
-    : p.applications.map((a) => `<tr><td>${escapeHtml(name.get(a.contractId) || "")}</td><td>${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}</td>
-      <td>${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}${checkCell(a.applicationId)}</tr>`).join("");
+    : Array.from(byContract.entries()).map(([cid, list]) => `<tr class="grp"><td colspan="7" class="l">${escapeHtml(name.get(cid) || "")}</td></tr>`
+      + list.map((a: typeof p.applications[number]) => `<tr><td class="l">${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}</td>
+      <td class="l">${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}${paidCell(a.applicationId)}${checkCell(a.applicationId)}</tr>`).join("")).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Pay App Status</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
-  ${reportHeaderHtml({ title: "Pay App Status", eyebrow: "Cost Report", info })}
+  ${reportHeaderHtml({ title: "Pay App Status", info })}
   <table class="t"><thead><tr>
     <th>Contract</th><th>Contract Sum</th><th>Billed to Date</th><th>% Billed</th><th>Retainage Held</th>
     <th>Net Billed</th><th>Paid</th><th>Owed</th><th>Left to Pay</th></tr></thead><tbody>
@@ -460,9 +473,10 @@ export function renderCostPositionHtml(input: {
     Left to Pay = contract sum less paid (owed + retainage + work not yet billed). Approved change orders only.</div>
 
   <h3 class="sec">Pay Apps &amp; Invoices</h3>
-  <table class="t"><thead><tr><th>Contract</th><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">vs Contractor G702</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">Paid On</th><th class="l">G702 Check</th></tr></thead><tbody>
     ${appRows}
   </tbody></table>
+  <div class="legend">Payment Due = G702 line 8 as we calculate it. G702 Check compares it with the contractor's own line 8, entered on the pay app or in its lien waiver package. Not Entered = the contractor's number isn't in yet.</div>
   ${directTable}
   ${cmFeeTable(input.cmFee)}
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
@@ -1218,7 +1232,21 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const one = /^\d+$/.test(want) ? b.contracts.find((c) => c.id === Number(want)) : null;
       if (/^\d+$/.test(want) && !one) return res.status(404).json({ message: "Contract not found" });
       const input = filterPositionInput(b.positionInput, want);
-      const checks = new Map(b.applications.map((a: any) => [a.id, a.check]));
+      // The contractor's line 8: the whole G702 when entered, else the number typed in the lien waiver package.
+      const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
+      const checks = new Map(b.applications.map((a: any) => {
+        if (a.check && a.check.status !== "none") return [a.id, { ...a.check, theirs: a.contractorG702?.currentPaymentDue ?? null }];
+        const g = gcPaymentDue(a, b.waivers, cname(a.contractId));
+        if (g.source !== "typed" || g.due == null || !a.g702) return [a.id, { status: "none", dueDiff: null }];
+        const diff = Math.round((a.g702.currentPaymentDue - g.due) * 100) / 100;
+        return [a.id, { status: Math.abs(diff) < 0.005 ? "match" : "off", dueDiff: diff, theirs: g.due }];
+      }));
+      const payDay = (d: any) => (d instanceof Date ? d.toISOString() : String(d)).slice(0, 10);
+      const payments = new Map<number, Array<{ paidDate: string; method?: string | null; reference?: string | null; amount: number }>>();
+      for (const x of [...(b.payments as any[])].sort((m, n) => payDay(m.paidDate).localeCompare(payDay(n.paidDate)))) {
+        if (!x.applicationId || payDay(x.paidDate) > asOf) continue;
+        payments.set(x.applicationId, [...(payments.get(x.applicationId) ?? []), { paidDate: payDay(x.paidDate), method: x.method, reference: x.reference, amount: x.amount }]);
+      }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCostPositionHtml({
         project: b.project, ...(await propertyFacts(b.project)),
@@ -1228,6 +1256,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         cmFee: asOf === todayEastern() && !one && want !== "direct" ? b.cmFee : null,
         scope: one ? one.counterparty + (one.contractNumber ? ` #${one.contractNumber}` : "") : want === "direct" ? "Direct costs only" : "",
         checks,
+        payments,
         lineNames: new Map(((b.project.baseline || []) as any[]).map((x) => [x.key, x.description])),
         generatedBy: generatedByName((req as any).user),
       }));

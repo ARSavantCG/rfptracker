@@ -130,7 +130,7 @@ export function reportHeaderHtml(opts: ReportShellOptions): string {
     <div class="rs-top">
       ${logo ? `<img class="rs-logo" src="${logo}" alt="${escapeHtml(COMPANY_NAME)}" />` : `<strong>${escapeHtml(COMPANY_NAME)}</strong>`}
     </div>
-    ${opts.eyebrow ? `<div class="rs-eyebrow">${escapeHtml(opts.eyebrow)}</div>` : ''}
+    ${/* No eyebrow above the banner on any report — the blue bar says it (Adolfo, 2026-10-22). */ ''}
     <div class="rs-banner">${escapeHtml(opts.title)}</div>
     <hr class="rs-rule" />
     ${info.length ? `<dl class="rs-info">${info.map((r) =>

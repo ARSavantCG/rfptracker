@@ -13,7 +13,7 @@
  *         That's where the real error shows: which line, and by how much.
  * Differences should all be zero; anything else is shaded.
  */
-import { lineProgress } from '@shared/cost-tracking';
+import { lineProgress, carryForwardCheck } from '@shared/cost-tracking';
 import { threeWayCheck, type Waiver } from '@shared/cost-waivers';
 import { matchRows, workOfRow, type ReadRow } from '@shared/cost-payapp-read';
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
@@ -185,6 +185,15 @@ export function renderG702CompareSection(x: CompareInput): string {
     })()}${flags.length ? `<ul style="margin:6px 0 0 18px">${flags.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}</div>`
     : `<div class="verdict" style="background:#f9fafb;border:1px solid #e5e7eb;color:#4b5563;padding:8px 10px;border-radius:6px">The contractor's G702 isn't entered for this pay app yet: type their line 8 (and 3, 4, 5, 7) on the pay app, or in its lien waiver package, to compare.</div>`;
 
+  // Their two G702s should chain (line 4 less last pay app's = this period; line 7 = last line 6).
+  const prevApp = x.apps.filter((a) => a.contractId === contract.id && a.number < app.number).sort((a, b) => b.number - a.number)[0];
+  const cf = prevApp ? carryForwardCheck(theirs, prevApp.contractorG702, g, prevApp.g702) : null;
+  const pn = prevApp ? nn(prevApp.docNumber ?? prevApp.number) : '';
+  const cfBox = cf && cf.status !== 'none' ? `<div class="verdict" style="background:${cf.status === 'off' ? '#fffbeb;border:1px solid #fcd34d;color:#78350f' : '#f0fdf4;border:1px solid #86efac;color:#166534'};padding:6px 10px;border-radius:6px;margin-top:6px">
+      <strong>Carry-forward check, their G702 against their Pay App ${pn}:</strong>
+      ${cf.implied != null ? ` their line 4 less their Pay App ${pn} line 4 is ${money2(cf.implied)}${cf.period != null ? `; work this period on the G703 lines is ${money2(cf.period)}${Math.abs(cf.periodDiff ?? 0) >= 0.005 ? ` <strong>(off ${money2(Math.abs(cf.periodDiff!))})</strong>` : ' ✓'}` : ''}.` : ''}
+      ${cf.line7 != null && cf.prevLine6 != null ? ` Their line 7 is ${money2(cf.line7)}; their Pay App ${pn} line 6 is ${money2(cf.prevLine6)}${Math.abs(cf.line7Diff ?? 0) >= 0.005 ? ` <strong>(off ${money2(Math.abs(cf.line7Diff!))})</strong>` : ' ✓'}.` : ''}
+      ${cf.status === 'off' ? ` Their two G702s don't chain: one of them is wrong.` : ''}</div>` : '';
   const shown = lineDiffs.slice(0, 12);
   const lineNote = g703
     ? (lineDiffs.length ? `<div class="verdict" style="background:#fff7ed;border:1px solid #fdba74;color:#7c2d12;padding:8px 10px;border-radius:6px;margin-top:6px"><strong>Line by line against their G703: ${lineDiffs.length} line${lineDiffs.length === 1 ? '' : 's'} differ${lineDiffs.length === 1 ? 's' : ''}.</strong><ul style="margin:4px 0 0 18px">${shown.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}${lineDiffs.length > shown.length ? `<li>and ${lineDiffs.length - shown.length} more, shaded below</li>` : ''}</ul></div>`
@@ -193,6 +202,7 @@ export function renderG702CompareSection(x: CompareInput): string {
   return `
   <h2 style="font-size:15px;margin:14px 0 6px">${escapeHtml(contract.counterparty)} — ${escapeHtml(label)}${app.invoiceNumber ? ` (${escapeHtml(app.invoiceNumber)})` : ''}${app.periodEnd ? ` · Period To ${escapeHtml(longDate(app.periodEnd))}` : ''}</h2>
   ${verdict}
+  ${cfBox}
   ${lineNote}
   <h3 class="sec">G702 — Application Summary</h3>
   <table class="t"><thead><tr><th class="l" style="width:28px">Line</th><th class="l"></th><th>Ours</th><th>Contractor's</th><th>Difference</th></tr></thead><tbody>${g702Rows}${condRow}</tbody></table>${lineTable}

@@ -674,3 +674,39 @@ export function g702Check(ours: G702, theirs: ContractorG702 | null | undefined)
   const first = off.find((l) => l.key !== 'currentPaymentDue') ?? off[0] ?? null;
   return { lines, status, dueDiff: due.diff, first };
 }
+
+/**
+ * Carry-forward check on the contractor's own G702s (Adolfo, 2026-10-23): their line 4
+ * on this pay app less their line 4 on the previous one should be the work billed this
+ * period; and their line 7 should be their previous line 6 (line 4 less line 5). When
+ * they don't chain, one of their two G702s is wrong, whatever the G703 lines say.
+ */
+export interface CarryForward {
+  /** Their line 4 now less their line 4 last pay app. */
+  implied: number | null;
+  /** Work billed this period on the G703 lines entered (ours: line 4 now less line 4 last pay app). */
+  period: number | null;
+  periodDiff: number | null;
+  /** Their line 7 now, and their line 6 last pay app. */
+  line7: number | null;
+  prevLine6: number | null;
+  line7Diff: number | null;
+  status: 'ok' | 'off' | 'none';
+}
+export function carryForwardCheck(
+  theirs: ContractorG702 | null | undefined,
+  prevTheirs: ContractorG702 | null | undefined,
+  oursNow: { completedAndStored: number } | null | undefined,
+  oursPrev: { completedAndStored: number } | null | undefined,
+): CarryForward {
+  const t4 = theirs?.completedAndStored ?? null, p4 = prevTheirs?.completedAndStored ?? null, p5 = prevTheirs?.retainage ?? null;
+  const implied = t4 != null && p4 != null ? round2(t4 - p4) : null;
+  const period = oursNow && oursPrev ? round2(oursNow.completedAndStored - oursPrev.completedAndStored) : oursNow && !oursPrev ? round2(oursNow.completedAndStored) : null;
+  const periodDiff = implied != null && period != null ? round2(implied - period) : null;
+  const line7 = theirs?.previousCertificates ?? null;
+  const prevLine6 = p4 != null && p5 != null ? round2(p4 - p5) : null;
+  const line7Diff = line7 != null && prevLine6 != null ? round2(line7 - prevLine6) : null;
+  const off = (d: number | null) => d != null && Math.abs(d) >= 0.005;
+  const status = periodDiff == null && line7Diff == null ? 'none' : off(periodDiff) || off(line7Diff) ? 'off' : 'ok';
+  return { implied, period, periodDiff, line7, prevLine6, line7Diff, status };
+}

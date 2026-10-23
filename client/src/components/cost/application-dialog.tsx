@@ -20,7 +20,7 @@ import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle, ChevronDown,
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, contractorG703From, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
-import { g702For, lineProgress, newAppNumbers, spreadCents, retainageCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
+import { g702For, lineProgress, newAppNumbers, spreadCents, retainageCents, carryForwardCheck, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
 import { threeWayCheck, type Waiver } from '@shared/cost-waivers';
 import {
@@ -690,6 +690,25 @@ export function ApplicationDialog({
                               : tw.oursOff != null ? `⚠ Ours is ${money(tw.oursOff)} higher than theirs: check the amounts entered.`
                               : "⚠ The contractor's G702 and the conditional don't agree with each other. Check which one the contractor revised.")}
                           </div>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      // Their two G702s should chain: their line 4 less last pay app's = this period's work; line 7 = last line 6.
+                      const prevApp = [...mine].filter((a) => a.number < thisNumber).sort((a, b) => b.number - a.number)[0];
+                      if (!prevApp) return null;
+                      const cf = carryForwardCheck(theirsNum as any, prevApp.contractorG702, preview, prevApp.g702);
+                      if (cf.status === 'none') return null;
+                      const pn = String(prevApp.docNumber).padStart(3, '0');
+                      const bad = cf.status === 'off';
+                      return (
+                        <div className={`w-full rounded-md border p-2 ${bad ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-green-300 bg-green-50 text-green-900'}`}>
+                          <div className="font-semibold">Carry-Forward Check: Their G702 Against Their Pay App {pn}</div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5 mt-1 tabular-nums">
+                            {cf.implied != null && <div>Their line 4 less their Pay App {pn} line 4: <strong>{money(cf.implied)}</strong>{cf.period != null && <> · work this period on the lines: <strong>{money(cf.period)}</strong>{Math.abs(cf.periodDiff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.periodDiff!))})</span>}</>}</div>}
+                            {cf.line7 != null && cf.prevLine6 != null && <div>Their line 7: <strong>{money(cf.line7)}</strong> · their Pay App {pn} line 6: <strong>{money(cf.prevLine6)}</strong>{Math.abs(cf.line7Diff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.line7Diff!))})</span>}</div>}
+                          </div>
+                          <div className="mt-1">{bad ? `⚠ Their G702s don't chain: this one and Pay App ${pn}'s disagree. One of them is wrong; the one that matches the G703 lines is usually right.` : `✓ Their G702 carries forward from Pay App ${pn}.`}</div>
                         </div>
                       );
                     })()}

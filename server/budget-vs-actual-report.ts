@@ -25,7 +25,7 @@ import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from
 import { fmtPct } from "@shared/format";
 import { CO_STAGES } from "@shared/co-routing";
 import { coLog, type CoLogRow } from "@shared/co-log";
-import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
+import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -400,7 +400,7 @@ export function renderCostPositionHtml(input: {
   /** "Nova Construction #300088" or "Direct costs only" when filtered; empty for everything. */
   scope?: string;
   /** Each pay app checked against the contractor's G702. */
-  checks?: Map<number, { status: string; dueDiff: number | null; theirs?: number | null } | undefined>;
+  checks?: Map<number, { status: string; dueDiff: number | null; theirs?: number | null; three?: ThreeWay } | undefined>;
   /** Payments made on each pay app (on or before the as-of date). */
   payments?: Map<number, Array<{ paidDate: string; method?: string | null; reference?: string | null; amount: number }>>;
   /** Budget line names, for the direct costs listed. */
@@ -415,8 +415,10 @@ export function renderCostPositionHtml(input: {
   const checkCell = (id: number) => {
     const c = input.checks?.get(id);
     if (!c || c.status === "none") return `<td class="l muted">Not Entered</td>`;
-    if (c.status === "match") return `<td class="l" style="color:#15803d">✓ Matches</td>`;
-    return `<td class="l neg">⚠ Off${c.dueDiff != null ? ` ${money2(Math.abs(c.dueDiff))}` : ""}${c.theirs != null ? `<div style="font-size:9px;font-weight:400">G702 ${money2(c.theirs)}</div>` : ""}</td>`;
+    const tw = (c as any).three as ThreeWay | undefined;
+    if (c.status === "match") return `<td class="l" style="color:#15803d">✓ ${tw && tw.status === "match" ? "All 3 Match" : "Matches"}</td>`;
+    const parts = tw ? [tw.contractor != null ? `G702 ${money2(tw.contractor)}` : "", tw.conditional != null ? `Conditional ${money2(tw.conditional)}` : ""].filter(Boolean).join(" · ") : c.theirs != null ? `G702 ${money2(c.theirs)}` : "";
+    return `<td class="l neg">⚠ Off${c.dueDiff != null ? ` ${money2(Math.abs(c.dueDiff))}` : ""}${parts ? `<div style="font-size:9px;font-weight:400">${parts}</div>` : ""}</td>`;
   };
   const name = new Map(input.contracts.map((c) => [c.id, c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : "")]));
   const t = p.totals;
@@ -477,7 +479,7 @@ export function renderCostPositionHtml(input: {
   <table class="t"><thead><tr><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">Paid On</th><th class="l">G702 Check</th></tr></thead><tbody>
     ${appRows}
   </tbody></table>
-  <div class="legend">Payment Due = G702 line 8 as we calculate it. G702 Check compares it with the contractor's own line 8, entered on the pay app or in its lien waiver package. Not Entered = the contractor's number isn't in yet.</div>
+  <div class="legend">Payment Due = G702 line 8 as we calculate it from the G703 lines entered. G702 Check compares three numbers: ours, the contractor's own line 8 (entered on the pay app or in its lien waiver package), and the GC's conditional waiver. Not Entered = theirs aren't in yet. When ours is lower, lines are missing, most often change order work billed that period.</div>
   ${directTable}
   ${cmFeeTable(input.cmFee)}
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
@@ -1294,11 +1296,10 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       // The contractor's line 8: the whole G702 when entered, else the number typed in the lien waiver package.
       const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
       const checks = new Map(b.applications.map((a: any) => {
-        if (a.check && a.check.status !== "none") return [a.id, { ...a.check, theirs: a.contractorG702?.currentPaymentDue ?? null }];
-        const g = gcPaymentDue(a, b.waivers, cname(a.contractId));
-        if (g.source !== "typed" || g.due == null || !a.g702) return [a.id, { status: "none", dueDiff: null }];
-        const diff = Math.round((a.g702.currentPaymentDue - g.due) * 100) / 100;
-        return [a.id, { status: Math.abs(diff) < 0.005 ? "match" : "off", dueDiff: diff, theirs: g.due }];
+        // Three-way: ours (from the G703 lines), the contractor's G702 line 8, the GC's conditional.
+        const tw = threeWayCheck(a, b.waivers, cname(a.contractId));
+        const theirs = tw.contractor ?? tw.conditional;
+        return [a.id, { status: tw.status === 'partial' ? 'match' : tw.status, dueDiff: tw.oursOff ?? (theirs != null && tw.ours != null ? Math.round((tw.ours - theirs) * 100) / 100 : null), theirs, three: tw }];
       }));
       const payDay = (d: any) => (d instanceof Date ? d.toISOString() : String(d)).slice(0, 10);
       const payments = new Map<number, Array<{ paidDate: string; method?: string | null; reference?: string | null; amount: number }>>();

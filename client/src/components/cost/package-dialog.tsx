@@ -18,7 +18,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { coLog, cosOnPayApp } from '@shared/co-log';
 import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, fundingNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
-import { fmtMoneyText } from '@shared/format';
+import { fmtMoneyText, parseAmount } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
 import { money, projectKey, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
@@ -606,7 +606,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <div className="flex gap-2 justify-end">
                     <Button size="sm" variant="ghost" className="h-7" onClick={() => setNewC(null)}>Cancel</Button>
                     <Button size="sm" className="h-7" disabled={!newC.vendor.trim() || busy}
-                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: newC.vendor, amount: newC.amount.replace(/,/g, '') }), 'Conditional added')) setNewC({ vendor: '', amount: '' }); }}>
+                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: newC.vendor, amount: (Number.isFinite(parseAmount(newC.amount)) ? String(parseAmount(newC.amount)) : newC.amount.replace(/,/g, '')) }), 'Conditional added')) setNewC({ vendor: '', amount: '' }); }}>
                       Add
                     </Button>
                   </div>
@@ -686,7 +686,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <div className="flex gap-2 justify-end">
                     <Button size="sm" variant="ghost" className="h-7" onClick={() => setNewU(null)}>Cancel</Button>
                     <Button size="sm" className="h-7" disabled={!newU.vendor.trim() || busy}
-                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'unconditional', vendor: newU.vendor, amount: newU.amount.replace(/,/g, ''), received: true }), 'Unconditional added')) setNewU(null); }}>
+                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'unconditional', vendor: newU.vendor, amount: (Number.isFinite(parseAmount(newU.amount)) ? String(parseAmount(newU.amount)) : newU.amount.replace(/,/g, '')), received: true }), 'Unconditional added')) setNewU(null); }}>
                       Add
                     </Button>
                   </div>
@@ -813,7 +813,7 @@ function MissingRow({ m, busy, start, onAdd, onSkip }: { m: MissingConditional; 
       <td colSpan={4} className="px-2">
         <div className="flex gap-2 justify-end">
           <Button size="sm" variant="ghost" className="h-7 text-gray-600" disabled={busy} onClick={onSkip} title="They aren't being paid on this pay app">Not This Pay App</Button>
-          <Button size="sm" className="h-7" disabled={busy} onClick={() => onAdd(amount.replace(/[$,\s]/g, ''))}>Add</Button>
+          <Button size="sm" className="h-7" disabled={busy} onClick={() => onAdd((Number.isFinite(parseAmount(amount)) ? String(parseAmount(amount)) : amount.replace(/,/g, '')))}>Add</Button>
         </div>
       </td>
     </tr>
@@ -858,8 +858,8 @@ function OptMoney({ value, label, onSave }: { value: number | null; label: strin
   const [v, setV] = useState(value == null ? '' : fmtMoneyText(String(value)));
   return <MoneyInput className="h-8 text-right" value={v} aria-label={label} onValueChange={setV}
                      onBlur={(e) => {
-                       const t = e.target.value.replace(/[$,\s]/g, '');
-                       const n = t === '' ? null : parseFloat(t) || 0;
+                       const t = e.target.value.trim();
+                       const n = t === '' ? null : parseAmount(t) || 0;
                        if (n === null ? value !== null : value === null || Math.abs(n - value) >= 0.005) onSave(n);
                      }} />;
 }
@@ -868,7 +868,7 @@ function OptMoney({ value, label, onSave }: { value: number | null; label: strin
 function BlurMoney({ value, onSave }: { value: number; onSave: (v: number) => void }) {
   const [v, setV] = useState(fmtMoneyText(String(value)));
   return <MoneyInput className="h-8" value={v} aria-label="Amount" onValueChange={setV}
-                     onBlur={(e) => { const n = parseFloat(e.target.value.replace(/[$,\s]/g, '')) || 0; if (Math.abs(n - value) >= 0.005) onSave(n); }} />;
+                     onBlur={(e) => { const n = parseAmount(e.target.value) || 0; if (Math.abs(n - value) >= 0.005) onSave(n); }} />;
 }
 
 const short = (name: string) => (name.length > 34 ? `${name.slice(0, 32)}…` : name);

@@ -5,6 +5,7 @@
  * off against the bank or card statement.
  */
 import { useMemo, useState } from 'react';
+import { parseAmount } from '@shared/format';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +63,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   };
   const add = useMutation({
     mutationFn: async () => {
-      const row: any = await apiRequest(`/api/cost-projects/${projectId}/direct-costs`, 'POST', { ...form, amount: form!.amount.replace(/,/g, ''), key: form!.key || null });
+      const row: any = await apiRequest(`/api/cost-projects/${projectId}/direct-costs`, 'POST', { ...form, amount: (Number.isFinite(parseAmount(form!.amount)) ? String(parseAmount(form!.amount)) : form!.amount.replace(/,/g, '')), key: form!.key || null });
       if (receipt) await upload(receipt, { directCostId: row.id });
       return row;
     },

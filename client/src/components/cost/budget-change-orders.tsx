@@ -16,12 +16,12 @@ import { Plus, Trash2, Pencil, Paperclip, Link2, Printer, Unlink, ChevronDown, C
 import { useRolled } from '@/hooks/use-rolled';
 import { openDocument } from './contract-card';
 import { CO_REASONS, CO_UNASSIGNED_KEY, reasonLabel, defaultMarkups, type BudgetCO } from '@shared/cost-budget-approval';
-import { fmtMoneyText, fmtPctText } from '@shared/format';
+import { fmtMoneyText, fmtPctText, parseAmount } from '@shared/format';
 import { MoneyInput, PercentInput, SharePercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, todayIso, openReport, type ProjectBundle, type SovLineRow } from './types';
 
 const num = (s: string | number) => {
-  const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v : 0;
 };
 const r2 = (v: number) => Math.round(v * 100) / 100;

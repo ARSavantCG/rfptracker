@@ -17,7 +17,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Plus, Trash2, ClipboardPaste } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { parseSovPaste } from '@shared/cost-tracking';
-import { fmtMoneyText } from '@shared/format';
+import { fmtMoneyText, parseAmount } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { money, projectKey, type SovLineRow } from './types';
 
@@ -37,7 +37,7 @@ type Row = {
 };
 
 const num = (s: string) => {
-  const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v : 0;
 };
 let seq = 0;

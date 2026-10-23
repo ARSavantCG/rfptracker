@@ -16,7 +16,9 @@ import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, C
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput, MoneyInput } from './inputs';
 import { CoStageControls, CoHigherTag } from './co-routing';
-import { fmtPctText } from '@shared/format';
+import { ThreeWayBadge } from './three-way';
+import { threeWayCheck } from '@shared/cost-waivers';
+import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
@@ -26,8 +28,10 @@ import {
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen,
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen, waivers = [],
 }: {
+  /** For the three-way check on each pay app (the GC's conditional and typed line 8). */
+  waivers?: import('@shared/cost-waivers').Waiver[];
   contract: ContractRow;
   changeOrders: ChangeOrderRow[];
   lines: SovLineRow[];
@@ -118,7 +122,7 @@ export function ContractCard({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}/change-orders`, 'POST',
       {
         number: coForm!.number, title: coForm!.title, receivedDate: coForm!.received || undefined,
-        proposedAmount: coForm!.proposed === '' ? null : Number(coForm!.proposed.replace(/,/g, '')),
+        proposedAmount: coForm!.proposed === '' ? null : parseAmount(coForm!.proposed),
         daysAdded: coForm!.days === '' ? null : Number(coForm!.days),
         ...(coForm!.approvedOn === 'pending' ? { stage: 'review' } : { stage: 'approved', startAppNumber: Number(coForm!.approvedOn) }),
       }),
@@ -428,13 +432,19 @@ export function ContractCard({
                   <tr key={a.id} className="border-b last:border-0 hover:bg-blue-50/40 cursor-pointer"
                       onClick={() => onOpenApplication(contract, a, a.kind)}>
                     <td className="py-1.5 px-2 whitespace-nowrap">{a.kind === 'invoice' ? 'Inv' : 'App'} {no3(a.docNumber)}
-                      {(() => { const bdg = checkBadge(a); return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}{a.check.status === 'off' && a.check.dueDiff != null ? ` ${money(Math.abs(a.check.dueDiff))}` : ''}</span> : null; })()}</td>
+                      <ThreeWayBadge app={a} waivers={waivers} contractName={contract.counterparty} /></td>
                     <td className="py-1.5 px-2 text-gray-700">{a.invoiceNumber || '—'}</td>
                     <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">
                       {a.periodEnd ? new Date(a.periodEnd).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
                     <td className="py-1.5 px-2 text-right tabular-nums">{money(appTotal(a))}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums font-medium">{money(a.g702.currentPaymentDue)}</td>
+                    {(() => {
+                      // Payment due goes red when it disagrees with the contractor's G702 or the GC's conditional.
+                      const tw = threeWayCheck(a as any, waivers, contract.counterparty);
+                      return <td className={`py-1.5 px-2 text-right tabular-nums font-medium ${tw.status === 'off' ? 'text-red-700 bg-red-50' : ''}`} title={tw.status === 'off' ? `Doesn't match. ${tw.summary}` : tw.status !== 'none' ? tw.summary : undefined}>
+                        {tw.status === 'off' && <span className="mr-1">⚠</span>}{money(a.g702.currentPaymentDue)}
+                      </td>;
+                    })()}
                     {(() => {
                       const paid = Math.round(payments.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0) * 100) / 100;
                       const open = Math.round((a.g702.currentPaymentDue - paid) * 100) / 100;

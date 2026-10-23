@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Printer, ChevronRight } from 'lucide-react';
 import { positionAsOf, filterPositionInput } from '@shared/cost-position';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ThreeWayBadge } from './three-way';
+import { threeWayCheck } from '@shared/cost-waivers';
 import { money, signedMoney, shortDate, todayIso, openReport, checkBadge, type ProjectBundle, type ApplicationRow, type ContractRow } from './types';
 
 export function PositionView({ bundle, projectId, onPay, onPackage }: {
@@ -163,9 +165,14 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
                 <tr key={a.applicationId} className="border-b last:border-0">
                   <td className="px-3 py-1.5">{contractName.get(a.contractId)}</td>
                   <td className="px-3 py-1.5 whitespace-nowrap">{app?.kind === 'invoice' ? 'Inv' : 'App'} {no3(app?.docNumber ?? a.number)}
-                    {(() => { const bdg = app ? checkBadge(app) : null; return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}</span> : null; })()}</td>
+                    {app && <ThreeWayBadge app={app} waivers={bundle.waivers} contractName={contractName.get(a.contractId) ?? ''} />}</td>
                   <td className="px-3 py-1.5 text-gray-600">{app?.periodEnd ? shortDate(a.date) : <span className="text-amber-700" title="No period end entered — dated the day it was entered">{shortDate(a.date)}*</span>}</td>
-                  <D v={a.due} /><D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
+                  {(() => {
+                    const tw = app ? threeWayCheck(app as any, bundle.waivers, contractName.get(a.contractId) ?? '') : null;
+                    return tw?.status === 'off'
+                      ? <td className="px-3 py-1.5 text-right tabular-nums text-red-700 bg-red-50 font-medium" title={`Doesn't match. ${tw.summary}`}>⚠ {signedMoney(a.due)}</td>
+                      : <D v={a.due} />;
+                  })()}<D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
                   <td className="px-2 py-1 text-center whitespace-nowrap">
                     {app && contract && <Button variant="outline" size="sm" className="h-7 w-[104px]" onClick={() => onPay({ app, contract })}>Payments</Button>}
                   </td>

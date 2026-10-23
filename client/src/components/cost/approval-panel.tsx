@@ -9,6 +9,7 @@
  *   4. Confirm. That budget becomes the Original; later changes are revisions.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { parseAmount } from '@shared/format';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,14 +24,14 @@ import { matchLafLines, compareLaf, rollUp, type LafLine } from '@shared/cost-bu
 import { money, signedMoney, projectKey, shortDate, type ApprovalView } from './types';
 
 const toNum = (s: string) => {
-  const v = parseFloat(String(s).replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v : 0;
 };
 const r2 = (v: number) => Math.round(v * 100) / 100;
 /** "1466500" → "1,466,500.00". Leaves text it can't read alone. */
 const fmtMoneyInput = (s: string) => {
   if (!s.trim()) return '';
-  const v = parseFloat(s.replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : s;
 };
 

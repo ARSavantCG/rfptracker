@@ -21,12 +21,12 @@ import { apiRequest } from '@/lib/queryClient';
 import { useRolled } from '@/hooks/use-rolled';
 import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import { rollUp, transferNet, DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
-import { fmtMoneyText, fmtPctText } from '@shared/format';
+import { fmtMoneyText, fmtPctText, parseAmount } from '@shared/format';
 import { MoneyInput, PercentInput } from './inputs';
 import { money, signedMoney, projectKey, shortDate, BUCKET_LABEL, type ProjectBundle } from './types';
 
 const num = (s: string | number | null | undefined) => {
-  const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v : 0;
 };
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -76,7 +76,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
   const moveMoney = async () => {
     if (!xForm) return;
     try {
-      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers`, 'POST', { ...xForm, amount: xForm.amount.replace(/,/g, '') });
+      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-transfers`, 'POST', { ...xForm, amount: (Number.isFinite(parseAmount(xForm.amount)) ? String(parseAmount(xForm.amount)) : xForm.amount.replace(/,/g, '')) });
       queryClient.setQueryData([projectKey(projectId)], data);
       toast({ title: 'Money Moved', description: `${lineName(xForm.fromKey)} → ${lineName(xForm.toKey)}` });
       setXForm(null);

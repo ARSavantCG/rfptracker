@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MoneyInput } from './inputs';
-import { fmtMoneyText } from '@shared/format';
+import { fmtMoneyText, parseAmount } from '@shared/format';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -161,7 +161,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
             ? <Button variant="outline" onClick={() => { setEditing(null); setForm(blank(form.method)); }}>Cancel Edit</Button>
             : <Button variant="outline" onClick={onClose}>Done</Button>}
           <Button disabled={!form.amount || !form.paidDate || saveP.isPending} onClick={() => {
-            const amt = parseFloat(form.amount.replace(/[$,\s]/g, '')) || 0;
+            const amt = parseAmount(form.amount) || 0;
             if (amt > openExcluding + 0.005 && !window.confirm(`That is ${money(amt - openExcluding)} more than is open on this pay app. Save it anyway?`)) return;
             saveP.mutate();
           }}>

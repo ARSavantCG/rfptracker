@@ -212,6 +212,7 @@ export default function CostProject() {
             {b.contracts.map((c) => (
               <ContractCard key={c.id}
                 contract={c}
+                waivers={b.waivers}
                 changeOrders={b.changeOrders.filter((co) => co.contractId === c.id)}
                 lines={b.sovLines.filter((l) => l.contractId === c.id)}
                 applications={b.applications.filter((a) => a.contractId === c.id)}
@@ -328,6 +329,7 @@ export default function CostProject() {
           </DialogContent>
         </Dialog>
         <ApplicationDialog
+        waivers={b.waivers}
         open={!!appState}
         contract={appState?.contract ?? null}
         app={appState?.app ?? null}

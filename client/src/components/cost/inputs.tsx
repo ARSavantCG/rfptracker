@@ -6,7 +6,7 @@
  */
 import { forwardRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { fmtMoneyText, fmtPctText } from '@shared/format';
+import { fmtMoneyText, fmtPctText, parseAmount, isFormula } from '@shared/format';
 
 type Props = Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange' | 'placeholder'> & {
   value: string;
@@ -16,13 +16,24 @@ type Props = Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange' | 'pl
 function makeNumberInput(format: (s: string) => string, suffix?: string, keepTyped = false) {
   return forwardRef<HTMLInputElement, Props>(function NumberInput({ value, onValueChange, className, onFocus, onBlur, ...rest }, ref) {
     const [editing, setEditing] = useState(false);
-    const shown = editing ? String(value ?? '').replace(/,/g, '') : format(String(value ?? ''));
+    const shown = editing ? (isFormula(value) ? String(value ?? '') : String(value ?? '').replace(/,/g, '')) : format(String(value ?? ''));
     return (
       <div className="relative">
-        <Input ref={ref} {...rest} inputMode="decimal" value={shown}
+        <Input ref={ref} {...rest} inputMode="text" value={shown}
                className={`text-right tabular-nums ${suffix ? 'pr-6' : ''} ${className || ''}`}
                onFocus={(e) => { setEditing(true); onFocus?.(e); }}
-               onBlur={(e) => { setEditing(false); onValueChange(keepTyped ? e.target.value.replace(/[,%\s]/g, '') : format(e.target.value)); onBlur?.(e); }}
+               onBlur={(e) => {
+                 setEditing(false);
+                 // A formula ("=19500*.5", "19500*50%") becomes its result, like Excel.
+                 const raw = e.target.value;
+                 const typed = isFormula(raw) && Number.isFinite(parseAmount(raw.replace(/%\s*$/, '')))
+                   ? String(Math.round(parseAmount(raw.replace(/%\s*$/, '')) * 1e6) / 1e6) : raw;
+                 const out = keepTyped ? typed.replace(/[,%\s]/g, '') : format(typed);
+                 onValueChange(out);
+                 if (typed !== raw) e.target.value = format(typed);
+                 onBlur?.(e);
+               }}
+               title={rest.title ?? 'Type a number or a formula, like =19500*.5'}
                onChange={(e) => onValueChange(e.target.value)} />
         {suffix && <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">{suffix}</span>}
       </div>

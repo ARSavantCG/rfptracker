@@ -4,6 +4,7 @@
  * days added to the schedule, notes, and every move with its date).
  */
 import { useState } from 'react';
+import { parseAmount } from '@shared/format';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,7 +88,7 @@ function RoutingDialog({ co, amount, fromLines, onClose, onChanged }: { co: Chan
     finally { setBusy(false); }
   };
   const moved = stage !== r.stage;
-  const higher = needsHigherRouting(fromLines ? amount : Number(proposed.replace(/,/g, '')) || 0, days === '' ? null : Number(days));
+  const higher = needsHigherRouting(fromLines ? amount : parseAmount(proposed) || 0, days === '' ? null : Number(days));
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="pm-scope max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -96,7 +97,7 @@ function RoutingDialog({ co, amount, fromLines, onClose, onChanged }: { co: Chan
           <label className="space-y-1"><span className="text-xs text-gray-600">Received From Contractor</span>
             <Input type="date" className="h-9" value={received} onChange={(e) => setReceived(e.target.value)} onBlur={() => received && save({ receivedDate: received })} /></label>
           <label className="space-y-1"><span className="text-xs text-gray-600">Amount as Submitted</span>
-            <MoneyInput className="h-9" value={proposed} onValueChange={setProposed} onBlur={() => save({ proposedAmount: proposed === '' ? null : Number(proposed.replace(/,/g, '')) })} /></label>
+            <MoneyInput className="h-9" value={proposed} onValueChange={setProposed} onBlur={() => save({ proposedAmount: proposed === '' ? null : parseAmount(proposed) })} /></label>
           <label className="space-y-1"><span className="text-xs text-gray-600">Days Added to Schedule</span>
             <Input className="h-9 text-right tabular-nums" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value.replace(/[^\d]/g, ''))} onBlur={() => save({ daysAdded: days === '' ? null : Number(days) })} /></label>
         </div>

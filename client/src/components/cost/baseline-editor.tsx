@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MoneyInput, PercentInput } from './inputs';
-import { fmtMoneyText, fmtPctText } from '@shared/format';
+import { fmtMoneyText, fmtPctText, parseAmount } from '@shared/format';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Plus, Trash2 } from 'lucide-react';
@@ -36,13 +36,13 @@ export function BaselineEditor({ projectId, baseline, sovLines, rfpLinked }: {
   // to Unallocated, which is allowed but should not be a surprise.
   const mappedKeys = useMemo(() => new Set(sovLines.flatMap((l) => l.allocations.map((a) => a.baselineKey))), [sovLines]);
   const dirty = JSON.stringify(rows) !== JSON.stringify(toRows(baseline));
-  const total = rows.reduce((s, r) => s + (parseFloat(r.budget.replace(/[$,]/g, '')) || 0), 0);
+  const total = rows.reduce((s, r) => s + (parseAmount(r.budget) || 0), 0);
 
   const save = useMutation({
     mutationFn: () => apiRequest(`/api/cost-projects/${projectId}`, 'PATCH', {
       baseline: rows.map((r) => ({
         key: r.key, description: r.description, bucket: r.bucket,
-        budget: r.budget.replace(/,/g, ''), tenantSharePct: parseFloat(r.tenantSharePct), masterItemId: r.masterItemId ?? null,
+        budget: Number.isFinite(parseAmount(r.budget)) ? String(parseAmount(r.budget)) : r.budget.replace(/,/g, ''), tenantSharePct: parseFloat(r.tenantSharePct), masterItemId: r.masterItemId ?? null,
       })),
     }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] }); toast({ title: 'Budget Saved' }); },

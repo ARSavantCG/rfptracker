@@ -4,8 +4,57 @@
  *   percentages — always two decimals: 2.75%, 3.00%, 100.00%
  */
 
+/**
+ * A dollar amount as typed — a plain number ("1,234.50", "$1,234.50") or a formula
+ * like Excel ("=19500*.5", "19500*50%", "(1200+340)/2"): + - * / ( ) and a trailing %
+ * (Adolfo, 2026-10-23). Arithmetic only — nothing else is ever run. NaN if it isn't one.
+ */
+export function parseAmount(v: unknown): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  let src = String(v ?? '').trim();
+  if (!src) return NaN;
+  if (src.startsWith('=')) src = src.slice(1);
+  src = src.replace(/[$,\s]/g, '');
+  if (!src || /[^0-9.+\-*/()%xX×÷]/.test(src)) return NaN;
+  src = src.replace(/[xX×]/g, '*').replace(/÷/g, '/');
+  let i = 0;
+  const peek = () => src[i];
+  const number = (): number => {
+    const m = /^\d*\.?\d+(?:[eE][+-]?\d+)?|^\d+\.?/.exec(src.slice(i));
+    if (!m) throw new Error('number');
+    i += m[0].length;
+    let n = parseFloat(m[0]);
+    if (peek() === '%') { i++; n /= 100; }
+    return n;
+  };
+  const factor = (): number => {
+    const c = peek();
+    if (c === '+') { i++; return factor(); }
+    if (c === '-') { i++; return -factor(); }
+    if (c === '(') { i++; const v2 = expr(); if (peek() !== ')') throw new Error(')'); i++; if (peek() === '%') { i++; return v2 / 100; } return v2; }
+    return number();
+  };
+  const term = (): number => {
+    let v2 = factor();
+    while (peek() === '*' || peek() === '/') { const op = src[i++]; const r = factor(); v2 = op === '*' ? v2 * r : v2 / r; }
+    return v2;
+  };
+  const expr = (): number => {
+    let v2 = term();
+    while (peek() === '+' || peek() === '-') { const op = src[i++]; const r = term(); v2 = op === '+' ? v2 + r : v2 - r; }
+    return v2;
+  };
+  try {
+    const out = expr();
+    return i === src.length && Number.isFinite(out) ? out : NaN;
+  } catch { return NaN; }
+}
+/** Typed text that is a formula rather than a plain number. */
+export const isFormula = (v: unknown) => /^\s*=|[0-9)%]\s*[*/xX×÷+]|[0-9)%]\s*-\s*[0-9(]/.test(String(v ?? '').replace(/^\s*-/, ''));
+
 const num = (v: unknown): number => {
-  const x = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[$,%\s]/g, ''));
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  const x = parseAmount(String(v ?? '').replace(/%\s*$/, ''));
   return Number.isFinite(x) ? x : NaN;
 };
 

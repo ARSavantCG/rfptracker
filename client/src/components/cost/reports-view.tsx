@@ -4,6 +4,8 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useMemo, useState } from 'react';
+import { MoneyInput } from './inputs';
+import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
 import { STAGE_STYLE } from './co-routing';
 import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue } from '@shared/cost-waivers';
@@ -327,7 +329,7 @@ function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) 
   const save = async (clear?: boolean) => {
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(inv.number)}/payment`, 'PATCH',
-        clear ? { amount: null } : { date, amount: parseFloat(amount.replace(/,/g, '')) });
+        clear ? { amount: null } : { date, amount: parseAmount(amount) });
       queryClient.setQueryData([projectKey(projectId)], data);
       setEditing(false);
       toast({ title: clear ? `${inv.number} marked unpaid` : `Payment recorded on ${inv.number}` });
@@ -336,7 +338,7 @@ function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) 
   if (editing) return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <Input type="date" className="h-8 w-36" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date paid" />
-      <Input className="h-8 w-28 text-right tabular-nums" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Amount received" />
+      <div className="w-32"><MoneyInput className="h-8" value={amount} onValueChange={setAmount} aria-label="Amount received" /></div>
       <Button size="sm" className="h-8" onClick={() => save()}>Save</Button>
       {inv.paidDate && <Button size="sm" variant="ghost" className="h-8 text-red-700" onClick={() => save(true)}>Clear</Button>}
       <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditing(false)}>Cancel</Button>

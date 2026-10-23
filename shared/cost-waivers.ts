@@ -512,3 +512,44 @@ export function gcPaymentDue(
   if (app.g702) return { due: r2(app.g702.currentPaymentDue), source: 'calculated' };
   return { due: null, source: null };
 }
+
+/**
+ * The three-way check on a pay app's payment due (G702 line 8) (Adolfo, 2026-10-23):
+ *   ours        line 8 worked out from the G703 lines entered (base contract AND change orders)
+ *   contractor  their own G702 line 8 — typed in the lien waiver package, or entered from their G702
+ *   conditional the GC's conditional waiver for this pay app
+ * All three should agree. When ours is lower than both of theirs, the usual cause is
+ * G703 lines left out — most often change order work billed this period.
+ */
+export interface ThreeWay {
+  ours: number | null;
+  contractor: number | null;
+  conditional: number | null;
+  /** match: all three agree · partial: the two entered agree, one missing · off: they disagree · none: under two entered */
+  status: 'match' | 'partial' | 'off' | 'none';
+  /** Ours less the larger of theirs, when ours is the one out (negative = lines missing). */
+  oursOff: number | null;
+  /** In words, for a tooltip or a report cell. */
+  summary: string;
+}
+export function threeWayCheck(
+  app: { id: number; g702?: { currentPaymentDue: number } | null; contractorG702?: { currentPaymentDue?: number | null } | null },
+  waivers: readonly Waiver[],
+  contractName: string,
+): ThreeWay {
+  const ours = app.g702 ? r2(app.g702.currentPaymentDue) : null;
+  const gc = waivers.find((w) => w.applicationId === app.id && w.kind === 'conditional' && !w.notNeeded && partyOf(w, contractName) === 'gc');
+  const theirsTyped = gc?.payAppDue ?? app.contractorG702?.currentPaymentDue ?? null;
+  const contractor = theirsTyped != null && Number.isFinite(theirsTyped) ? r2(theirsTyped) : null;
+  const conditional = gc ? r2(gc.amount) : null;
+  const vals = [ours, contractor, conditional].filter((v): v is number => v != null);
+  const eq = (a: number, b: number) => Math.abs(a - b) < 0.005;
+  const m = (v: number | null) => (v == null ? 'not entered' : v.toLocaleString('en-US', { style: 'currency', currency: 'USD' }));
+  const summary = `Ours (from the G703 lines) ${m(ours)} · Contractor's G702 ${m(contractor)} · GC conditional ${m(conditional)}`;
+  if (vals.length < 2) return { ours, contractor, conditional, status: 'none', oursOff: null, summary };
+  const allEq = vals.every((v) => eq(v, vals[0]));
+  const theirs = [contractor, conditional].filter((v): v is number => v != null);
+  const theirsAgree = theirs.length === 2 ? eq(theirs[0], theirs[1]) : theirs.length === 1;
+  const oursOff = ours != null && theirs.length && theirsAgree && !eq(ours, theirs[0]) ? r2(ours - theirs[0]) : null;
+  return { ours, contractor, conditional, status: allEq ? (vals.length === 3 ? 'match' : 'partial') : 'off', oursOff, summary };
+}

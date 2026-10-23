@@ -21,7 +21,8 @@ import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
 import { g702For, lineProgress, newAppNumbers, spreadCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
-import { fmtMoneyText } from '@shared/format';
+import { fmtMoneyText, parseAmount } from '@shared/format';
+import { threeWayCheck, type Waiver } from '@shared/cost-waivers';
 import {
   money, projectKey,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow,
@@ -29,7 +30,7 @@ import {
 import { openDocument } from './contract-card';
 
 const num = (s: string) => {
-  const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
+  const v = parseAmount(s);
   return Number.isFinite(v) ? v : 0;
 };
 const isoDate = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 10) : '');
@@ -40,8 +41,10 @@ type AiCell = { work: number; stored: number; retainage: number | null; previous
 const same = (a: string | undefined, b: number | null) => b != null && Math.abs(num(a ?? '') - b) < 0.005 && (a ?? '') !== '';
 
 export function ApplicationDialog({
-  open, contract, app, kind, lines, changeOrders, applications, documents, projectId, onClose,
+  open, contract, app, kind, lines, changeOrders, applications, documents, projectId, onClose, waivers = [],
 }: {
+  /** The GC's conditional (and its typed line 8), for the three-way check. */
+  waivers?: Waiver[];
   open: boolean;
   contract: ContractRow | null;
   app: ApplicationRow | null;
@@ -637,6 +640,31 @@ export function ApplicationDialog({
                     {ck.status === 'match' && <span className="text-green-800 font-medium">✓ Matches the contractor's G702 — current payment due {money(preview.currentPaymentDue)}.</span>}
                     {ck.status === 'off' && <span className="text-red-800 font-medium">⚠ Doesn't match the contractor's G702{ck.dueDiff != null ? ` — payment due off ${money(Math.abs(ck.dueDiff))}` : ''}{ck.first && ck.first.key !== 'currentPaymentDue' ? `. Start with line ${ck.first.no}.` : '.'}</span>}
                     {ck.status === 'none' && <span className="text-gray-600">Type their line 8 (and 3, 4, 5, 7 if you like) to check this pay app against theirs. It's saved with the pay app.</span>}
+                    {(() => {
+                      // The third check: the GC's conditional for this pay app (and its line 8 typed in the package).
+                      if (!app || !contract) return null;
+                      const tw = threeWayCheck({ id: app.id, g702: { currentPaymentDue: preview.currentPaymentDue }, contractorG702: theirsNum.currentPaymentDue != null ? { currentPaymentDue: theirsNum.currentPaymentDue as number } : null }, waivers, contract.counterparty);
+                      if (tw.status === 'none') return null;
+                      const rate = Number(contract.retainagePct) || 0;
+                      return (
+                        <div className={`w-full rounded-md border p-2 ${tw.status === 'off' ? 'border-red-300 bg-red-50 text-red-900' : 'border-green-300 bg-green-50 text-green-900'}`}>
+                          <div className="font-semibold">Three-Way Check on Line 8</div>
+                          <div className="grid grid-cols-3 gap-2 mt-1 tabular-nums">
+                            <div>Ours (These Lines)<div className="font-semibold">{tw.ours != null ? money(tw.ours) : '—'}</div></div>
+                            <div>Contractor's G702<div className="font-semibold">{tw.contractor != null ? money(tw.contractor) : 'Not entered'}</div></div>
+                            <div>GC Conditional<div className="font-semibold">{tw.conditional != null ? money(tw.conditional) : 'Not entered'}</div></div>
+                          </div>
+                          <div className="mt-1">
+                            {tw.status === 'match' && '✓ All three match.'}
+                            {tw.status === 'partial' && '✓ The two entered match.'}
+                            {tw.status === 'off' && (tw.oursOff != null && tw.oursOff < 0
+                              ? `⚠ Ours is ${money(-tw.oursOff)} lower than theirs: lines are missing, about ${money(-tw.oursOff / (1 - rate / 100))} of work this period before retainage. Most often it's change order work billed this period. Check the change order lines above.`
+                              : tw.oursOff != null ? `⚠ Ours is ${money(tw.oursOff)} higher than theirs: check the amounts entered.`
+                              : "⚠ The contractor's G702 and the conditional don't agree with each other. Check which one the contractor revised.")}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {canSpread && (
                       <button className="text-blue-700 hover:underline" onClick={() => setRetTarget(theirs.retainage)}>
                         Spread the blank retainage boxes to match their line 5

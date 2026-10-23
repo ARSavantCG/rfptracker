@@ -37,6 +37,8 @@ const isoDate = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 10
 
 type Draft = { work: string; stored: string; retainage: string; toDate: string };
 type AiResult = PayAppRead & MatchResult & { fileName: string };
+/** Largest line 5 difference that can be accepted as rounding; anything bigger gets chased. */
+const RET_ADJ_MAX = 10;
 type AiCell = { work: number; stored: number; retainage: number | null; previous: number | null };
 const same = (a: string | undefined, b: number | null) => b != null && Math.abs(num(a ?? '') - b) < 0.005 && (a ?? '') !== '';
 
@@ -71,6 +73,8 @@ export function ApplicationDialog({
   const [setupIds, setSetupIds] = useState<Record<string, number>>({});
   /** The contractor's G702 line 5, typed to match their retainage to the cent. */
   const [retTarget, setRetTarget] = useState('');
+  /** Accepted retainage adjustment on this pay app (their rounding), in dollars; 0 = none. */
+  const [retAdj, setRetAdj] = useState(0);
   /** The contractor's G702 figures for this pay app (typed or read by AI). */
   const [theirs, setTheirs] = useState<Record<string, string>>({});
   /** Groups (base contract, each change order) rolled up to their subtotal. */
@@ -109,6 +113,7 @@ export function ApplicationDialog({
     setAiCells({});
     setRetTarget('');
     setRetTyped(new Set());
+    setRetAdj(Number(app?.retainageAdj) || 0);
     setTheirs(Object.fromEntries(Object.entries(app?.contractorG702 ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, fmtMoneyText(String(v))])));
     setSetupDone(false);
     setPick({ lines: true, opening: true, paid: true, retainage: true });
@@ -142,14 +147,11 @@ export function ApplicationDialog({
     const auto = contractLines.filter((l) => !(draft[l.id]?.retainage ?? '').trim());
     const items = auto.map((l) => ({ id: l.id, exact: toDateOf(l) * rate })).filter((x) => Math.abs(x.exact) >= 0.0001);
     const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
-    const atRate = retainageCents(items.reduce((s, x) => s + x.exact, 0));
-    // Their line 5, when typed and within rounding of the rate (contractors round line by line), is used as is.
-    const theirRet = (theirs.retainage ?? '').trim() ? Math.round((num(theirs.retainage) - typed) * 100) / 100 : null;
     const target = retTarget.trim()
       ? Math.round((num(retTarget) - typed) * 100) / 100
-      : theirRet != null && items.length && Math.abs(theirRet - atRate) <= 1.0 ? theirRet : atRate;
+      : retainageCents(items.reduce((s, x) => s + x.exact, 0));
     return spreadCents(items, target);
-  }, [contractLines, draft, rate, retTarget, entry, prior, theirs.retainage]);
+  }, [contractLines, draft, rate, retTarget, entry, prior]);
   const autoRetainage = (l: SovLineRow) => autoMap.get(l.id) ?? 0;
   const retainageOf = (l: SovLineRow) => {
     const typed = draft[l.id]?.retainage;
@@ -164,14 +166,14 @@ export function ApplicationDialog({
   const preview = useMemo(() => {
     if (!contract || !thisNumber) return null;
     const others: Application[] = mine.filter((a) => a.number !== thisNumber)
-      .map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, lines: a.lines }));
-    const current: Application = { id: -1, contractId: contract.id, number: thisNumber, lines: outLines };
+      .map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, lines: a.lines, retainageAdj: a.retainageAdj ?? 0 }));
+    const current: Application = { id: -1, contractId: contract.id, number: thisNumber, lines: outLines, retainageAdj: retAdj };
     return g702For(contract.id, thisNumber, {
       lines: lines.map((l) => ({ ...l })),
       changeOrders: changeOrders.map((c) => ({ id: c.id, contractId: c.contractId, status: c.status, startApp: c.startApp })),
       applications: [...others, current],
     });
-  }, [contract?.id, thisNumber, JSON.stringify(outLines), mine, lines, changeOrders]);
+  }, [contract?.id, thisNumber, JSON.stringify(outLines), mine, lines, changeOrders, retAdj]);
 
   /**
    * Switch between entering "this period" and "total to date", carrying every
@@ -329,7 +331,7 @@ export function ApplicationDialog({
       const contractorG702 = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
       // Their G703 as read, kept for the line-by-line comparison (left as is when not read this time).
       const contractorG703 = aiResult ? contractorG703From(aiResult, aiResult, aiResult.fileName, setupIds) : undefined;
-      const body = { docNumber: typedDoc, kind, contractorG702, contractorG703, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
+      const body = { docNumber: typedDoc, kind, contractorG702, contractorG703, retainageAdj: retAdj || null, retainageAdjNote: retAdj ? 'Rounding: accepted the contractor\'s retainage' : null, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
       const saved = app
         ? (await apiRequest(`/api/cost-applications/${app.id}`, 'PUT', body), { id: app.id })
         : await apiRequest(`/api/cost-contracts/${contract!.id}/applications`, 'POST', body);
@@ -627,6 +629,12 @@ export function ApplicationDialog({
               const canSpread = ret && ret.ok === false && contractLines.some((l) => !(draft[l.id]?.retainage ?? '').trim() && toDateOf(l));
               // Saved retainage is kept as typed; offer to figure it again (contract rate, rounded down).
               const canRecalc = ret && ret.ok === false && !canSpread && contractLines.some((l) => (draft[l.id]?.retainage ?? '').trim() && toDateOf(l));
+              // A small difference on line 5 (their line-by-line rounding) can be accepted as an adjustment
+              // instead of chased: it's kept on this pay app and carries forward, so later pay apps agree.
+              const theirRet = (theirs.retainage ?? '').trim() ? num(theirs.retainage) : null;
+              const baseRet = Math.round((preview.retainage - retAdj) * 100) / 100;
+              const adjNeeded = theirRet != null ? Math.round((theirRet - baseRet) * 100) / 100 : 0;
+              const canAccept = theirRet != null && !retTarget.trim() && Math.abs(adjNeeded) >= 0.005 && Math.abs(adjNeeded) <= RET_ADJ_MAX && Math.abs(adjNeeded - retAdj) >= 0.005;
               return (
                 <>
                   <table className="text-sm w-full max-w-3xl">
@@ -689,6 +697,16 @@ export function ApplicationDialog({
                       <button className="text-blue-700 hover:underline" onClick={() => setRetTarget(theirs.retainage)}>
                         Spread the blank retainage boxes to match their line 5
                       </button>
+                    )}
+                    {canAccept && (
+                      <button className="text-blue-700 hover:underline" title="Keeps our retainage as figured and records the difference as an accepted rounding adjustment on this pay app; it carries to later pay apps"
+                              onClick={() => setRetAdj(adjNeeded)}>
+                        Accept their retainage: {adjNeeded > 0 ? '+' : ''}{money(adjNeeded)} rounding adjustment
+                      </button>
+                    )}
+                    {Math.abs(retAdj) >= 0.005 && (
+                      <span className="text-violet-800">Line 5 includes an accepted rounding adjustment of {retAdj > 0 ? '+' : ''}{money(retAdj)} (ours at the rate: {money(baseRet)}).
+                        {' '}<button className="text-blue-700 hover:underline" onClick={() => setRetAdj(0)}>Remove</button></span>
                     )}
                     {canRecalc && (
                       <button className="text-blue-700 hover:underline" title="Clears the retainage boxes so they're figured at the contract rate on work to date, rounded down to the cent like the contractor's"

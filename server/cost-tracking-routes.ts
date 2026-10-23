@@ -247,6 +247,7 @@ export async function loadProjectBundle(projectId: number) {
   }));
   const applications: Application[] = apps.map((a) => ({
     id: a.id, contractId: a.contractId, number: a.number,
+    retainageAdj: a.retainageAdjCents ? dollars(a.retainageAdjCents) : 0,
     lines: appLines.filter((l) => l.applicationId === a.id).map((l) => ({
       sovLineId: l.sovLineId,
       workThisPeriod: dollars(l.workThisPeriodCents),
@@ -352,6 +353,7 @@ export async function loadProjectBundle(projectId: number) {
     sovLines: sov.map((l) => ({ ...l, scheduledValue: dollars(l.scheduledValueCents) })),
     applications: apps.map((a) => ({
       ...a,
+      retainageAdj: a.retainageAdjCents ? dollars(a.retainageAdjCents) : 0,
       docNumber: docs.get(a.id)!,
       lines: appLines.filter((l) => l.applicationId === a.id).map((l) => ({
         id: l.id, sovLineId: l.sovLineId,
@@ -2009,6 +2011,8 @@ export function registerCostTrackingRoutes(app: Express): void {
         contractId, number, docNumber: doc,
         contractorG702: normalizeContractorG702(b.contractorG702),
         contractorG703: normalizeContractorG703(b.contractorG703),
+        retainageAdjCents: Number.isFinite(Number(b.retainageAdj)) && Math.abs(Number(b.retainageAdj)) >= 0.005 ? Math.round(Number(b.retainageAdj) * 100) : null,
+        retainageAdjNote: Number.isFinite(Number(b.retainageAdj)) && Math.abs(Number(b.retainageAdj)) >= 0.005 ? String(b.retainageAdjNote || 'Rounding').slice(0, 200) : null,
         kind,
         invoiceNumber: b.invoiceNumber ? String(b.invoiceNumber) : null,
         periodStart: b.periodStart ? new Date(b.periodStart) : null,
@@ -2036,6 +2040,11 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
       if (b.contractorG702 !== undefined) patch.contractorG702 = normalizeContractorG702(b.contractorG702);
       if (b.contractorG703 !== undefined) patch.contractorG703 = normalizeContractorG703(b.contractorG703);
+      if (b.retainageAdj !== undefined) {
+        const v = Number(b.retainageAdj);
+        patch.retainageAdjCents = b.retainageAdj === null || b.retainageAdj === '' || !Number.isFinite(v) || Math.abs(v) < 0.005 ? null : Math.round(v * 100);
+        patch.retainageAdjNote = patch.retainageAdjCents == null ? null : String(b.retainageAdjNote || 'Rounding').slice(0, 200);
+      }
       if (b.docNumber !== undefined && b.docNumber !== null && b.docNumber !== '') {
         const doc = Math.floor(Number(b.docNumber));
         if (!(doc >= 1)) return res.status(400).json({ message: 'Enter a number.' });

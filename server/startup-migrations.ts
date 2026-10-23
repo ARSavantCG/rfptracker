@@ -137,6 +137,8 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   // The contractor's own G702 figures, typed or read, to check ours against.
   { table: 'cost_applications', column: 'contractor_g702', type: 'json' },
   { table: 'cost_applications', column: 'contractor_g703', type: 'json' },
+  { table: 'cost_applications', column: 'retainage_adj_cents', type: 'integer' },
+  { table: 'cost_applications', column: 'retainage_adj_note', type: 'text' },
 ];
 
 // Additive new tables (CREATE TABLE IF NOT EXISTS — idempotent, never drops).

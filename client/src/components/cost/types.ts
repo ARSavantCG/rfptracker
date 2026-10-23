@@ -83,6 +83,9 @@ export interface ApplicationRow {
   g702: G702;
   /** The contractor's own G702 figures, typed or read. */
   contractorG702: ContractorG702 | null;
+  /** Accepted adjustment to retainage held on this pay app (dollars), carried to later ones. */
+  retainageAdj?: number | null;
+  retainageAdjNote?: string | null;
   /** Ours against theirs. */
   check: ReturnType<typeof g702Check>;
 }

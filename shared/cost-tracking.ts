@@ -119,6 +119,12 @@ export interface Application {
   /** Ordering within the contract; the highest is the latest. */
   number: number;
   lines: ApplicationLine[];
+  /**
+   * An accepted adjustment to retainage held, entered on this pay app (dollars). It stays
+   * in retainage held on every later pay app, so their line 7 keeps agreeing. Used for the
+   * contractor's rounding (they round line by line) when it's accepted rather than chased.
+   */
+  retainageAdj?: number | null;
 }
 
 const n = (v: unknown): number => {
@@ -436,6 +442,7 @@ export function g702For(contractId: number, upTo: number, input: {
     const p = lineProgress(appsFor(cutoff));
     let done = 0, held = 0;
     Array.from(p.values()).forEach((v) => { done += v.toDate; held += v.retainage; });
+    for (const a of appsFor(cutoff)) held += n(a.retainageAdj);
     return { done, held };
   };
   const now = earned(upTo);

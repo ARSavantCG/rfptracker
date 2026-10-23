@@ -2375,6 +2375,9 @@ export const costApplications = pgTable("cost_applications", {
   contractorG702: json("contractor_g702").$type<Record<string, number | null>>(),
   /** The contractor's own G703 as AI read it from their pay app (rows + when read), for line-by-line comparison. */
   contractorG703: json("contractor_g703").$type<any>(),
+  /** Accepted change to retainage held on this pay app (cents; carries to later pay apps), e.g. the contractor's line-by-line rounding. */
+  retainageAdjCents: integer("retainage_adj_cents"),
+  retainageAdjNote: text("retainage_adj_note"),
   kind: text("kind").notNull().default("pay_app"), // pay_app | invoice
   invoiceNumber: text("invoice_number"),
   periodStart: timestamp("period_start"),

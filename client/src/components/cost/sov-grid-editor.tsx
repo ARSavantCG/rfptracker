@@ -183,12 +183,12 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
       <td colSpan={6} className="p-0">
         <div className="bg-blue-50/40 border-y border-blue-200 px-3 py-3 space-y-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="text-sm font-semibold text-gray-900">Editing {label}{dirty && <span className="ml-2 text-xs font-medium text-amber-700">unsaved changes</span>}</div>
+            <div className="text-sm font-semibold text-gray-900">Editing {label}{dirty ? <span className="ml-2 text-xs font-medium text-amber-700">Unsaved Changes</span> : <span className="ml-2 text-xs font-medium text-green-700">✓ All Changes Saved</span>}</div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" className="h-8" onClick={() => setPaste(paste == null ? '' : null)}>
                 <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Paste from Excel or a G703
               </Button>
-              <Button size="sm" variant="ghost" className="h-8" onClick={() => { if (!dirty || window.confirm('Discard the changes to these lines?')) onDone(); }}>Cancel</Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => { if (!dirty || window.confirm('Discard the changes to these lines?')) onDone(); }}>{dirty ? 'Cancel' : 'Close'}</Button>
               <Button size="sm" className="h-8" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>{saving ? 'Saving…' : 'Save Lines'}</Button>
             </div>
           </div>
@@ -277,7 +277,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => {
                 if (!dirty || window.confirm('Discard the changes to these lines?')) onDone();
-              }}>Cancel</Button>
+              }}>{dirty ? 'Cancel' : 'Close'}</Button>
               <Button size="sm" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>
                 {saving ? 'Saving…' : 'Save Lines'}
               </Button>

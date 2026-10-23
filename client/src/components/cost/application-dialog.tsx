@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import { setupPlan, workOfRow, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
+import { setupPlan, workOfRow, contractorG703From, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
 import { g702For, lineProgress, newAppNumbers, spreadCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
@@ -67,6 +67,8 @@ export function ApplicationDialog({
   const [file, setFile] = useState<File | null>(null);
   const ai = useAiStatus();
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  /** Lines added from the read (row index → line id), so their G703 is kept matched. */
+  const [setupIds, setSetupIds] = useState<Record<string, number>>({});
   /** The contractor's G702 line 5, typed to match their retainage to the cent. */
   const [retTarget, setRetTarget] = useState('');
   /** The contractor's G702 figures for this pay app (typed or read by AI). */
@@ -103,6 +105,7 @@ export function ApplicationDialog({
     setEntry('period');
     setFile(null);
     setAiResult(null);
+    setSetupIds({});
     setAiCells({});
     setRetTarget('');
     setTheirs(Object.fromEntries(Object.entries(app?.contractorG702 ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, fmtMoneyText(String(v))])));
@@ -254,6 +257,7 @@ export function ApplicationDialog({
       if (!periodStart && r.periodFrom) setPeriodStart(r.periodFrom);
       if (!periodEnd && r.periodTo) setPeriodEnd(r.periodTo);
       setAiResult(r);
+      setSetupIds({});
       // Their G702 figures go in the Theirs column (anything typed there already stays).
       setTheirs((t) => {
         const out = { ...t };
@@ -300,6 +304,7 @@ export function ApplicationDialog({
       });
       setAiCells((c) => ({ ...c, ...cells }));
       setSetupDone(true);
+      setSetupIds(r.lineIds);
       const n = Object.keys(r.lineIds).length;
       setAdded(n);
       toast({ title: 'Contract Set Up from the Pay App',
@@ -311,7 +316,9 @@ export function ApplicationDialog({
   const save = useMutation({
     mutationFn: async () => {
       const contractorG702 = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
-      const body = { docNumber: typedDoc, kind, contractorG702, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
+      // Their G703 as read, kept for the line-by-line comparison (left as is when not read this time).
+      const contractorG703 = aiResult ? contractorG703From(aiResult, aiResult, aiResult.fileName, setupIds) : undefined;
+      const body = { docNumber: typedDoc, kind, contractorG702, contractorG703, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
       const saved = app
         ? (await apiRequest(`/api/cost-applications/${app.id}`, 'PUT', body), { id: app.id })
         : await apiRequest(`/api/cost-contracts/${contract!.id}/applications`, 'POST', body);

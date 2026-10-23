@@ -2373,6 +2373,8 @@ export const costApplications = pgTable("cost_applications", {
   docNumber: integer("doc_number"),
   /** The contractor's own G702 lines 3, 4, 5, 7, 8 — what ours is checked against. */
   contractorG702: json("contractor_g702").$type<Record<string, number | null>>(),
+  /** The contractor's own G703 as AI read it from their pay app (rows + when read), for line-by-line comparison. */
+  contractorG703: json("contractor_g703").$type<any>(),
   kind: text("kind").notNull().default("pay_app"), // pay_app | invoice
   invoiceNumber: text("invoice_number"),
   periodStart: timestamp("period_start"),

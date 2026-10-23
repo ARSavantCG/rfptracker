@@ -288,3 +288,37 @@ export function setupPlan(read: PayAppRead, m: MatchResult, ctx: {
   const retainagePct = implied != null && Math.abs(implied - ctx.retainagePct) >= 0.01 ? implied : null;
   return { lines, changeOrders, opening, retainagePct };
 }
+
+/**
+ * The contractor's own G703, kept on the pay app once AI has read it, so the
+ * G702 / G703 Comparison can put their figures beside ours line by line.
+ * Each row keeps the line it was matched to when read (or null); the report
+ * matches again against the lines as they are then.
+ */
+export type ContractorG703 = { readAt: string; fileName: string | null; rows: ReadRow[] };
+
+/** From an AI read and its match (plus lines just added from it: row index → line id). */
+export function contractorG703From(read: PayAppRead, match: MatchResult, fileName: string | null, added?: Record<string | number, number>): ContractorG703 {
+  const byRow = new Map<number, number>(match.matched.map((m) => [m.row.rowIndex, m.sovLineId]));
+  return {
+    readAt: new Date().toISOString(),
+    fileName,
+    rows: read.rows.map((r) => ({ ...r, sovLineId: byRow.get(r.rowIndex) ?? (added?.[r.rowIndex] != null ? Number(added[r.rowIndex]) : null) })),
+  };
+}
+
+/** Accepts what the client sends; null clears it, anything unreadable is dropped. */
+export function normalizeContractorG703(raw: any): ContractorG703 | null {
+  if (!raw || !Array.isArray(raw.rows)) return null;
+  const n = (v: unknown) => toNum(v);
+  const rows: ReadRow[] = raw.rows.slice(0, 2000).map((r: any, i: number) => ({
+    rowIndex: Number.isFinite(Number(r?.rowIndex)) ? Number(r.rowIndex) : i,
+    itemNo: r?.itemNo == null || r.itemNo === '' ? null : String(r.itemNo).slice(0, 40),
+    description: String(r?.description ?? '').slice(0, 300),
+    scheduledValue: n(r?.scheduledValue), previous: n(r?.previous), thisPeriod: n(r?.thisPeriod),
+    stored: n(r?.stored), totalToDate: n(r?.totalToDate), retainage: n(r?.retainage),
+    sovLineId: Number.isFinite(Number(r?.sovLineId)) && r?.sovLineId != null ? Number(r.sovLineId) : null,
+    changeOrder: r?.changeOrder ? String(r.changeOrder).slice(0, 60) : null,
+  }));
+  return { readAt: typeof raw.readAt === 'string' ? raw.readAt : new Date().toISOString(), fileName: raw.fileName ? String(raw.fileName).slice(0, 200) : null, rows };
+}

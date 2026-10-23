@@ -442,7 +442,8 @@ export function PayoffCard({ b, projectId }: { b: ProjectBundle; projectId: numb
   const t = b.position.totals;
   const openApps = b.position.applications.filter((a) => a.open > 0.005);
   const payoff = Math.round((openApps.reduce((s, a) => s + a.open, 0) + t.retainageHeld) * 100) / 100;
-  const open = async () => { const { openReport } = await import('./types'); await openReport(`/api/reports/payoff/${projectId}?asOf=${asOf}`); };
+  const { toast } = useToast();
+  const open = () => { openReport(`/api/reports/payoff/${projectId}?asOf=${asOf}`).then((ok) => { if (!ok) toast({ title: 'Report Failed', description: 'The new tab says why.', variant: 'destructive' }); }); };
   return (
     <Card id="payoff" title="Payoff Statement" what="For a refinance or sale: what it takes to bring every contractor to zero (each pay app billed and not yet paid, plus the retainage held) as of a closing date, and the lien releases to collect once it's paid."
           summary={`Payoff ${money(payoff)}`}
@@ -466,8 +467,23 @@ function G702CompareCard({ b, projectId, open }: { b: ProjectBundle; projectId: 
   const off = apps.filter((x) => x.tw.status === 'off');
   const [pick, setPick] = useState<string>(String((off[0] ?? apps[0])?.a.id ?? ''));
   const nn = (n: number) => String(n).padStart(3, '0');
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [reading, setReading] = useState(false);
+  const picked = b.applications.find((a) => String(a.id) === pick) as any;
+  const g703 = picked?.contractorG703 as { readAt?: string; fileName?: string; rows?: unknown[] } | null | undefined;
+  const hasPdf = picked ? b.documents.some((d: any) => d.applicationId === picked.id && (/\.pdf$/i.test(d.originalName) || /pdf|^image\//i.test(d.mimeType ?? ''))) : false;
+  const readTheirs = async () => {
+    setReading(true);
+    try {
+      const r: any = await apiRequest(`/api/cost-applications/${picked.id}/read-their-g703`, 'POST', {}, 180_000);
+      await qc.invalidateQueries({ queryKey: [projectKey(projectId)] });
+      toast({ title: "Their G703 Read", description: `${r.rows} line${r.rows === 1 ? '' : 's'} read from ${r.fileName}${r.unmatched ? `; ${r.unmatched} didn't match a line of ours (listed at the end of the report)` : ''}. Print to see them line by line.`, duration: 9000 });
+    } catch (e: any) { toast({ title: 'Not Read', description: e?.message, variant: 'destructive', duration: 10000 }); }
+    finally { setReading(false); }
+  };
   return (
-    <Card id="g702-compare" title="G702 / G703 Comparison" what="One pay app, ours beside the contractor's: G702 lines 1 to 9 and the GC's conditional with the difference on each (all should be $0.00), then the G703 lines as entered, flagging change orders approved on the pay app with nothing entered for them."
+    <Card id="g702-compare" title="G702 / G703 Comparison" what="One pay app, ours beside the contractor's: G702 lines 1 to 9 and the GC's conditional with the difference on each (all should be $0.00), then every G703 line, ours beside theirs (read by AI from their pay app PDF) so you see exactly which line is off, and the lines as entered."
           summary={apps.length ? (off.length ? `${off.length} Don't Agree` : 'All Agree') : undefined}
           action={<Button variant="outline" className="h-9" disabled={!pick} onClick={() => open(`/api/reports/g702-compare/${projectId}?app=${pick}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
       {!apps.length ? <p className="text-sm text-gray-700">No pay apps yet.</p> : (
@@ -484,8 +500,14 @@ function G702CompareCard({ b, projectId, open }: { b: ProjectBundle; projectId: 
               </SelectContent>
             </Select>
           </div>
+          {picked && <Button variant="outline" className="h-9" disabled={reading || !hasPdf} title={hasPdf ? 'AI reads the pay app PDF attached to this pay app and keeps their G703 lines for the comparison' : 'Attach the pay app PDF to this pay app first'} onClick={readTheirs}>
+            {reading ? 'Reading…' : g703?.rows ? 'Read Their G703 Again' : 'Read Their G703 (AI)'}</Button>}
           {off.length > 0 && <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/g702-compare/${projectId}?app=off`)}>Print All That Don't Agree ({off.length})</Button>}
           <Button variant="ghost" className="h-9" onClick={() => open(`/api/reports/g702-compare/${projectId}?app=all`)}>Print Every Pay App</Button>
+          {picked && <p className="w-full text-xs text-gray-600">{g703?.rows
+            ? <>Their G703: {g703.rows.length} lines read{g703.fileName ? ` from ${g703.fileName}` : ''}{g703.readAt ? ` on ${shortDate(g703.readAt.slice(0, 10))}` : ''}. The report compares every line, ours against theirs.</>
+            : hasPdf ? <>Their G703 isn't read for this pay app yet: Read Their G703 so the report shows which lines differ, not just the totals.</>
+            : <>No pay app PDF is attached to this pay app. Attach it on the pay app to read their G703 line by line.</>}</p>}
         </div>
       )}
     </Card>

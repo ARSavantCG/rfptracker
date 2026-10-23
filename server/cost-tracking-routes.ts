@@ -38,7 +38,7 @@ import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStora
 import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
-import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-payapp-read';
+import { normalizeRead, matchRows, payAppPrompt, coKey, contractorG703From, normalizeContractorG703 } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
 import { coLog, cosOnPayApp } from '@shared/co-log';
@@ -1778,6 +1778,56 @@ export function registerCostTrackingRoutes(app: Express): void {
     } catch (e) { fail(res, e, 'delete the line'); }
   });
 
+  /** AI reads a pay app file against the contract's lines. Throws {status, message} when it can't. */
+  async function aiReadPayApp(contract: { id: number; counterparty: string }, buf: Buffer, mime: string, name: string) {
+    const isPdf = /pdf/i.test(mime) || /\.pdf$/i.test(name);
+    const img = /^image\/(png|jpe?g|gif|webp)$/i.exec(mime);
+    if (!isPdf && !img) throw Object.assign(new Error('AI can read a PDF or a photo of the pay app. For a spreadsheet, copy the columns into the grid instead.'), { status: 400 });
+    const cos = await db.select().from(costChangeOrders).where(eq(costChangeOrders.contractId, contract.id));
+    const voided = new Set(cos.filter((c) => c.status === 'void').map((c) => c.id));
+    const sov = (await db.select().from(costSovLines).where(eq(costSovLines.contractId, contract.id))
+      .orderBy(costSovLines.sortOrder, costSovLines.id))
+      .filter((l) => l.changeOrderId == null || !voided.has(l.changeOrderId))
+      .map((l) => ({ id: l.id, itemNo: l.itemNo, description: l.description, scheduledValue: dollars(l.scheduledValueCents) }));
+
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const source = { type: 'base64' as const, data: buf.toString('base64') };
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: AI_MODEL,
+        max_tokens: 16000,
+        messages: [{
+          role: 'user',
+          content: [
+            isPdf
+              ? { type: 'document' as const, source: { ...source, media_type: 'application/pdf' as const } }
+              : { type: 'image' as const, source: { ...source, media_type: img![0].toLowerCase().replace('jpg', 'jpeg') as any } },
+            { type: 'text' as const, text: payAppPrompt(contract.counterparty, sov) },
+          ],
+        }],
+      });
+    } catch (e: any) {
+      if (e?.status === 401) throw Object.assign(new Error('The Anthropic API key was rejected. Check the ANTHROPIC_API_KEY secret.'), { status: 502 });
+      throw e;
+    }
+    const block = response.content.find((c) => c.type === 'text');
+    const text = block && block.type === 'text' ? block.text : '';
+    const a = text.indexOf('{'), z = text.lastIndexOf('}');
+    if (a === -1 || z === -1) throw Object.assign(new Error('AI could not read a pay app in that file.'), { status: 502 });
+    let parsed: any;
+    try { parsed = JSON.parse(text.slice(a, z + 1)); }
+    catch { throw Object.assign(new Error(response.stop_reason === 'max_tokens' ? 'That pay app is too long to read in one go.' : 'AI returned something that was not readable. Try again.'), { status: 502 }); }
+    const read = normalizeRead(parsed);
+    const result = matchRows(read, sov);
+    console.log(`[ai] read pay app for contract ${contract.id}: ${read.rows.length} rows, ${result.matched.length} matched, ${result.unmatched.length} unmatched (${response.usage?.input_tokens ?? '?'} in / ${response.usage?.output_tokens ?? '?'} out tokens)`);
+    return { read, result };
+  }
+  async function documentBytes(d: { storage: string | null; storageKey: string }) {
+    return d.storage === 'object' ? await downloadFromObjectStorage(d.storageKey)
+      : await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+  }
+
   // ---- AI read of a G702/G703. Returns figures for the dialog; saves nothing.
   app.post('/api/cost-contracts/:id/read-pay-app', ...canEdit, requireAi, docUpload.single('file'), async (req, res) => {
     try {
@@ -1794,51 +1844,49 @@ export function registerCostTrackingRoutes(app: Express): void {
       } else if (req.body?.documentId) {
         const [d] = await db.select().from(costDocuments).where(and(eq(costDocuments.id, Number(req.body.documentId)), isNull(costDocuments.deletedAt)));
         if (!d) return res.status(404).json({ message: 'File not found' });
-        buf = d.storage === 'object' ? await downloadFromObjectStorage(d.storageKey)
-          : await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
+        buf = await documentBytes(d as any);
         mime = d.mimeType || ''; name = d.originalName;
       }
       if (!buf) return res.status(400).json({ message: 'Attach the pay app PDF first.' });
-      const isPdf = /pdf/i.test(mime) || /\.pdf$/i.test(name);
-      const img = /^image\/(png|jpe?g|gif|webp)$/i.exec(mime);
-      if (!isPdf && !img) return res.status(400).json({ message: 'AI can read a PDF or a photo of the pay app. For a spreadsheet, copy the columns into the grid instead.' });
-
-      const cos = await db.select().from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
-      const voided = new Set(cos.filter((c) => c.status === 'void').map((c) => c.id));
-      const sov = (await db.select().from(costSovLines).where(eq(costSovLines.contractId, contractId))
-        .orderBy(costSovLines.sortOrder, costSovLines.id))
-        .filter((l) => l.changeOrderId == null || !voided.has(l.changeOrderId))
-        .map((l) => ({ id: l.id, itemNo: l.itemNo, description: l.description, scheduledValue: dollars(l.scheduledValueCents) }));
-
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-      const source = { type: 'base64' as const, data: buf.toString('base64') };
-      const response = await anthropic.messages.create({
-        model: AI_MODEL,
-        max_tokens: 16000,
-        messages: [{
-          role: 'user',
-          content: [
-            isPdf
-              ? { type: 'document' as const, source: { ...source, media_type: 'application/pdf' as const } }
-              : { type: 'image' as const, source: { ...source, media_type: img![0].toLowerCase().replace('jpg', 'jpeg') as any } },
-            { type: 'text' as const, text: payAppPrompt(contract.counterparty, sov) },
-          ],
-        }],
-      });
-      const block = response.content.find((c) => c.type === 'text');
-      const text = block && block.type === 'text' ? block.text : '';
-      const a = text.indexOf('{'), z = text.lastIndexOf('}');
-      if (a === -1 || z === -1) return res.status(502).json({ message: 'AI could not read a pay app in that file.' });
-      let parsed: any;
-      try { parsed = JSON.parse(text.slice(a, z + 1)); }
-      catch { return res.status(502).json({ message: response.stop_reason === 'max_tokens' ? 'That pay app is too long to read in one go.' : 'AI returned something that was not readable. Try again.' }); }
-      const read = normalizeRead(parsed);
-      const result = matchRows(read, sov);
-      console.log(`[ai] read pay app for contract ${contractId}: ${read.rows.length} rows, ${result.matched.length} matched, ${result.unmatched.length} unmatched (${response.usage?.input_tokens ?? '?'} in / ${response.usage?.output_tokens ?? '?'} out tokens)`);
+      const { read, result } = await aiReadPayApp(contract, buf, mime, name);
       res.json({ ...read, ...result, fileName: name });
     } catch (e: any) {
-      if (e?.status === 401) return res.status(502).json({ message: 'The Anthropic API key was rejected. Check the ANTHROPIC_API_KEY secret.' });
+      if (e?.status === 400 || e?.status === 502) return res.status(e.status).json({ message: e.message });
       fail(res, e, 'read the pay app');
+    }
+  });
+
+  /**
+   * Read the contractor's G703 from the pay app file attached to a saved pay app
+   * and keep it on the pay app (their G702 figures fill any not typed yet), for
+   * the line-by-line G702 / G703 Comparison.
+   */
+  app.post('/api/cost-applications/:id/read-their-g703', ...canEdit, requireAi, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [appRow] = await db.select().from(costApplications).where(eq(costApplications.id, id));
+      if (!appRow) return res.status(404).json({ message: 'Pay app not found' });
+      const [contract] = await db.select().from(costContracts).where(eq(costContracts.id, appRow.contractId));
+      const docs = (await db.select().from(costDocuments).where(and(eq(costDocuments.applicationId, id), isNull(costDocuments.deletedAt))))
+        .filter((d) => /\.pdf$/i.test(d.originalName) || /pdf|^image\//i.test(d.mimeType || ''));
+      const pick = req.body?.documentId ? docs.find((d) => d.id === Number(req.body.documentId)) : docs.find((d) => /\.pdf$/i.test(d.originalName) || /pdf/i.test(d.mimeType || '')) ?? docs[0];
+      if (!pick) return res.status(400).json({ message: 'No pay app PDF is attached to this pay app. Attach it on the pay app first.' });
+      const buf = await documentBytes(pick as any);
+      if (!buf) return res.status(404).json({ message: 'The attached file could not be opened.' });
+      const { read, result } = await aiReadPayApp(contract, buf, pick.mimeType || '', pick.originalName);
+      const g703 = contractorG703From(read, result, pick.originalName);
+      // Their G702: fill only what wasn't typed.
+      const had: Record<string, number | null> = (appRow.contractorG702 as any) || {};
+      const merged: Record<string, unknown> = { ...had };
+      for (const k of ['contractSumToDate', 'completedAndStored', 'retainage', 'previousCertificates', 'currentPaymentDue']) {
+        if (merged[k] == null && (read.g702 as any)[k] != null) merged[k] = (read.g702 as any)[k];
+      }
+      await db.update(costApplications).set({ contractorG703: g703, contractorG702: normalizeContractorG702(merged) }).where(eq(costApplications.id, id));
+      res.json({ ok: true, rows: g703.rows.length, matched: result.matched.length, unmatched: result.unmatched.length, fileName: pick.originalName, warnings: result.warnings });
+    } catch (e: any) {
+      if (e?.status === 400 || e?.status === 502) return res.status(e.status).json({ message: e.message });
+      fail(res, e, "read the contractor's G703");
     }
   });
 
@@ -1960,6 +2008,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const [row] = await db.insert(costApplications).values({
         contractId, number, docNumber: doc,
         contractorG702: normalizeContractorG702(b.contractorG702),
+        contractorG703: normalizeContractorG703(b.contractorG703),
         kind,
         invoiceNumber: b.invoiceNumber ? String(b.invoiceNumber) : null,
         periodStart: b.periodStart ? new Date(b.periodStart) : null,
@@ -1986,6 +2035,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.periodEnd !== undefined) patch.periodEnd = b.periodEnd ? new Date(b.periodEnd) : null;
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
       if (b.contractorG702 !== undefined) patch.contractorG702 = normalizeContractorG702(b.contractorG702);
+      if (b.contractorG703 !== undefined) patch.contractorG703 = normalizeContractorG703(b.contractorG703);
       if (b.docNumber !== undefined && b.docNumber !== null && b.docNumber !== '') {
         const doc = Math.floor(Number(b.docNumber));
         if (!(doc >= 1)) return res.status(400).json({ message: 'Enter a number.' });

@@ -8,11 +8,13 @@
 import type { PayAppWaivers } from '@shared/cost-waivers';
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
 
-const money2 = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const money2 = (v: number | null | undefined) => (Number(v) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const nn = (n: number) => String(n).padStart(3, '0');
-const longDate = (iso: string) => new Date(iso.slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' });
-const shortD = (iso: string) => new Date(iso.slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+/** Dates arrive as ISO strings or Date objects, depending on the source. */
+const isoDay = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v ?? '')).slice(0, 10);
+const longDate = (iso: unknown) => new Date(isoDay(iso) + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' });
+const shortD = (iso: unknown) => new Date(isoDay(iso) + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
 
 export interface PayoffInput {
   info: ReportInfoRow[];

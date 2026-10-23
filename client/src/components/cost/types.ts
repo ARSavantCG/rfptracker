@@ -2,6 +2,7 @@
  * The shapes the cost-tracking API returns, and the money formatting every
  * cost screen uses. Amounts arrive in DOLLARS; the API converts from cents.
  */
+import { AUTH_TOKEN_KEY } from '@/lib/auth-constants';
 import type { BudgetVsActual, G702, BaselineLine, SovLine, ChangeOrder, ContractorG702, g702Check } from '@shared/cost-tracking';
 import type { BudgetApproval } from '@shared/cost-budget-approval';
 import type { positionAsOf, DatedApplication, Payment, LedgerEntry } from '@shared/cost-position';
@@ -234,14 +235,32 @@ export function shortDate(iso: string | null | undefined): string {
 export const todayIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
 /** Open a server-rendered report in a new tab, carrying the auth token. */
+/**
+ * Opens a report in a new tab. The tab opens first, synchronously inside the click
+ * (anything awaited before window.open lets the browser's popup blocker step in),
+ * then the report loads into it. When the report can't be made, the tab says why
+ * instead of closing.
+ */
 export async function openReport(url: string): Promise<boolean> {
-  const { AUTH_TOKEN_KEY } = await import('@/lib/auth-constants');
   const win = window.open('', '_blank');
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } });
-  if (!res.ok) { if (win) win.close(); return false; }
+  try { win?.document.write('<p style="font:14px Arial,sans-serif;color:#374151;padding:24px">Preparing the report…</p>'); } catch { /* cross-origin or closed */ }
+  let res: Response;
+  try { res = await fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem(AUTH_TOKEN_KEY)}` } }); }
+  catch (e: any) { showReportError(win, e?.message || 'The server could not be reached.'); return false; }
+  if (!res.ok) {
+    let msg = `The report could not be made (${res.status}).`;
+    try { const j = await res.json(); msg = [j.message, j.error].filter(Boolean).join(': ') || msg; } catch { /* not JSON */ }
+    showReportError(win, msg);
+    return false;
+  }
   const blobUrl = URL.createObjectURL(await res.blob());
-  if (win) win.location.href = blobUrl; else window.location.href = blobUrl;
+  if (win && !win.closed) win.location.href = blobUrl; else window.location.href = blobUrl;
   return true;
+}
+function showReportError(win: Window | null, msg: string) {
+  if (!win || win.closed) return;
+  const esc = msg.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+  try { win.document.body.innerHTML = `<div style="font:14px Arial,sans-serif;padding:24px;color:#991b1b"><strong>Report not made.</strong><p style="color:#374151">${esc}</p><p style="color:#6b7280;font-size:12px">Close this tab and try again; if it keeps happening, send this message along.</p></div>`; } catch { /* closed */ }
 }
 
 export const BUCKET_LABEL: Record<string, string> = {

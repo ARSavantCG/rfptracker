@@ -1133,7 +1133,8 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       const asOfRaw = String(req.query.asOf || "");
       // Default: through today, or the latest pay app when one is dated ahead.
-      const latest = (b.positionInput.applications as any[]).reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), "");
+      const dayOf = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v ?? "")).slice(0, 10);
+      const latest = (b.positionInput.applications as any[]).reduce((m, a) => (dayOf(a.date) > m ? dayOf(a.date) : m), "");
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : latest > todayEastern() ? latest : todayEastern();
       const pos = positionAsOf(asOf, b.positionInput);
       const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";

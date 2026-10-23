@@ -22,7 +22,7 @@ export interface RollForwardInput {
   info: ReportInfoRow[];
   contracts: Array<{ id: number; counterparty: string; contractNumber?: string | null }>;
   sovLines: Array<{ id: number; contractId: number; changeOrderId: number | null; itemNo?: string | null; description: string; scheduledValue: number }>;
-  changeOrders: Array<{ id: number; contractId: number; number: string; title: string | null; status: string }>;
+  changeOrders: Array<{ id: number; contractId: number; number: string; title: string | null; status: string; startApp?: number | null }>;
   applications: any[]; // bundle applications: id, contractId, number, docNumber, kind, periodEnd, createdAt, lines, contractorG702
   generatedBy: string | null;
 }
@@ -61,28 +61,44 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
 
     // ---- By line: total to date at the end of each pay app
     const cos = x.changeOrders.filter((o) => o.contractId === c.id && o.status !== 'void');
-    const groups = [{ id: null as number | null, name: 'Base Contract' }, ...cos.map((o) => ({ id: o.id, name: `${o.number}${o.title ? ` — ${o.title}` : ''}` }))]
+    // A change order is on the schedule of values from the pay app it was approved on; before that
+    // (or while it's still pending) its lines aren't part of the contract yet.
+    const startOf = (coId: number | null) => {
+      if (coId == null) return 0;
+      const o = cos.find((k) => k.id === coId);
+      return o && o.status === 'approved' ? (o.startApp ?? 0) : Infinity;
+    };
+    const groups = [{ id: null as number | null, name: 'Base Contract' }, ...cos.map((o) => {
+      const st = startOf(o.id);
+      const when = st === Infinity ? ' · not approved yet' : st > 0 ? ` · on the SOV from ${label(apps.find((a) => a.number === st) ?? { docNumber: st })}` : '';
+      return { id: o.id, name: `${o.number}${o.title ? ` — ${o.title}` : ''}${when}` };
+    })]
       .map((g) => ({ ...g, lines: x.sovLines.filter((l) => l.contractId === c.id && (l.changeOrderId ?? null) === g.id) }))
       .filter((g) => g.lines.length);
     const head = apps.map((a) => `<th>${escapeHtml(label(a))}</th>`).join('');
     const body = groups.map((g) => {
       const lineRows = g.lines.map((l) => {
-        const cells = apps.map((_, i) => {
+        const cells = apps.map((a, i) => {
           const v = r2(toDateAt[i].get(l.id)?.toDate ?? 0);
+          // Not on the SOV yet at this pay app (and nothing billed): shaded, blank.
+          if (a.number < startOf(l.changeOrderId ?? null) && Math.abs(v) < 0.005) return '<td class="nosov"></td>';
           const before = i ? r2(toDateAt[i - 1].get(l.id)?.toDate ?? 0) : 0;
           const moved = Math.abs(v - before) >= 0.005;
-          return `<td class="num"${moved ? ' style="font-weight:700"' : ' style="color:#9ca3af"'}>${v ? money2(v) : '—'}</td>`;
+          return `<td class="num"${moved ? ' style="font-weight:700"' : ' style="color:#9ca3af"'}>${money2(v)}</td>`;
         }).join('');
         return `<tr><td>${escapeHtml(l.itemNo ?? '')}</td><td>${escapeHtml(l.description)}</td><td class="num">${money2(l.scheduledValue)}</td>${cells}</tr>`;
       }).join('');
-      const sub = apps.map((_, i) => `<td class="num">${money2(r2(g.lines.reduce((s, l) => s + (toDateAt[i].get(l.id)?.toDate ?? 0), 0)))}</td>`).join('');
+      const sub = apps.map((a, i) => {
+        const v = r2(g.lines.reduce((s, l) => s + (toDateAt[i].get(l.id)?.toDate ?? 0), 0));
+        return a.number < startOf(g.id) && Math.abs(v) < 0.005 ? '<td class="nosov"></td>' : `<td class="num">${money2(v)}</td>`;
+      }).join('');
       return `<tr class="grp"><td colspan="${3 + apps.length}">${escapeHtml(g.name)}</td></tr>${lineRows}
         <tr class="total"><td></td><td>Subtotal</td><td class="num">${money2(r2(g.lines.reduce((s, l) => s + l.scheduledValue, 0)))}</td>${sub}</tr>`;
     }).join('');
-    const grand = `<tr class="total" style="border-top:2px solid #111827"><td></td><td>Total Billed to Date</td><td class="num">${money2(r2(groups.reduce((s, g) => s + g.lines.reduce((t, l) => t + l.scheduledValue, 0), 0)))}</td>${totalAt.map((t) => `<td class="num">${money2(t)}</td>`).join('')}</tr>`;
+    const grand = `<tr class="total" style="border-top:2px solid #111827"><td></td><td>Total Billed to Date</td><td class="num">${money2(r2(groups.filter((g) => startOf(g.id) !== Infinity).reduce((s, g) => s + g.lines.reduce((t, l) => t + l.scheduledValue, 0), 0)))}</td>${totalAt.map((t) => `<td class="num">${money2(t)}</td>`).join('')}</tr>`;
     const byLine = `
     <h3 class="sec">By Line: Total to Date at the End of Each Pay App</h3>
-    <p class="hint" style="margin-top:0">Each pay app's column is what the next pay app's G703 should show as Previous (Column D), line by line. Bold: billed on that pay app.</p>
+    <p class="hint" style="margin-top:0">Each pay app's column is what the next pay app's G703 should show as Previous (Column D), line by line. Bold: billed on that pay app. Gray: on the schedule of values, nothing new billed ($0.00 = not billed yet). <span style="display:inline-block;width:18px;height:9px;background:#e5e7eb;vertical-align:middle;border:1px solid #d1d5db"></span> Shaded: not on the schedule of values yet (change order not approved by that pay app).</p>
     <table class="t wide"><thead><tr><th class="l">Item</th><th class="l">Description</th><th>Scheduled Value</th>${head}</tr></thead><tbody>${body}${grand}</tbody></table>`;
 
     return `<h2 style="font-size:15px;margin:14px 0 4px">${escapeHtml(c.counterparty)}${c.contractNumber ? ` #${escapeHtml(c.contractNumber)}` : ''}</h2>${byApp}${byLine}`;
@@ -100,6 +116,7 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
     .t tr.grp td { background: #e5e7eb; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
     .t tr.total td { font-weight: 700; background: #f9fafb; }
     .muted { color: #9ca3af; }
+    .t td.nosov, .t tr.total td.nosov { background: repeating-linear-gradient(135deg, #f3f4f6, #f3f4f6 3px, #e5e7eb 3px, #e5e7eb 6px); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .hint { font-size: 9.5px; color: #6b7280; margin: 4px 0 0; }
     .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #374151; margin: 14px 0 6px; }
   </style></head><body>

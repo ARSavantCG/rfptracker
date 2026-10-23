@@ -80,10 +80,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
         <td class="num" style="background:#f5f7ff">${isOpen ? money2(a.open) : '$0.00 <span style="color:#166534;font-size:8.5px;font-weight:700">PAID</span>'}</td><td class="num" style="background:#f5f7ff">${money2(ret)}</td><td class="num" style="background:#f5f7ff"><strong>${money2(pay)}</strong></td></tr>`;
     }).join('')}
     <tr class="total"><td colspan="2">Total${multi ? '' : ` · ${escapeHtml(name(all[0].contractId))}`}</td><td class="num">${money2(r2(allTot.gross))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.due))}</td><td class="num">${money2(r2(allTot.paid))}</td><td></td><td class="num">${money2(r2(allTot.open))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.payoff))}</td></tr>
-  </tbody></table>
-  <div style="font-size:10px;color:#1e3a8a;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:6px 9px;margin-top:6px">
-    <strong>Retainage held is not past due.</strong> It is withheld under the contract and normally released at completion. It's included here only because everything is being paid off now, so each pay app shows what is still due on it plus its retainage.
-    ${allTot.open > 0.005 ? '' : ' Every pay app is paid; the payoff is the retainage alone.'}</div>` : '';
+  </tbody></table>` : '';
 
   const retain = rows.some((r) => r.retainageHeld > 0.005) ? `
   <h3 class="sec">Retainage Held</h3>

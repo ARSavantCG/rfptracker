@@ -101,6 +101,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
       <G702CompareCard b={b} projectId={projectId} open={open} />
+      <PayoffCard b={b} projectId={projectId} />
       <CoLogCard b={b} projectId={projectId} open={open} />
       </div>
 
@@ -431,6 +432,32 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
 }
 
 /** Pay Application Log: the GC's and each sub's pay app per pay app — line 8 vs the conditional, and the file. */
+/**
+ * Payoff Statement (refinance / sale): every pay app billed and unpaid plus the retainage held,
+ * as of a closing date, and the releases to collect once it's paid.
+ */
+export function PayoffCard({ b, projectId }: { b: ProjectBundle; projectId: number }) {
+  const latest = b.positionInput.applications.reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), '');
+  const [asOf, setAsOf] = useState(latest > todayIso() ? latest : todayIso());
+  const t = b.position.totals;
+  const openApps = b.position.applications.filter((a) => a.open > 0.005);
+  const payoff = Math.round((openApps.reduce((s, a) => s + a.open, 0) + t.retainageHeld) * 100) / 100;
+  const open = async () => { const { openReport } = await import('./types'); await openReport(`/api/reports/payoff/${projectId}?asOf=${asOf}`); };
+  return (
+    <Card id="payoff" title="Payoff Statement" what="For a refinance or sale: what it takes to bring every contractor to zero (each pay app billed and not yet paid, plus the retainage held) as of a closing date, and the lien releases to collect once it's paid."
+          summary={`Payoff ${money(payoff)}`}
+          action={<Button variant="outline" className="h-9" onClick={open}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      <div className="flex flex-wrap items-end gap-4 text-sm">
+        <label className="space-y-1"><span className="text-xs text-gray-600 block">As Of (Closing Date)</span>
+          <Input type="date" className="h-9 w-44" value={asOf} onChange={(e) => setAsOf(e.target.value)} /></label>
+        <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Billed, Unpaid</div><div className="font-semibold tabular-nums">{money(openApps.reduce((s, a) => s + a.open, 0))} <span className="text-xs font-normal text-gray-500">({openApps.length} pay app{openApps.length === 1 ? '' : 's'})</span></div></div>
+        <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Retainage Held</div><div className="font-semibold tabular-nums">{money(t.retainageHeld)}</div></div>
+        <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Payoff Today</div><div className="font-semibold tabular-nums text-blue-900">{money(payoff)}</div></div>
+      </div>
+    </Card>
+  );
+}
+
 /** Ours against the contractor's, G702 and G703, for one pay app or every one that doesn't agree. */
 function G702CompareCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
   const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '';

@@ -25,6 +25,7 @@ import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from
 import { fmtPct } from "@shared/format";
 import { CO_STAGES } from "@shared/co-routing";
 import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-report";
+import { renderPayoffHtml } from "./payoff-report";
 import { coLog, type CoLogRow } from "@shared/co-log";
 import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
@@ -1119,6 +1120,36 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Pay app log error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Payoff Statement: billed-unpaid pay apps + retainage held, as of a date (?asOf=), and the releases to collect. */
+  app.get("/api/reports/payoff/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const asOfRaw = String(req.query.asOf || "");
+      // Default: through today, or the latest pay app when one is dated ahead.
+      const latest = (b.positionInput.applications as any[]).reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), "");
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : latest > todayEastern() ? latest : todayEastern();
+      const pos = positionAsOf(asOf, b.positionInput);
+      const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
+      const apps = b.applications.map((a: any) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber }));
+      const paidOf = paidOfFrom(b.payments, (aid) => { const a: any = b.applications.find((x: any) => x.id === aid); return a ? gcPaymentDue(a, b.waivers, cname(a.contractId)).due : null; });
+      const facts = await propertyFacts(b.project);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderPayoffHtml({
+        info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
+        contracts: b.contracts.map((c: any) => ({ id: c.id, name: c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : ""), retainagePct: Number(c.retainagePct) || 0 })),
+        positions: pos.contracts as any, applications: pos.applications as any,
+        waiverGroups: waiversByPayApp(apps, b.waivers, cname, paidOf),
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Payoff report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

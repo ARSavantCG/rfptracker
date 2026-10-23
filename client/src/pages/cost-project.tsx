@@ -23,7 +23,7 @@ import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
 import { ProjectFilesList, DeletedFilesBin } from '@/components/cost/project-files';
-import { ReportsView, LenderPackagesCard } from '@/components/cost/reports-view';
+import { ReportsView, LenderPackagesCard, PayoffCard } from '@/components/cost/reports-view';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
@@ -175,6 +175,7 @@ export default function CostProject() {
 
           <TabsContent value="documents" className="mt-4 space-y-3">
             <LenderPackagesCard b={b} projectId={id} />
+            <PayoffCard b={b} projectId={id} />
           {/* Every file on the project in one list — pay apps, receipts, contracts. */}
           <div className="bg-white border rounded-lg px-4 py-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">

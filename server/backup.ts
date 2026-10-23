@@ -29,7 +29,7 @@ import { sql, eq } from 'drizzle-orm';
 import { db, pool } from './db';
 import { appSettings, backupFiles } from '@shared/schema';
 import { requireAuth, requireAdmin } from './middleware';
-import { listObjectsWithMeta, objectReadStream, downloadFromObjectStorage } from './storage-backup';
+import { listObjectsWithMeta, objectReadStream, mimeFromName } from './storage-backup';
 
 const admin = [requireAuth, requireAdmin] as const;
 const OAUTH = () => process.env.GOOGLE_OAUTH_BASE || 'https://oauth2.googleapis.com';
@@ -105,10 +105,6 @@ async function allStoredFiles(): Promise<Stored[]> {
 const fileStream = (key: string): Readable | null => (process.env.PRIVATE_OBJECT_DIR
   ? (objectReadStream(key) as Readable | null)
   : fs.existsSync(path.join(process.cwd(), 'uploads', key)) ? fs.createReadStream(path.join(process.cwd(), 'uploads', key)) : null);
-const fileBuffer = async (key: string): Promise<Buffer | null> => (process.env.PRIVATE_OBJECT_DIR
-  ? downloadFromObjectStorage(key)
-  : fsp.readFile(path.join(process.cwd(), 'uploads', key)).catch(() => null));
-
 // ---------------------------------------------------------------- full download
 
 const README = `RFPTracker full backup
@@ -193,9 +189,53 @@ async function upload(tok: string, parent: string, name: string, data: Buffer, m
   return j.id;
 }
 
+/**
+ * A stored file to Drive in 8 MB pieces (resumable upload), read as a stream, so memory
+ * stays flat whatever the file's size. Holding whole files in memory is what took the
+ * server down on the first big run (2026-10-23).
+ */
+const CHUNK = 8 * 1024 * 1024; // a multiple of 256 KB, as Drive requires
+async function uploadStream(tok: string, parent: string, name: string, key: string, size: number, mime: string): Promise<string> {
+  const start = await fetch(`${API()}/upload/drive/v3/files?uploadType=resumable&fields=id`, {
+    method: 'POST', headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': mime, 'X-Upload-Content-Length': String(size) },
+    body: JSON.stringify({ name, parents: [parent] }),
+  });
+  if (!start.ok) { const e: any = new Error(`Google Drive upload refused (${start.status})`); e.status = start.status; throw e; }
+  const loc = start.headers.get('location');
+  if (!loc) throw new Error('Google Drive gave no upload address');
+  const src = fileStream(key);
+  if (!src) throw new Error('file not found in storage');
+  let pending: Buffer[] = [], pendingLen = 0, sent = 0, id: string | null = null;
+  const put = async (last: boolean) => {
+    const body = Buffer.concat(pending, pendingLen); pending = []; pendingLen = 0;
+    const end = sent + body.length - 1;
+    const r = await fetch(loc, { method: 'PUT', headers: { 'Content-Length': String(body.length), 'Content-Range': body.length ? `bytes ${sent}-${end}/${last ? sent + body.length : '*'}` : `bytes */${sent}` }, body });
+    sent += body.length;
+    if (last) {
+      const j: any = await r.json().catch(() => ({}));
+      if (!r.ok || !j.id) throw new Error(`Google Drive upload failed (${r.status})`);
+      id = j.id;
+    } else if (r.status !== 308) throw new Error(`Google Drive upload stopped (${r.status})`);
+  };
+  try {
+    for await (const chunk of src as AsyncIterable<Buffer>) {
+      let c = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      while (c.length) {
+        const take = Math.min(CHUNK - pendingLen, c.length);
+        pending.push(c.subarray(0, take)); pendingLen += take; c = c.subarray(take);
+        if (pendingLen === CHUNK) await put(false);
+      }
+    }
+    await put(true);
+  } finally { (src as any).destroy?.(); }
+  return id!;
+}
+
 // ---------------------------------------------------------------- the run
 
 let running = false;
+/** Short, and renewed before every file, so a server that dies mid-run frees it quickly. */
+const LEASE_MIN = 5;
 const INSTANCE = crypto.randomBytes(6).toString('hex');
 
 /** Take the lease (or renew ours). False when another instance holds a live one. */
@@ -223,7 +263,7 @@ const keepNames = (names: Array<{ id: string; name: string }>) => {
 
 export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunRecord> {
   if (running) throw new Error('A backup is already running.');
-  if (!(await takeLease(30))) throw new Error('A backup is already running on another server.');
+  if (!(await takeLease(LEASE_MIN))) throw new Error('A backup is already running on another server.');
   running = true;
   const t0 = Date.now();
   const status: Status = (await getSetting<Status>(K.status)) ?? { history: [] };
@@ -268,17 +308,21 @@ export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunR
     await save({ current: 'Files' });
     const done2 = new Map((await db.select().from(backupFiles)).map((r) => [r.key, r.sizeBytes ?? -1]));
     const todo = (await allStoredFiles()).filter((f) => done2.get(f.key) !== f.size);
-    let copied = 0;
+    let copied = 0, failed = 0;
     for (const f of todo) {
       if (Date.now() - t0 > budgetMs) break;
-      await takeLease(30);
-      const buf = await fileBuffer(f.key);
-      if (!buf) continue;
+      await takeLease(LEASE_MIN);
       const parts = f.key.split('/');
       const name = parts.pop()!;
-      const ext = name.split('.').pop()?.toLowerCase() ?? '';
-      const mime = ext === 'pdf' ? 'application/pdf' : /^(png|jpe?g|gif|webp)$/.test(ext) ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : 'application/octet-stream';
-      const id = await withFolder(['Files', ...parts], (pid) => upload(tok, pid, name, buf, mime));
+      let id: string;
+      try {
+        id = await withFolder(['Files', ...parts], async (pid) => uploadStream(await fresh(), pid, name, f.key, f.size, mimeFromName(name)));
+      } catch (e: any) {
+        // One bad file doesn't stop the rest; it's tried again next run.
+        if (e?.status === 401 || e?.status === 403) throw e;
+        failed++; console.warn(`[backup] skipped ${f.key}: ${e?.message}`);
+        continue;
+      }
       await db.insert(backupFiles).values({ key: f.key, driveId: id, sizeBytes: f.size, backedUpAt: new Date() })
         .onConflictDoUpdate({ target: backupFiles.key, set: { driveId: id, sizeBytes: f.size, backedUpAt: new Date() } });
       copied++;
@@ -287,6 +331,7 @@ export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunR
     await setSetting(K.folders, cache);
     rec.filesCopied = copied;
     rec.filesRemaining = todo.length - copied;
+    if (failed) rec.error = `${failed} file${failed === 1 ? '' : 's'} could not be copied; tried again next run`;
     rec.ok = true;
     const total = Number((await pool.query('SELECT count(*)::int AS n FROM backup_files')).rows[0]?.n ?? 0);
     // A run that ran out of time still counts for the database; the files carry on next time.
@@ -308,7 +353,7 @@ export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunR
 export function startBackupScheduler() {
   const tick = async () => {
     try {
-      if (running || !configured()) return;
+      if (running || !configured() || process.env.BACKUP_AUTO === 'off') return;
       const conn = await getSetting<DriveConn>(K.drive);
       if (!conn) return;
       const st = await getSetting<Status>(K.status);

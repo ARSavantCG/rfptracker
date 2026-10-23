@@ -47,7 +47,7 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
       const off = theirPrev != null ? r2(theirPrev - shouldBe) : null;
       if (off != null && Math.abs(off) >= 0.005) breaks++;
       const check = off == null ? '<td class="muted" style="text-align:center">—</td>'
-        : Math.abs(off) < 0.005 ? '<td style="text-align:center;color:#166534">✓ Rolls forward</td>'
+        : Math.abs(off) < 0.005 ? '<td style="text-align:center;color:#166534">✓ Ties</td>'
         : `<td style="text-align:center;color:#991b1b;font-weight:700">Off ${money2(Math.abs(off))}</td>`;
       return `<tr${off != null && Math.abs(off) >= 0.005 ? ' style="background:#fef2f2"' : ''}><td>${label(a)}</td><td>${shortD(a.periodEnd ?? a.createdAt)}</td>
         <td class="num">${money2(prev)}</td><td class="num">${money2(period)}</td><td class="num"><strong>${money2(totalAt[i])}</strong></td>
@@ -55,9 +55,9 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
     }).join('');
     const byApp = `
     <h3 class="sec">By Pay App: Billed Through the End of Each</h3>
-    <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Period To</th><th>Previous</th><th>This Period</th><th>Total Billed to Date</th><th>Their G702 Line 4</th><th>Their Previous<br>(Line 4 Less This Period)</th><th style="text-align:center">Carries Forward?</th></tr></thead>
+    <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Period To</th><th>Previous</th><th>This Period</th><th>Total Billed to Date</th><th>Their G702 Line 4</th><th>Their Previous<br>(Line 4 Less This Period)</th><th style="text-align:center">Ties to Their<br>Last Pay App?</th></tr></thead>
     <tbody>${rows}</tbody></table>
-    <p class="hint">Total billed to date at the end of one pay app should be the previous on the next. "Their previous" is their line 4 less this period's work on the lines; it should equal their line 4 on the pay app before.${breaks ? ` <strong style="color:#991b1b">${breaks} pay app${breaks === 1 ? '' : 's'} where theirs doesn't carry forward.</strong>` : ''}</p>`;
+    <p class="hint">Total billed to date at the end of one pay app should be the previous on the next. "Their previous" is their line 4 less this period's work: what they say was billed before this pay app. It should equal their line 4 on their last pay app; when it doesn't, their two G702s don't agree.${breaks ? ` <strong style="color:#991b1b">${breaks} pay app${breaks === 1 ? '' : 's'} where theirs doesn't tie.</strong>` : ''}</p>`;
 
     // ---- By line: total to date at the end of each pay app
     const cos = x.changeOrders.filter((o) => o.contractId === c.id && o.status !== 'void');

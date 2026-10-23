@@ -26,6 +26,7 @@ import { fmtPct } from "@shared/format";
 import { CO_STAGES } from "@shared/co-routing";
 import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-report";
 import { renderPayoffHtml } from "./payoff-report";
+import { renderRollForwardHtml } from "./rollforward-report";
 import { coLog, type CoLogRow } from "@shared/co-log";
 import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
@@ -1168,6 +1169,27 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Payoff report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Billing Roll-Forward: billed through the end of each pay app, by pay app and by line. */
+  app.get("/api/reports/rollforward/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const facts = await propertyFacts(b.project);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderRollForwardHtml({
+        info: infoRows(b.project, facts.propertyLabel, facts.rentableSf),
+        contracts: b.contracts.map((c: any) => ({ id: c.id, counterparty: c.counterparty, contractNumber: c.contractNumber })),
+        sovLines: b.sovLines as any, changeOrders: b.changeOrders as any, applications: b.applications as any[],
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Roll-forward report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

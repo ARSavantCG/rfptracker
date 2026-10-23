@@ -101,6 +101,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
       <G702CompareCard b={b} projectId={projectId} open={open} />
+      <Card id="rollforward" title="Billing Roll-Forward" what="What's been billed through the end of each pay app, by pay app and line by line. Each pay app's total to date should be the next one's Previous; flags where the contractor's doesn't carry forward."
+            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/rollforward/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+        <p className="text-sm text-gray-700">Prints landscape: one table by pay app (previous, this period, total to date, their line 4 and whether it rolls forward), then every line's total to date at the end of each pay app.</p>
+      </Card>
       <PayoffCard b={b} projectId={projectId} />
       <CoLogCard b={b} projectId={projectId} open={open} />
       </div>

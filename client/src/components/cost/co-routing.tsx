@@ -46,7 +46,7 @@ export function CoStageControls({ co, amount, fromLines, onChanged }: { co: Chan
   };
   return (
     <>
-      <div className="w-52">
+      <div className="w-52 shrink-0">
         <Select value={r.stage} onValueChange={(v) => move(v as CoStage)}>
           <SelectTrigger className={`h-7 text-xs font-medium ${STAGE_STYLE[st.tone]}`}><SelectValue /></SelectTrigger>
           <SelectContent className="pm-scope">
@@ -54,14 +54,19 @@ export function CoStageControls({ co, amount, fromLines, onChanged }: { co: Chan
           </SelectContent>
         </Select>
       </div>
-      <button className="inline-flex items-center gap-1 text-xs font-normal text-blue-700 hover:underline" onClick={() => setOpen(true)} title="Who has it, dates, notes and history">
+      <button className="inline-flex items-center gap-1 text-xs font-normal text-blue-700 hover:underline w-36 shrink-0 truncate text-left" onClick={() => setOpen(true)} title={r.with ? `With ${r.with}: who has it, dates, notes and history` : 'Who has it, dates, notes and history'}>
         <Route className="h-3.5 w-3.5" />
         {r.open ? <>{r.with ? `With ${r.with}` : 'Routing'}{r.daysInStage != null && <span className={r.daysInStage >= 30 ? 'text-red-700 font-semibold' : r.daysInStage >= 14 ? 'text-amber-700 font-semibold' : 'text-gray-500'}> · {r.daysInStage}d</span>}</> : 'Routing'}
       </button>
-      {r.higher && <span className="text-[11px] font-semibold text-violet-800 bg-violet-50 border border-violet-200 rounded px-1.5" title="Routes to the same approvers as large change orders">{r.higher}</span>}
       {open && <RoutingDialog co={co} amount={amount} fromLines={fromLines} onClose={() => setOpen(false)} onChanged={onChanged} />}
     </>
   );
+}
+
+/** "Over $250,000.00" / "Adds 45 days": shown next to the change order's name. */
+export function CoHigherTag({ co, amount }: { co: ChangeOrderRow; amount: number }) {
+  const why = needsHigherRouting(amount, co.daysAdded);
+  return why ? <span className="text-[11px] font-semibold text-violet-800 bg-violet-50 border border-violet-200 rounded px-1.5" title="Routes to the same approvers as large change orders">{why}</span> : null;
 }
 
 function RoutingDialog({ co, amount, fromLines, onClose, onChanged }: { co: ChangeOrderRow; amount: number; fromLines: boolean; onClose: () => void; onChanged: () => void }) {

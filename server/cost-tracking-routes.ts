@@ -314,7 +314,10 @@ export async function loadProjectBundle(projectId: number) {
     contractIds, lines, changeOrders, applications: dated, payments,
     directCosts: directCosts.map((d) => ({ id: d.id, date: d.date, amount: d.amount, vendor: d.vendor, description: d.description, method: d.method, reference: d.reference, key: d.key })),
   };
-  const position = positionAsOf(todayEastern(), positionInput);
+  // Through today, or through the latest pay app when one is dated ahead (period ending at
+  // month end, entered before it): what's been entered counts (Adolfo, 2026-10-23).
+  const latestApp = dated.reduce((m, a: any) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), '');
+  const position = positionAsOf(latestApp > todayEastern() ? latestApp : todayEastern(), positionInput);
 
   const settings = (project.settings || {}) as any;
   // The CM's own contract (if there is one) is not part of its base.

@@ -19,7 +19,11 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
   onPackage?: (t: { app: ApplicationRow; contract: ContractRow }) => void;
 }) {
   const { toast } = useToast();
-  const [asOf, setAsOf] = useState(todayIso());
+  // Today, or the latest pay app's date when one is dated ahead (a period ending at month end,
+  // entered before it) — otherwise a pay app just entered wouldn't show (Adolfo, 2026-10-23).
+  const latest = bundle.positionInput.applications.reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), '');
+  const defaultAsOf = latest > todayIso() ? latest : todayIso();
+  const [asOf, setAsOf] = useState(defaultAsOf);
   // Each list rolls up to one line; remembered.
   const [appsOpen, toggleApps] = useRemembered('pm-payapps-open-apps', true);
   const [directOpen, toggleDirect] = useRemembered('pm-payapps-open-direct', true);
@@ -44,6 +48,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
   const owedTone = (v: number) => (v > 0.005 ? 'text-red-700 font-medium' : v < -0.005 ? 'text-amber-700 font-medium' : 'text-green-700');
   const overpaid = p.contracts.filter((c) => c.owed < -0.005);
   const undated = bundle.applications.filter((a) => !a.periodEnd);
+  const after = bundle.positionInput.applications.filter((a) => String(a.date).slice(0, 10) > asOf);
 
   return (
     <div className="space-y-4">
@@ -51,8 +56,8 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
         <div className="space-y-1">
           <label htmlFor="as-of" className="text-xs text-gray-600">As of</label>
           <div className="flex gap-2">
-            <Input id="as-of" type="date" className="h-9 w-44" value={asOf} max={todayIso()} onChange={(e) => setAsOf(e.target.value)} />
-            {asOf !== todayIso() && <Button variant="ghost" size="sm" onClick={() => setAsOf(todayIso())}>Today</Button>}
+            <Input id="as-of" type="date" className="h-9 w-44" value={asOf} max={defaultAsOf} onChange={(e) => setAsOf(e.target.value)} />
+            {asOf !== defaultAsOf && <Button variant="ghost" size="sm" onClick={() => setAsOf(defaultAsOf)}>{defaultAsOf === todayIso() ? 'Today' : 'Latest'}</Button>}
           </div>
         </div>
           <div className="space-y-1">
@@ -74,6 +79,13 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
           <Printer className="h-4 w-4 mr-1" /> Print Pay App Status
         </Button>
       </div>
+
+      {after.length > 0 && (
+        <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-3 flex items-center justify-between gap-3 flex-wrap">
+          <span>{after.length} pay app{after.length === 1 ? ' is' : 's are'} dated after {shortDate(asOf)} and not counted here: {after.map((a) => `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${String(a.docNumber ?? a.number).padStart(3, '0')} (${shortDate(String(a.date).slice(0, 10))})`).join(', ')}.</span>
+          <Button size="sm" variant="outline" onClick={() => setAsOf(after.reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), asOf))}>Show Through {shortDate(after.reduce((m, a) => (String(a.date).slice(0, 10) > m ? String(a.date).slice(0, 10) : m), asOf))}</Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <Stat label="Billed to Date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(2)}% of ${money(t.contractSum)}`} />
@@ -113,7 +125,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
             ))}
             {p.direct.count > 0 && (
               <tr className="border-b last:border-0">
-                <td className="px-3 py-1.5">Direct costs — no contract <span className="text-xs text-gray-500">({p.direct.count}, listed below)</span></td>
+                <td className="px-3 py-1.5">Direct Costs <span className="text-xs text-gray-500">({p.direct.count}, listed below)</span></td>
                 <D v={p.direct.total} /><D v={p.direct.total} />
                 <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">100.00%</td>
                 <D v={0} /><D v={p.direct.total} /><D v={p.direct.total} /><D v={0} tone="text-green-700" /><D v={0} />

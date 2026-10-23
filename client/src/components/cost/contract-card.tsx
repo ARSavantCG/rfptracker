@@ -15,7 +15,7 @@ import { useAiStatus } from '@/hooks/use-ai-status';
 import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput, MoneyInput } from './inputs';
-import { CoStageControls } from './co-routing';
+import { CoStageControls, CoHigherTag } from './co-routing';
 import { fmtPctText } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
@@ -231,6 +231,8 @@ export function ContractCard({
               <tbody key={g.id ?? 'base'} className={isVoid ? 'opacity-50' : ''}>
                 <tr className="bg-gray-100 border-y">
                   <td colSpan={2} className="px-3 py-1.5 font-semibold text-gray-900">
+                    {/* Name on the first line; every change order's controls on the second, in the same order and widths, so they line up down the page. */}
+                    <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <button className="inline-flex items-center gap-1 hover:text-blue-800" title={rolled.has(String(g.id ?? 'base')) ? 'Show its lines' : 'Roll up to one line'}
                               onClick={() => toggleRoll(String(g.id ?? 'base'))}>
@@ -238,7 +240,10 @@ export function ContractCard({
                         <span>{g.label}</span>
                         {rolled.has(String(g.id ?? 'base')) && <span className="text-xs font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'}</span>}
                       </button>
-                      {g.co && <CoStageControls co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} fromLines={g.lines.length > 0} onChanged={refresh} />}
+                      {g.co && <CoHigherTag co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} />}
+                    </div>
+                    {g.co && <div className="flex items-center gap-2 flex-nowrap font-normal">
+                      <CoStageControls co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} fromLines={g.lines.length > 0} onChanged={refresh} />
                       {g.co && (() => {
                         const co = g.co!;
                         const sorted = [...applications].sort((a, b) => a.number - b.number);
@@ -249,7 +254,7 @@ export function ContractCard({
                         };
                         const auto = co.startApp == null ? 'Approved on: auto' : `Auto · approved on ${nameOf(co.startApp)}`;
                         return (
-                          <div className="w-52" title="The pay app this change order was approved on. Its G702 lists it under 'approved this period'; earlier pay apps leave it out.">
+                          <div className="w-52 shrink-0" title="The pay app this change order was approved on. Its G702 lists it under 'approved this period'; earlier pay apps leave it out.">
                             <Select value={co.startAppNumber == null ? 'auto' : String(co.startAppNumber)}
                                     onValueChange={(v) => setCoStart.mutate({ id: co.id, startAppNumber: v === 'auto' ? null : Number(v) })}>
                               <SelectTrigger className="h-7 text-xs">
@@ -273,6 +278,7 @@ export function ContractCard({
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
+                    </div>}
                     </div>
                   </td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(total)}</td>
@@ -613,7 +619,7 @@ function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrd
   };
   const executed = co.status === 'approved' && docs.length > 0;
   return (
-    <div className={`flex items-center gap-1.5 flex-wrap text-xs rounded px-1 ${over ? 'bg-blue-100' : ''}`}
+    <div className={`flex items-center gap-1.5 flex-nowrap whitespace-nowrap text-xs rounded px-1 ${over ? 'bg-blue-100' : ''}`}
          onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setOver(true); } }}
          onDragLeave={() => setOver(false)}
          onDrop={(e) => { if (!Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); setOver(false); add(Array.from(e.dataTransfer.files)); }}>
@@ -623,7 +629,7 @@ function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrd
       {docs.map((d) => (
         <span key={d.id} className="inline-flex items-center gap-1">
           <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => openDocument(d.id)} title={d.originalName}>
-            <Paperclip className="h-3 w-3" />{d.originalName.length > 26 ? `${d.originalName.slice(0, 24)}…` : d.originalName}
+            <Paperclip className="h-3 w-3" />{d.originalName.length > 22 ? `${d.originalName.slice(0, 20)}…` : d.originalName}
           </button>
           <button className="text-gray-400 hover:text-red-700" title="Remove this file" onClick={() => remove(d)}><X className="h-3 w-3" /></button>
         </span>

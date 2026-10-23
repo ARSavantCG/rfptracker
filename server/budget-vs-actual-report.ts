@@ -27,8 +27,9 @@ import { CO_STAGES } from "@shared/co-routing";
 import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-report";
 import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
+import { renderOwedHtml } from "./owed-report";
 import { coLog, type CoLogRow } from "@shared/co-log";
-import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, partyOf, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
+import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, partyOf, owedByVendor, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -1187,6 +1188,25 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Payoff report error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Owed by Vendor: each vendor's conditionals on the pay apps not yet paid in full. */
+  app.get("/api/reports/owed-by-vendor/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const open = new Set((b.position.applications as any[]).filter((a) => a.open > 0.005).map((a) => a.applicationId));
+      const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
+      const o = owedByVendor((b.applications as any[]).filter((a) => open.has(a.id)), b.waivers, cname);
+      const facts = await propertyFacts(b.project);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), ...o, generatedBy: generatedByName((req as any).user) }));
+    } catch (e: any) {
+      console.error("Owed by vendor error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

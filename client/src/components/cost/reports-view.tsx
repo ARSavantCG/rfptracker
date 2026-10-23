@@ -8,7 +8,7 @@ import { MoneyInput } from './inputs';
 import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
 import { STAGE_STYLE } from './co-routing';
-import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue, threeWayCheck } from '@shared/cost-waivers';
+import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue, threeWayCheck, owedByVendor } from '@shared/cost-waivers';
 import { coLog } from '@shared/co-log';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -106,6 +106,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         <p className="text-sm text-gray-700">Prints landscape: one table by pay app (previous, this period, total to date, their line 4 and whether it rolls forward), then every line's total to date at the end of each pay app.</p>
       </Card>
       <PayoffCard b={b} projectId={projectId} />
+      <OwedByVendorCard b={b} projectId={projectId} open={open} />
       <CoLogCard b={b} projectId={projectId} open={open} />
       </div>
 
@@ -715,4 +716,55 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 function Fig({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return <div><div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div><div className={`tabular-nums ${strong ? 'text-lg font-bold text-gray-900' : 'font-semibold text-gray-800'}`}>{value}</div></div>;
+}
+
+/** Who's waiting on what: each vendor's conditionals on the pay apps not yet paid, and their total. */
+function OwedByVendorCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const [q, setQ] = useState('');
+  const o = useMemo(() => {
+    const ids = new Set(b.position.applications.filter((a) => a.open > 0.005).map((a) => a.applicationId));
+    return owedByVendor(b.applications.filter((a) => ids.has(a.id)) as any, b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '');
+  }, [b.position.applications, b.applications, b.waivers, b.contracts]);
+  const nn = (n: number) => String(n).padStart(3, '0');
+  const rows = o.rows.filter((r) => !q.trim() || r.vendor.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <Card id="owed-by-vendor" title="Owed by Vendor" what="For every pay app not yet paid: each vendor's conditional release on it and their total. The GC's covers its subs' (we pay the GC, the GC pays them)."
+          summary={o.apps.length ? `${o.apps.length} Unpaid Pay App${o.apps.length === 1 ? '' : 's'} · Subs ${money(o.subTotal)}` : 'All Paid'}
+          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/owed-by-vendor/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!o.apps.length ? <p className="text-sm text-gray-700">Every pay app is paid.</p> : (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm"><span className="text-xs text-gray-600">Find a Vendor</span>
+            <Input className="h-9 w-72" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <div className="overflow-x-auto">
+            <table className="text-sm w-full">
+              <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
+                <th className="text-left font-medium py-1 pr-3">Vendor</th>
+                {o.apps.map((a) => <th key={a.id} className="text-right font-medium py-1 px-2">Pay App {nn(a.docNumber)}</th>)}
+                <th className="text-right font-medium py-1 pl-2">Total</th>
+              </tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.party + r.vendor} className={`border-b ${r.party === 'gc' ? 'font-semibold bg-gray-50' : ''}`}>
+                    <td className={`py-1 pr-3 ${r.party === 'sub' ? 'pl-3' : ''}`}>{r.vendor}{r.party === 'gc' && <span className="ml-1 text-[10px] text-blue-700 border border-blue-200 rounded px-1">GC</span>}</td>
+                    {o.apps.map((a) => {
+                      const v = r.byApp[a.id];
+                      return <td key={a.id} className="py-1 px-2 text-right tabular-nums">{v ? <>{money(v.amount)}{!v.received && <div className="text-[10px] text-amber-700 font-normal">not received</div>}</> : <span className="text-gray-300">—</span>}</td>;
+                    })}
+                    <td className="py-1 pl-2 text-right tabular-nums font-semibold">{money(r.total)}</td>
+                  </tr>
+                ))}
+                {!q.trim() && o.rows.some((r) => r.party === 'sub') && (
+                  <tr className="font-semibold border-t-2 border-gray-800">
+                    <td className="py-1 pr-3">Subcontractors Total</td>
+                    {o.apps.map((a) => <td key={a.id} className="py-1 px-2 text-right tabular-nums">{money(o.subByApp[a.id] ?? 0)}</td>)}
+                    <td className="py-1 pl-2 text-right tabular-nums">{money(o.subTotal)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 }

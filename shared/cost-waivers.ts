@@ -580,3 +580,33 @@ export function threeWayCheck(
   const oursOff = ours != null && theirs.length && theirsAgree && !eq(ours, theirs[0]) ? r2(ours - theirs[0]) : null;
   return { ours, contractor, conditional, status: allEq ? (vals.length === 3 ? 'match' : 'partial') : 'off', oursOff, summary };
 }
+
+/**
+ * Who's waiting on what (Adolfo, 2026-10-23: "the plumber's crying, he has bills in 6, 7
+ * and 8?"): for every pay app not yet paid in full, each vendor's conditional on it, and
+ * each vendor's total across them. The GC's conditional covers its subs' (we pay the GC,
+ * the GC pays them), so subs are totalled on their own.
+ */
+export interface OwedRow { vendor: string; party: 'gc' | 'sub'; byApp: Record<number, { amount: number; received: boolean }>; total: number; apps: number }
+export function owedByVendor(
+  openApps: ReadonlyArray<{ id: number; contractId: number; number: number; docNumber?: number | null }>,
+  waivers: readonly Waiver[],
+  contractName: (contractId: number) => string,
+): { apps: Array<{ id: number; contractId: number; docNumber: number }>; rows: OwedRow[]; subTotal: number; gcTotal: number; subByApp: Record<number, number> } {
+  const apps = [...openApps].sort((a, b) => a.contractId - b.contractId || a.number - b.number).map((a) => ({ id: a.id, contractId: a.contractId, docNumber: a.docNumber || a.number }));
+  const rows: OwedRow[] = [];
+  for (const a of apps) {
+    for (const w of byOrder(waivers.filter((x) => x.applicationId === a.id && x.kind === 'conditional' && !x.notNeeded && x.amount > 0.005))) {
+      const party = partyOf(w, contractName(a.contractId)) === 'gc' ? 'gc' : 'sub';
+      let r = rows.find((x) => x.party === party && sameVendor(x.vendor, w.vendor));
+      if (!r) { r = { vendor: w.vendor, party, byApp: {}, total: 0, apps: 0 }; rows.push(r); }
+      const cur = r.byApp[a.id];
+      r.byApp[a.id] = { amount: r2((cur?.amount ?? 0) + w.amount), received: (cur?.received ?? true) && w.received };
+    }
+  }
+  for (const r of rows) { r.total = r2(Object.values(r.byApp).reduce((s, v) => s + v.amount, 0)); r.apps = Object.keys(r.byApp).length; }
+  rows.sort((x, y) => (x.party === 'gc' ? 0 : 1) - (y.party === 'gc' ? 0 : 1) || y.total - x.total);
+  const subByApp: Record<number, number> = {};
+  for (const a of apps) subByApp[a.id] = r2(rows.filter((r) => r.party === 'sub').reduce((s, r) => s + (r.byApp[a.id]?.amount ?? 0), 0));
+  return { apps, rows, subTotal: r2(rows.filter((r) => r.party === 'sub').reduce((s, r) => s + r.total, 0)), gcTotal: r2(rows.filter((r) => r.party === 'gc').reduce((s, r) => s + r.total, 0)), subByApp };
+}

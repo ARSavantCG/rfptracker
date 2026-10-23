@@ -25,7 +25,7 @@ export interface PayoffInput {
   /** From positionAsOf: per pay app. */
   applications: Array<{ applicationId: number; contractId: number; docNumber: number; kind: string; date: string; due: number; paid: number; open: number }>;
   /** Per pay app: retainage withheld on it (line 5 less the previous app's line 5), the last payment date, and the GC conditional amount. */
-  appExtras?: Map<number, { retainage: number; paidOn: string | null; conditional: number | null }>;
+  appExtras?: Map<number, { retainage: number; gross?: number; paidOn: string | null; conditional: number | null }>;
   /** The lien waiver log by pay app (statuses as of today). */
   waiverGroups: PayAppWaivers[];
   generatedBy: string | null;
@@ -56,23 +56,34 @@ export function renderPayoffHtml(x: PayoffInput): string {
   const all = [...x.applications].sort((a, b) => a.contractId - b.contractId || a.docNumber - b.docNumber);
   const ex = (id: number) => x.appExtras?.get(id);
   const shortOrDash = (v: string | null | undefined) => (v ? shortD(v) : '—');
-  const allTot = { due: 0, paid: 0, open: 0, ret: 0 };
+  const allTot = { gross: 0, due: 0, paid: 0, open: 0, ret: 0, payoff: 0 };
   const multi = new Set(all.map((a) => a.contractId)).size > 1;
   let lastC = -1;
+  // Per pay app, left to right the way the G702 works: work billed (before retainage), retainage withheld,
+  // payment due (net, line 8), paid, still due on the pay app, then the payoff for it (still due + its retainage).
   const detail = all.length ? `
   <h3 class="sec">Pay Apps</h3>
-  <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Period To</th><th>Payment Due</th><th>Paid</th><th class="l" style="text-align:center">Paid On</th><th>Still Due</th><th>Retainage Withheld</th></tr></thead><tbody>
+  <table class="t pa"><thead>
+    <tr><th class="l" rowspan="2">Pay App</th><th class="l" rowspan="2">Period To</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">As Billed (G702)</th><th colspan="2" style="text-align:center;border-bottom:1px solid #d1d5db">Payments</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db;background:#e0e7ff">For the Payoff</th></tr>
+    <tr><th>Work Billed<br>(Before Retainage)</th><th>Retainage<br>Withheld</th><th>Payment Due<br>(Net, Line 8)</th><th>Paid<br>(Net)</th><th style="text-align:center">Paid On</th><th style="background:#e0e7ff">Still Due on<br>Pay App</th><th style="background:#e0e7ff">Retainage<br>Held</th><th style="background:#e0e7ff">Payoff</th></tr>
+  </thead><tbody>
     ${all.map((a) => {
       const e = ex(a.applicationId);
-      allTot.due += a.due; allTot.paid += a.paid; allTot.open += a.open; allTot.ret += e?.retainage ?? 0;
-      const head = multi && a.contractId !== lastC ? `<tr class="grp"><td colspan="7" style="background:#e5e7eb;font-weight:700">${escapeHtml(name(a.contractId))}</td></tr>` : '';
+      const ret = e?.retainage ?? 0;
+      const gross = e?.gross ?? r2(a.due + ret);
+      const pay = r2(a.open + ret);
+      allTot.gross += gross; allTot.due += a.due; allTot.paid += a.paid; allTot.open += a.open; allTot.ret += ret; allTot.payoff += pay;
+      const head = multi && a.contractId !== lastC ? `<tr class="grp"><td colspan="10" style="background:#e5e7eb;font-weight:700">${escapeHtml(name(a.contractId))}</td></tr>` : '';
       lastC = a.contractId;
       const isOpen = a.open > 0.005;
-      return `${head}<tr${isOpen ? '' : ' style="color:#4b5563"'}><td>${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)}</td><td>${shortD(a.date)}</td><td class="num">${money2(a.due)}</td><td class="num">${money2(a.paid)}</td><td style="text-align:center">${a.paid > 0.005 ? shortOrDash(e?.paidOn) : '—'}</td><td class="num">${isOpen ? `<strong>${money2(a.open)}</strong>` : '$0.00 <span style="color:#166534;font-size:9px;font-weight:700">PAID</span>'}</td><td class="num">${money2(e?.retainage ?? 0)}</td></tr>`;
+      return `${head}<tr><td>${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)}</td><td>${shortD(a.date)}</td><td class="num">${money2(gross)}</td><td class="num">${money2(ret)}</td><td class="num">${money2(a.due)}</td><td class="num">${money2(a.paid)}</td><td style="text-align:center">${a.paid > 0.005 ? shortOrDash(e?.paidOn) : '—'}</td>
+        <td class="num" style="background:#f5f7ff">${isOpen ? money2(a.open) : '$0.00 <span style="color:#166534;font-size:8.5px;font-weight:700">PAID</span>'}</td><td class="num" style="background:#f5f7ff">${money2(ret)}</td><td class="num" style="background:#f5f7ff"><strong>${money2(pay)}</strong></td></tr>`;
     }).join('')}
-    <tr class="total"><td colspan="2">Total${multi ? '' : ` · ${escapeHtml(name(all[0].contractId))}`}</td><td class="num">${money2(r2(allTot.due))}</td><td class="num">${money2(r2(allTot.paid))}</td><td></td><td class="num">${money2(r2(allTot.open))}</td><td class="num">${money2(r2(allTot.ret))}</td></tr>
+    <tr class="total"><td colspan="2">Total${multi ? '' : ` · ${escapeHtml(name(all[0].contractId))}`}</td><td class="num">${money2(r2(allTot.gross))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.due))}</td><td class="num">${money2(r2(allTot.paid))}</td><td></td><td class="num">${money2(r2(allTot.open))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.payoff))}</td></tr>
   </tbody></table>
-  <p style="font-size:9.5px;color:#6b7280;margin:2px 0 0">Still due on the pay apps (${money2(total.open)}) plus the retainage withheld (${money2(total.ret)} held) is the payoff, ${money2(total.payoff)}.</p>` : '';
+  <div style="font-size:10px;color:#1e3a8a;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:6px 9px;margin-top:6px">
+    <strong>Retainage held is not past due.</strong> It is withheld under the contract and normally released at completion. It's included here only because everything is being paid off now, so each pay app shows what is still due on it plus its retainage.
+    ${allTot.open > 0.005 ? '' : ' Every pay app is paid; the payoff is the retainage alone.'}</div>` : '';
 
   const retain = rows.some((r) => r.retainageHeld > 0.005) ? `
   <h3 class="sec">Retainage Held</h3>
@@ -127,6 +138,8 @@ export function renderPayoffHtml(x: PayoffInput): string {
     .t td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; }
     .t td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .t tr.total td { font-weight: 700; background: #f9fafb; border-top: 2px solid #111827; }
+    .t.pa { font-size: 9.5px; }
+    .t.pa th, .t.pa td { padding: 3px 4px; }
     .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #374151; margin: 16px 0 6px; }
     .big { margin: 10px 0 14px; padding: 10px 12px; border: 2px solid #003087; border-radius: 6px; display: flex; justify-content: space-between; align-items: baseline; }
     .big .n { font-size: 20px; font-weight: 700; color: #003087; font-variant-numeric: tabular-nums; }
@@ -141,6 +154,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
   <h3 class="sec">Notes</h3>
   <ol style="font-size:10px;color:#4b5563;padding-left:18px">
     <li>Billed, unpaid: each pay app's current payment due (G702 line 8) less payments recorded against it, on or before the as-of date. Paid pay apps are listed with $0.00 still due.</li>
+    <li>Work billed (before retainage) is the pay app's G702 line 4 less the previous pay app's; payment due is net of retainage, and payments are net.</li>
     <li>Retainage withheld on each pay app: its G702 line 5 less the previous pay app's; together they are the retainage held.</li>
     <li>Retainage held: withheld on work completed and stored to date; released with final payment.</li>
     <li>Work not yet billed is not included: ${money2(total.unbilled)} of the contract sums remains to be billed by these contractors.</li>

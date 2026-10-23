@@ -718,29 +718,36 @@ function Fig({ label, value, strong }: { label: string; value: string; strong?: 
   return <div><div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div><div className={`tabular-nums ${strong ? 'text-lg font-bold text-gray-900' : 'font-semibold text-gray-800'}`}>{value}</div></div>;
 }
 
-/** Who's waiting on what: each vendor's conditionals on the pay apps not yet paid, and their total. */
+/** Who's waiting on what: each vendor's conditionals on every pay app (paid ones grayed, $0.00 owed), their total and what's still owed. */
 function OwedByVendorCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
   const [q, setQ] = useState('');
+  const [onlyOut, setOnlyOut] = useState(false);
   const o = useMemo(() => {
     const ids = new Set(b.position.applications.filter((a) => a.open > 0.005).map((a) => a.applicationId));
-    return owedByVendor(b.applications.filter((a) => ids.has(a.id)) as any, b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '');
-  }, [b.position.applications, b.applications, b.waivers, b.contracts]);
+    return owedByVendor(b.applications as any, b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '', ids, onlyOut);
+  }, [b.position.applications, b.applications, b.waivers, b.contracts, onlyOut]);
   const nn = (n: number) => String(n).padStart(3, '0');
+  const unpaidCount = o.apps.filter((a) => !a.paid).length;
   const rows = o.rows.filter((r) => !q.trim() || r.vendor.toLowerCase().includes(q.trim().toLowerCase()));
   return (
-    <Card id="owed-by-vendor" title="Owed by Vendor" what="For every pay app not yet paid: each vendor's conditional release on it and their total. The GC's covers its subs' (we pay the GC, the GC pays them)."
-          summary={o.apps.length ? `${o.apps.length} Unpaid Pay App${o.apps.length === 1 ? '' : 's'} · Subs ${money(o.subTotal)}` : 'All Paid'}
-          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/owed-by-vendor/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
-      {!o.apps.length ? <p className="text-sm text-gray-700">Every pay app is paid.</p> : (
-        <div className="space-y-2">
+    <Card id="owed-by-vendor" title="Owed by Vendor" what="Each vendor's conditional release on every pay app, what they've been released in total and what's still owed on pay apps not yet paid. The GC's covers its subs' (we pay the GC, the GC pays them)."
+          summary={unpaidCount ? `${unpaidCount} Unpaid Pay App${unpaidCount === 1 ? '' : 's'} · Subs Owed ${money(o.subOwed)}` : 'All Paid'}
+          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/owed-by-vendor/${projectId}${onlyOut ? '?outstanding=1' : ''}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!o.apps.length ? <p className="text-sm text-gray-700">{onlyOut ? 'Every pay app is paid.' : 'No pay apps yet.'}</p> : null}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm"><span className="text-xs text-gray-600">Find a Vendor</span>
             <Input className="h-9 w-72" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4" checked={onlyOut} onChange={(e) => setOnlyOut(e.target.checked)} /> Outstanding Only</label>
+        </div>
+        {o.apps.length > 0 && (
           <div className="overflow-x-auto">
             <table className="text-sm w-full">
               <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
                 <th className="text-left font-medium py-1 pr-3">Vendor</th>
-                {o.apps.map((a) => <th key={a.id} className="text-right font-medium py-1 px-2">Pay App {nn(a.docNumber)}</th>)}
-                <th className="text-right font-medium py-1 pl-2">Total</th>
+                {o.apps.map((a) => <th key={a.id} className={`text-right font-medium py-1 px-2 ${a.paid ? 'text-gray-400' : ''}`}>Pay App {nn(a.docNumber)}{a.paid && <div className="text-[10px] normal-case text-green-700">Paid</div>}</th>)}
+                {!onlyOut && <th className="text-right font-medium py-1 px-2">Total Released</th>}
+                <th className="text-right font-medium py-1 pl-2">Still Owed</th>
               </tr></thead>
               <tbody>
                 {rows.map((r) => (
@@ -748,23 +755,25 @@ function OwedByVendorCard({ b, projectId, open }: { b: ProjectBundle; projectId:
                     <td className={`py-1 pr-3 ${r.party === 'sub' ? 'pl-3' : ''}`}>{r.vendor}{r.party === 'gc' && <span className="ml-1 text-[10px] text-blue-700 border border-blue-200 rounded px-1">GC</span>}</td>
                     {o.apps.map((a) => {
                       const v = r.byApp[a.id];
-                      return <td key={a.id} className="py-1 px-2 text-right tabular-nums">{v ? <>{money(v.amount)}{!v.received && <div className="text-[10px] text-amber-700 font-normal">not received</div>}</> : <span className="text-gray-300">—</span>}</td>;
+                      return <td key={a.id} className={`py-1 px-2 text-right tabular-nums ${a.paid ? 'text-gray-400' : ''}`}>{v ? <>{money(v.amount)}{!v.received && !a.paid && <div className="text-[10px] text-amber-700 font-normal">not received</div>}</> : <span className="text-gray-300">—</span>}</td>;
                     })}
-                    <td className="py-1 pl-2 text-right tabular-nums font-semibold">{money(r.total)}</td>
+                    {!onlyOut && <td className="py-1 px-2 text-right tabular-nums">{money(r.total)}</td>}
+                    <td className={`py-1 pl-2 text-right tabular-nums font-semibold ${r.owed > 0.005 ? '' : 'text-gray-400'}`}>{money(r.owed)}</td>
                   </tr>
                 ))}
                 {!q.trim() && o.rows.some((r) => r.party === 'sub') && (
                   <tr className="font-semibold border-t-2 border-gray-800">
                     <td className="py-1 pr-3">Subcontractors Total</td>
-                    {o.apps.map((a) => <td key={a.id} className="py-1 px-2 text-right tabular-nums">{money(o.subByApp[a.id] ?? 0)}</td>)}
-                    <td className="py-1 pl-2 text-right tabular-nums">{money(o.subTotal)}</td>
+                    {o.apps.map((a) => <td key={a.id} className={`py-1 px-2 text-right tabular-nums ${a.paid ? 'text-gray-400' : ''}`}>{money(o.subByApp[a.id] ?? 0)}</td>)}
+                    {!onlyOut && <td className="py-1 px-2 text-right tabular-nums">{money(o.subTotal)}</td>}
+                    <td className="py-1 pl-2 text-right tabular-nums">{money(o.subOwed)}</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Card>
   );
 }

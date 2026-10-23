@@ -1201,10 +1201,11 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       const open = new Set((b.position.applications as any[]).filter((a) => a.open > 0.005).map((a) => a.applicationId));
       const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
-      const o = owedByVendor((b.applications as any[]).filter((a) => open.has(a.id)), b.waivers, cname);
+      const outstandingOnly = req.query.outstanding === "1";
+      const o = owedByVendor(b.applications as any[], b.waivers, cname, open, outstandingOnly);
       const facts = await propertyFacts(b.project);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), ...o, generatedBy: generatedByName((req as any).user) }));
+      res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), outstandingOnly, ...o, generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
       console.error("Owed by vendor error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });

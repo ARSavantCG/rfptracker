@@ -587,26 +587,40 @@ export function threeWayCheck(
  * each vendor's total across them. The GC's conditional covers its subs' (we pay the GC,
  * the GC pays them), so subs are totalled on their own.
  */
-export interface OwedRow { vendor: string; party: 'gc' | 'sub'; byApp: Record<number, { amount: number; received: boolean }>; total: number; apps: number }
+export interface OwedRow { vendor: string; party: 'gc' | 'sub'; byApp: Record<number, { amount: number; received: boolean }>; total: number; owed: number; apps: number }
+/**
+ * Every pay app (or only unpaid ones): each vendor's conditional on it, their total, and
+ * what's still owed (on pay apps not yet paid in full). Paid pay apps show what was
+ * released with $0.00 still owed, for the complete picture (Adolfo, 2026-10-23).
+ */
 export function owedByVendor(
-  openApps: ReadonlyArray<{ id: number; contractId: number; number: number; docNumber?: number | null }>,
+  allApps: ReadonlyArray<{ id: number; contractId: number; number: number; docNumber?: number | null }>,
   waivers: readonly Waiver[],
   contractName: (contractId: number) => string,
-): { apps: Array<{ id: number; contractId: number; docNumber: number }>; rows: OwedRow[]; subTotal: number; gcTotal: number; subByApp: Record<number, number> } {
-  const apps = [...openApps].sort((a, b) => a.contractId - b.contractId || a.number - b.number).map((a) => ({ id: a.id, contractId: a.contractId, docNumber: a.docNumber || a.number }));
+  unpaid: ReadonlySet<number>,
+  outstandingOnly = false,
+): { apps: Array<{ id: number; contractId: number; docNumber: number; paid: boolean }>; rows: OwedRow[]; subTotal: number; subOwed: number; gcTotal: number; gcOwed: number; subByApp: Record<number, number> } {
+  const apps = [...allApps].filter((a) => !outstandingOnly || unpaid.has(a.id))
+    .sort((a, b) => a.contractId - b.contractId || a.number - b.number)
+    .map((a) => ({ id: a.id, contractId: a.contractId, docNumber: a.docNumber || a.number, paid: !unpaid.has(a.id) }));
   const rows: OwedRow[] = [];
   for (const a of apps) {
     for (const w of byOrder(waivers.filter((x) => x.applicationId === a.id && x.kind === 'conditional' && !x.notNeeded && x.amount > 0.005))) {
       const party = partyOf(w, contractName(a.contractId)) === 'gc' ? 'gc' : 'sub';
       let r = rows.find((x) => x.party === party && sameVendor(x.vendor, w.vendor));
-      if (!r) { r = { vendor: w.vendor, party, byApp: {}, total: 0, apps: 0 }; rows.push(r); }
+      if (!r) { r = { vendor: w.vendor, party, byApp: {}, total: 0, owed: 0, apps: 0 }; rows.push(r); }
       const cur = r.byApp[a.id];
       r.byApp[a.id] = { amount: r2((cur?.amount ?? 0) + w.amount), received: (cur?.received ?? true) && w.received };
     }
   }
-  for (const r of rows) { r.total = r2(Object.values(r.byApp).reduce((s, v) => s + v.amount, 0)); r.apps = Object.keys(r.byApp).length; }
-  rows.sort((x, y) => (x.party === 'gc' ? 0 : 1) - (y.party === 'gc' ? 0 : 1) || y.total - x.total);
+  for (const r of rows) {
+    r.total = r2(Object.values(r.byApp).reduce((s, v) => s + v.amount, 0));
+    r.owed = r2(apps.filter((a) => !a.paid).reduce((s, a) => s + (r.byApp[a.id]?.amount ?? 0), 0));
+    r.apps = Object.keys(r.byApp).length;
+  }
+  rows.sort((x, y) => (x.party === 'gc' ? 0 : 1) - (y.party === 'gc' ? 0 : 1) || y.owed - x.owed || y.total - x.total);
   const subByApp: Record<number, number> = {};
   for (const a of apps) subByApp[a.id] = r2(rows.filter((r) => r.party === 'sub').reduce((s, r) => s + (r.byApp[a.id]?.amount ?? 0), 0));
-  return { apps, rows, subTotal: r2(rows.filter((r) => r.party === 'sub').reduce((s, r) => s + r.total, 0)), gcTotal: r2(rows.filter((r) => r.party === 'gc').reduce((s, r) => s + r.total, 0)), subByApp };
+  const sum = (p: 'gc' | 'sub', k: 'total' | 'owed') => r2(rows.filter((r) => r.party === p).reduce((s, r) => s + r[k], 0));
+  return { apps, rows, subTotal: sum('sub', 'total'), subOwed: sum('sub', 'owed'), gcTotal: sum('gc', 'total'), gcOwed: sum('gc', 'owed'), subByApp };
 }

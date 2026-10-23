@@ -26,7 +26,7 @@ import {
   type BudgetApproval, type BudgetCO,
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
-import { and, eq, inArray, like, desc } from 'drizzle-orm';
+import { and, eq, inArray, like, desc, isNull, isNotNull, sql } from 'drizzle-orm';
 import { feePaid, feeDonut, vendorDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
 import {
   budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
@@ -34,7 +34,7 @@ import {
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
 import { resolveContractBucket } from './budget-by-contract';
-import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage } from './storage-backup';
+import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage, deleteFromObjectStorage, listObjectsWithMeta } from './storage-backup';
 import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
@@ -87,6 +87,23 @@ const who = (req: Request) => {
 };
 /** A person's name for anything printed: "Adolfo Reutlinger", not an email address. */
 const whoName = (req: Request) => generatedByName((req as any).user) || who(req);
+
+/** Where a file sat, said in words for the Deleted Files bin: "Nova · Pay App 05 · Conditional Waiver — JEM". */
+async function fileLocation(d: typeof costDocuments.$inferSelect, waiver?: { kind: string; vendor: string } | null): Promise<string> {
+  const parts: string[] = [];
+  if (d.contractId) { const [c] = await db.select({ n: costContracts.counterparty }).from(costContracts).where(eq(costContracts.id, d.contractId)); if (c) parts.push(c.n); }
+  if (d.applicationId) {
+    const [a] = await db.select({ n: costApplications.number, k: costApplications.kind, doc: costApplications.docNumber }).from(costApplications).where(eq(costApplications.id, d.applicationId));
+    if (a) parts.push(`${a.k === 'invoice' ? 'Invoice' : 'Pay App'} ${String(a.doc ?? a.n).padStart(2, '0')}`);
+  }
+  if (d.changeOrderId) { const [co] = await db.select({ n: costChangeOrders.number }).from(costChangeOrders).where(eq(costChangeOrders.id, d.changeOrderId)); if (co) parts.push(`Change Order ${co.n}`); }
+  if (d.directCostId) { const [x] = await db.select({ v: costDirectCosts.vendor, t: costDirectCosts.description }).from(costDirectCosts).where(eq(costDirectCosts.id, d.directCostId)); if (x) parts.push(`Direct Cost — ${x.v || x.t || ''}`.trim()); }
+  if (d.budgetCoId) parts.push('Tenant Change Order Backup');
+  const type = waiver ? (waiver.kind === 'conditional' ? 'Conditional Waiver' : 'Unconditional Waiver') : DOC_TYPES.find(([k]) => k === d.docType)?.[1];
+  const vendor = waiver ? waiver.vendor : d.vendor;
+  if (type) parts.push(type + (vendor ? ` — ${vendor}` : ''));
+  return parts.join(' · ') || 'Project Files';
+}
 
 // --------------------------------------------------------------- baseline
 
@@ -206,7 +223,7 @@ export async function loadProjectBundle(projectId: number) {
     .where(inArray(costApplicationLines.applicationId, appIds));
   const waiverRows = await db.select().from(costWaivers).where(eq(costWaivers.projectId, projectId)).orderBy(costWaivers.id);
   const documents = await db.select().from(costDocuments)
-    .where(eq(costDocuments.projectId, projectId)).orderBy(desc(costDocuments.createdAt));
+    .where(and(eq(costDocuments.projectId, projectId), isNull(costDocuments.deletedAt))).orderBy(desc(costDocuments.createdAt));
   const payRows = none ? [] : await db.select().from(costPayments)
     .where(inArray(costPayments.contractId, contractIds)).orderBy(costPayments.paidDate, costPayments.id);
   const directRows = await db.select().from(costDirectCosts)
@@ -1556,14 +1573,19 @@ export function registerCostTrackingRoutes(app: Express): void {
           .where(eq(costApplications.contractId, id))).map((a) => a.id);
         if (appIds.length) {
           await tx.delete(costApplicationLines).where(inArray(costApplicationLines.applicationId, appIds));
-          await tx.delete(costDocuments).where(inArray(costDocuments.applicationId, appIds));
+          // Its files go to the Deleted Files bin, not away: restored, they land under Other.
+          await tx.update(costDocuments).set({ deletedAt: sql`COALESCE(${costDocuments.deletedAt}, now())`, deletedBy: sql`COALESCE(${costDocuments.deletedBy}, ${who(req)})`,
+            deletedFrom: sql`COALESCE(${costDocuments.deletedFrom}, ${`${c.counterparty} (contract deleted)`})`, applicationId: null, contractId: null, changeOrderId: null })
+            .where(inArray(costDocuments.applicationId, appIds));
         }
         await tx.delete(costPayments).where(eq(costPayments.contractId, id));
         await tx.delete(costWaivers).where(eq(costWaivers.contractId, id));
         await tx.delete(costApplications).where(eq(costApplications.contractId, id));
         await tx.delete(costSovLines).where(eq(costSovLines.contractId, id));
         await tx.delete(costChangeOrders).where(eq(costChangeOrders.contractId, id));
-        await tx.delete(costDocuments).where(eq(costDocuments.contractId, id));
+        await tx.update(costDocuments).set({ deletedAt: sql`COALESCE(${costDocuments.deletedAt}, now())`, deletedBy: sql`COALESCE(${costDocuments.deletedBy}, ${who(req)})`,
+          deletedFrom: sql`COALESCE(${costDocuments.deletedFrom}, ${`${c.counterparty} (contract deleted)`})`, applicationId: null, contractId: null, changeOrderId: null })
+          .where(eq(costDocuments.contractId, id));
         await tx.delete(costContracts).where(eq(costContracts.id, id));
       });
       console.log(`[cost] contract ${id} (${c.counterparty}) deleted by ${who(req)}`);
@@ -1730,7 +1752,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if ((req as any).file) {
         buf = (req as any).file.buffer; mime = (req as any).file.mimetype || ''; name = (req as any).file.originalname || '';
       } else if (req.body?.documentId) {
-        const [d] = await db.select().from(costDocuments).where(eq(costDocuments.id, Number(req.body.documentId)));
+        const [d] = await db.select().from(costDocuments).where(and(eq(costDocuments.id, Number(req.body.documentId)), isNull(costDocuments.deletedAt)));
         if (!d) return res.status(404).json({ message: 'File not found' });
         buf = d.storage === 'object' ? await downloadFromObjectStorage(d.storageKey)
           : await fsp.readFile(path.join(process.cwd(), 'uploads', d.storageKey)).catch(() => null);
@@ -2139,11 +2161,11 @@ export function registerCostTrackingRoutes(app: Express): void {
       }));
       const prev = previousApp({ id: a.id, contractId: a.contractId, number: a.number }, allApps);
       const ck = waiverChecklist(a.id, allApps, waivers, c.counterparty);
-      const docs = await db.select().from(costDocuments).where(eq(costDocuments.applicationId, a.id));
+      const docs = await db.select().from(costDocuments).where(and(eq(costDocuments.applicationId, a.id), isNull(costDocuments.deletedAt)));
       const payRows = payAppVendors(ck.conditionals, c.counterparty);
       const waiverDocIds = new Set(waivers.filter((w) => w.applicationId === a.id && w.documentId).map((w) => w.documentId!));
       const extra = waiverDocIds.size
-        ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(waiverDocIds)))).filter((d) => !docs.some((x) => x.id === d.id))
+        ? (await db.select().from(costDocuments).where(and(inArray(costDocuments.id, Array.from(waiverDocIds)), isNull(costDocuments.deletedAt)))).filter((d) => !docs.some((x) => x.id === d.id))
         : [];
       // Change orders approved on this pay app (its G702 "this period"): their executed copies go in too.
       const bundleForPaid = await loadProjectBundle(c.projectId).catch(() => null);
@@ -2151,7 +2173,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const coDocOf = new Map<number, (typeof coRows)[number]>();
       for (const r of coRows) for (const f of r.files) coDocOf.set(f.id, r);
       const coDocs = coDocOf.size
-        ? (await db.select().from(costDocuments).where(inArray(costDocuments.id, Array.from(coDocOf.keys())))).filter((d) => !docs.some((x) => x.id === d.id) && !extra.some((x) => x.id === d.id))
+        ? (await db.select().from(costDocuments).where(and(inArray(costDocuments.id, Array.from(coDocOf.keys())), isNull(costDocuments.deletedAt)))).filter((d) => !docs.some((x) => x.id === d.id) && !extra.some((x) => x.id === d.id))
         : [];
       const all = [...docs, ...extra, ...coDocs];
       if (!all.length) return { error: 'No files on this pay app yet.', status: 404 };
@@ -2308,7 +2330,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (bnd) {
         const rowsCo = coLog(bnd.changeOrders as any, bnd.sovLines as any, bnd.documents as any).filter((r) => r.status === 'approved');
         const ids = rowsCo.flatMap((r) => r.files.map((f) => f.id));
-        const docRows = ids.length ? await db.select().from(costDocuments).where(inArray(costDocuments.id, ids)) : [];
+        const docRows = ids.length ? await db.select().from(costDocuments).where(and(inArray(costDocuments.id, ids), isNull(costDocuments.deletedAt))) : [];
         const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
         const used = new Set<string>();
@@ -2429,11 +2451,135 @@ export function registerCostTrackingRoutes(app: Express): void {
     try {
       const id = intParam(req, 'id');
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
-      // The record goes; the stored object stays. Deleting evidence is not
-      // something a click in a list should be able to do.
-      await db.delete(costDocuments).where(eq(costDocuments.id, id));
+      // Into the Deleted Files bin: the record and the stored object stay until the bin is
+      // emptied, so a wrong click can be restored (Adolfo, 2026-10-22).
+      const [d] = await db.select().from(costDocuments).where(eq(costDocuments.id, id));
+      if (!d) return res.status(404).json({ message: 'File not found' });
+      if (d.deletedAt) return res.json({ ok: true });
+      const links = await db.select({ id: costWaivers.id, received: costWaivers.received, kind: costWaivers.kind, vendor: costWaivers.vendor }).from(costWaivers).where(eq(costWaivers.documentId, id));
+      const from = await fileLocation(d, links[0] ?? null);
+      await db.transaction(async (tx) => {
+        if (links.length) await tx.update(costWaivers).set({ documentId: null, received: false }).where(eq(costWaivers.documentId, id));
+        await tx.update(costDocuments).set({ deletedAt: new Date(), deletedBy: who(req), deletedFrom: from, restoreLinks: links.length ? JSON.stringify(links.map((l) => ({ id: l.id, received: l.received }))) : null })
+          .where(eq(costDocuments.id, id));
+      });
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'remove the file'); }
+  });
+
+  // ---- Deleted Files bin ------------------------------------------------------------
+  // Files deleted before the bin existed are still in storage under cost/<project>/ with no
+  // record; they're listed as "deleted earlier" and can be recovered or removed the same way.
+  const earlierDeleted = async (projectId: number) => {
+    const prefix = `cost/${projectId}/`;
+    const known = new Set((await db.select({ k: costDocuments.storageKey }).from(costDocuments).where(eq(costDocuments.projectId, projectId))).map((r) => r.k));
+    let objs: Array<{ key: string; size: number; created: string | null }> = [];
+    if (process.env.PRIVATE_OBJECT_DIR) objs = await listObjectsWithMeta(prefix);
+    else {
+      const dir = path.join(process.cwd(), 'uploads', prefix);
+      const names = await fsp.readdir(dir).catch(() => [] as string[]);
+      for (const n of names) {
+        const st = await fsp.stat(path.join(dir, n)).catch(() => null);
+        if (st?.isFile()) objs.push({ key: prefix + n, size: st.size, created: st.mtime.toISOString() });
+      }
+    }
+    return objs.filter((o) => !known.has(o.key)).map((o) => ({ ...o, name: o.key.slice(prefix.length).replace(/^[A-Za-z0-9_-]{10}-/, '') }));
+  };
+  const removeStored = async (key: string, where: string) => {
+    if (where === 'object' && process.env.PRIVATE_OBJECT_DIR) return deleteFromObjectStorage(key);
+    await fsp.unlink(path.join(process.cwd(), 'uploads', key)).catch(() => null);
+    return true;
+  };
+
+  app.get('/api/cost-projects/:id/deleted-files', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const rows = await db.select().from(costDocuments).where(and(eq(costDocuments.projectId, id), isNotNull(costDocuments.deletedAt))).orderBy(desc(costDocuments.deletedAt));
+      const earlier = await earlierDeleted(id).catch((e) => { console.error('[bin] list earlier', e); return []; });
+      res.json({
+        deleted: rows.map((d) => ({ id: d.id, name: d.originalName, size: d.sizeBytes ?? 0, mimeType: d.mimeType, deletedAt: d.deletedAt, deletedBy: d.deletedBy, from: d.deletedFrom, uploadedAt: d.createdAt })),
+        earlier: earlier.sort((a, b) => String(b.created).localeCompare(String(a.created))),
+      });
+    } catch (e) { fail(res, e, 'list deleted files'); }
+  });
+
+  app.post('/api/cost-documents/:id/restore', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [d] = await db.select().from(costDocuments).where(eq(costDocuments.id, id));
+      if (!d || !d.deletedAt) return res.status(404).json({ message: 'Not in the Deleted Files bin' });
+      // Back where it was when that still exists; otherwise under Other.
+      const exists = async (t: any, col: any, v: number | null) => (v == null ? true : (await db.select({ id: col }).from(t).where(eq(col, v))).length > 0);
+      const patch: any = { deletedAt: null, deletedBy: null, deletedFrom: null, restoreLinks: null };
+      if (!(await exists(costApplications, costApplications.id, d.applicationId))) patch.applicationId = null;
+      if (!(await exists(costContracts, costContracts.id, d.contractId))) patch.contractId = null;
+      if (!(await exists(costChangeOrders, costChangeOrders.id, d.changeOrderId))) patch.changeOrderId = null;
+      if (!(await exists(costDirectCosts, costDirectCosts.id, d.directCostId))) patch.directCostId = null;
+      const links: Array<{ id: number; received: boolean }> = (() => { try { return JSON.parse(d.restoreLinks || '[]'); } catch { return []; } })();
+      await db.transaction(async (tx) => {
+        await tx.update(costDocuments).set(patch).where(eq(costDocuments.id, id));
+        for (const l of links) await tx.update(costWaivers).set({ documentId: id, received: true }).where(and(eq(costWaivers.id, l.id), isNull(costWaivers.documentId)));
+      });
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'restore the file'); }
+  });
+
+  app.post('/api/cost-projects/:id/deleted-files/recover', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const key = String(req.body?.key ?? '');
+      const hit = (await earlierDeleted(id)).find((o) => o.key === key);
+      if (!hit) return res.status(404).json({ message: 'That file is no longer in storage.' });
+      const ext = hit.name.split('.').pop()?.toLowerCase() || '';
+      const mime = ext === 'pdf' ? 'application/pdf' : /^(png|jpe?g|gif|webp)$/.test(ext) ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : null;
+      await db.insert(costDocuments).values({ projectId: id, originalName: hit.name, mimeType: mime, sizeBytes: hit.size, storageKey: key,
+        storage: process.env.PRIVATE_OBJECT_DIR ? 'object' : 'local', uploadedBy: who(req) });
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'recover the file'); }
+  });
+
+  app.delete('/api/cost-documents/:id/forever', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const [d] = await db.select().from(costDocuments).where(eq(costDocuments.id, id));
+      if (!d || !d.deletedAt) return res.status(400).json({ message: 'Only a file in the Deleted Files bin can be deleted forever.' });
+      await removeStored(d.storageKey, d.storage);
+      await db.delete(costDocuments).where(eq(costDocuments.id, id));
+      console.log(`[cost] file ${d.originalName} (${d.storageKey}) deleted forever by ${who(req)}`);
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'delete the file'); }
+  });
+
+  app.post('/api/cost-projects/:id/deleted-files/purge', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const key = String(req.body?.key ?? '');
+      const hit = (await earlierDeleted(id)).find((o) => o.key === key);
+      if (!hit) return res.status(404).json({ message: 'That file is no longer in storage.' });
+      await removeStored(key, process.env.PRIVATE_OBJECT_DIR ? 'object' : 'local');
+      console.log(`[cost] earlier-deleted file ${key} removed forever by ${who(req)}`);
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'delete the file'); }
+  });
+
+  /** Empty the bin: every deleted file on the project, and every earlier-deleted one, gone for good. */
+  app.post('/api/cost-projects/:id/deleted-files/empty', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const rows = await db.select().from(costDocuments).where(and(eq(costDocuments.projectId, id), isNotNull(costDocuments.deletedAt)));
+      const earlier = await earlierDeleted(id);
+      for (const d of rows) await removeStored(d.storageKey, d.storage);
+      if (rows.length) await db.delete(costDocuments).where(inArray(costDocuments.id, rows.map((d) => d.id)));
+      for (const o of earlier) await removeStored(o.key, process.env.PRIVATE_OBJECT_DIR ? 'object' : 'local');
+      console.log(`[cost] bin emptied on project ${id} by ${who(req)}: ${rows.length} + ${earlier.length} earlier`);
+      res.json({ ok: true, removed: rows.length + earlier.length });
+    } catch (e) { fail(res, e, 'empty the bin'); }
   });
 }
 

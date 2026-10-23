@@ -81,6 +81,7 @@ import { registerReportPinRoutes } from './report-pins-routes';
 import { registerBudgetReconciliationReport } from './budget-reconciliation-report';
 import { registerItbSendRoutes } from './itb-send';
 import { registerCostTrackingRoutes } from './cost-tracking-routes';
+import { registerBackupRoutes } from './backup';
 import { registerBudgetVsActualReportRoutes } from './budget-vs-actual-report';
 import { reconcileBudget } from '@shared/budget-totals';
 import { resolveScope } from './property-scope-middleware';
@@ -127,6 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerBudgetReconciliationReport(app);
   registerItbSendRoutes(app);
   registerCostTrackingRoutes(app);
+  registerBackupRoutes(app);
   registerBudgetVsActualReportRoutes(app);
   registerAiRoutes(app);
   registerIntakeParserRoutes(app);

@@ -19,6 +19,7 @@ import Navigation from "@/components/navigation";
 import ContactPasswordModal from "@/components/contact-password-modal";
 import AdminResetPasswordModal from "@/components/admin-reset-password-modal";
 import { FileCleanupPanel } from "@/components/file-cleanup-panel";
+import { BackupPanel } from "@/components/backup-panel";
 import { FileIntegrityAuditPanel } from "@/components/file-integrity-audit-panel";
 import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
 import { AiSettingsPanel } from "@/components/ai-settings-panel";
@@ -1504,7 +1505,7 @@ export default function Admin() {
           </div>
         </div>
 
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "users"} className="w-full">
           <TabsList className="flex flex-wrap w-full gap-1 h-auto p-2">
             <TabsTrigger value="users" className="flex items-center gap-2 flex-shrink-0">
               <Users className="h-4 w-4" />
@@ -1694,6 +1695,7 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="storage" className="mt-6 space-y-6">
+            <BackupPanel />
             <FileIntegrityAuditPanel />
             <FileCleanupPanel />
           </TabsContent>

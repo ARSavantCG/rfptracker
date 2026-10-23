@@ -266,3 +266,36 @@ export async function getFileBuffer(filePath: string, originalName?: string): Pr
   console.log(`[getFileBuffer] all candidates exhausted for: ${filePath}`);
   return null;
 }
+
+/** Remove a stored object for good (Deleted Files bin: Delete Forever / Empty Bin). True if gone. */
+export async function deleteFromObjectStorage(filename: string): Promise<boolean> {
+  const key = getOSKey(filename);
+  if (!key) return false;
+  try {
+    await objectStorageClient.bucket(key.bucketName).file(key.objectName).delete({ ignoreNotFound: true } as any);
+    return true;
+  } catch (err) {
+    console.error(`[OS] delete failed for ${filename}:`, (err as Error).message);
+    return false;
+  }
+}
+
+/** Every stored object under uploads/<sub> with its size and date: keys are relative to uploads/. */
+export async function listObjectsWithMeta(sub = ''): Promise<Array<{ key: string; size: number; created: string | null }>> {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR;
+  if (!privateDir) return [];
+  const { bucketName, objectName: prefix } = parseOSPath(`${privateDir}/uploads/`);
+  const [files] = await objectStorageClient.bucket(bucketName).getFiles({ prefix: prefix + sub });
+  return files.filter((f) => !f.name.endsWith('/')).map((f) => ({
+    key: f.name.slice(prefix.length),
+    size: Number(f.metadata?.size ?? 0),
+    created: (f.metadata?.timeCreated as string | undefined) ?? null,
+  }));
+}
+
+/** A read stream for one stored object (key relative to uploads/), or null without Object Storage. */
+export function objectReadStream(filename: string): NodeJS.ReadableStream | null {
+  const key = getOSKey(filename);
+  if (!key) return null;
+  return objectStorageClient.bucket(key.bucketName).file(key.objectName).createReadStream();
+}

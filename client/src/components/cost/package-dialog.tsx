@@ -375,7 +375,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                         </Select>
                       </div>
                       <button className="text-gray-400 hover:text-red-700 flex-shrink-0" title="Remove this file"
-                              onClick={() => { if (window.confirm(`Remove ${d.originalName}?`)) call(() => apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'), 'File Removed'); }}>
+                              onClick={() => { if (window.confirm(`Move ${d.originalName} to Deleted Files? You can restore it from the Documents tab.`)) call(() => apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'), 'Moved to Deleted Files'); }}>
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

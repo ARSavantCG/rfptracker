@@ -11,6 +11,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import Templates from "./lib/rfp-templates";
 import { startEmailScheduler } from "./email-scheduler";
+import { startBackupScheduler } from "./backup";
 import { runStartupMigrations, runPermissionAndOwnershipBackfill } from "./startup-migrations";
 
 const app = express();
@@ -111,6 +112,8 @@ app.use((req, res, next) => {
   } catch (error) {
     log(`⚠️  Warning: Failed to start email scheduler: ${error}`);
   }
+  // Daily catch-up backup to Google Drive (runs only once Drive is connected).
+  try { startBackupScheduler(); } catch (error) { log(`⚠️  Backup scheduler not started: ${error}`); }
 
   // Serve on the platform-assigned port (Railway sets PORT), falling back to
   // 5000 for Replit where 5000 is the only non-firewalled port.

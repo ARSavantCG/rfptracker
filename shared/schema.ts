@@ -2404,7 +2404,22 @@ export const costDocuments = pgTable("cost_documents", {
   storage: text("storage").notNull().default("object"),
   uploadedBy: text("uploaded_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  /** In the Deleted Files bin since then (null = live). The stored object stays until the bin is emptied. */
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: text("deleted_by"),
+  /** Where it was when deleted ("Pay App 05 · Conditional — JEM"), for the bin. */
+  deletedFrom: text("deleted_from"),
+  /** JSON: waiver ids it was attached to, re-attached on restore when still empty. */
+  restoreLinks: text("restore_links"),
 }, (t) => [index("cost_documents_project_idx").on(t.projectId)]);
+
+/** Stored files the nightly backup has copied to Google Drive (key = Object Storage key under uploads/). */
+export const backupFiles = pgTable("backup_files", {
+  key: text("key").primaryKey(),
+  driveId: text("drive_id").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }),
+  backedUpAt: timestamp("backed_up_at").defaultNow().notNull(),
+});
 
 /** Money out the door against a pay app or invoice. */
 export const costPayments = pgTable("cost_payments", {

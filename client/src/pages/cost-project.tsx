@@ -22,7 +22,7 @@ import { FundingSummary } from '@/components/cost/funding-summary';
 import { PaymentDialog } from '@/components/cost/payment-dialog';
 import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
-import { ProjectFilesList } from '@/components/cost/project-files';
+import { ProjectFilesList, DeletedFilesBin } from '@/components/cost/project-files';
 import { ReportsView, LenderPackagesCard } from '@/components/cost/reports-view';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
@@ -92,7 +92,7 @@ export default function CostProject() {
   };
   const removeFile = useMutation({
     mutationFn: (docId: number) => apiRequest(`/api/cost-documents/${docId}`, 'DELETE'),
-    onSuccess: () => { refresh(); toast({ title: 'File Removed' }); },
+    onSuccess: () => { refresh(); queryClient.invalidateQueries({ queryKey: [`/api/cost-projects/${id}/deleted-files`] }); toast({ title: 'Moved to Deleted Files' }); },
     onError: (e: any) => toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }),
   });
   const deleteProject = useMutation({
@@ -196,8 +196,9 @@ export default function CostProject() {
               {b.documents.length === 0 ? (
                 <p className="text-sm text-gray-600">No files yet. Attach pay apps when you record them.</p>
               ) : (
-                <ProjectFilesList b={b} onRemove={(d) => { if (window.confirm(`Remove ${d.originalName}?`)) removeFile.mutate(d.id); }} />
+                <ProjectFilesList b={b} onRemove={(d) => { if (window.confirm(`Move ${d.originalName} to Deleted Files? You can restore it from there.`)) removeFile.mutate(d.id); }} />
               )}
+              <DeletedFilesBin projectId={id} onChanged={refresh} />
                       </div>
           </div>
           </TabsContent>

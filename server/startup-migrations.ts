@@ -62,6 +62,11 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_waivers', column: 'party', type: 'text' },
   { table: 'cost_documents', column: 'vendor', type: 'text' },
   { table: 'cost_waivers', column: 'pay_app_due_cents', type: 'bigint' },
+  // Deleted Files bin: a deleted project file is kept (and its stored object) until the bin is emptied.
+  { table: 'cost_documents', column: 'deleted_at', type: 'timestamp' },
+  { table: 'cost_documents', column: 'deleted_by', type: 'text' },
+  { table: 'cost_documents', column: 'deleted_from', type: 'text' },
+  { table: 'cost_documents', column: 'restore_links', type: 'text' },
   // Ownership scoping (slice 0b, DESIGN-rom-mode-on-rfp.md): the REAL owner id.
   // rfp_requests never had created_by at all; rom_pilots.created_by is a display
   // name. Backfilled below in runPermissionAndOwnershipBackfill(); NULL after
@@ -139,6 +144,13 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Which stored files the nightly backup has already copied to Google Drive.
+  `CREATE TABLE IF NOT EXISTS backup_files (
+    key text PRIMARY KEY,
+    drive_id text NOT NULL,
+    size_bytes bigint,
+    backed_up_at timestamp NOT NULL DEFAULT now()
+  )`,
   // Cost tracking (2026-10-20): budget vs actual on a job being built. Shapes
   // mirror shared/schema.ts exactly; money in bigint cents. No foreign keys —
   // a constraint that fails against an existing row would stop the boot.

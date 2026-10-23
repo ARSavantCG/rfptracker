@@ -246,6 +246,32 @@ export function carriedVendors(app: AppRef, apps: readonly AppRef[], waivers: re
   return out;
 }
 
+/**
+ * Every sub that has billed on this contract (a conditional with an amount on any of its
+ * pay apps), not yet on this pay app: to pick from when building the package. Those on the
+ * previous pay app come first, then the most recent.
+ */
+export function billedVendors(app: AppRef, apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: string): Array<{ vendor: string; lastAmount: number; lastApp: number; onPrevious: boolean }> {
+  const here = waivers.filter((w) => w.applicationId === app.id && w.kind === 'conditional');
+  const prev = previousApp(app, apps);
+  const mine = new Map(apps.filter((a) => a.contractId === app.contractId && a.id !== app.id).map((a) => [a.id, a]));
+  const out: Array<{ vendor: string; lastAmount: number; lastApp: number; onPrevious: boolean; order: number }> = [];
+  for (const w of waivers) {
+    const a = mine.get(w.applicationId);
+    if (!a || w.kind !== 'conditional' || w.notNeeded || !(w.amount > 0.005)) continue;
+    if (contractName && partyOf(w, contractName) === 'gc') continue;
+    if (here.some((x) => sameVendor(x.vendor, w.vendor))) continue;
+    const doc = a.docNumber || a.number;
+    const had = out.find((x) => sameVendor(x.vendor, w.vendor));
+    if (had) {
+      if (a.number > had.order) { had.order = a.number; had.lastAmount = r2(w.amount); had.lastApp = doc; }
+      if (prev && a.id === prev.id) had.onPrevious = true;
+    } else out.push({ vendor: w.vendor, lastAmount: r2(w.amount), lastApp: doc, onPrevious: !!prev && a.id === prev.id, order: a.number });
+  }
+  return out.sort((x, y) => Number(y.onPrevious) - Number(x.onPrevious) || y.order - x.order || x.vendor.localeCompare(y.vendor))
+    .map(({ order: _o, ...v }) => v);
+}
+
 export function waiverChecklist(appId: number, apps: readonly AppRef[], waivers: readonly Waiver[], contractName?: string) {
   const app = apps.find((a) => a.id === appId);
   if (!app) return { conditionals: [], unconditionals: [] as UnconditionalRow[], previous: null as AppRef | null, outstanding: 0, missing: [] as MissingConditional[] };

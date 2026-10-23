@@ -7,17 +7,18 @@
  * Anything the app fills in can be typed over; what was typed over shows as
  * Edited, with what was expected beside it.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { coLog, cosOnPayApp } from '@shared/co-log';
-import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, carriedVendors, gcPaymentDue, paidOfFrom, unpaid, fundingNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
+import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, billedVendors, gcPaymentDue, paidOfFrom, unpaid, fundingNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText, parseAmount } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
@@ -53,6 +54,18 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   const ck = useMemo(() => (app ? waiverChecklist(app.id, apps, bundle.waivers, gcName) : null), [app?.id, apps, bundle.waivers, gcName]);
   /** Line 8 as the paperwork says it (typed, the GC's G702, or ours). */
   const dueOf = (aid: number) => { const a = bundle.applications.find((x) => x.id === aid); const c = bundle.contracts.find((x) => x.id === a?.contractId); return a ? gcPaymentDue(a as any, bundle.waivers, c?.counterparty ?? '') : { due: null, source: null }; };
+  // The GC is on every pay app: its conditional goes in on its own (for line 8, not yet received)
+  // instead of waiting under "Missing" (Adolfo, 2026-10-23).
+  const gcAdded = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (!app || !ck || app.kind === 'invoice') return;
+    const gc = ck.missing.find((m) => m.party === 'gc');
+    if (!gc || gcAdded.current.has(app.id)) return;
+    gcAdded.current.add(app.id);
+    const due = dueOf(app.id).due;
+    apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: gc.vendor, amount: due ?? 0, received: false, party: isGcVendor(gc.vendor, gcName) ? undefined : 'gc' })
+      .then(() => refresh()).catch(() => { /* the Missing row stays, with its Add button */ });
+  }, [app?.id, ck?.missing.length]);
   const paidOf = useMemo(() => paidOfFrom(bundle.payments, (aid) => dueOf(aid).due), [bundle.payments, bundle.applications, bundle.waivers, bundle.contracts]);
   // Owed on pay apps before the previous one (that one's are the unconditionals below).
   const earlier = useMemo(() => {
@@ -226,7 +239,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
   // Change orders this pay app's G702 carries as approved this period.
   const cosHere = cosOnPayApp(coLog(bundle.changeOrders as any, bundle.sovLines as any, bundle.documents as any), app.contractId, app.number);
   // Subs from the pay app before who aren't here: a one-click add, not a requirement.
-  const carried = carriedVendors(apps.find((a) => a.id === app.id)!, apps, bundle.waivers, gcName);
+  const billed = billedVendors(apps.find((a) => a.id === app.id)!, apps, bundle.waivers, gcName);
   /** A sub marked not needed with nothing on it: not billing this pay app — one quiet line, not a row. */
   const notBilling = (w: { notNeeded: boolean; amount: number }) => w.notNeeded && Math.abs(w.amount) < 0.005;
   /** An expected unconditional for a pay app we haven't paid in full. */
@@ -576,17 +589,18 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 </td>
               </tr>
             )}
-            {carried.length > 0 && (
+            {billed.length > 0 && (
               <tr className="border-b">
                 <td />
-                <td colSpan={7} className="px-2 py-1.5 text-xs text-gray-600">
-                  <span className="text-gray-500">Also on {prevLabel}:</span>{' '}
-                  {carried.map((c, i) => (
-                    <span key={c.vendor}>{i > 0 && ' · '}{c.vendor}{' '}
-                      <button className="text-blue-700 hover:underline" onClick={() => { setNewC({ vendor: c.vendor, amount: '' }); setFolds((f) => ({ ...f, cond: true })); }}>(Add)</button>
-                    </span>
-                  ))}
-                  <span className="text-gray-400"> — only if they're billing this pay app</span>
+                <td colSpan={7} className="px-2 py-1.5">
+                  <AddBilledVendors list={billed} prevLabel={prevLabel} busy={busy}
+                    onAdd={async (names) => {
+                      // Each gets a conditional on this pay app (amount to fill in), so they also
+                      // show up under Pay Applications above, ready for their pay app.
+                      await call(async () => { for (const v of names) await apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: v, amount: 0, received: false }); },
+                        `${names.length} vendor${names.length === 1 ? '' : 's'} added`);
+                      setFolds((f) => ({ ...f, cond: true }));
+                    }} />
                 </td>
               </tr>
             )}
@@ -891,5 +905,45 @@ function FileCell({ name, id, onPick, onUnlink }: { name?: string; id: number | 
       <Paperclip className="h-3 w-3" /> Attach or Drop
       <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(f); }} />
     </label>
+  );
+}
+
+/** Pick any of the subs who've billed on this contract and add them to this pay app at once. */
+function AddBilledVendors({ list, prevLabel, busy, onAdd }: { list: Array<{ vendor: string; lastAmount: number; lastApp: number; onPrevious: boolean }>; prevLabel: string | null; busy: boolean; onAdd: (names: string[]) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const onPrev = list.filter((v) => v.onPrevious);
+  const flip = (v: string) => setPicked((p) => { const n = new Set(p); if (n.has(v)) n.delete(v); else n.add(v); return n; });
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setPicked(new Set()); }}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="h-7 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Add Vendors Who've Billed ({list.length})</Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="pm-scope w-[26rem] p-0">
+        <div className="px-3 py-2 border-b flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Add to This Pay App</span>
+          {onPrev.length > 0 && prevLabel && (
+            <button className="text-xs text-blue-700 hover:underline" onClick={() => setPicked(new Set(onPrev.map((v) => v.vendor)))}>Select Everyone on {prevLabel}</button>
+          )}
+        </div>
+        <div className="max-h-72 overflow-y-auto py-1">
+          {list.map((v) => (
+            <label key={v.vendor} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 cursor-pointer">
+              <input type="checkbox" className="h-4 w-4" checked={picked.has(v.vendor)} onChange={() => flip(v.vendor)} />
+              <span className="flex-1 min-w-0 truncate">{v.vendor}</span>
+              <span className="text-[11px] text-gray-500 tabular-nums whitespace-nowrap">Pay App {String(v.lastApp).padStart(3, '0')} · {money(v.lastAmount)}</span>
+            </label>
+          ))}
+        </div>
+        <div className="px-3 py-2 border-t flex items-center justify-between">
+          <span className="text-xs text-gray-500">Adds a conditional for each; fill in the amounts.</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" className="h-7" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button size="sm" className="h-7" disabled={!picked.size || busy} onClick={async () => { await onAdd(Array.from(picked)); setOpen(false); setPicked(new Set()); }}>
+              Add {picked.size ? `(${picked.size})` : ''}</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

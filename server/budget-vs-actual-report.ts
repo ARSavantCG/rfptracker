@@ -24,6 +24,7 @@ import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-ap
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
 import { CO_STAGES } from "@shared/co-routing";
+import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-report";
 import { coLog, type CoLogRow } from "@shared/co-log";
 import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
@@ -1118,6 +1119,36 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }));
     } catch (e: any) {
       console.error("Pay app log error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** One pay app (?app=), every pay app (?app=all), or only those that don't agree (?app=off): ours vs the contractor's. */
+  app.get("/api/reports/g702-compare/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const want = String(req.query.app || "off");
+      const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
+      const apps = [...(b.applications as any[])].sort((x, y) => x.contractId - y.contractId || x.number - y.number);
+      const picked = /^\d+$/.test(want) ? apps.filter((a) => a.id === Number(want))
+        : want === "all" ? apps
+        : apps.filter((a) => threeWayCheck(a, b.waivers, cname(a.contractId)).status === "off");
+      const facts = await propertyFacts(b.project);
+      const info = infoRows(b.project, facts.propertyLabel, facts.rentableSf);
+      const sections = picked.map((a) => {
+        const c: any = b.contracts.find((x: any) => x.id === a.contractId);
+        return renderG702CompareSection({ info, contract: { id: c.id, counterparty: c.counterparty, contractNumber: c.contractNumber, retainagePct: Number(c.retainagePct) || 0 },
+          app: a, apps: b.applications as any[], sovLines: b.sovLines as any, changeOrders: b.changeOrders as any, waivers: b.waivers });
+      });
+      const notes = [want === "off" ? (picked.length ? `${picked.length} pay app${picked.length === 1 ? "" : "s"} where ours and the contractor's don't agree.` : "Every pay app agrees with the contractor's G702 and the GC's conditional.")
+        : want === "all" ? `All ${picked.length} pay apps.` : ""].filter(Boolean);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderG702CompareHtml(info, sections.length ? sections : ['<p style="color:#166534;font-weight:600;margin-top:12px">Nothing to show: no pay app disagrees.</p>'], generatedByName((req as any).user), notes));
+    } catch (e: any) {
+      console.error("G702 compare error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

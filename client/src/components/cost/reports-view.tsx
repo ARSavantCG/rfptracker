@@ -8,7 +8,7 @@ import { MoneyInput } from './inputs';
 import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
 import { STAGE_STYLE } from './co-routing';
-import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue } from '@shared/cost-waivers';
+import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue, threeWayCheck } from '@shared/cost-waivers';
 import { coLog } from '@shared/co-log';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       </Card>
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
+      <G702CompareCard b={b} projectId={projectId} open={open} />
       <CoLogCard b={b} projectId={projectId} open={open} />
       </div>
 
@@ -430,6 +431,40 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
 }
 
 /** Pay Application Log: the GC's and each sub's pay app per pay app — line 8 vs the conditional, and the file. */
+/** Ours against the contractor's, G702 and G703, for one pay app or every one that doesn't agree. */
+function G702CompareCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '';
+  const apps = [...b.applications].sort((x, y) => x.contractId - y.contractId || y.number - x.number)
+    .map((a) => ({ a, tw: threeWayCheck(a as any, b.waivers, cname(a.contractId)) }));
+  const off = apps.filter((x) => x.tw.status === 'off');
+  const [pick, setPick] = useState<string>(String((off[0] ?? apps[0])?.a.id ?? ''));
+  const nn = (n: number) => String(n).padStart(3, '0');
+  return (
+    <Card id="g702-compare" title="G702 / G703 Comparison" what="One pay app, ours beside the contractor's: G702 lines 1 to 9 and the GC's conditional with the difference on each (all should be $0.00), then the G703 lines as entered, flagging change orders approved on the pay app with nothing entered for them."
+          summary={apps.length ? (off.length ? `${off.length} Don't Agree` : 'All Agree') : undefined}
+          action={<Button variant="outline" className="h-9" disabled={!pick} onClick={() => open(`/api/reports/g702-compare/${projectId}?app=${pick}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!apps.length ? <p className="text-sm text-gray-700">No pay apps yet.</p> : (
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-80">
+            <Select value={pick} onValueChange={setPick}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                {apps.map(({ a, tw }) => (
+                  <SelectItem key={a.id} value={String(a.id)}>
+                    {b.contracts.length > 1 ? `${cname(a.contractId)} · ` : ''}{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {nn(a.docNumber)} — {tw.status === 'off' ? `⚠ Off${tw.oursOff != null ? ` ${money(Math.abs(tw.oursOff))}` : ''}` : tw.status === 'none' ? 'Theirs Not Entered' : '✓ Agrees'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {off.length > 0 && <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/g702-compare/${projectId}?app=off`)}>Print All That Don't Agree ({off.length})</Button>}
+          <Button variant="ghost" className="h-9" onClick={() => open(`/api/reports/g702-compare/${projectId}?app=all`)}>Print Every Pay App</Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [issues, setIssues] = useState(false);

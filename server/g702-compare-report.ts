@@ -164,10 +164,9 @@ export function renderG702CompareSection(x: CompareInput): string {
     const extra = m.unmatched.filter((r) => Math.abs(workOfRow(r)) >= 0.005 || Math.abs(theirToDate(r)) >= 0.005 || Math.abs(r.retainage ?? 0) >= 0.005);
     if (extra.length) body2 += `<tr class="grp" style="background:#fee2e2"><td colspan="11">On Their G703, Not Matched to a Line of Ours</td></tr>${extra.map((r) => rowHtml(r.itemNo ?? '', `${r.changeOrder ? `${r.changeOrder} · ` : ''}${r.description}`, null, r)).join('')}`;
     const tot2 = `<tr class="total" style="border-top:2px solid #111827"><td></td><td>Total</td><td class="num">${money2(r2(T.ow))}</td><td class="num">${money2(r2(T.tw))}</td>${dcell(r2(T.ow), r2(T.tw))}<td class="num">${money2(r2(T.ot))}</td><td class="num">${money2(r2(T.tt))}</td>${dcell(r2(T.ot), r2(T.tt))}<td class="num">${money2(r2(T.or))}</td><td class="num">${money2(r2(T.tr))}</td>${dcell(r2(T.or), r2(T.tr))}</tr>`;
-    const readOn = g703.readAt ? new Date(g703.readAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }) : '';
     lineTable = `
   <h3 class="sec">G703 — Line by Line, Ours vs the Contractor's</h3>
-  <p style="font-size:9.5px;color:#6b7280;margin:0 0 4px">Theirs: read from ${escapeHtml(g703.fileName || 'their pay app')}${readOn ? ` on ${escapeHtml(readOn)}` : ''}. Difference is ours less theirs; ${lineDiffs.length ? `<strong style="color:#991b1b">${lineDiffs.length} line${lineDiffs.length === 1 ? '' : 's'} differ${lineDiffs.length === 1 ? 's' : ''}</strong> (shaded).` : '<strong style="color:#166534">every line agrees.</strong>'}</p>
+  <p style="font-size:9.5px;color:#6b7280;margin:0 0 4px">Theirs: from ${escapeHtml(g703.fileName || 'their pay app')}. Difference is ours less theirs; ${lineDiffs.length ? `<strong style="color:#991b1b">${lineDiffs.length} line${lineDiffs.length === 1 ? '' : 's'} differ${lineDiffs.length === 1 ? 's' : ''}</strong> (shaded).` : '<strong style="color:#166534">every line agrees.</strong>'}</p>
   <table class="t lbl"><thead>
     <tr><th class="l" rowspan="2">Item</th><th class="l" rowspan="2">Description</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">This Period</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">Total to Date</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">Retainage</th></tr>
     <tr><th>Ours</th><th>Theirs</th><th>Difference</th><th>Ours</th><th>Theirs</th><th>Difference</th><th>Ours</th><th>Theirs</th><th>Difference</th></tr>
@@ -177,14 +176,20 @@ export function renderG702CompareSection(x: CompareInput): string {
   const rate = Number(contract.retainagePct) || 0;
   const verdict = tw.status === 'match' ? `<div class="verdict" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:8px 10px;border-radius:6px;font-weight:600">✓ All three agree on line 8: ${money2(g.currentPaymentDue ?? 0)}.</div>`
     : tw.status === 'partial' ? `<div class="verdict" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:8px 10px;border-radius:6px;font-weight:600">✓ The figures entered agree. ${escapeHtml(tw.summary)}.</div>`
-    : tw.status === 'off' ? `<div class="verdict" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:8px 10px;border-radius:6px"><strong>⚠ Line 8 doesn't agree.</strong> ${escapeHtml(tw.summary)}.${tw.oursOff != null && tw.oursOff < 0 ? ` Ours is ${money2(-tw.oursOff)} lower: about ${money2(-tw.oursOff / (1 - rate / 100))} of work before retainage is missing from the G703 lines entered.` : tw.oursOff != null ? ` Ours is ${money2(tw.oursOff)} higher than theirs.` : ''}${flags.length ? `<ul style="margin:6px 0 0 18px">${flags.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}</div>`
+    : tw.status === 'off' ? `<div class="verdict" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:8px 10px;border-radius:6px"><strong>⚠ Line 8 doesn't agree.</strong> ${escapeHtml(tw.summary)}.${tw.oursOff != null && tw.oursOff < 0 ? ` Ours is ${money2(-tw.oursOff)} lower: about ${money2(-tw.oursOff / (1 - rate / 100))} of work before retainage is missing from the G703 lines entered.` : tw.oursOff != null ? ` Ours is ${money2(tw.oursOff)} higher than theirs.` : ''}${(() => {
+      // Where it comes from: if lines 3 and 7 agree, the contract sum and the earlier pay apps carry over fine.
+      const eq = (a: unknown, b: unknown) => a != null && b != null && Math.abs(Number(a) - Number(b)) < 0.005;
+      const d4 = theirs.completedAndStored != null && g.completedAndStored != null ? r2(g.completedAndStored - theirs.completedAndStored) : null;
+      if (!eq(g.contractSumToDate, theirs.contractSumToDate) || !eq(g.previousCertificates, theirs.previousCertificates) || d4 == null || Math.abs(d4) < 0.005) return '';
+      return `<div style="margin-top:4px">Lines 3 and 7 agree, so the contract sum and the earlier pay apps carry over correctly. The difference is in work completed and stored this period: line 4 is off ${money2(Math.abs(d4))}. Check their G703 column totals against their G702 line 4, and look for a line, a change order line, or stored materials (column F) entered short.</div>`;
+    })()}${flags.length ? `<ul style="margin:6px 0 0 18px">${flags.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}</div>`
     : `<div class="verdict" style="background:#f9fafb;border:1px solid #e5e7eb;color:#4b5563;padding:8px 10px;border-radius:6px">The contractor's G702 isn't entered for this pay app yet: type their line 8 (and 3, 4, 5, 7) on the pay app, or in its lien waiver package, to compare.</div>`;
 
   const shown = lineDiffs.slice(0, 12);
   const lineNote = g703
     ? (lineDiffs.length ? `<div class="verdict" style="background:#fff7ed;border:1px solid #fdba74;color:#7c2d12;padding:8px 10px;border-radius:6px;margin-top:6px"><strong>Line by line against their G703: ${lineDiffs.length} line${lineDiffs.length === 1 ? '' : 's'} differ${lineDiffs.length === 1 ? 's' : ''}.</strong><ul style="margin:4px 0 0 18px">${shown.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}${lineDiffs.length > shown.length ? `<li>and ${lineDiffs.length - shown.length} more, shaded below</li>` : ''}</ul></div>`
       : `<div class="verdict" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:6px 10px;border-radius:6px;margin-top:6px">✓ Line by line, every G703 line agrees with theirs.</div>`)
-    : `<div class="verdict" style="background:#f9fafb;border:1px solid #e5e7eb;color:#4b5563;padding:6px 10px;border-radius:6px;margin-top:6px">Their G703 hasn't been read for this pay app, so lines can't be compared one by one. On the Reports tab, G702 / G703 Comparison, use Read Their G703 (AI reads the pay app PDF attached to it).</div>`;
+    : '';
   return `
   <h2 style="font-size:15px;margin:14px 0 6px">${escapeHtml(contract.counterparty)} — ${escapeHtml(label)}${app.invoiceNumber ? ` (${escapeHtml(app.invoiceNumber)})` : ''}${app.periodEnd ? ` · Period To ${escapeHtml(longDate(app.periodEnd))}` : ''}</h2>
   ${verdict}
@@ -223,7 +228,7 @@ export function renderG702CompareHtml(info: ReportInfoRow[], sections: string[],
     <li>When ours is lower, lines are missing from what was entered, most often change order work billed that period. Change orders approved on the pay app with nothing entered for them are shaded in the G703.</li>
     <li>Line 1 is the base contract as entered on the Contracts tab; ours on line 2 is the change orders approved on the Contracts tab through this pay app, theirs is their line 3 less line 1. A difference on line 2 means they carry a change order that isn't approved here (or the reverse).</li>
     <li>Lines 6 and 9 for the contractor are worked out from their lines 3 to 5 when those are entered.</li>
-    <li>Line by line: the contractor's G703 as read by AI from the pay app PDF, each row matched to our line by item number, description or scheduled value. Their total to date is column G (or D + E + F when G is blank). Rows of theirs that match no line of ours are listed at the end; a line of ours they don't list counts as zero on theirs.</li>
+    <li>Line by line (when their G703 lines are on file): each of their rows matched to our line by item number, description or scheduled value. Their total to date is column G (or D + E + F when G is blank). Rows of theirs that match no line of ours are listed at the end; a line of ours they don't list counts as zero on theirs.</li>
   </ol>
   ${reportFooterHtml({ generatedBy })}
   </body></html>`;

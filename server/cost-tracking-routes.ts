@@ -29,7 +29,7 @@ import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, bil
 import { and, eq, inArray, like, desc, isNull, isNotNull, sql } from 'drizzle-orm';
 import { feePaid, feeDonut, vendorDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
 import {
-  budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
+  budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, retainageCents, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
@@ -709,7 +709,7 @@ async function writeApplicationLines(
     const stored = toCents(r?.storedToDate);
     const typedRetainage = r?.retainageToDate;
     const retainage = typedRetainage === null || typedRetainage === undefined || typedRetainage === ''
-      ? Math.round(((priorWork.get(sovLineId) ?? 0) + work + stored) * retainageBp / 10000)
+      ? Math.round(retainageCents(((priorWork.get(sovLineId) ?? 0) + work + stored) * retainageBp / 10000 / 100) * 100)
       : toCents(typedRetainage);
     if (work === 0 && stored === 0 && retainage === 0) continue;
     toInsert.push({
@@ -1963,7 +1963,7 @@ export function registerCostTrackingRoutes(app: Express): void {
             const work = toCents(ol.work);
             if (!work) continue;
             const ret = ol.retainage === null || ol.retainage === undefined || ol.retainage === ''
-              ? Math.round(work * retainageBp / 10000) : toCents(ol.retainage);
+              ? Math.round(retainageCents(work * retainageBp / 10000 / 100) * 100) : toCents(ol.retainage);
             rows.push({ applicationId: app0.id, sovLineId: id, workThisPeriodCents: work, storedToDateCents: 0, retainageToDateCents: ret });
           }
           if (rows.length) await tx.insert(costApplicationLines).values(rows);

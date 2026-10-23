@@ -589,6 +589,17 @@ export function parseSovPaste(text: string): { lines: PastedSovLine[]; skipped: 
  * with the largest remainders. The lines then add to the total exactly, where
  * rounding each line on its own can be a cent or two off.
  */
+/**
+ * Retainage at the contract rate, to the cent, rounded DOWN as contractors figure
+ * it on the G702 ($7,642.0504 → $7,642.05; $7,642.045 → $7,642.04), so line 5
+ * doesn't come out a penny over theirs (Adolfo, 2026-10-23). The tiny allowance
+ * keeps float noise (…0.0499999) from dropping a whole cent.
+ */
+export function retainageCents(exact: number): number {
+  const c = exact * 100;
+  return (c >= 0 ? Math.floor(c + 1e-6) : -Math.floor(-c + 1e-6)) / 100;
+}
+
 export function spreadCents(items: ReadonlyArray<{ id: number; exact: number }>, total: number): Map<number, number> {
   const out = new Map<number, number>();
   if (!items.length) return out;

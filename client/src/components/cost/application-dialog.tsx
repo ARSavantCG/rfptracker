@@ -20,7 +20,7 @@ import { Paperclip, Sparkles, Loader2, CheckCircle2, AlertTriangle, ChevronDown,
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { setupPlan, workOfRow, contractorG703From, type PayAppRead, type MatchResult } from '@shared/cost-payapp-read';
 import { Checkbox } from '@/components/ui/checkbox';
-import { g702For, lineProgress, newAppNumbers, spreadCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
+import { g702For, lineProgress, newAppNumbers, spreadCents, retainageCents, g702Check, G702_CHECK_LINES, type Application } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
 import { threeWayCheck, type Waiver } from '@shared/cost-waivers';
 import {
@@ -143,7 +143,7 @@ export function ApplicationDialog({
     const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
     const target = retTarget.trim()
       ? Math.round((num(retTarget) - typed) * 100) / 100
-      : Math.round(items.reduce((s, x) => s + x.exact, 0) * 100) / 100;
+      : retainageCents(items.reduce((s, x) => s + x.exact, 0));
     return spreadCents(items, target);
   }, [contractLines, draft, rate, retTarget, entry, prior]);
   const autoRetainage = (l: SovLineRow) => autoMap.get(l.id) ?? 0;
@@ -614,6 +614,8 @@ export function ApplicationDialog({
               const keyOf = (no: string) => G702_CHECK_LINES.find((l) => l[1] === no)?.[0];
               const ret = byKey.get('retainage');
               const canSpread = ret && ret.ok === false && contractLines.some((l) => !(draft[l.id]?.retainage ?? '').trim() && toDateOf(l));
+              // Saved retainage is kept as typed; offer to figure it again (contract rate, rounded down).
+              const canRecalc = ret && ret.ok === false && !canSpread && contractLines.some((l) => (draft[l.id]?.retainage ?? '').trim() && toDateOf(l));
               return (
                 <>
                   <table className="text-sm w-full max-w-3xl">
@@ -677,8 +679,14 @@ export function ApplicationDialog({
                         Spread the blank retainage boxes to match their line 5
                       </button>
                     )}
+                    {canRecalc && (
+                      <button className="text-blue-700 hover:underline" title="Clears the retainage boxes so they're figured at the contract rate on work to date, rounded down to the cent like the contractor's"
+                              onClick={() => setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }])))}>
+                        Recalculate retainage at {(rate * 100).toFixed(2)}% (rounded down)
+                      </button>
+                    )}
                     {retTarget.trim() && (
-                      <span className="text-amber-800">Retainage spread to {money(num(retTarget))} · ours would be {money(Math.round(contractLines.reduce((s2, l) => s2 + toDateOf(l) * rate, 0) * 100) / 100)}
+                      <span className="text-amber-800">Retainage spread to {money(num(retTarget))} · ours would be {money(retainageCents(contractLines.reduce((s2, l) => s2 + toDateOf(l) * rate, 0)))}
                         {' '}<button className="text-blue-700 hover:underline" onClick={() => setRetTarget('')}>Undo</button></span>
                     )}
                   </div>

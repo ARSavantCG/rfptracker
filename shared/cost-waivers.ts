@@ -567,7 +567,8 @@ export function threeWayCheck(
   const gc = waivers.find((w) => w.applicationId === app.id && w.kind === 'conditional' && !w.notNeeded && partyOf(w, contractName) === 'gc');
   const theirsTyped = gc?.payAppDue ?? app.contractorG702?.currentPaymentDue ?? null;
   const contractor = theirsTyped != null && Number.isFinite(theirsTyped) ? r2(theirsTyped) : null;
-  const conditional = gc ? r2(gc.amount) : null;
+  // A conditional not yet received (e.g. the GC's, put in on its own at line 8) isn't evidence yet.
+  const conditional = gc && gc.received ? r2(gc.amount) : null;
   const vals = [ours, contractor, conditional].filter((v): v is number => v != null);
   const eq = (a: number, b: number) => Math.abs(a - b) < 0.005;
   const m = (v: number | null) => (v == null ? 'not entered' : v.toLocaleString('en-US', { style: 'currency', currency: 'USD' }));

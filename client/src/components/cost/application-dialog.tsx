@@ -108,6 +108,7 @@ export function ApplicationDialog({
     setSetupIds({});
     setAiCells({});
     setRetTarget('');
+    setRetTyped(new Set());
     setTheirs(Object.fromEntries(Object.entries(app?.contractorG702 ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, fmtMoneyText(String(v))])));
     setSetupDone(false);
     setPick({ lines: true, opening: true, paid: true, retainage: true });
@@ -141,11 +142,14 @@ export function ApplicationDialog({
     const auto = contractLines.filter((l) => !(draft[l.id]?.retainage ?? '').trim());
     const items = auto.map((l) => ({ id: l.id, exact: toDateOf(l) * rate })).filter((x) => Math.abs(x.exact) >= 0.0001);
     const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
+    const atRate = retainageCents(items.reduce((s, x) => s + x.exact, 0));
+    // Their line 5, when typed and within rounding of the rate (contractors round line by line), is used as is.
+    const theirRet = (theirs.retainage ?? '').trim() ? Math.round((num(theirs.retainage) - typed) * 100) / 100 : null;
     const target = retTarget.trim()
       ? Math.round((num(retTarget) - typed) * 100) / 100
-      : retainageCents(items.reduce((s, x) => s + x.exact, 0));
+      : theirRet != null && items.length && Math.abs(theirRet - atRate) <= 1.0 ? theirRet : atRate;
     return spreadCents(items, target);
-  }, [contractLines, draft, rate, retTarget, entry, prior]);
+  }, [contractLines, draft, rate, retTarget, entry, prior, theirs.retainage]);
   const autoRetainage = (l: SovLineRow) => autoMap.get(l.id) ?? 0;
   const retainageOf = (l: SovLineRow) => {
     const typed = draft[l.id]?.retainage;
@@ -214,11 +218,18 @@ export function ApplicationDialog({
     return <div className="text-[10px] text-right text-amber-700 tabular-nums mt-0.5">Edited · AI read {money(v)}</div>;
   };
 
-  const set = (id: number, field: keyof Draft, value: string) =>
+  /** Retainage boxes typed in this window: those stay as typed when the work changes. */
+  const [retTyped, setRetTyped] = useState<Set<number>>(new Set());
+  const set = (id: number, field: keyof Draft, value: string) => {
+    if (field === 'retainage') setRetTyped((t) => new Set(t).add(id));
     setDraft((d) => {
       const cur: Draft = d[id] ?? { work: '', stored: '', retainage: '', toDate: '' };
-      return { ...d, [id]: { ...cur, [field]: value } };
+      // Changing the work on a line figures its retainage again (unless it was typed here):
+      // a saved retainage would otherwise stay put while the work moves.
+      const clearRet = field !== 'retainage' && !retTyped.has(id);
+      return { ...d, [id]: { ...cur, [field]: value, ...(clearRet ? { retainage: '' } : {}) } };
     });
+  };
 
   const attachedNow = app ? documents.filter((d) => d.applicationId === app.id) : [];
   const readable = (n: string, t?: string | null) => /\.pdf$/i.test(n) || /pdf|^image\//i.test(t ?? '');
@@ -681,7 +692,7 @@ export function ApplicationDialog({
                     )}
                     {canRecalc && (
                       <button className="text-blue-700 hover:underline" title="Clears the retainage boxes so they're figured at the contract rate on work to date, rounded down to the cent like the contractor's"
-                              onClick={() => setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }])))}>
+                              onClick={() => { setRetTyped(new Set()); setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }]))); }}>
                         Recalculate retainage at {(rate * 100).toFixed(2)}% (rounded down)
                       </button>
                     )}

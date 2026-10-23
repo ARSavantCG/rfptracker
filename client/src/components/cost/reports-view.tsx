@@ -447,7 +447,8 @@ export function PayoffCard({ b, projectId }: { b: ProjectBundle; projectId: numb
   const openApps = b.position.applications.filter((a) => a.open > 0.005);
   const payoff = Math.round((openApps.reduce((s, a) => s + a.open, 0) + t.retainageHeld) * 100) / 100;
   const { toast } = useToast();
-  const open = () => { openReport(`/api/reports/payoff/${projectId}?asOf=${asOf}`).then((ok) => { if (!ok) toast({ title: 'Report Failed', description: 'The new tab says why.', variant: 'destructive' }); }); };
+  const [worst, setWorst] = useState(false);
+  const open = () => { openReport(`/api/reports/payoff/${projectId}?asOf=${asOf}${worst ? '&worst=1' : ''}`).then((ok) => { if (!ok) toast({ title: 'Report Failed', description: 'The new tab says why.', variant: 'destructive' }); }); };
   return (
     <Card id="payoff" title="Payoff Statement" what="For a refinance or sale: what it takes to bring every contractor to zero (each pay app billed and not yet paid, plus the retainage held) as of a closing date, and the lien releases to collect once it's paid."
           summary={`Payoff ${money(payoff)}`}
@@ -455,6 +456,8 @@ export function PayoffCard({ b, projectId }: { b: ProjectBundle; projectId: numb
       <div className="flex flex-wrap items-end gap-4 text-sm">
         <label className="space-y-1"><span className="text-xs text-gray-600 block">As Of (Closing Date)</span>
           <Input type="date" className="h-9 w-44" value={asOf} onChange={(e) => setAsOf(e.target.value)} /></label>
+        <label className="flex items-center gap-2 text-sm pb-2" title="For a capital call while differences are reconciled: each open pay app at the higher of ours and the contractor's payment due">
+          <input type="checkbox" className="h-4 w-4" checked={worst} onChange={(e) => setWorst(e.target.checked)} /> Worst Case (Higher of Ours and Theirs)</label>
         <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Billed, Unpaid</div><div className="font-semibold tabular-nums">{money(openApps.reduce((s, a) => s + a.open, 0))} <span className="text-xs font-normal text-gray-500">({openApps.length} pay app{openApps.length === 1 ? '' : 's'})</span></div></div>
         <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Retainage Held</div><div className="font-semibold tabular-nums">{money(t.retainageHeld)}</div></div>
         <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Payoff Today</div><div className="font-semibold tabular-nums text-blue-900">{money(payoff)}</div></div>

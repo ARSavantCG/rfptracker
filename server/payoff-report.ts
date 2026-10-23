@@ -28,6 +28,8 @@ export interface PayoffInput {
   appExtras?: Map<number, { retainage: number; gross?: number; paidOn: string | null; conditional: number | null }>;
   /** The lien waiver log by pay app (statuses as of today). */
   waiverGroups: PayAppWaivers[];
+  /** Worst case: pay apps carried at the contractor's higher line 8 (ours and theirs). */
+  worst?: Map<number, { ours: number; theirs: number }>;
   generatedBy: string | null;
 }
 
@@ -41,6 +43,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
     return { ...p, apps, openAmt, payoff: r2(openAmt + p.retainageHeld) };
   }).filter((r) => r.payoff > 0.005 || r.apps.length);
   const total = { open: r2(rows.reduce((t, r) => t + r.openAmt, 0)), ret: r2(rows.reduce((t, r) => t + r.retainageHeld, 0)), payoff: r2(rows.reduce((t, r) => t + r.payoff, 0)), unbilled: r2(rows.reduce((t, r) => t + r.leftToBill, 0)) };
+  const worstExtra = x.worst ? r2(Array.from(x.worst.values()).reduce((t, v) => t + (v.theirs - v.ours), 0)) : 0;
   const notes = [
     `Payoff as of ${longDate(x.asOf)}: ${money2(total.payoff)} — ${money2(total.open)} billed and unpaid on ${open.length} pay app${open.length === 1 ? '' : 's'}, plus ${money2(total.ret)} retainage held.`,
   ];
@@ -76,7 +79,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
       const head = multi && a.contractId !== lastC ? `<tr class="grp"><td colspan="10" style="background:#e5e7eb;font-weight:700">${escapeHtml(name(a.contractId))}</td></tr>` : '';
       lastC = a.contractId;
       const isOpen = a.open > 0.005;
-      return `${head}<tr><td>${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)}</td><td>${shortD(a.date)}</td><td class="num">${money2(gross)}</td><td class="num">${money2(ret)}</td><td class="num">${money2(a.due)}</td><td class="num">${money2(a.paid)}</td><td style="text-align:center">${a.paid > 0.005 ? shortOrDash(e?.paidOn) : '—'}</td>
+      return `${head}<tr><td>${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)}</td><td>${shortD(a.date)}</td><td class="num">${money2(gross)}</td><td class="num">${money2(ret)}</td><td class="num">${money2(a.due)}${x.worst?.get(a.applicationId) ? `<div style="font-size:8px;color:#92400e;font-weight:400">theirs; ours ${money2(x.worst.get(a.applicationId)!.ours)}</div>` : ''}</td><td class="num">${money2(a.paid)}</td><td style="text-align:center">${a.paid > 0.005 ? shortOrDash(e?.paidOn) : '—'}</td>
         <td class="num" style="background:#f5f7ff">${isOpen ? money2(a.open) : '$0.00 <span style="color:#166534;font-size:8.5px;font-weight:700">PAID</span>'}</td><td class="num" style="background:#f5f7ff">${money2(ret)}</td><td class="num" style="background:#f5f7ff"><strong>${money2(pay)}</strong></td></tr>`;
     }).join('')}
     <tr class="total"><td colspan="2">Total${multi ? '' : ` · ${escapeHtml(name(all[0].contractId))}`}</td><td class="num">${money2(r2(allTot.gross))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.due))}</td><td class="num">${money2(r2(allTot.paid))}</td><td></td><td class="num">${money2(r2(allTot.open))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.payoff))}</td></tr>
@@ -127,7 +130,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
     }).join('')}
   </tbody></table>` : '';
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Payoff Statement</title><style>${REPORT_SHELL_CSS}
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${x.worst ? 'Payoff Statement: Worst Case' : 'Payoff Statement'}</title><style>${REPORT_SHELL_CSS}
     body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; padding: 0.5in; }
     .t { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 4px; }
     .t th { text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; color: #4b5563; border-bottom: 2px solid #111827; padding: 4px 6px; background: #f3f4f6; }
@@ -141,9 +144,10 @@ export function renderPayoffHtml(x: PayoffInput): string {
     .big { margin: 10px 0 14px; padding: 10px 12px; border: 2px solid #003087; border-radius: 6px; display: flex; justify-content: space-between; align-items: baseline; }
     .big .n { font-size: 20px; font-weight: 700; color: #003087; font-variant-numeric: tabular-nums; }
   </style></head><body>
-  ${reportHeaderHtml({ title: 'Payoff Statement', info: [...x.info, { label: 'As Of', value: longDate(x.asOf) }], notes })}
+  ${reportHeaderHtml({ title: x.worst ? 'Payoff Statement: Worst Case' : 'Payoff Statement', info: [...x.info, { label: 'As Of', value: longDate(x.asOf) }], notes })}
   <div class="big"><div><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#374151">Total to Bring Every Contractor to Zero</div>
-    <div style="font-size:10.5px;color:#4b5563">${money2(total.open)} billed and unpaid + ${money2(total.ret)} retainage held</div></div><div class="n">${money2(total.payoff)}</div></div>
+    <div style="font-size:10.5px;color:#4b5563">${money2(total.open)} billed and unpaid + ${money2(total.ret)} retainage held</div>
+    ${x.worst ? `<div style="font-size:10.5px;color:#92400e;margin-top:2px">Worst case: each open pay app at the higher of ours and the contractor's payment due${worstExtra > 0.005 ? `, ${money2(worstExtra)} over ours while it's reconciled` : ''}.</div>` : ''}</div><div class="n">${money2(total.payoff)}</div></div>
   ${rows.length ? summary : '<p>Nothing is owed: every pay app is paid and no retainage is held.</p>'}
   ${detail}
   ${retain}

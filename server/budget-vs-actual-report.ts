@@ -28,7 +28,7 @@ import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-
 import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
 import { coLog, type CoLogRow } from "@shared/co-log";
-import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
+import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, partyOf, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
 const BUCKETS: Array<[string, string]> = [
   ["contractor", "Contractor"], ["design", "Design"], ["cm", "Construction Management"], ["misc", "Miscellaneous"],
@@ -1139,6 +1139,23 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : latest > todayEastern() ? latest : todayEastern();
       const pos = positionAsOf(asOf, b.positionInput);
       const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
+      // Worst case (?worst=1): each pay app still open at the higher of ours and the contractor's
+      // line 8 (their G702, or the GC's received conditional), for a capital call that covers
+      // differences still being reconciled.
+      const worst = req.query.worst === "1";
+      const worstApps = new Map<number, { ours: number; theirs: number }>();
+      if (worst) {
+        pos.applications = pos.applications.map((pa: any) => {
+          if (pa.open <= 0.005) return pa;
+          const a: any = b.applications.find((x: any) => x.id === pa.applicationId);
+          const gc = (b.waivers as any[]).find((w) => w.applicationId === pa.applicationId && w.kind === "conditional" && !w.notNeeded && w.received && partyOf(w, cname(pa.contractId)) === "gc");
+          const theirs = [a?.contractorG702?.currentPaymentDue, gc?.payAppDue, gc?.amount].filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+          const high = Math.max(pa.due, ...theirs);
+          if (high - pa.due < 0.005) return pa;
+          worstApps.set(pa.applicationId, { ours: pa.due, theirs: Math.max(...theirs) });
+          return { ...pa, due: Math.round(high * 100) / 100, open: Math.max(0, Math.round((high - pa.paid) * 100) / 100) };
+        });
+      }
       const apps = b.applications.map((a: any) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber }));
       const paidOf = paidOfFrom(b.payments, (aid) => { const a: any = b.applications.find((x: any) => x.id === aid); return a ? gcPaymentDue(a, b.waivers, cname(a.contractId)).due : null; });
       const facts = await propertyFacts(b.project);
@@ -1147,6 +1164,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
         contracts: b.contracts.map((c: any) => ({ id: c.id, name: c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : ""), retainagePct: Number(c.retainagePct) || 0 })),
         positions: pos.contracts as any, applications: pos.applications as any,
+        worst: worst ? worstApps : undefined,
         appExtras: (() => {
           const m = new Map<number, { retainage: number; gross: number; paidOn: string | null; conditional: number | null }>();
           const byC = new Map<number, any[]>();

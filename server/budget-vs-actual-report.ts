@@ -1146,6 +1146,22 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
         contracts: b.contracts.map((c: any) => ({ id: c.id, name: c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : ""), retainagePct: Number(c.retainagePct) || 0 })),
         positions: pos.contracts as any, applications: pos.applications as any,
+        appExtras: (() => {
+          const m = new Map<number, { retainage: number; paidOn: string | null; conditional: number | null }>();
+          const byC = new Map<number, any[]>();
+          for (const a of b.applications as any[]) { const l = byC.get(a.contractId) ?? []; l.push(a); byC.set(a.contractId, l); }
+          byC.forEach((list) => {
+            list.sort((x, y) => x.number - y.number);
+            let prevRet = 0;
+            for (const a of list) {
+              const ret = Number(a.g702?.retainage) || 0;
+              const paidOn = (b.payments as any[]).filter((p) => p.applicationId === a.id && dayOf(p.paidDate) <= asOf).map((p) => dayOf(p.paidDate)).sort().pop() ?? null;
+              m.set(a.id, { retainage: Math.round((ret - prevRet) * 100) / 100, paidOn, conditional: null });
+              prevRet = ret;
+            }
+          });
+          return m;
+        })(),
         waiverGroups: waiversByPayApp(apps, b.waivers, cname, paidOf),
         generatedBy: generatedByName((req as any).user),
       }));

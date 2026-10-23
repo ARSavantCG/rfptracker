@@ -46,12 +46,16 @@ export const unpaid = (p: { paid: number; due: number } | null | undefined) => !
 const money2 = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 export const paidNote = (n: number, p: { paid: number; due: number }) => `Pay App ${String(n).padStart(2, '0')} paid ${money2(p.paid)} of ${money2(p.due)}`;
 /**
- * The note under a Pending Funding row. The dollars are the pay app's line 8 —
- * what WE owe the GC — so they only belong on the GC's row; a sub just waits
- * for that pay app to be funded (Adolfo, 2026-10-22: subs read as owed Nova's amount).
+ * The note under a Pending Funding row, tied to that vendor's own conditional
+ * on the pay app it releases (Adolfo, 2026-10-22). What we've paid is only
+ * known for the GC — we pay the GC, the GC pays its subs — so subs just read
+ * "not yet funded" until that pay app is paid in full.
  */
-export const fundingNote = (n: number, p: { paid: number; due: number }, party: WaiverParty | null | undefined) =>
-  party === 'gc' ? `${paidNote(n, p)} to the GC` : `Waiting on Pay App ${String(n).padStart(2, '0')} to be funded`;
+export const fundingNote = (n: number, p: { paid: number; due: number }, party: WaiverParty | null | undefined, conditional: number | null | undefined) => {
+  const nn = String(n).padStart(2, '0');
+  const cond = conditional != null ? `Pay App ${nn} conditional ${money2(conditional)}` : `Pay App ${nn}`;
+  return party === 'gc' ? `${cond} · paid ${money2(p.paid)}` : `${cond} · not yet funded`;
+};
 
 /**
  * Build a PaidOf from payments and each pay app's payment due.
@@ -333,7 +337,7 @@ export function waiverLog(apps: readonly AppRef[], waivers: readonly Waiver[], c
         unconditionalDueWith: next ? (next.docNumber || next.number) : null, unconditionalAmount: u ? r2(u.amount) : null,
         unconditionalReceived: !!u?.received, status, edited: !!u?.edited,
         conditionalId: c.id, unconditionalAppId: next?.id ?? null, unconditionalId: u?.id ?? null,
-        note: status === 'awaiting payment' ? fundingNote(app.docNumber || app.number, paidOf!(app.id)!, name ? partyOf(u ?? c, name) : (c.party ?? 'sub')) : undefined,
+        note: status === 'awaiting payment' ? fundingNote(app.docNumber || app.number, paidOf!(app.id)!, name ? partyOf(u ?? c, name) : (c.party ?? 'sub'), r2(c.amount)) : undefined,
         party: name ? partyOf(u ?? c, name) : (c.party ?? 'sub'),
       });
     }
@@ -422,7 +426,7 @@ export function waiversByPayApp(apps: readonly AppRef[], waivers: readonly Waive
         const s = st(u);
         const wait = s === 'outstanding' && waiting && u.source === 'expected';
         return { kind: 'unconditional' as const, vendor: u.vendor, party: partyOf(u, name), amount: r2(u.amount),
-          status: wait ? 'awaiting payment' as const : s, note: wait ? fundingNote(prevNo!, prevPaid!, partyOf(u, name)) : undefined,
+          status: wait ? 'awaiting payment' as const : s, note: wait ? fundingNote(prevNo!, prevPaid!, partyOf(u, name), u.expectedAmount) : undefined,
           releases: u.source === 'expected' ? prevNo : null, edited: u.edited };
       }),
     ];

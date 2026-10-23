@@ -693,7 +693,7 @@ export function renderWaiverLogHtml(input: {
   <h3 class="sec">Notes</h3>
   <ol class="notes">
     <li>A pay app is compliant when its conditional waivers are in and so are the unconditional waivers it carries for the pay app before. A pay app's own unconditionals come with the next pay app and are listed there.</li>
-    <li>"Pending Funding": the pay app that unconditional releases hasn't been paid in full yet, so the contractor can't give it. The dollars on the GC's row are what we've paid the GC against that pay app's line 8; each sub waits on that funding. It isn't held against the contractor's compliance.</li>
+    <li>"Pending Funding": the pay app that unconditional releases hasn't been paid in full yet, so the contractor can't give it. Each row shows that vendor's conditional on the pay app it releases; the GC's row also shows what we've paid against that pay app. Subs are paid by the GC once it's funded. It isn't held against the contractor's compliance.</li>
     <li>"Not Entered": the GC gives a conditional with every pay app. Subs are listed only on the pay apps they bill.</li>
     <li>"Edited" marks an unconditional whose vendor or amount was changed from the conditional it answers.</li>
     <li>GC Less Subs: the GC's release less its subcontractors' — the GC's own work, fee and general conditions, or sub releases not yet in.</li>

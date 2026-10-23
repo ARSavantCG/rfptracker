@@ -44,7 +44,7 @@ export type PaidOf = (appId: number) => { paid: number; due: number } | null;
 /** Not yet paid in full — so its unconditionals can't exist yet; they're waiting on us, not the contractor. */
 export const unpaid = (p: { paid: number; due: number } | null | undefined) => !!p && p.due > 0.005 && p.paid < p.due - 0.005;
 const money2 = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-export const paidNote = (n: number, p: { paid: number; due: number }) => `Pay App ${String(n).padStart(2, '0')} paid ${money2(p.paid)} of ${money2(p.due)}`;
+export const paidNote = (n: number, p: { paid: number; due: number }) => `Pay App ${String(n).padStart(3, '0')} paid ${money2(p.paid)} of ${money2(p.due)}`;
 /**
  * The note under a Pending Funding row, tied to that vendor's own conditional
  * on the pay app it releases (Adolfo, 2026-10-22). What we've paid is only
@@ -52,7 +52,7 @@ export const paidNote = (n: number, p: { paid: number; due: number }) => `Pay Ap
  * "not yet funded" until that pay app is paid in full.
  */
 export const fundingNote = (n: number, p: { paid: number; due: number }, party: WaiverParty | null | undefined, conditional: number | null | undefined) => {
-  const nn = String(n).padStart(2, '0');
+  const nn = String(n).padStart(3, '0');
   const cond = conditional != null ? `Pay App ${nn} conditional ${money2(conditional)}` : `Pay App ${nn}`;
   return party === 'gc' ? `${cond} · paid ${money2(p.paid)}` : `${cond} · not yet funded`;
 };

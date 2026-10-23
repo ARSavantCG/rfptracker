@@ -191,7 +191,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
   const queryClient = useQueryClient();
   const tenant = d.stream === 'tenant';
   const mine = b.cmInvoices.filter((i) => (i.type === 'reimbursable') === tenant);
-  const nextNo = (n: number) => `${tenant ? 'TEN' : 'CAP'}-${String(n + 1).padStart(2, '0')}`;
+  const nextNo = (n: number) => `${tenant ? 'TEN' : 'CAP'}-${String(n + 1).padStart(3, '0')}`;
   const [invNo, setInvNo] = useState(nextNo(mine.length));
   const [invDate, setInvDate] = useState(todayIso());
   const [billTo, setBillTo] = useState(d.billTo);
@@ -366,7 +366,7 @@ function WaiverLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
     b.waivers, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
     paidOfFrom(b.payments, (aid) => (() => { const a = b.applications.find((x) => x.id === aid); return a ? gcPaymentDue(a as any, b.waivers, b.contracts.find((c) => c.id === a.contractId)?.counterparty ?? '').due : null; })())), [b.applications, b.waivers, b.contracts, b.payments]);
   const contracts = Array.from(new Set(groups.map((g) => g.contractId)));
-  const nn = (n: number) => String(n).padStart(2, '0');
+  const nn = (n: number) => String(n).padStart(3, '0');
   const ok = groups.filter((g) => g.compliant).length;
   const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const url = () => {
@@ -433,7 +433,7 @@ function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
     b.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })),
     b.waivers, b.documents, (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? '',
     (aid) => (() => { const a = b.applications.find((x) => x.id === aid); return a ? gcPaymentDue(a as any, b.waivers, b.contracts.find((c) => c.id === a.contractId)?.counterparty ?? '').due : null; })()), [b.applications, b.waivers, b.documents, b.contracts]);
-  const nn = (n: number) => String(n).padStart(2, '0');
+  const nn = (n: number) => String(n).padStart(3, '0');
   const done = groups.filter((g) => g.complete).length;
   const flip = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const url = () => {
@@ -506,7 +506,7 @@ export function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; project
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [withCos, setWithCos] = useState(false);
-  const nn = (n: number) => String(n).padStart(2, '0');
+  const nn = (n: number) => String(n).padStart(3, '0');
   const apps = [...b.applications].sort((x, y) => x.contractId - y.contractId || x.number - y.number);
   const coRows = useMemo(() => coLog(b.changeOrders as any, b.sovLines as any, b.documents as any), [b.changeOrders, b.sovLines, b.documents]);
   const fileCount = (aid: number) => {

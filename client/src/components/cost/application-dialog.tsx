@@ -7,6 +7,7 @@
  * pages is wrong.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { no3 } from '@shared/doc-number';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -373,7 +374,7 @@ export function ApplicationDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="pm-scope w-[96vw] max-w-[min(1100px,96vw)] max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
         <DialogHeader>
-          <DialogTitle>{app ? `${label} ${app.docNumber}` : `New ${label}`} — {contract.counterparty}</DialogTitle>
+          <DialogTitle>{app ? `${label} ${no3(app.docNumber)}` : `New ${label}`} — {contract.counterparty}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

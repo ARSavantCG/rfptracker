@@ -4,6 +4,7 @@
  * the rest. Any payment can be opened and corrected.
  */
 import { useEffect, useState } from 'react';
+import { no3 } from '@shared/doc-number';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export function PaymentDialog({ target, payments, projectId, onClose }: {
       <DialogContent className="pm-scope w-[96vw] sm:max-w-xl max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
         <DialogHeader>
           <DialogTitle>
-            Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {app?.docNumber}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
+            Payments — {target?.contract.counterparty}, {app?.kind === 'invoice' ? 'Invoice' : 'Pay App'} {no3(app?.docNumber)}{app?.invoiceNumber ? ` (#${app.invoiceNumber})` : ''}
           </DialogTitle>
         </DialogHeader>
         {app?.check?.status === 'off' && (

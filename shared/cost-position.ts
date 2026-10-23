@@ -442,7 +442,7 @@ export function billableItems(input: {
       const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
       out.push({
         ref: `app-${a.id}`, date: a.date, vendor: input.contractName(contractId),
-        item: `${label} ${a.docNumber ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
+        item: `${label} ${String(a.docNumber ?? a.number).padStart(3, '0')}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
         amount: r2(amount), billable: r2(billable),
         // The capital partner's fee is on all the original work (the project's cost), not the tenant's share of it.
         fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2((origAmount * rate) / 100), suppP: r2(suppP), coAmount: r2(coAmount),

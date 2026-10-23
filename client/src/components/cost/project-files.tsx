@@ -16,7 +16,7 @@ import { openDocument } from './contract-card';
 type Group = { key: string; title: string; sub?: string; files: DocumentRow[] };
 
 export function ProjectFilesList({ b, onRemove }: { b: ProjectBundle; onRemove: (d: DocumentRow) => void }) {
-  const nn = (n: number) => String(n).padStart(2, '0');
+  const nn = (n: number) => String(n).padStart(3, '0');
   const used = new Set<number>();
   const take = (f: (d: DocumentRow) => boolean) => b.documents.filter((d) => !used.has(d.id) && f(d)).map((d) => { used.add(d.id); return d; });
   const apps = [...b.applications].sort((x, y) => x.contractId - y.contractId || y.number - x.number);

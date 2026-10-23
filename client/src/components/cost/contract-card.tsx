@@ -4,6 +4,7 @@
  * lines (cost of work, insurance, fee) underneath — and its pay apps.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { no3 } from '@shared/doc-number';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -254,7 +255,7 @@ export function ContractCard({
                         const next = (sorted.length ? sorted[sorted.length - 1].number : 0) + 1;
                         const nameOf = (n: number) => {
                           const a = sorted.find((x) => x.number === n);
-                          return a ? `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}` : 'next pay app';
+                          return a ? `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${no3(a.docNumber)}` : 'next pay app';
                         };
                         const auto = co.startApp == null ? 'Approved on: auto' : `Auto · approved on ${nameOf(co.startApp)}`;
                         return (
@@ -266,7 +267,7 @@ export function ContractCard({
                               </SelectTrigger>
                               <SelectContent className="pm-scope">
                                 <SelectItem value="auto">{auto}</SelectItem>
-                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'App'} {a.docNumber}</SelectItem>)}
+                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'App'} {no3(a.docNumber)}</SelectItem>)}
                                 <SelectItem value={String(next)}>Approved on the Next Pay App</SelectItem>
                               </SelectContent>
                             </Select>
@@ -359,7 +360,7 @@ export function ContractCard({
                 <SelectContent className="pm-scope">
                   <SelectItem value={String(nextAppNumber)}>The Next Pay App</SelectItem>
                   {[...applications].sort((a, b) => b.number - a.number).map((a) => (
-                    <SelectItem key={a.id} value={String(a.number)}>{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {a.docNumber}</SelectItem>
+                    <SelectItem key={a.id} value={String(a.number)}>{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {no3(a.docNumber)}</SelectItem>
                   ))}
                   <SelectItem value="pending">Not Approved Yet (Pending)</SelectItem>
                 </SelectContent>
@@ -389,7 +390,7 @@ export function ContractCard({
               const open = Math.round(applications.reduce((t, a) => t + a.g702.currentPaymentDue - paidOf(a.id), 0) * 100) / 100;
               return (
                 <span className="text-xs text-gray-600 ml-1">
-                  {applications.length} · latest {latest.kind === 'invoice' ? 'Inv' : 'App'} {latest.docNumber}
+                  {applications.length} · latest {latest.kind === 'invoice' ? 'Inv' : 'App'} {no3(latest.docNumber)}
                   {' · '}<span className={open > 0.005 ? 'text-red-700 font-medium' : 'text-green-700'}>{open > 0.005 ? `${money(open)} open` : 'all paid ✓'}</span>
                 </span>
               );
@@ -411,31 +412,33 @@ export function ContractCard({
         </p>}
         {applications.length > 0 && !rolled.has('__apps') && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[720px]">
+            {/* Headers sit exactly over their column: money right, text left, buttons centered in fixed-width columns so they line up row to row. */}
+            <table className="w-full text-sm min-w-[900px]">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-                  <th className="py-1 pr-2">No.</th><th className="py-1 pr-2">Invoice</th><th className="py-1 pr-2">Period</th>
-                  <th className="py-1 pr-2 text-right">This Period</th><th className="py-1 pr-2 text-right">Payment Due</th><th className="py-1 pr-2 text-right">Paid</th><th className="py-1 pr-2 text-right">Open</th><th className="py-1">Files</th>
+                <tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
+                  <th className="py-1 px-2 text-left">No.</th><th className="py-1 px-2 text-left">Invoice</th><th className="py-1 px-2 text-left">Period</th>
+                  <th className="py-1 px-2 text-right w-[120px]">This Period</th><th className="py-1 px-2 text-right w-[120px]">Payment Due</th><th className="py-1 px-2 text-right w-[120px]">Paid</th><th className="py-1 px-2 text-right w-[120px]">Open</th>
+                  <th className="py-1 px-2 text-center w-[150px]">Payments</th><th className="py-1 px-2 text-center w-[130px]">Package</th><th className="py-1 px-2 text-left">Files</th>
                 </tr>
               </thead>
               <tbody>
                 {[...applications].sort((a, b) => b.number - a.number).map((a) => (
                   <tr key={a.id} className="border-b last:border-0 hover:bg-blue-50/40 cursor-pointer"
                       onClick={() => onOpenApplication(contract, a, a.kind)}>
-                    <td className="py-1.5 pr-2 whitespace-nowrap">{a.kind === 'invoice' ? 'Inv' : 'App'} {a.docNumber}
+                    <td className="py-1.5 px-2 whitespace-nowrap">{a.kind === 'invoice' ? 'Inv' : 'App'} {no3(a.docNumber)}
                       {(() => { const bdg = checkBadge(a); return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}{a.check.status === 'off' && a.check.dueDiff != null ? ` ${money(Math.abs(a.check.dueDiff))}` : ''}</span> : null; })()}</td>
-                    <td className="py-1.5 pr-2 text-gray-700">{a.invoiceNumber || '—'}</td>
-                    <td className="py-1.5 pr-2 text-gray-700 text-xs">
+                    <td className="py-1.5 px-2 text-gray-700">{a.invoiceNumber || '—'}</td>
+                    <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">
                       {a.periodEnd ? new Date(a.periodEnd).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{money(appTotal(a))}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums font-medium">{money(a.g702.currentPaymentDue)}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{money(appTotal(a))}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums font-medium">{money(a.g702.currentPaymentDue)}</td>
                     {(() => {
                       const paid = Math.round(payments.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0) * 100) / 100;
                       const open = Math.round((a.g702.currentPaymentDue - paid) * 100) / 100;
                       return (<>
-                        <td className="py-1.5 pr-2 text-right tabular-nums">{paid ? money(paid) : '—'}</td>
-                        <td className="py-1.5 pr-2 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className={`py-1.5 px-2 tabular-nums ${paid ? 'text-right' : 'text-center'}`}>{paid ? money(paid) : '—'}</td>
+                        <td className="py-1.5 px-2 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <button className={`tabular-nums hover:underline ${open > 0.005 ? 'text-red-700 font-medium' : 'text-green-700'}`}
                                   title="Record or view payments" onClick={() => onPay?.(contract, a)}>
                             {open > 0.005 ? money(open) : 'Paid ✓'}
@@ -443,14 +446,18 @@ export function ContractCard({
                         </td>
                       </>);
                     })()}
-                    <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" title="Record a payment: check date, check #, amount"
+                    <td className="py-1.5 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs w-[136px] justify-center" title="Record a payment: check date, check #, amount"
                               onClick={() => onPay?.(contract, a)}>
                         <DollarSign className="h-3.5 w-3.5 mr-0.5" /> {payments.some((p) => p.applicationId === a.id) ? 'Payments' : 'Record Payment'}
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => onPackage?.(contract, a)}>
+                    </td>
+                    <td className="py-1.5 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs w-[116px] justify-center" onClick={() => onPackage?.(contract, a)}>
                         <FolderOpen className="h-3.5 w-3.5 mr-1" /> Package{docsFor(a.id).length ? ` (${docsFor(a.id).length})` : ''}
                       </Button>
+                    </td>
+                    <td className="py-1.5 px-2 text-left" onClick={(e) => e.stopPropagation()}>
                       {docsFor(a.id).slice(0, 1).map((d) => (
                         <a key={d.id} href={`/api/cost-documents/${d.id}/download`} target="_blank" rel="noreferrer"
                            onClick={(e) => { e.preventDefault(); openDocument(d.id); }}
@@ -485,8 +492,22 @@ export async function openDocument(id: number) {
     if (win) win.document.body.innerText = `Could not open the file (${res.status}).`;
     return;
   }
-  const url = URL.createObjectURL(await res.blob());
-  if (win) win.location.href = url; else window.location.href = url;
+  // PDFs, photos and text open in the new tab in every browser; anything else (Word, Excel,
+  // email) is saved under its own name, so it opens in the right program.
+  const name = decodeURIComponent(res.headers.get('X-File-Name') || '') || 'file';
+  const type = (res.headers.get('Content-Type') || '').split(';')[0].trim();
+  const blob = new Blob([await res.arrayBuffer()], { type: type || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const viewable = /^(application\/pdf|image\/(png|jpe?g|gif|webp)|text\/plain)$/i.test(type);
+  if (viewable) {
+    if (win) { win.location.href = url; try { setTimeout(() => { win.document.title = name; }, 800); } catch { /* cross-origin once loaded */ } }
+    else window.location.href = url;
+  } else {
+    win?.close();
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
 }
 
 /**

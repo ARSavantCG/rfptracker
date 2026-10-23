@@ -45,7 +45,7 @@ export async function backupToObjectStorage(localFilePath: string, filename: str
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      await bucket.upload(localFilePath, { destination: objectName });
+      await bucket.upload(localFilePath, { destination: objectName, contentType: mimeFromName(filename) } as any);
 
       // Read back. Upload resolving is not proof the object is retrievable.
       const [exists] = await bucket.file(objectName).exists();
@@ -89,7 +89,21 @@ export async function listObjectStorageFiles(): Promise<{ name: string; key: str
   }
 }
 
-export async function streamFromObjectStorage(filename: string, res: Response, urlPath?: string): Promise<boolean> {
+/** A file's type from its extension, for files stored without one. */
+export function mimeFromName(name: string): string {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const map: Record<string, string> = {
+    pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
+    txt: 'text/plain', csv: 'text/csv', htm: 'text/html', html: 'text/html', eml: 'message/rfc822', msg: 'application/vnd.ms-outlook',
+    doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    zip: 'application/zip', dwg: 'application/acad',
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
+export async function streamFromObjectStorage(filename: string, res: Response, urlPath?: string, contentType?: string | null): Promise<boolean> {
   const privateDir = process.env.PRIVATE_OBJECT_DIR;
   if (!privateDir) return false;
 
@@ -117,7 +131,10 @@ export async function streamFromObjectStorage(filename: string, res: Response, u
       const [exists] = await file.exists();
       if (exists) {
         const [metadata] = await file.getMetadata();
-        res.set('Content-Type', (metadata.contentType as string) || 'application/octet-stream');
+        // The stored type is often application/octet-stream (uploaded from a temp file), which makes
+        // Chrome download a nameless file instead of showing it; the caller's known type wins.
+        const stored = metadata.contentType as string | undefined;
+        res.set('Content-Type', contentType || (stored && stored !== 'application/octet-stream' ? stored : '') || mimeFromName(filename));
         file.createReadStream().pipe(res);
         console.log(`[OS Backup] Serving ${filename} from key: ${objectName}`);
         return true;

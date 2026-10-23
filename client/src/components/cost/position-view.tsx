@@ -3,6 +3,7 @@
  * retainage, paid, owed, left to pay; and each pay app's due / paid / open.
  */
 import { useMemo, useState } from 'react';
+import { no3 } from '@shared/doc-number';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -136,12 +137,12 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
         {appsOpen && <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
-              <H left>Contract</H><H left>No.</H><H left>Dated</H><H>Payment due</H><H>Paid</H><H>Open</H><th className="w-44" />
+              <H left>Contract</H><H left>No.</H><H left>Dated</H><H>Payment Due</H><H>Paid</H><H>Open</H><th className="px-2 py-2 w-[120px]">Payments</th><th className="px-2 py-2 w-[110px]">Package</th>
             </tr>
           </thead>
           <tbody>
             {p.applications.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-3 text-gray-500">Nothing billed on or before {shortDate(asOf)}.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-3 text-gray-500">Nothing billed on or before {shortDate(asOf)}.</td></tr>
             )}
             {p.applications.map((a) => {
               const app = bundle.applications.find((x) => x.id === a.applicationId);
@@ -149,13 +150,15 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
               return (
                 <tr key={a.applicationId} className="border-b last:border-0">
                   <td className="px-3 py-1.5">{contractName.get(a.contractId)}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">{app?.kind === 'invoice' ? 'Inv' : 'App'} {app?.docNumber ?? a.number}
+                  <td className="px-3 py-1.5 whitespace-nowrap">{app?.kind === 'invoice' ? 'Inv' : 'App'} {no3(app?.docNumber ?? a.number)}
                     {(() => { const bdg = app ? checkBadge(app) : null; return bdg ? <span className={`ml-1 font-semibold ${bdg.tone}`} title={bdg.title}>{bdg.text}</span> : null; })()}</td>
                   <td className="px-3 py-1.5 text-gray-600">{app?.periodEnd ? shortDate(a.date) : <span className="text-amber-700" title="No period end entered — dated the day it was entered">{shortDate(a.date)}*</span>}</td>
                   <D v={a.due} /><D v={a.paid} /><D v={a.open} tone={owedTone(a.open)} />
-                  <td className="px-2 text-right">
-                    {app && contract && <Button variant="outline" size="sm" className="h-7 mr-1" onClick={() => onPay({ app, contract })}>Payments</Button>}
-                    {app && contract && onPackage && <Button variant="outline" size="sm" className="h-7" onClick={() => onPackage({ app, contract })}>Package</Button>}
+                  <td className="px-2 py-1 text-center whitespace-nowrap">
+                    {app && contract && <Button variant="outline" size="sm" className="h-7 w-[104px]" onClick={() => onPay({ app, contract })}>Payments</Button>}
+                  </td>
+                  <td className="px-2 py-1 text-center whitespace-nowrap">
+                    {app && contract && onPackage && <Button variant="outline" size="sm" className="h-7 w-[94px]" onClick={() => onPackage({ app, contract })}>Package</Button>}
                   </td>
                 </tr>
               );
@@ -165,12 +168,12 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
       </div>
       {p.direct.rows.length > 0 && (
         <div className="bg-white border rounded-lg overflow-x-auto">
-          <RollHead k="direct" open={directOpen} onToggle={toggleDirect} title="Direct Costs (No Contract)"
+          <RollHead k="direct" open={directOpen} onToggle={toggleDirect} title="Direct Costs"
                     summary={`${p.direct.rows.length} · ${money(p.direct.total)}`} />
           {directOpen && <table className="w-full text-sm min-w-[760px]">
             <thead>
               <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
-                <H left>Date</H><H left>Paid to</H><H left>Description</H><H left>Budget line</H><H left>Paid by</H><H>Amount</H>
+                <H left>Date</H><H left>Paid To</H><H left>Description</H><H left>Budget Line</H><H left>Paid By</H><H>Amount</H>
               </tr>
             </thead>
             <tbody>

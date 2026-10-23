@@ -506,3 +506,12 @@ textarea::placeholder {
   color: transparent !important;
   opacity: 0 !important;
 }
+
+/*
+ * Table headers sit centered over their column, everywhere in the app (Adolfo,
+ * 2026-10-22). Cells keep their own alignment — money right (so decimals line
+ * up), text left, buttons centered — and the header is centered over them.
+ * A header that must stay put can opt out with .th-keep.
+ */
+table thead th:not(.th-keep) { text-align: center !important; }
+table thead th:not(.th-keep) > * { margin-left: auto; margin-right: auto; }

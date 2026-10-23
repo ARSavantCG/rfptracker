@@ -455,7 +455,7 @@ export function renderCostPositionHtml(input: {
   const appRows = p.applications.length === 0
     ? `<tr><td colspan="7" class="muted">No pay apps or invoices dated on or before ${escapeHtml(longDate(p.asOf))}.</td></tr>`
     : Array.from(byContract.entries()).map(([cid, list]) => `<tr class="grp"><td colspan="7" class="l">${escapeHtml(name.get(cid) || "")}</td></tr>`
-      + list.map((a: typeof p.applications[number]) => `<tr><td class="l">${a.kind === 'invoice' ? 'Invoice' : 'App'} ${a.docNumber}</td>
+      + list.map((a: typeof p.applications[number]) => `<tr><td class="l">${a.kind === 'invoice' ? 'Invoice' : 'App'} ${String(a.docNumber).padStart(3, '0')}</td>
       <td class="l">${escapeHtml(longDate(a.date))}</td>${cell(a.due)}${cell(a.paid)}${cell(a.open, a.open > 0.005 ? "neg" : "")}${paidCell(a.applicationId)}${checkCell(a.applicationId)}</tr>`).join("")).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Pay App Status</title><style>
@@ -674,7 +674,7 @@ export function renderWaiverLogHtml(input: {
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const nn = (n: number) => String(n).padStart(2, "0");
+  const nn = (n: number) => String(n).padStart(3, "0");
   const all = input.groups.flatMap((g) => g.rows);
   const nMissing = all.filter((r) => r.status === "missing").length;
   const nCond = all.filter((r) => r.kind === "conditional" && r.status === "outstanding").length;
@@ -753,7 +753,7 @@ export function renderPayAppLogHtml(input: {
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const nn = (n: number) => String(n).padStart(2, "0");
+  const nn = (n: number) => String(n).padStart(3, "0");
   const done = input.groups.filter((g) => g.complete).length;
   const miss = input.groups.reduce((t, g) => t + g.missingFiles, 0);
   const off = input.groups.reduce((t, g) => t + g.mismatched, 0);
@@ -1069,7 +1069,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         .map((g) => (issuesOnly ? { ...g, rows: g.rows.filter((r) => !r.files.length || (r.diff != null && Math.abs(r.diff) >= 0.01)) } : g))
         .filter((g) => !issuesOnly || g.rows.length);
       const parts: string[] = [];
-      if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(2, "0")).join(", ")} only`);
+      if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(3, "0")).join(", ")} only`);
       if (issuesOnly) parts.push("missing files and amounts that don't match only");
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderPayAppLogHtml({
@@ -1095,7 +1095,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.send(renderCoLogHtml({
         project: b.project, ...(await propertyFacts(b.project)), rows,
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
-        appLabel: (cid, n) => { const a: any = b.applications.find((x: any) => x.contractId === cid && x.number === n); return a ? `${a.kind === "invoice" ? "Invoice" : "Pay App"} ${String(a.docNumber ?? n).padStart(2, "0")}` : "Next pay app"; },
+        appLabel: (cid, n) => { const a: any = b.applications.find((x: any) => x.contractId === cid && x.number === n); return a ? `${a.kind === "invoice" ? "Invoice" : "Pay App"} ${String(a.docNumber ?? n).padStart(3, "0")}` : "Next pay app"; },
         generatedBy: generatedByName((req as any).user),
       }));
     } catch (e: any) {
@@ -1128,7 +1128,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         filter: (() => {
           const want = String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
           const parts: string[] = [];
-          if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(2, "0")).join(", ")} only`);
+          if (want.length) parts.push(`Showing ${want.length === 1 ? "pay app" : "pay apps"} ${apps.filter((a) => want.includes(a.id)).sort((x, y) => x.number - y.number).map((a) => String(a.docNumber || a.number).padStart(3, "0")).join(", ")} only`);
           if (String(req.query.outstanding || "") === "1") parts.push("outstanding waivers only");
           return parts.length ? `${parts.join("; ")}.` : "";
         })(),

@@ -29,7 +29,7 @@ const ROW_MIME = 'application/x-waiver-row';
 const isRowDrag = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes(ROW_MIME);
 const uKey = (r: UnconditionalRow) => (r.id ? `u${r.id}` : `ux${r.fromWaiverId}`);
 type Kind = 'conditional' | 'unconditional';
-const nn = (n: number) => String(n).padStart(2, '0');
+const nn = (n: number) => String(n).padStart(3, '0');
 
 export function PackageDialog({ target, bundle, projectId, onClose }: {
   target: { app: ApplicationRow; contract: ContractRow } | null;

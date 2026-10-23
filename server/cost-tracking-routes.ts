@@ -34,7 +34,7 @@ import {
 } from '@shared/cost-tracking';
 import { headIds, lineSplitWithHeads, isCoveredByHead } from '@shared/budget-totals';
 import { resolveContractBucket } from './budget-by-contract';
-import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage, deleteFromObjectStorage, listObjectsWithMeta } from './storage-backup';
+import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStorage, deleteFromObjectStorage, listObjectsWithMeta, mimeFromName } from './storage-backup';
 import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
@@ -94,7 +94,7 @@ async function fileLocation(d: typeof costDocuments.$inferSelect, waiver?: { kin
   if (d.contractId) { const [c] = await db.select({ n: costContracts.counterparty }).from(costContracts).where(eq(costContracts.id, d.contractId)); if (c) parts.push(c.n); }
   if (d.applicationId) {
     const [a] = await db.select({ n: costApplications.number, k: costApplications.kind, doc: costApplications.docNumber }).from(costApplications).where(eq(costApplications.id, d.applicationId));
-    if (a) parts.push(`${a.k === 'invoice' ? 'Invoice' : 'Pay App'} ${String(a.doc ?? a.n).padStart(2, '0')}`);
+    if (a) parts.push(`${a.k === 'invoice' ? 'Invoice' : 'Pay App'} ${String(a.doc ?? a.n).padStart(3, '0')}`);
   }
   if (d.changeOrderId) { const [co] = await db.select({ n: costChangeOrders.number }).from(costChangeOrders).where(eq(costChangeOrders.id, d.changeOrderId)); if (co) parts.push(`Change Order ${co.n}`); }
   if (d.directCostId) { const [x] = await db.select({ v: costDirectCosts.vendor, t: costDirectCosts.description }).from(costDirectCosts).where(eq(costDirectCosts.id, d.directCostId)); if (x) parts.push(`Direct Cost — ${x.v || x.t || ''}`.trim()); }
@@ -482,7 +482,7 @@ export async function loadProjectBundle(projectId: number) {
         if (!row) return null;
         return {
           vendor: contracts.find((c) => c.id === row.contractId)?.counterparty ?? 'Contract',
-          item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(row.id)}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
+          item: `${row.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(docs.get(row.id)).padStart(3, '0')}${row.invoiceNumber ? ` (${row.invoiceNumber})` : ''}`,
         };
       });
       const chosen = basis === 'billed' ? items : paidList;
@@ -593,7 +593,7 @@ export async function loadProjectBundle(projectId: number) {
       applicationLabel: (aid) => {
         const a = apps.find((x) => x.id === aid);
         if (!a) return 'Payment';
-        return `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${docs.get(a.id) ?? a.number}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`;
+        return `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(docs.get(a.id) ?? a.number).padStart(3, '0')}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`;
       },
       budgetLineName: (key) => (key ? baseline.find((b) => b.key === key)?.description ?? 'Unallocated' : 'Unallocated'),
     }),
@@ -1656,7 +1656,7 @@ export function registerCostTrackingRoutes(app: Express): void {
               .from(costApplicationLines).innerJoin(costApplications, eq(costApplications.id, costApplicationLines.applicationId))
               .where(inArray(costApplicationLines.sovLineId, lineIds));
             const first = billed.reduce((m, r) => Math.min(m, r.number), Infinity);
-            if (first < n) return res.status(400).json({ message: `${co.number} is already billed on Pay App ${first}, so it has to start on App ${first} or earlier.` });
+            if (first < n) return res.status(400).json({ message: `${co.number} is already billed on Pay App ${String(first).padStart(3, '0')}, so it has to start on App ${String(first).padStart(3, '0')} or earlier.` });
           }
         }
         patch.startAppNumber = n;
@@ -1915,7 +1915,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const { seq: number, doc } = newAppNumbers(kind, Number.isFinite(typed) && typed > 0 ? typed : null, existing);
       const docs = docNumbers(existing);
       if (existing.some((a) => (a.kind === 'invoice') === (kind === 'invoice') && docs.get(a.id) === doc)) {
-        return res.status(409).json({ message: `${kind === 'invoice' ? 'Invoice' : 'Pay App'} ${doc} already exists on this contract. Open it to edit it.` });
+        return res.status(409).json({ message: `${kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(doc).padStart(3, '0')} already exists on this contract. Open it to edit it.` });
       }
       const [row] = await db.insert(costApplications).values({
         contractId, number, docNumber: doc,
@@ -1953,7 +1953,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           .from(costApplications).where(eq(costApplications.contractId, appRow.contractId));
         const docs = docNumbers(others);
         if (others.some((a) => a.id !== id && (a.kind === 'invoice') === (appRow.kind === 'invoice') && docs.get(a.id) === doc)) {
-          return res.status(409).json({ message: `${appRow.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${doc} already exists on this contract.` });
+          return res.status(409).json({ message: `${appRow.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(doc).padStart(3, '0')} already exists on this contract.` });
         }
         patch.docNumber = doc;
       }
@@ -2179,7 +2179,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (!all.length) return { error: 'No files on this pay app yet.', status: 404 };
 
       const safe = (s: string) => String(s ?? '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
-      const nn = (n: number) => String(n).padStart(2, '0');
+      const nn = (n: number) => String(n).padStart(3, '0');
       const label = a.kind === 'invoice' ? 'Invoice' : 'Pay App';
       const zipName = safe([project.tenantName, property?.name, c.counterparty, `${label} ${nn(dn.get(a.id)!)}`].filter(Boolean).join(' - ')) + '.zip';
       const ext = (n: string) => (n.includes('.') ? n.slice(n.lastIndexOf('.')) : '');
@@ -2225,12 +2225,12 @@ export function registerCostTrackingRoutes(app: Express): void {
           // Numbered as arranged in the app, so the folder lists in the same order.
           const list: Array<{ id: number | null }> = w.kind === 'conditional' ? ck.conditionals : ck.unconditionals;
           const pos = list.findIndex((x) => x.id === w.id);
-          name = `${pos >= 0 ? `${nn(pos + 1)} ` : ''}${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
+          name = `${pos >= 0 ? `${String(pos + 1).padStart(2, '0')} ` : ''}${safe(w.vendor)} - ${w.kind === 'conditional' ? 'Conditional' : 'Unconditional'} - ${covers} - ${money(w.amount)}${ext(d.originalName)}`;
         } else if (type === 'g702') {
           name = `00 ${safe(d.vendor || c.counterparty)} - GC - ${label} ${nn(dn.get(a.id)!)} - G702-G703${ext(d.originalName)}`;
         } else if (type === 'sub_pay_app') {
           const pos = payRows.findIndex((r) => r.party === 'sub' && d.vendor && sameVendor(r.vendor, d.vendor));
-          name = `${nn(pos >= 0 ? pos : 98)} ${safe(d.vendor || 'Subcontractor')} - Sub Pay App - ${label} ${nn(dn.get(a.id)!)}${ext(d.originalName)}`;
+          name = `${String(pos >= 0 ? pos : 98).padStart(2, '0')} ${safe(d.vendor || 'Subcontractor')} - Sub Pay App - ${label} ${nn(dn.get(a.id)!)}${ext(d.originalName)}`;
         } else {
           name = `${label} ${nn(dn.get(a.id)!)} - ${safe(d.originalName)}`;
         }
@@ -2362,7 +2362,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         }
         zip.append([zipName.replace(/\.zip$/, ''), '', 'One folder per pay app, each with its own contents sheet:', ...ready.map((p) => `  ${p.folderName}`),
           ...(allCos ? ['', 'Change Orders/ — every approved change order to date, with its executed copy'] : []),
-          ...(skipped.length ? ['', 'Left out (no files yet):', ...skipped.map((x) => `  Pay App ${x}`)] : [])].join('\r\n'), { name: '00 Contents.txt' });
+          ...(skipped.length ? ['', 'Left out (no files yet):', ...skipped.map((x) => `  Pay App ${String(x).padStart(3, '0')}`)] : [])].join('\r\n'), { name: '00 Contents.txt' });
       }
       await zip.finalize();
     } catch (e) { if (!res.headersSent) fail(res, e, 'build the packages'); }
@@ -2436,13 +2436,18 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       const [doc] = await db.select().from(costDocuments).where(eq(costDocuments.id, id));
       if (!doc) return res.status(404).json({ message: 'File not found' });
-      res.setHeader('Content-Disposition', `inline; filename="${doc.originalName.replace(/"/g, '')}"`);
+      // The real type and name, so every browser opens a PDF or photo in the tab and saves anything else under its own name.
+      const type = doc.mimeType && doc.mimeType !== 'application/octet-stream' ? doc.mimeType : mimeFromName(doc.originalName);
+      const ascii = doc.originalName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
+      res.setHeader('Content-Disposition', `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(doc.originalName)}`);
+      res.setHeader('X-File-Name', encodeURIComponent(doc.originalName));
+      res.setHeader('Access-Control-Expose-Headers', 'X-File-Name, Content-Disposition');
       if (doc.storage === 'object') {
-        const served = await streamFromObjectStorage(doc.storageKey, res);
+        const served = await streamFromObjectStorage(doc.storageKey, res, undefined, type);
         if (!served) res.status(404).json({ message: 'The file record exists but Object Storage does not have it.' });
         return;
       }
-      res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Type', type);
       res.sendFile(path.join(process.cwd(), 'uploads', doc.storageKey));
     } catch (e) { fail(res, e, 'fetch the file'); }
   });

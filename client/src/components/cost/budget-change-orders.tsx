@@ -61,7 +61,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
   const totals = (id: string) => a.changeOrderTotals.find((t) => t.id === id)
     ?? { id, work: 0, tenantWork: 0, ourWork: 0, markups: 0, markupLines: [], cm: 0, cmAbsorbed: 0, partnerFee: 0, credit: 0, tenant: 0, absorbed: 0, total: 0, funded: 0, budgetIncrease: 0 };
 
-  const nextNumber = () => `CO-${String(cos.length + 1).padStart(2, '0')}`;
+  const nextNumber = () => `CO-${String(cos.length + 1).padStart(3, '0')}`;
   const blank = (): Form => ({
     id: null, number: nextNumber(), title: '', date: todayIso(), status: 'pending', billable: true, cmFee: rate > 0,
     contractId: bundle.contracts.find((c) => c.bucket === 'contractor') ? String(bundle.contracts.find((c) => c.bucket === 'contractor')!.id) : NO_CONTRACT,

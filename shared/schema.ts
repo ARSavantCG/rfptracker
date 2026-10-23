@@ -2335,6 +2335,18 @@ export const costChangeOrders = pgTable("cost_change_orders", {
   startAppNumber: integer("start_app_number"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  /** Routing stage (shared/co-routing.ts); null on older rows = follows status. */
+  stage: text("stage"),
+  /** Who has it now. */
+  routedTo: text("routed_to"),
+  /** Date received from the contractor (defaults to when it was entered). */
+  receivedDate: timestamp("received_date"),
+  /** Amount as submitted, before its lines are entered (for the log and the approval threshold). */
+  proposedAmountCents: bigint("proposed_amount_cents", { mode: "number" }),
+  /** Calendar days the change order adds to the schedule (30+ routes it like a large one). */
+  daysAdded: integer("days_added"),
+  /** JSON RoutingEntry[]: every move between stages. */
+  routing: text("routing"),
 }, (t) => [index("cost_change_orders_contract_idx").on(t.contractId)]);
 
 /** A schedule-of-values line. changeOrderId null = base contract. */

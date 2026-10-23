@@ -43,6 +43,15 @@ export interface ChangeOrderRow {
   /** The pay app it actually starts on, set or worked out (null = no apps yet). */
   startApp: number | null;
   startSource: 'set' | 'billed' | 'recorded' | 'next' | 'none';
+  /** Routing (shared/co-routing.ts). */
+  stage?: string | null;
+  routedTo?: string | null;
+  receivedDate?: string | null;
+  createdAt?: string | null;
+  approvedDate?: string | null;
+  proposedAmount?: number | null;
+  daysAdded?: number | null;
+  routing?: unknown;
 }
 
 export interface SovLineRow {

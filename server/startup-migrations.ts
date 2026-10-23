@@ -63,6 +63,13 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_documents', column: 'vendor', type: 'text' },
   { table: 'cost_waivers', column: 'pay_app_due_cents', type: 'bigint' },
   // Deleted Files bin: a deleted project file is kept (and its stored object) until the bin is emptied.
+  // Change order routing (stage, who has it, dates, history).
+  { table: 'cost_change_orders', column: 'stage', type: 'text' },
+  { table: 'cost_change_orders', column: 'routed_to', type: 'text' },
+  { table: 'cost_change_orders', column: 'received_date', type: 'timestamp' },
+  { table: 'cost_change_orders', column: 'proposed_amount_cents', type: 'bigint' },
+  { table: 'cost_change_orders', column: 'routing', type: 'text' },
+  { table: 'cost_change_orders', column: 'days_added', type: 'integer' },
   { table: 'cost_documents', column: 'deleted_at', type: 'timestamp' },
   { table: 'cost_documents', column: 'deleted_by', type: 'text' },
   { table: 'cost_documents', column: 'deleted_from', type: 'text' },

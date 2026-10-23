@@ -42,6 +42,7 @@ import { normalizeRead, matchRows, payAppPrompt, coKey } from '@shared/cost-paya
 
 const AI_MODEL = 'claude-sonnet-4-5';
 import { coLog, cosOnPayApp } from '@shared/co-log';
+import { isStage, stageOf, statusOfStage, parseRouting, type CoStage } from '@shared/co-routing';
 import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, partyOf, previousApp, payAppVendors, sameVendor, paidOfFrom, unpaid, paidNote, fundingNote, gcPaymentDue, DOC_TYPES, type Waiver } from '@shared/cost-waivers';
 import { generatedByName } from './lib/report-shell';
 import { pctText } from '@shared/format';
@@ -344,7 +345,7 @@ export async function loadProjectBundle(projectId: number) {
   const bundle = {
     project: { ...project, baseline },
     contracts: contracts.map((c) => ({ ...c, retainagePct: c.retainageBp / 100 })),
-    changeOrders: cos.map((c) => ({ ...c, startApp: coStarts.get(c.id)?.start ?? null, startSource: coStarts.get(c.id)?.source ?? 'none' })),
+    changeOrders: cos.map((c) => ({ ...c, routing: parseRouting(c.routing), proposedAmount: c.proposedAmountCents == null ? null : dollars(c.proposedAmountCents), startApp: coStarts.get(c.id)?.start ?? null, startSource: coStarts.get(c.id)?.source ?? 'none' })),
     sovLines: sov.map((l) => ({ ...l, scheduledValue: dollars(l.scheduledValueCents) })),
     applications: apps.map((a) => ({
       ...a,
@@ -1547,11 +1548,17 @@ export function registerCostTrackingRoutes(app: Express): void {
       const existing = await db.select({ id: costChangeOrders.id })
         .from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
       const start = b.startAppNumber != null && Number(b.startAppNumber) >= 1 ? Math.floor(Number(b.startAppNumber)) : null;
+      // Routing starts at Under Review (or wherever its status puts it), received today unless given.
+      const stage: CoStage = isStage(b.stage) ? b.stage : status === 'approved' ? 'approved' : status === 'void' ? 'rejected' : 'review';
+      const received = /^\d{4}-\d{2}-\d{2}$/.test(String(b.receivedDate ?? '')) ? new Date(String(b.receivedDate) + 'T12:00:00Z') : new Date();
+      const amt = b.proposedAmount != null && b.proposedAmount !== '' && Number.isFinite(Number(b.proposedAmount)) ? Math.round(Number(b.proposedAmount) * 100) : null;
       const [row] = await db.insert(costChangeOrders).values({
-        contractId, number, title: b.title ? String(b.title) : null, status,
-        approvedDate: status === 'approved' ? new Date() : null,
-        startAppNumber: status === 'approved' ? start : null,
+        contractId, number, title: b.title ? String(b.title) : null, status: statusOfStage(stage),
+        approvedDate: stage === 'approved' ? new Date() : null,
+        startAppNumber: stage === 'approved' ? start : null,
         sortOrder: existing.length,
+        stage, receivedDate: received, proposedAmountCents: amt, daysAdded: b.daysAdded != null && b.daysAdded !== '' && Number.isFinite(Number(b.daysAdded)) ? Math.max(0, Math.round(Number(b.daysAdded))) : null, routedTo: b.routedTo ? String(b.routedTo).trim().slice(0, 120) || null : null,
+        routing: JSON.stringify([{ stage, at: received.toISOString().slice(0, 10), by: whoName(req), to: b.routedTo ? String(b.routedTo).trim() : null, note: 'Received' }]),
       }).returning();
       res.json(row);
     } catch (e) { fail(res, e, 'add the change order'); }
@@ -1626,9 +1633,39 @@ export function registerCostTrackingRoutes(app: Express): void {
       const patch: any = {};
       if (b.number !== undefined) patch.number = String(b.number).trim() || 'CO';
       if (b.title !== undefined) patch.title = b.title ? String(b.title) : null;
+      // Routing: a move to a new stage (logged with its date, who moved it, who has it now, a note).
+      const at = /^\d{4}-\d{2}-\d{2}$/.test(String(b.at ?? '')) ? String(b.at) : todayEastern();
+      if (b.stage !== undefined || b.status !== undefined || b.routedTo !== undefined || b.note !== undefined || b.receivedDate !== undefined || b.proposedAmount !== undefined || b.daysAdded !== undefined) {
+        const [cur] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, id));
+        if (!cur) return res.status(404).json({ message: 'Change order not found' });
+        const hist = parseRouting(cur.routing);
+        const curStage = stageOf(cur);
+        // A plain status change (older screens) moves the stage too.
+        const toStage: CoStage | null = isStage(b.stage) ? b.stage
+          : b.status !== undefined && CO_STATUSES.includes(String(b.status)) ? (b.status === 'approved' ? 'approved' : b.status === 'void' ? 'rejected' : (curStage === 'approved' || curStage === 'rejected' ? 'review' : curStage))
+          : null;
+        const to = b.routedTo !== undefined ? (String(b.routedTo ?? '').trim().slice(0, 120) || null) : undefined;
+        if (to !== undefined) patch.routedTo = to;
+        if (toStage && toStage !== curStage) {
+          patch.stage = toStage;
+          hist.push({ stage: toStage, at, by: whoName(req), to: to !== undefined ? to : cur.routedTo ?? null, note: b.note ? String(b.note).slice(0, 500) : null });
+          b.status = statusOfStage(toStage);
+          if (toStage === 'approved' && b.at) b.approvedAt = at;
+        } else if (b.note) {
+          hist.push({ stage: curStage, at, by: whoName(req), to: to !== undefined ? to : cur.routedTo ?? null, note: String(b.note).slice(0, 500) });
+        } else if (to !== undefined && hist.length) {
+          hist[hist.length - 1] = { ...hist[hist.length - 1], to };
+        }
+        if (cur.stage == null && !patch.stage) patch.stage = curStage;
+        patch.routing = JSON.stringify(hist);
+        if (b.receivedDate !== undefined) patch.receivedDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.receivedDate ?? '')) ? new Date(String(b.receivedDate) + 'T12:00:00Z') : null;
+        if (b.daysAdded !== undefined) patch.daysAdded = b.daysAdded == null || b.daysAdded === '' || !Number.isFinite(Number(b.daysAdded)) ? null : Math.max(0, Math.round(Number(b.daysAdded)));
+        if (b.proposedAmount !== undefined) patch.proposedAmountCents = b.proposedAmount == null || b.proposedAmount === '' || !Number.isFinite(Number(b.proposedAmount)) ? null : Math.round(Number(b.proposedAmount) * 100);
+        if (b.status === (cur.status) && !(toStage && toStage !== curStage)) delete b.status; // nothing to change financially
+      }
       if (b.status !== undefined && CO_STATUSES.includes(String(b.status))) {
         patch.status = String(b.status);
-        patch.approvedDate = b.status === 'approved' ? new Date() : null;
+        patch.approvedDate = b.status === 'approved' ? (b.approvedAt ? new Date(b.approvedAt + 'T12:00:00Z') : new Date()) : null;
         // Approved now and not tied to a pay app yet: it goes on the next one,
         // unless it is already billed (then the first app that bills it).
         if (b.status === 'approved' && b.startAppNumber === undefined) {

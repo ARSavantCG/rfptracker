@@ -23,6 +23,7 @@ import { UNALLOCATED_KEY, type BudgetVsActual } from "@shared/cost-tracking";
 import { DEAL_DISCOUNT_KEY, coTotals, reasonLabel } from "@shared/cost-budget-approval";
 import { positionAsOf, buildLedger, filterPositionInput, type LedgerEntry } from "@shared/cost-position";
 import { fmtPct } from "@shared/format";
+import { CO_STAGES } from "@shared/co-routing";
 import { coLog, type CoLogRow } from "@shared/co-log";
 import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
@@ -838,41 +839,76 @@ export function renderCoLogHtml(input: {
   rows: CoLogRow[];
   contractName: (id: number) => string;
   appLabel: (contractId: number, appNumber: number) => string;
+  /** Only change orders still in someone's hands. */
+  openOnly?: boolean;
+  /** Each change order's moves between stages, under it. */
+  history?: boolean;
   generatedBy?: string | null;
 }): string {
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const approved = input.rows.filter((r) => r.status === "approved");
+  const all = input.rows;
+  const rows = input.openOnly ? all.filter((r) => r.routing.open) : all;
+  const approved = all.filter((r) => r.status === "approved");
   const notExec = approved.filter((r) => !r.executed).length;
-  const pending = input.rows.filter((r) => r.status === "pending");
-  const notes = [`${approved.length} approved change order${approved.length === 1 ? "" : "s"}, ${money2(approved.reduce((t, r) => t + r.amount, 0))}. ${notExec ? `${notExec} without an executed copy on file, shaded.` : "All executed copies on file."}${pending.length ? ` ${pending.length} pending, ${money2(pending.reduce((t, r) => t + r.amount, 0))}.` : ""}`];
-  const STATUS: Record<string, string> = { approved: "Approved", pending: "Pending", void: "Void" };
+  const open = all.filter((r) => r.routing.open);
+  const notes = [
+    `${open.length} open change order${open.length === 1 ? "" : "s"}, ${money2(open.reduce((t, r) => t + r.amount, 0))}${open.length ? `; the longest has sat ${Math.max(...open.map((r) => r.routing.daysInStage ?? 0))} days in its current stage` : ""}.`,
+    `${approved.length} approved, ${money2(approved.reduce((t, r) => t + r.amount, 0))}. ${notExec ? `${notExec} without an executed copy on file.` : approved.length ? "All executed copies on file." : ""}`,
+    ...(input.openOnly ? ["Showing open change orders only."] : []),
+  ];
+  // Where they stand: one line per stage.
+  const stages = CO_STAGES.map((st) => {
+    const list = all.filter((r) => r.routing.stage === st.key);
+    return { st, n: list.length, amt: list.reduce((t, r) => t + r.amount, 0), oldest: list.length && st.key !== "approved" && st.key !== "rejected" ? Math.max(...list.map((r) => r.routing.daysInStage ?? 0)) : null };
+  }).filter((x) => x.n);
+  const TONE: Record<string, string> = { amber: "#92400e", orange: "#9a3412", violet: "#5b21b6", blue: "#1e40af", green: "#166534", gray: "#6b7280" };
+  const BG: Record<string, string> = { amber: "#fef3c7", orange: "#ffedd5", violet: "#ede9fe", blue: "#dbeafe", green: "#dcfce7", gray: "#f3f4f6" };
+  const tag = (key: string) => { const st = CO_STAGES.find((x) => x.key === key)!; return `<span style="display:inline-block;font-size:9.5px;font-weight:700;color:${TONE[st.tone]};background:${BG[st.tone]};border-radius:3px;padding:1px 6px;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact">${escapeHtml(st.label)}</span>`; };
+  const shortD = (iso: string | null) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }) : "—");
+  const ageStyle = (d: number | null) => (d == null ? "" : d >= 30 ? "color:#991b1b;font-weight:700" : d >= 14 ? "color:#92400e;font-weight:600" : "");
+  const COLS = 8;
   const byContract = new Map<number, CoLogRow[]>();
-  for (const r of input.rows) byContract.set(r.contractId, [...(byContract.get(r.contractId) ?? []), r]);
-  const body = Array.from(byContract).map(([cid, rows]) => {
-    const tot = rows.filter((r) => r.status === "approved").reduce((t, r) => t + r.amount, 0);
+  for (const r of rows) byContract.set(r.contractId, [...(byContract.get(r.contractId) ?? []), r]);
+  const body = Array.from(byContract).map(([cid, list]) => {
+    const tot = list.filter((r) => r.status === "approved").reduce((t, r) => t + r.amount, 0);
     return `
-    <tr class="grp"><td colspan="6">${escapeHtml(input.contractName(cid))}</td></tr>
-    ${rows.map((r) => {
+    <tr class="grp"><td colspan="${COLS}">${escapeHtml(input.contractName(cid))}</td></tr>
+    ${list.map((r) => {
+      const g = r.routing;
       const bad = r.status === "approved" && !r.executed;
+      const stageCell = `${tag(g.stage)}${g.with && g.open ? `<div style="font-size:9.5px;color:#374151;margin-top:2px">With ${escapeHtml(g.with)}</div>` : ""}${g.open && g.daysInStage != null ? `<div style="font-size:9.5px;${ageStyle(g.daysInStage)}">${g.daysInStage} day${g.daysInStage === 1 ? "" : "s"} in this stage</div>` : ""}${g.skippedInternal ? `<div style="font-size:9px;color:#991b1b">Skipped internal approval</div>` : ""}`;
+      const exec = r.executed ? `<span style="color:#166534">Executed${r.files.length > 1 ? ` (${r.files.length})` : ""}</span>` : r.status === "approved" ? `<span style="color:#92400e;font-weight:600">Not on file</span>` : `<span class="muted">—</span>`;
+      const hist = input.history && g.history.length ? `<tr><td></td><td colspan="${COLS - 1}" style="font-size:9.5px;color:#4b5563;padding-top:0">${g.history.map((h) => `${shortD(h.at)} · ${escapeHtml(CO_STAGES.find((x) => x.key === h.stage)?.label ?? h.stage)}${h.to ? ` · with ${escapeHtml(h.to)}` : ""}${h.note ? ` · ${escapeHtml(h.note)}` : ""}${h.by ? ` <span class="muted">(${escapeHtml(h.by)})</span>` : ""}`).join("<br>")}</td></tr>` : "";
       return `<tr${bad ? ' style="background:#fffbeb"' : r.status === "void" ? ' style="color:#9ca3af"' : ""}>
-        <td>${escapeHtml(r.number)}</td><td>${escapeHtml(r.title ?? "")}</td>
-        <td>${r.startApp != null ? escapeHtml(input.appLabel(r.contractId, r.startApp)) : '<span class="muted">—</span>'}</td>
-        <td>${STATUS[r.status]}</td>${cell(r.amount)}
-        <td style="${r.executed ? "color:#166534" : bad ? "color:#92400e;font-weight:600" : "color:#6b7280"}">${r.executed ? `Executed${r.files.length > 1 ? ` (${r.files.length} files)` : ""}` : r.status === "approved" ? "Not on file" : "—"}</td></tr>`;
+        <td style="white-space:nowrap">${escapeHtml(r.number)}${g.higher ? `<div style="font-size:9px;color:#5b21b6;font-weight:600">${escapeHtml(g.higher)}</div>` : ""}</td>
+        <td>${escapeHtml(r.title ?? "")}</td>
+        <td style="white-space:nowrap">${shortD(g.received)}${g.daysOpen != null ? `<div style="font-size:9.5px;${g.open ? ageStyle(g.daysOpen) : "color:#6b7280"}">${g.daysOpen} day${g.daysOpen === 1 ? "" : "s"} ${g.open ? "open" : "to close"}</div>` : ""}</td>
+        <td>${stageCell}</td>
+        <td class="num">${g.daysAdded != null ? `${g.daysAdded}` : '<span class="muted">—</span>'}</td>
+        <td class="num">${money2(r.amount)}${r.amountSource === "proposed" ? '<div style="font-size:9px;color:#6b7280">as submitted</div>' : ""}</td>
+        <td style="white-space:nowrap">${r.startApp != null && r.status === "approved" ? escapeHtml(input.appLabel(r.contractId, r.startApp)) : '<span class="muted">—</span>'}</td>
+        <td style="white-space:nowrap">${exec}</td></tr>${hist}`;
     }).join("")}
-    <tr class="total"><td colspan="4">Approved change orders</td>${cell(tot)}<td></td></tr>`;
+    <tr class="total"><td colspan="5">Approved change orders</td>${cell(tot)}<td colspan="2"></td></tr>`;
   }).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>Change Order Log</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
   </style></head><body>
   ${reportHeaderHtml({ title: "Change Order Log", info, notes })}
-  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Description</th><th class="l">Approved On</th><th class="l">Status</th><th>Amount</th><th class="l">Executed Copy</th></tr></thead><tbody>
-    ${body || `<tr><td colspan="6" class="muted">No change orders recorded yet.</td></tr>`}
+  ${stages.length ? `<h3 class="sec">Where They Stand</h3>
+  <table class="t" style="width:auto;min-width:60%"><thead><tr><th class="l">Stage</th><th>Change Orders</th><th>Amount</th><th>Longest in Stage</th></tr></thead><tbody>
+    ${stages.map((x) => `<tr><td>${tag(x.st.key)}</td><td class="num">${x.n}</td>${cell(x.amt)}<td class="num" style="${ageStyle(x.oldest)}">${x.oldest != null ? `${x.oldest} day${x.oldest === 1 ? "" : "s"}` : '<span class="muted">—</span>'}</td></tr>`).join("")}
+  </tbody></table>` : ""}
+  <h3 class="sec">Change Orders</h3>
+  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Description</th><th class="l">Received</th><th class="l">Stage</th><th>Days Added</th><th>Amount</th><th class="l">Approved On</th><th class="l">Executed Copy</th></tr></thead><tbody>
+    ${body || `<tr><td colspan="${COLS}" class="muted">${input.openOnly ? "No open change orders." : "No change orders recorded yet."}</td></tr>`}
   </tbody></table>
   <h3 class="sec">Notes</h3>
   <ol class="notes">
-    <li>Approved On: the pay app whose G702 first carries the change order ("approved this period").</li>
-    <li>Executed Copy: the signed change order attached on the Contracts tab. Shaded: approved, but no signed copy on file yet.</li>
+    <li>Stages: Under Review (received, pending review) · Returned to Contractor · Pending Internal Approval (over $250,000.00, or adds 30 or more days to the schedule) · Pending Signatures · Approved (executed and returned; the contractor can bill it) · Rejected.</li>
+    <li>Days in this stage: since it moved to its current stage. Amber at 14 days, red at 30. Days open: from the day it was received.</li>
+    <li>Amount: from its schedule of values lines; "as submitted" when only the contractor's proposed amount is entered so far.</li>
+    <li>Approved On: the pay app whose G702 first carries the change order. Executed Copy: the signed change order on file.</li>
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
@@ -1090,10 +1126,11 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const rows = coLog(b.changeOrders as any, b.sovLines as any, b.documents as any);
+      const rows = coLog(b.changeOrders as any, b.sovLines as any, b.documents as any, todayEastern());
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCoLogHtml({
         project: b.project, ...(await propertyFacts(b.project)), rows,
+        openOnly: String(req.query.open || "") === "1", history: String(req.query.history || "") === "1",
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         appLabel: (cid, n) => { const a: any = b.applications.find((x: any) => x.contractId === cid && x.number === n); return a ? `${a.kind === "invoice" ? "Invoice" : "Pay App"} ${String(a.docNumber ?? n).padStart(3, "0")}` : "Next pay app"; },
         generatedBy: generatedByName((req as any).user),

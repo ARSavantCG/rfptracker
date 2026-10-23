@@ -14,7 +14,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { useAiStatus } from '@/hooks/use-ai-status';
 import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { PercentInput } from './inputs';
+import { PercentInput, MoneyInput } from './inputs';
+import { CoStageControls } from './co-routing';
 import { fmtPctText } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
@@ -58,7 +59,7 @@ export function ContractCard({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
-  const [coForm, setCoForm] = useState<{ number: string; title: string; approvedOn: string } | null>(null);
+  const [coForm, setCoForm] = useState<{ number: string; title: string; approvedOn: string; received: string; proposed: string; days: string } | null>(null);
   // Open or folded, remembered per contract in this browser. Open by default
   // when it's the only contract, or a new one with nothing in it yet.
   const storeKey = `pm-contract-open-${contract.id}`;
@@ -115,9 +116,12 @@ export function ContractCard({
 
   const addCo = useMutation({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}/change-orders`, 'POST',
-      coForm!.approvedOn === 'pending'
-        ? { number: coForm!.number, title: coForm!.title, status: 'pending' }
-        : { number: coForm!.number, title: coForm!.title, status: 'approved', startAppNumber: Number(coForm!.approvedOn) }),
+      {
+        number: coForm!.number, title: coForm!.title, receivedDate: coForm!.received || undefined,
+        proposedAmount: coForm!.proposed === '' ? null : Number(coForm!.proposed.replace(/,/g, '')),
+        daysAdded: coForm!.days === '' ? null : Number(coForm!.days),
+        ...(coForm!.approvedOn === 'pending' ? { stage: 'review' } : { stage: 'approved', startAppNumber: Number(coForm!.approvedOn) }),
+      }),
     onSuccess: () => { refresh(); setCoForm(null); },
     onError: (e: any) => toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }),
   });
@@ -234,21 +238,7 @@ export function ContractCard({
                         <span>{g.label}</span>
                         {rolled.has(String(g.id ?? 'base')) && <span className="text-xs font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'}</span>}
                       </button>
-                      {g.co && (
-                        <div className="w-28">
-                          <Select value={g.co.status} onValueChange={(v) => setCoStatus.mutate({ id: g.co!.id, status: v })}>
-                            <SelectTrigger className={`h-7 text-xs font-medium ${
-                              g.co.status === 'approved' ? 'bg-green-50 border-green-300 text-green-800'
-                              : g.co.status === 'pending' ? 'bg-amber-50 border-amber-300 text-amber-800'
-                              : 'bg-gray-50 border-gray-300 text-gray-600'}`}><SelectValue /></SelectTrigger>
-                            <SelectContent className="pm-scope">
-                              <SelectItem value="approved">Approved</SelectItem>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="void">Void</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                      {g.co && <CoStageControls co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} fromLines={g.lines.length > 0} onChanged={refresh} />}
                       {g.co && (() => {
                         const co = g.co!;
                         const sorted = [...applications].sort((a, b) => a.number - b.number);
@@ -353,16 +343,22 @@ export function ContractCard({
             <label className="text-xs text-gray-600" htmlFor={`co-title-${contract.id}`}>For</label>
             <Input id={`co-title-${contract.id}`} value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })}
                    className="h-8 w-56 text-sm" />
-            <label className="text-xs text-gray-600">Approved On</label>
-            <div className="w-48">
+            <label className="text-xs text-gray-600" htmlFor={`co-rec-${contract.id}`}>Received</label>
+            <Input id={`co-rec-${contract.id}`} type="date" value={coForm.received} onChange={(e) => setCoForm({ ...coForm, received: e.target.value })} className="h-8 w-40 text-sm" />
+            <label className="text-xs text-gray-600">Amount as Submitted</label>
+            <div className="w-36"><MoneyInput className="h-8 text-sm" value={coForm.proposed} onValueChange={(v) => setCoForm({ ...coForm, proposed: v })} /></div>
+            <label className="text-xs text-gray-600" htmlFor={`co-days-${contract.id}`}>Days Added</label>
+            <Input id={`co-days-${contract.id}`} inputMode="numeric" value={coForm.days} onChange={(e) => setCoForm({ ...coForm, days: e.target.value.replace(/[^\d]/g, '') })} className="h-8 w-20 text-sm text-right" />
+            <label className="text-xs text-gray-600">Status</label>
+            <div className="w-56">
               <Select value={coForm.approvedOn} onValueChange={(v) => setCoForm({ ...coForm, approvedOn: v })}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">
-                  <SelectItem value={String(nextAppNumber)}>The Next Pay App</SelectItem>
+                  <SelectItem value={String(nextAppNumber)}>Approved, on the Next Pay App</SelectItem>
                   {[...applications].sort((a, b) => b.number - a.number).map((a) => (
-                    <SelectItem key={a.id} value={String(a.number)}>{a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {no3(a.docNumber)}</SelectItem>
+                    <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'Pay App'} {no3(a.docNumber)}</SelectItem>
                   ))}
-                  <SelectItem value="pending">Not Approved Yet (Pending)</SelectItem>
+                  <SelectItem value="pending">Not Approved Yet (Under Review)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -371,7 +367,7 @@ export function ContractCard({
           </div>
         ) : (
           <Button size="sm" variant="outline" className="h-8"
-                  onClick={() => setCoForm({ number: `PCCO #${String(changeOrders.length + 1).padStart(3, '0')}`, title: '', approvedOn: String(nextAppNumber) })}>
+                  onClick={() => setCoForm({ number: `PCCO #${String(changeOrders.length + 1).padStart(3, '0')}`, title: '', approvedOn: 'pending', received: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()), proposed: '', days: '' })}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Change Order
           </Button>
         )}

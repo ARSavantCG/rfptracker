@@ -4,6 +4,8 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useMemo, useState } from 'react';
+import { CO_STAGES } from '@shared/co-routing';
+import { STAGE_STYLE } from './co-routing';
 import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue } from '@shared/cost-waivers';
 import { coLog } from '@shared/co-log';
 import { useQueryClient } from '@tanstack/react-query';
@@ -486,16 +488,36 @@ function PayAppLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: nu
 
 /** Change Order Log: every vendor change order with its amount, approval pay app and executed copy. */
 function CoLogCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
-  const rows = useMemo(() => coLog(b.changeOrders as any, b.sovLines as any, b.documents as any), [b.changeOrders, b.sovLines, b.documents]);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  const rows = useMemo(() => coLog(b.changeOrders as any, b.sovLines as any, b.documents as any, today), [b.changeOrders, b.sovLines, b.documents, today]);
+  const [openOnly, setOpenOnly] = useState(false);
+  const [history, setHistory] = useState(false);
   const approved = rows.filter((r) => r.status === 'approved');
   const missing = approved.filter((r) => !r.executed).length;
+  const openRows = rows.filter((r) => r.routing.open);
+  const stages = CO_STAGES.map((st) => ({ st, list: rows.filter((r) => r.routing.stage === st.key) })).filter((x) => x.list.length);
+  const q = [openOnly ? 'open=1' : '', history ? 'history=1' : ''].filter(Boolean).join('&');
   return (
-    <Card id="co-log" title="Change Order Log" what="Every vendor change order: amount, the pay app it was approved on, and whether the executed (signed) copy is on file. Attach signed copies on the Contracts tab or in a pay app's Package."
-          summary={approved.length ? `${approved.length - missing} of ${approved.length} Executed` : undefined}
-          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/co-log/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
-      <p className="text-sm text-gray-700">
-        {!rows.length ? 'No change orders yet.' : <>{approved.length} approved ({money(approved.reduce((t, r) => t + r.amount, 0))}){missing ? <span className="text-amber-700 font-medium"> · {missing} without an executed copy</span> : <span className="text-green-700"> · all executed copies on file</span>}{rows.some((r) => r.status === 'pending') ? ` · ${rows.filter((r) => r.status === 'pending').length} pending` : ''}.</>}
-      </p>
+    <Card id="co-log" title="Change Order Log" what="Where every contractor change order stands: stage, who has it, days in the stage, days added to the schedule, amount, the pay app it was approved on, and whether the executed copy is on file."
+          summary={openRows.length ? `${openRows.length} Open · ${money(openRows.reduce((t, r) => t + r.amount, 0))}` : approved.length ? `${approved.length - missing} of ${approved.length} Executed` : undefined}
+          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/co-log/${projectId}${q ? `?${q}` : ''}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {!rows.length ? <p className="text-sm text-gray-700">No change orders yet.</p> : <>
+        <div className="flex flex-wrap gap-2">
+          {stages.map(({ st, list }) => {
+            const oldest = st.key !== 'approved' && st.key !== 'rejected' ? Math.max(...list.map((r) => r.routing.daysInStage ?? 0)) : null;
+            return (
+              <span key={st.key} className={`text-xs border rounded px-2 py-1 ${STAGE_STYLE[st.tone]}`}>
+                <strong>{st.label}</strong> · {list.length} · {money(list.reduce((t, r) => t + r.amount, 0))}{oldest != null ? ` · longest ${oldest}d` : ''}
+              </span>
+            );
+          })}
+        </div>
+        <p className="text-sm text-gray-700">{approved.length} approved ({money(approved.reduce((t, r) => t + r.amount, 0))}){missing ? <span className="text-amber-700 font-medium"> · {missing} without an executed copy</span> : approved.length ? <span className="text-green-700"> · all executed copies on file</span> : null}.</p>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} /> Open Only</label>
+          <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4" checked={history} onChange={(e) => setHistory(e.target.checked)} /> Include Routing History</label>
+        </div>
+      </>}
     </Card>
   );
 }

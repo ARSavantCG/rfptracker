@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { DatabaseBackup, Download, CloudUpload, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
-type RunRecord = { at: string; ok: boolean; db?: { name: string; bytes: number }; filesCopied?: number; filesRemaining?: number; error?: string; by: string };
+type RunRecord = { at: string; ok: boolean; db?: { name: string; bytes: number; unchanged?: boolean }; filesCopied?: number; filesRemaining?: number; error?: string; by: string };
 type BackupStatus = {
   configured: boolean; redirectUri: string;
   drive: { email: string | null; connectedAt: string; connectedBy: string | null; folder: string } | null;
@@ -99,13 +99,13 @@ export function BackupPanel() {
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-700">Backing up to <strong>{d.drive.email || 'Google Drive'}</strong>, folder <strong>{d.drive.folder}</strong>. Once a day while the app is in use: a database snapshot (newest 30 kept, plus the first of each month), and every new file.</p>
+                <p className="text-sm text-gray-700">Backing up to <strong>{d.drive.email || 'Google Drive'}</strong>, folder <strong>{d.drive.folder}</strong>. Once a day while the app is in use: a database snapshot when anything changed (newest 30 kept, plus the first of each month for two years), and every new file.</p>
                 {running ? (
                   <div className="text-sm text-blue-800 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Backing up{d.status.current ? ` — ${d.status.current}` : ''}…</div>
                 ) : last ? (
                   <div className={`text-sm flex items-start gap-2 ${last.ok ? 'text-green-800' : 'text-red-800'}`}>
                     {last.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5" /> : <AlertTriangle className="h-4 w-4 mt-0.5" />}
-                    <span>{when(last.at)} · {last.ok ? `Database saved (${size(last.db?.bytes ?? 0)}), ${last.filesCopied ?? 0} new file${last.filesCopied === 1 ? '' : 's'} copied${last.filesRemaining ? `, ${last.filesRemaining} still to copy (continues on the next run)` : ''}` : last.error}</span>
+                    <span>{when(last.at)} · {last.ok ? `${last.db?.unchanged ? 'Database unchanged since the last snapshot (no new copy needed)' : `Database saved (${size(last.db?.bytes ?? 0)})`}, ${last.filesCopied ?? 0} new file${last.filesCopied === 1 ? '' : 's'} copied${last.filesRemaining ? `, ${last.filesRemaining} still to copy (continues on the next run)` : ''}` : last.error}</span>
                   </div>
                 ) : null}
                 <div className="flex gap-2 flex-wrap">

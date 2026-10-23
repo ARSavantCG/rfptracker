@@ -46,8 +46,8 @@ const SKIP_TABLES = new Set(['auth_tokens', 'password_reset_tokens', 'session', 
 
 const K = { drive: 'backup.drive', folders: 'backup.drive.folders', status: 'backup.status', lease: 'backup.lease', state: 'backup.oauth.state', tickets: 'backup.tickets' };
 type DriveConn = { refreshToken: string; email: string | null; connectedAt: string; connectedBy: string | null };
-type RunRecord = { at: string; ok: boolean; db?: { name: string; bytes: number }; filesCopied?: number; filesRemaining?: number; error?: string; by: string };
-type Status = { lastRunAt?: string; lastSuccessAt?: string; running?: boolean; current?: string; filesBackedUp?: number; history: RunRecord[] };
+type RunRecord = { at: string; ok: boolean; db?: { name: string; bytes: number; unchanged?: boolean }; filesCopied?: number; filesRemaining?: number; error?: string; by: string };
+type Status = { lastRunAt?: string; lastSuccessAt?: string; lastDbHash?: string; lastDbName?: string; running?: boolean; current?: string; filesBackedUp?: number; history: RunRecord[] };
 
 async function getSetting<T>(key: string): Promise<T | null> {
   const [r] = await db.select().from(appSettings).where(eq(appSettings.key, key));
@@ -65,7 +65,9 @@ const configured = () => !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GO
 // ---------------------------------------------------------------- database
 
 /** Every table, as one JSON document, written gzipped to `out`. Streams table by table. */
-export async function writeDatabaseDump(out: NodeJS.WritableStream, opts: { gzip: boolean }): Promise<{ tables: number; rows: number }> {
+export async function writeDatabaseDump(out: NodeJS.WritableStream, opts: { gzip: boolean }): Promise<{ tables: number; rows: number; hash: string }> {
+  // A fingerprint of the data alone (not the date on it), to tell whether anything changed since the last snapshot.
+  const sha = crypto.createHash('sha256');
   const sink: NodeJS.WritableStream = opts.gzip ? (() => { const z = zlib.createGzip(); z.pipe(out); return z; })() : out;
   const write = (s: string) => new Promise<void>((res) => (sink.write(s) ? res() : sink.once('drain', () => res())));
   const tables = (await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name`)).rows
@@ -77,11 +79,13 @@ export async function writeDatabaseDump(out: NodeJS.WritableStream, opts: { gzip
     let list: any[] = (await pool.query(`SELECT * FROM "${t.replace(/"/g, '""')}"`)).rows;
     if (t === 'app_settings') list = list.filter((r) => !String(r.key).startsWith('backup.'));
     rows += list.length;
-    await write(`${i ? ',' : ''}${JSON.stringify(t)}:${JSON.stringify(list)}`);
+    const piece = `${JSON.stringify(t)}:${JSON.stringify(list)}`;
+    sha.update(piece);
+    await write(`${i ? ',' : ''}${piece}`);
   }
   await write('}}');
   await new Promise<void>((res) => sink.end(() => res()));
-  return { tables: tables.length, rows };
+  return { tables: tables.length, rows, hash: sha.digest('hex') };
 }
 
 // ---------------------------------------------------------------- files
@@ -290,19 +294,25 @@ export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunR
     const sink = new PassThrough();
     sink.on('data', (c) => chunks.push(c));
     const done = new Promise((r) => sink.on('end', r));
-    await writeDatabaseDump(sink, { gzip: true });
+    const dump = await writeDatabaseDump(sink, { gzip: true });
     await done;
     const dbBuf = Buffer.concat(chunks);
-    const et = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
-    const g = (t: string) => et.find((p) => p.type === t)?.value ?? '';
-    const dbName = `rfptracker-database-${g('year')}-${g('month')}-${g('day')}-${g('hour')}${g('minute')}.json.gz`;
-    const dbFolder = await withFolder(['Database'], async (id) => { await upload(await fresh(), id, dbName, dbBuf, 'application/gzip'); return id; });
-    rec.db = { name: dbName, bytes: dbBuf.length };
-    // Retention on the snapshots this app made.
-    try {
-      const list = await drive(await fresh(), 'GET', `/drive/v3/files?q=${encodeURIComponent(`'${dbFolder}' in parents and trashed = false`)}&fields=files(id,name)&pageSize=1000`);
-      for (const f of keepNames(list?.files ?? [])) await drive(await fresh(), 'DELETE', `/drive/v3/files/${f.id}`).catch(() => null);
-    } catch (e) { console.warn('[backup] retention skipped:', (e as Error).message); }
+    if (status.lastDbHash === dump.hash && status.lastDbName) {
+      // Nothing changed since the last snapshot (a weekend, a quiet day): that one still stands, so no new copy.
+      rec.db = { name: status.lastDbName, bytes: 0, unchanged: true };
+    } else {
+      const et = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+      const g = (t: string) => et.find((p) => p.type === t)?.value ?? '';
+      const dbName = `rfptracker-database-${g('year')}-${g('month')}-${g('day')}-${g('hour')}${g('minute')}.json.gz`;
+      const dbFolder = await withFolder(['Database'], async (id) => { await upload(await fresh(), id, dbName, dbBuf, 'application/gzip'); return id; });
+      rec.db = { name: dbName, bytes: dbBuf.length };
+      status.lastDbHash = dump.hash; status.lastDbName = dbName;
+      // Retention on the snapshots this app made.
+      try {
+        const list = await drive(await fresh(), 'GET', `/drive/v3/files?q=${encodeURIComponent(`'${dbFolder}' in parents and trashed = false`)}&fields=files(id,name)&pageSize=1000`);
+        for (const f of keepNames(list?.files ?? [])) await drive(await fresh(), 'DELETE', `/drive/v3/files/${f.id}`).catch(() => null);
+      } catch (e) { console.warn('[backup] retention skipped:', (e as Error).message); }
+    }
 
     // 2. Every stored file not copied yet (same key, same size).
     await save({ current: 'Files' });
@@ -336,7 +346,7 @@ export async function runBackup(by: string, budgetMs = 20 * 60000): Promise<RunR
     const total = Number((await pool.query('SELECT count(*)::int AS n FROM backup_files')).rows[0]?.n ?? 0);
     // A run that ran out of time still counts for the database; the files carry on next time.
     await save({ running: false, current: undefined, lastSuccessAt: rec.at, filesBackedUp: total, history: [rec, ...status.history].slice(0, 14) });
-    console.log(`[backup] ok: ${dbName} (${dbBuf.length} bytes), ${copied} files copied, ${rec.filesRemaining} left`);
+    console.log(`[backup] ok: ${rec.db?.unchanged ? 'database unchanged' : `${rec.db?.name} (${rec.db?.bytes} bytes)`}, ${copied} files copied, ${rec.filesRemaining} left`);
     return rec;
   } catch (e: any) {
     rec.error = e?.message || String(e);

@@ -499,7 +499,33 @@ export async function loadProjectBundle(projectId: number) {
       const withPaid = (it: typeof items[number]) => ({ ...it, retainage: heldOn(it.ref), paid: it.ref.startsWith('direct-') || it.ref.startsWith('pay-') ? it.amount : it.ref.startsWith('app-') ? r2c(paidOn.get(it.ref) ?? 0) : 0 });
       // The capital partner sees every cost incurred (with what's been paid), whatever the fee is counted on.
       const shown = type === 'fee' ? items.map(withPaid) : chosen.map(withPaid);
+      // The tenant can owe each approved change order in full — work share, markups and CM fee, less
+      // credits — as soon as it's approved, rather than as the work is billed (Adolfo, 2026-10-22: the
+      // money has to be in our sources per the lease). Previously invoiced still comes off.
+      if (type === 'reimbursable' && settings.tenantBillMode === 'full') {
+        const coItems = cosApproved.map((c) => {
+          const t = coTotals(c);
+          return { ref: `co-${c.id}`, date: c.date ?? todayEastern(), vendor: `Change Order ${c.number}`, item: c.title || '',
+            amount: t.tenantWork, billable: r2c(t.tenantWork + t.markups - t.credit), fee: 0, suppFee: t.cm,
+            markups: t.markups, credit: t.credit, total: t.tenant, retainage: 0, paid: 0 };
+        });
+        const full = invoiceCalc({ type, items: coItems, pct: invPct, previouslyInvoiced: calc.previous });
+        return {
+          ...calc, type, basis, billTo, stream: 'tenant' as const, mode: 'full' as const,
+          incurred: r2c(items.reduce((t, i) => t + i.amount, 0)),
+          paidToDate: r2c(items.reduce((t, i) => t + withPaid(i).paid, 0)),
+          invoicedToDate: r2c(issued.reduce((t, i) => t + (Number(i.due) || 0), 0)),
+          feeInvoiced: issued.length ? r2c((Number(issued[issued.length - 1].earned) || 0) + (Number(issued[issued.length - 1].suppFee) || 0)) : 0,
+          invoices: issued.length, tenantCosOnly, earnedBilled, earnedPaid,
+          projected: (() => { const pr = projection.reimbursable; return { ...pr, fee: r2c(pr.original + pr.changeOrders) }; })(),
+          base: full.costs, earned: full.fee, suppFee: full.suppFee, cpFee: 0, toDate: full.toDate, due: full.due, pct: invPct,
+          supplementalCos: cosApproved.filter((c) => coTotals(c).cm > 0).map((c) => c.number),
+          items: coItems.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
+          lines: [] as typeof calc.lines,
+        };
+      }
       return {
+        mode: 'incurred' as const,
         ...calc, type, basis, billTo, stream: type === 'fee' ? 'capital' as const : 'tenant' as const,
         incurred: r2c(items.reduce((t, i) => t + i.amount, 0)),
         paidToDate: r2c(items.reduce((t, i) => t + withPaid(i).paid, 0)),
@@ -581,6 +607,8 @@ export interface CmInvoiceRecord {
   items?: Array<{ ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean }>;
   type?: 'fee' | 'reimbursable';
   basis?: 'paid' | 'billed';
+  /** Tenant invoice: billed as costs are incurred, or each approved change order in full. */
+  mode?: 'incurred' | 'full';
   billTo?: string;
   toDate?: number;
   issuedBy: string | null;
@@ -1120,7 +1148,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (Math.abs(d.due) < 0.005) return res.status(400).json({ message: 'Nothing new to invoice — everything to date has been invoiced.' });
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
         lines: d.lines, payApps: payAppsFor(b), items: d.items, type: d.type, basis: d.basis, billTo: d.billTo, toDate: d.toDate,
-        suppFee: d.suppFee, cpFee: d.cpFee, supplementalCos: d.supplementalCos,
+        suppFee: d.suppFee, cpFee: d.cpFee, supplementalCos: d.supplementalCos, mode: (d as any).mode,
         issuedBy: whoName(req), issuedAt: new Date().toISOString() });
       settings.cmInvoices = list;
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
@@ -1271,6 +1299,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.cmUncapped !== undefined) next.cmUncapped = !!b.cmUncapped;
       if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
+      if (b.tenantBillMode !== undefined) next.tenantBillMode = b.tenantBillMode === 'full' ? 'full' : 'incurred';
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
       if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';

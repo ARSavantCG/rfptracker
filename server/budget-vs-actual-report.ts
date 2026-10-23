@@ -543,9 +543,13 @@ export interface CmInvoiceView {
   base: number; pct: number; earned: number; previous: number; due: number;
   lines: Array<{ description: string; spent: number; tenantSharePct: number; billable: number }>;
   payApps: Array<{ contract: string; number: number; date: string; billedToDate: number }>;
-  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number; retainage?: number }>;
+  items?: Array<{ date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number; retainage?: number;
+    /** Full change order billing: markups, credit, CM fee and total on each change order. */
+    markups?: number; credit?: number; suppFee?: number; total?: number }>;
   /** fee: the CM fee only. reimbursable: the billable costs plus the CM fee. */
   type?: 'fee' | 'reimbursable';
+  /** Tenant invoice: as costs are incurred, or each approved change order in full. */
+  mode?: 'incurred' | 'full';
   basis?: 'paid' | 'billed';
   billTo?: string;
   toDate?: number;
@@ -577,9 +581,14 @@ export function renderCmInvoiceHtml(input: {
     { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },
     { label: "Invoice Date", value: longDate(inv.date) },
   ];
-  const title = reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
+  const title = reimb && inv.mode === "full" ? "Change Order Invoice" : reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
   const costWord = paid ? "paid" : "billed";
   const showRet = !!inv.items?.some((i) => i.retainage !== undefined && Math.abs(i.retainage) >= 0.005);
+  // Each approved change order billed in full when approved (tenant invoice).
+  const full = reimb && inv.mode === 'full';
+  const sumIt = (f: (i: NonNullable<CmInvoiceView["items"]>[number]) => number) => (inv.items || []).reduce((t, i) => t + f(i), 0);
+  const anyMk = full && (inv.items || []).some((i) => Math.abs(i.markups ?? 0) >= 0.005);
+  const anyCr = full && (inv.items || []).some((i) => Math.abs(i.credit ?? 0) >= 0.005);
   return `<!doctype html><html><head><meta charset="utf-8"><title>${reimb ? "Reimbursement Invoice" : "CM Fee Invoice"}</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
     .due { margin-top: 10px; margin-left: auto; width: 55%; border-collapse: collapse; font-size: 12px; }
@@ -589,9 +598,15 @@ export function renderCmInvoiceHtml(input: {
     .draft-mark { color: #b45309; font-weight: 700; }
   </style></head><body>
   ${reportHeaderHtml({ title, eyebrow: "Invoice", info, draft: !inv.number,
-    notes: inv.number ? [] : ["Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
+    notes: inv.number ? [] : [reimb && inv.mode === "full" ? "Draft — figures are as of today and change as change orders are approved. Issue the invoice to fix them." : "Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
-  ${!reimb && inv.items && inv.items.length && inv.items.some((i) => i.paid !== undefined) ? `<h3 class="sec">Costs Incurred and Paid to Date</h3>
+  ${full ? `<h3 class="sec">Approved Change Orders</h3>
+  <table class="t"><thead><tr><th class="l">Change Order</th><th class="l">Description</th><th class="l">Approved</th><th>Work</th>${anyMk ? "<th>Markups</th>" : ""}${anyCr ? "<th>Credit</th>" : ""}<th>CM Fee</th><th>Total</th><th class="l"></th></tr></thead><tbody>
+    ${(inv.items || []).map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(it.vendor.replace(/^Change Order /, ""))}</td><td>${escapeHtml(it.item)}</td><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td>
+      ${cell(it.amount)}${anyMk ? cell(it.markups ?? 0) : ""}${anyCr ? (it.credit ? `<td class="num">(${money2(it.credit)})</td>` : '<td class="num muted">—</td>') : ""}${cell(it.suppFee ?? 0)}${cell(it.total ?? 0)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
+    <tr class="total"><td colspan="3">Total</td>${cell(sumIt((i) => i.amount))}${anyMk ? cell(sumIt((i) => i.markups ?? 0)) : ""}${anyCr ? `<td class="num">(${money2(sumIt((i) => i.credit ?? 0))})</td>` : ""}${cell(sumIt((i) => i.suppFee ?? 0))}${cell(sumIt((i) => i.total ?? 0))}<td></td></tr>
+  </tbody></table>` : ""}
+  ${full ? "" : !reimb && inv.items && inv.items.length && inv.items.some((i) => i.paid !== undefined) ? `<h3 class="sec">Costs Incurred and Paid to Date</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Item</th><th>Cost Incurred</th>${showRet ? "<th>Retainage Held</th>" : ""}<th>Paid</th><th class="l"></th></tr></thead><tbody>
     ${inv.items.map((it) => `<tr${it.thisInvoice ? ' style="background:#eff6ff"' : ""}><td style="white-space:nowrap">${escapeHtml(longDate(it.date))}</td><td>${escapeHtml(it.vendor)}</td>
       <td>${escapeHtml(it.item)}</td>${cell(it.amount)}${showRet ? (it.retainage ? cell(it.retainage) : '<td class="num muted">—</td>') : ""}${cell(it.paid ?? 0)}<td style="font-size:9.5px;color:#1d4ed8;white-space:nowrap">${it.thisInvoice ? "This invoice" : ""}</td></tr>`).join("")}
@@ -612,29 +627,36 @@ export function renderCmInvoiceHtml(input: {
   </tbody></table>` : ""}
 
   <table class="due"><tbody>
+    ${full ? `<tr><td>Change order work${anyMk ? ", markups" : ""}${anyCr ? " less credits" : ""}</td><td class="num">${fmt(inv.base)}</td></tr>
+    <tr><td>Construction management fee on change orders</td><td class="num">${fmt(inv.suppFee ?? 0)}</td></tr>
+    <tr><td><strong>Total approved change orders</strong></td><td class="num"><strong>${fmt(inv.toDate ?? 0)}</strong></td></tr>` : `
     <tr><td>${reimb ? "Billable costs" : "Costs the fee is figured on —"} ${costWord} to date</td><td class="num">${fmt(inv.base)}</td></tr>
     <tr><td>Construction management fee at ${fmtPct(inv.pct)}${inv.suppFee || inv.cpFee ? " — original scope" : ""}</td><td class="num">${fmt(inv.earned)}</td></tr>
     ${inv.suppFee ? `<tr><td>Supplemental CM fee — change orders${inv.supplementalCos?.length ? ` (${escapeHtml(inv.supplementalCos.join(", "))})` : ""}</td><td class="num">${fmt(inv.suppFee)}</td></tr>` : ""}
     ${inv.cpFee ? `<tr><td>Supplemental CM fee — change order work funded by the owner</td><td class="num">${fmt(inv.cpFee)}</td></tr>` : ""}
     ${reimb ? `<tr><td><strong>Total costs and fee to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.base + inv.earned)}</strong></td></tr>`
-      : inv.suppFee || inv.cpFee ? `<tr><td><strong>Total CM fees to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.earned)}</strong></td></tr>` : ""}
+      : inv.suppFee || inv.cpFee ? `<tr><td><strong>Total CM fees to date</strong></td><td class="num"><strong>${fmt(inv.toDate ?? inv.earned)}</strong></td></tr>` : ""}`}
     <tr><td>Less previously invoiced</td><td class="num">${inv.previous ? `(${money2(inv.previous)})` : money2(0)}</td></tr>
     <tr class="big"><td>Amount Due This Invoice</td><td class="num">${fmt(inv.due)}</td></tr>
   </tbody></table>
 
-  ${inv.payApps.length && !(inv.items && inv.items.length) ? `<h3 class="sec">Contractor Pay Applications Included</h3>
+  ${!full && inv.payApps.length && !(inv.items && inv.items.length) ? `<h3 class="sec">Contractor Pay Applications Included</h3>
   <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Through Pay App</th><th class="l">Period Ending</th><th>Billed to Date</th></tr></thead><tbody>
     ${inv.payApps.map((p) => `<tr><td>${escapeHtml(p.contract)}</td><td>No. ${p.number}</td><td>${escapeHtml(longDate(p.date))}</td>${cell(p.billedToDate)}</tr>`).join("")}
   </tbody></table>` : ""}
 
   <h3 class="sec">Notes</h3>
   <ol class="notes">
+    ${full ? `<li>${escapeHtml("Each approved change order is invoiced in full when approved: the tenant's share of the work, markups and the construction management fee, less any credits. Funds are to be available before the work proceeds.")}</li>
+    ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Change orders shaded and marked "This invoice" are new since the last invoice.</li>` : ""}
+    ${inv.previous ? `<li>${escapeHtml(`Previously invoiced amounts of ${money2(inv.previous)} are deducted.`)}</li>` : ""}` : `
     <li>${escapeHtml(reimb ? `Reimbursement of the billable costs listed, plus a construction management fee of ${fmtPct(inv.pct)} on them. Billable means the tenant's share of each budget line.`
       : `A construction management fee of ${fmtPct(inv.pct)}. The project's costs are funded by the approved budget; they are listed for reference only.`)}</li>
     ${inv.suppFee || inv.cpFee ? `<li>${escapeHtml("Change order work is shown at the tenant's share of each change order; its CM fee is the supplemental fee, kept apart from the fee on the original scope.")}</li>` : ""}
     <li>${paid ? "Costs are amounts paid to date: payments against the contractors' pay applications and invoices listed, and direct charges at cost." : "Costs are work completed and stored to date, before retainage, as certified on the pay applications and invoices listed. Direct charges are at cost."}</li>
     ${inv.items && inv.items.some((i) => i.thisInvoice) && inv.previous ? `<li>Items shaded and marked "This invoice" are new since the last CM invoice.</li>` : ""}
     ${inv.previous ? `<li>${escapeHtml(`Previously invoiced CM fees of ${money2(inv.previous)} are deducted.`)}</li>` : ""}
+    `}
   </ol>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;

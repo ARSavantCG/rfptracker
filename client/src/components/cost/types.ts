@@ -125,7 +125,7 @@ export interface ProjectBundle {
   cmInvoiceDrafts: { capital: CmInvoiceDraft; tenant: CmInvoiceDraft };
   /** Admin dashboard figures (shown to admins only). */
   dashboard: import('@shared/cost-dashboard').ProjectDashboard;
-  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number }[];
+  cmInvoiceDraft: { type: 'fee' | 'reimbursable'; basis: 'paid' | 'billed'; billTo: string; toDate: number; suppFee: number; cpFee: number; supplementalCos: string[]; items: { ref: string; date: string; vendor: string; item: string; amount: number; billable: number; thisInvoice: boolean; paid?: number; suppFee?: number; total?: number }[];
     base: number; pct: number; earned: number; previous: number; due: number; lines: { key: string; description: string; spent: number; tenantSharePct: number; billable: number }[] };
   directCosts: DirectCostRow[];
   waivers: Array<import('@shared/cost-waivers').Waiver & { notes: string | null }>;
@@ -144,6 +144,8 @@ export type CmInvoiceDraft = ProjectBundle['cmInvoiceDraft'] & {
   stream: 'capital' | 'tenant';
   incurred: number; paidToDate: number; invoicedToDate: number; invoices: number; feeInvoiced: number;
   tenantCosOnly: boolean;
+  /** Tenant invoice: as costs are incurred, or each approved change order in full when approved. */
+  mode?: 'incurred' | 'full';
   /** At completion: fee on committed original scope + each approved change order's fee; pending shown apart. */
   projected: { original: number; changeOrders: number; pending: number; budget: number; base: number; fee: number; coBase: number; pendingBase: number; total?: number; pendingTotal?: number };
 };

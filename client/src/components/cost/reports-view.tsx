@@ -217,15 +217,29 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
     } catch (e: any) { toast({ title: 'Not Withdrawn', description: e?.message, variant: 'destructive' }); }
   };
   const basisKey = tenant ? 'invoiceBasisTenant' : 'invoiceBasisCapital';
+  const full = tenant && d.mode === 'full';
   const billKey = tenant ? 'billToTenant' : 'billToCapital';
   return (
-    <Card id={`invoice-${d.stream}`} title={tenant ? 'Tenant Invoice — Costs + CM Fee' : 'Capital Partner Invoice — CM Fee'}
+    <Card id={`invoice-${d.stream}`} title={tenant ? (full ? 'Tenant Invoice — Change Orders in Full' : 'Tenant Invoice — Costs + CM Fee') : 'Capital Partner Invoice — CM Fee'}
           summary={`Due now ${money(d.due)}${mine.length ? ` · ${mine.length} issued` : ''}`}
-          what={tenant
+          what={tenant && full
+            ? `Each approved change order in full when it's approved: the tenant's share of the work, markups and their CM fee, less credits and what's been invoiced.`
+            : tenant
             ? `${d.tenantCosOnly ? 'Their change orders as the work is done' : "The tenant's share of costs"} (${d.basis} to date), markups and their CM fee at ${d.pct.toFixed(2)}%, less credits and what's been invoiced. Every pay app, invoice and charge itemized.`
             : `The CM fee at ${d.pct.toFixed(2)}% on costs ${d.basis} to date, less what's been invoiced. Costs incurred and paid listed as backup.`}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 pb-2 border-b">
-        <Labeled label={tenant ? 'Costs Counted' : 'Fee Figured On'}>
+        {tenant && (
+          <Labeled label="Billing Method">
+            <Select value={full ? 'full' : 'incurred'} onValueChange={(v) => saveSetting({ tenantBillMode: v }, 'Saved')}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="full">Change Orders in Full When Approved</SelectItem>
+                <SelectItem value="incurred">As Costs Are Incurred</SelectItem>
+              </SelectContent>
+            </Select>
+          </Labeled>
+        )}
+        {!full && <Labeled label={tenant ? 'Costs Counted' : 'Fee Figured On'}>
           <Select value={d.basis} onValueChange={(v) => saveSetting({ [basisKey]: v }, 'Saved')}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent className="pm-scope">
@@ -233,8 +247,8 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
               <SelectItem value="billed">What's Been Billed (Completed & Stored)</SelectItem>
             </SelectContent>
           </Select>
-        </Labeled>
-        {tenant && (
+        </Labeled>}
+        {tenant && !full && (
           <Labeled label="Tenant Pays For">
             <Select value={d.tenantCosOnly ? 'cos' : 'all'} onValueChange={(v) => saveSetting({ tenantBills: v }, 'Saved')}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -252,17 +266,24 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
           </div>
         </Labeled>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+      {full ? <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+        <Fig label="Approved Change Orders" value={String(d.items.length)} />
+        <Fig label="Work, Markups, Less Credits" value={money(d.base)} />
+        <Fig label="CM Fee" value={money(d.suppFee)} />
+        <Fig label="Total Change Orders" value={money(d.toDate)} />
+        <Fig label="Previously Invoiced" value={money(d.previous)} />
+        <Fig label="Due Now" value={money(d.due)} strong />
+      </div> : <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
         {tenant ? <Fig label={`Billable Costs ${d.basis}`} value={money(d.base)} /> : <Fig label="Costs Incurred · Paid" value={`${money(d.incurred)} · ${money(d.paidToDate)}`} />}
         <Fig label={`CM Fee (${d.pct.toFixed(2)}%)${d.suppFee ? ' — Original' : ''}`} value={money(d.earned)} />
         {d.suppFee ? <Fig label="Supplemental CM Fee" value={money(d.suppFee)} /> : null}
         <Fig label={tenant ? 'Costs + Fee to Date' : 'CM Fees to Date'} value={money(d.toDate)} />
         <Fig label="Previously Invoiced" value={money(d.previous)} />
         <Fig label="Due Now" value={money(d.due)} strong />
-      </div>
-      <p className="text-xs text-gray-600">{d.items.length} item{d.items.length === 1 ? '' : 's'} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
+      </div>}
+      <p className="text-xs text-gray-600">{full ? `${d.items.length} change order${d.items.length === 1 ? '' : 's'}` : `${d.items.length} item${d.items.length === 1 ? '' : 's'}`} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
       <div className="flex items-end gap-2 flex-wrap">
-        <Labeled label="Invoice no."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
+        <Labeled label="Invoice No."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
         <Labeled label="Date"><Input type="date" className="h-9 w-44" value={invDate} onChange={(e) => setInvDate(e.target.value)} /></Labeled>
         <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-invoice/${projectId}?stream=${d.stream}`)}><FileText className="h-4 w-4 mr-1" /> Preview</Button>
         <Button className="h-9" disabled={busy || Math.abs(d.due) < 0.005 || !invNo.trim()} onClick={issue}><Printer className="h-4 w-4 mr-1" /> Issue</Button>

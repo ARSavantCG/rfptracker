@@ -7,6 +7,7 @@
 import { coLog } from '@shared/co-log';
 import { threeWayCheck, waiversByPayApp, paidOfFrom, gcPaymentDue } from '@shared/cost-waivers';
 import { carryForwardCheck } from '@shared/cost-tracking';
+import { financialFigures, figuresDiff, type FinancialFigures } from '@shared/financial-figures';
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
 
 const money0 = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -20,7 +21,9 @@ const BUCKET: Record<string, string> = { contractor: 'Contractor', design: 'Desi
 
 type Item = { level: 'red' | 'amber' | 'info'; text: string };
 
-export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today: string; generatedBy: string | null }): string {
+export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today: string; generatedBy: string | null; since?: { takenAt: string; kind: string; period: string; data: FinancialFigures } | null }): string {
+  const F = financialFigures(b, x.today);
+  const C = F.contingency;
   const t = b.summary.totals;
   const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? '';
   const pos = b.position;
@@ -80,6 +83,11 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
   const wg = waiversByPayApp(apps.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber })), b.waivers, cname, paidOf);
   const missingRel = wg.flatMap((g: any) => g.rows.filter((r: any) => r.status === 'outstanding' || r.status === 'missing'));
   if (missingRel.length) watch.push({ level: 'amber', text: `${missingRel.length} lien release${missingRel.length === 1 ? ' is' : 's are'} outstanding (conditionals or unconditionals not yet received). See the Lien Waiver Log.` });
+  // Contingency used ahead of the work: the burn most bosses ask about first.
+  if (C && C.original > 0.005) {
+    if (C.remaining < -0.005) watch.push({ level: 'red', text: `Contingency is overdrawn: ${money0(C.used)} used of ${money0(C.original)} (${C.usedPct.toFixed(0)}%).` });
+    else if (C.usedPct > C.completePct + 10) watch.push({ level: 'amber', text: `Contingency is being used ahead of the work: ${C.usedPct.toFixed(0)}% used at ${C.completePct.toFixed(0)}% complete (${money0(C.remaining)} left).` });
+  }
   const rank = { red: 0, amber: 1, info: 2 } as const;
   watch.sort((p, q) => rank[p.level] - rank[q.level]);
   if (!watch.length) watch.push({ level: 'info', text: 'Nothing needs attention: every line is within budget, pay apps agree, and releases are in.' });
@@ -92,9 +100,41 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     ${tile('Projected at Completion', money0(projected), `with ${money0(pend)} pending`, afterPending < -0.005 ? '#991b1b' : '#003087')}
     ${tile(afterPending < -0.005 ? 'Projected Over Budget' : 'Projected Under Budget', money0(Math.abs(afterPending)), `uncommitted today ${money0(uncommitted)}`, afterPending < -0.005 ? '#991b1b' : '#166534')}
     ${tile('Work Complete', money0(toDate), `${pct(toDate, committed)} of committed`)}
-    ${tile('Paid to Date', money0(P.paid ?? 0), `${money0(P.owed ?? 0)} billed, unpaid · ${money0(P.retainageHeld ?? 0)} retainage held`)}
+    ${tile('Paid to Date', money0(P.paid ?? 0), `${pct(P.paid ?? 0, committed)} of committed`)}
+    ${tile('Billed, Unpaid', money0(P.owed ?? 0), `plus ${money0(P.retainageHeld ?? 0)} retainage held`)}
+    ${C ? tile('Contingency Remaining', money0(C.remaining), `${C.usedPct.toFixed(0)}% used at ${C.completePct.toFixed(0)}% complete${C.inContracts.amount > 0.005 ? ` · ${money0(C.inContracts.amount - C.inContracts.billed)} more in contracts` : ''}`, C.remaining < -0.005 || C.usedPct > C.completePct + 10 ? '#b45309' : '#166534')
+      : tile('Contingency', '—', 'No budget line named Contingency; pick one in the report settings')}
   </div>`;
 
+  // ---- Since the last snapshot: what moved, and the change orders and pay apps behind it
+  let sinceHtml = '';
+  if (x.since) {
+    const D = figuresDiff(x.since.data, F);
+    const when = new Date(x.since.takenAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'long', day: 'numeric', year: 'numeric' });
+    const label = x.since.kind === 'month' ? `${new Date(x.since.period + '-15T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' })} month-end (saved ${when})` : x.since.kind === 'baseline' ? `tracking began, ${when}` : when;
+    const sign = (v: number) => (Math.abs(v) < 0.005 ? '<span class="muted">no change</span>' : `<span style="color:${v > 0 ? '#991b1b' : '#166534'}">${v > 0 ? '+' : '−'}${money0(Math.abs(v))}</span>`);
+    const signPlain = (v: number) => (Math.abs(v) < 0.005 ? '<span class="muted">no change</span>' : `${v > 0 ? '+' : '−'}${money0(Math.abs(v))}`);
+    const why: string[] = [];
+    if (D.newlyApproved.length) why.push(`Approved: ${D.newlyApproved.map((c) => `${escapeHtml(c.number)}${c.title ? ` ${escapeHtml(c.title)}` : ''} (${money0(c.amount)})`).join('; ')}.`);
+    if (D.newPending.length) why.push(`New pending: ${D.newPending.map((c) => `${escapeHtml(c.number)} (${money0(c.amount)})`).join('; ')}.`);
+    if (D.rejected.length) why.push(`Rejected: ${D.rejected.map((c) => escapeHtml(c.number)).join(', ')}.`);
+    if (D.changedAmount.length) why.push(`Amounts changed: ${D.changedAmount.map((c) => `${escapeHtml(c.number)} ${money0(c.was)} → ${money0(c.amount)}`).join('; ')}.`);
+    if (D.moved.length) why.push(`Moved along: ${D.moved.map((c) => `${escapeHtml(c.number)} ${escapeHtml(c.from)} → ${escapeHtml(c.stage)}`).join('; ')}.`);
+    if (D.newApps.length) why.push(`New pay apps: ${D.newApps.map((a) => `${escapeHtml(a.label)} (${money0(a.due)})`).join('; ')}.`);
+    if (D.paidOff.length) why.push(`Paid: ${D.paidOff.map((a) => escapeHtml(a.label)).join('; ')}.`);
+    const lines = D.rowMoves.slice(0, 4).filter((r) => Math.abs(r.projected) >= 0.005);
+    if (lines.length) why.push(`Biggest moves by line: ${lines.map((r) => `${escapeHtml(r.description)} ${r.projected > 0 ? '+' : '−'}${money0(Math.abs(r.projected))}`).join('; ')}.`);
+    sinceHtml = `<h3 class="sec">Since ${escapeHtml(label)}</h3>
+    <table class="t"><thead><tr><th>Budget</th><th>Committed</th><th>Projected</th><th>Work Complete</th><th>Paid</th>${D.contingencyUsed != null ? '<th>Contingency Used</th>' : ''}</tr></thead><tbody><tr>
+      <td class="num">${signPlain(D.budget)}</td><td class="num">${sign(D.committed)}</td><td class="num"><strong>${sign(D.projected)}</strong></td><td class="num">${signPlain(D.toDate)}</td><td class="num">${signPlain(D.paid)}</td>${D.contingencyUsed != null ? `<td class="num">${sign(D.contingencyUsed)}</td>` : ''}
+    </tr></tbody></table>
+    ${why.length ? `<ul class="why">${why.map((w) => `<li>${w}</li>`).join('')}</ul>` : '<p class="hint">No change orders or pay apps moved.</p>'}`;
+  }
+  const contHtml = C ? `<h3 class="sec">Contingency</h3>
+  <table class="t" style="width:80%"><thead><tr><th class="l">Line</th><th>Original</th><th>Moved to Other Lines</th><th>Spent</th><th>Used</th><th>Remaining</th><th>% Used</th><th>% Complete</th></tr></thead><tbody>
+    <tr><td>${escapeHtml(C.names.join(', '))}</td><td class="num">${money0(C.original)}</td><td class="num">${money0(C.movedOut)}</td><td class="num">${money0(C.spent)}</td><td class="num"><strong>${money0(C.used)}</strong></td><td class="num" style="color:${C.remaining < -0.005 ? '#991b1b' : '#166534'}"><strong>${money0(C.remaining)}</strong></td><td class="num">${C.usedPct.toFixed(1)}%</td><td class="num">${C.completePct.toFixed(1)}%</td></tr>
+  </tbody></table>
+  ${C.inContracts.amount > 0.005 ? `<p class="hint">Also carried inside contracts (lines named contingency): ${money0(C.inContracts.amount)}, ${money0(C.inContracts.billed)} billed so far.</p>` : ''}` : '';
   const watchHtml = `<h3 class="sec">Watch List</h3><ul class="watch">${watch.map((w) => `<li class="${w.level}">${escapeHtml(w.text)}</li>`).join('')}</ul>`;
 
   // Budget by bucket
@@ -146,10 +186,10 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Project Financial Summary</title><style>${REPORT_SHELL_CSS}
     body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 0; padding: 0.5in; }
-    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 6px 0 10px; }
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 10px; }
     .tile { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px; break-inside: avoid; }
     .tile .k { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #4b5563; font-weight: 700; }
-    .tile .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .tile .v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
     .tile .s { font-size: 9.5px; color: #6b7280; margin-top: 1px; }
     .watch { margin: 0; padding: 0; list-style: none; font-size: 10.5px; }
     .watch li { padding: 5px 8px 5px 22px; border-radius: 4px; margin-bottom: 3px; position: relative; break-inside: avoid; }
@@ -165,12 +205,16 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     .t tr.total td { font-weight: 700; background: #f9fafb; border-top: 2px solid #111827; }
     .muted { color: #9ca3af; }
     .hint { font-size: 9.5px; color: #6b7280; margin: 4px 0 0; }
+    .why { margin: 4px 0 0; padding-left: 16px; font-size: 10px; color: #374151; }
+    .why li { margin-bottom: 2px; }
     .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #374151; margin: 14px 0 6px; break-after: avoid; }
   </style></head><body>
   ${reportHeaderHtml({ title: 'Project Financial Summary', info: [...x.info, { label: 'As Of', value: new Date(x.today + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' }) }], notes: [] })}
   ${tiles}
   ${watchHtml}
+  ${sinceHtml}
   ${budgetHtml}
+  ${contHtml}
   ${coHtml}
   ${payHtml}
   <p class="hint" style="margin-top:12px">Detail behind each section: Budget vs Actual, Change Order Log, Pay App Status, Owed by Vendor and Lien Waiver Log (Reports tab).</p>

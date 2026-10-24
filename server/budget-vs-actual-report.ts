@@ -29,6 +29,7 @@ import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
 import { renderOwedHtml } from "./owed-report";
 import { renderExecSummaryHtml } from "./exec-summary-report";
+import { listSnapshots } from "./snapshots";
 import { coLog, type CoLogRow } from "@shared/co-log";
 import { waiversByPayApp, paidOfFrom, payAppLog, vendorKey, gcPaymentDue, threeWayCheck, partyOf, owedByVendor, type ThreeWay, type PayAppWaivers, type PayAppWaiverRow, type PayAppLogGroup, type PayAppLogRow } from "@shared/cost-waivers";
 
@@ -1202,7 +1203,13 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       const facts = await propertyFacts(b.project);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(renderExecSummaryHtml(b, { info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), today: todayEastern(), generatedBy: generatedByName((req as any).user) }));
+      // Compare with the snapshot asked for (?since=id), else the latest taken before today.
+      const snaps = await listSnapshots(id).catch(() => []);
+      const today = todayEastern();
+      const want = req.query.since ? Number(req.query.since) : null;
+      const dayOf = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(iso));
+      const since = want === 0 ? null : (want ? snaps.find((s) => s.id === want) : snaps.find((s) => dayOf(s.takenAt) < today)) ?? null;
+      res.send(renderExecSummaryHtml(b, { info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), today, generatedBy: generatedByName((req as any).user), since }));
     } catch (e: any) {
       console.error("Financial summary error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });

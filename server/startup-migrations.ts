@@ -154,6 +154,17 @@ const SAFE_ALTERS: string[] = [
 ];
 
 const ADDITIVE_TABLES: string[] = [
+  // Monthly financial snapshots per cost project (server/snapshots.ts).
+  `CREATE TABLE IF NOT EXISTS cost_snapshots (
+    id serial PRIMARY KEY,
+    project_id integer NOT NULL,
+    kind text NOT NULL,
+    period text NOT NULL,
+    taken_at timestamp NOT NULL DEFAULT now(),
+    taken_by text,
+    data jsonb NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS cost_snapshots_once_idx ON cost_snapshots (project_id, kind, period)`,
   // Which stored files the nightly backup has already copied to Google Drive.
   `CREATE TABLE IF NOT EXISTS backup_files (
     key text PRIMARY KEY,

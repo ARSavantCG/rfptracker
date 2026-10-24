@@ -10,7 +10,7 @@ import { CO_STAGES } from '@shared/co-routing';
 import { STAGE_STYLE } from './co-routing';
 import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue, threeWayCheck, owedByVendor } from '@shared/cost-waivers';
 import { coLog } from '@shared/co-log';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -48,10 +48,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
     <div className="space-y-5">
       <div className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cost Reports</h3>
-      <Card id="financial-summary" title="Project Financial Summary" what="One report for leadership: budget against committed, pending and projected; change orders approved and pending by stage; contracts and payments; and a Watch List of what needs attention, worked out from everything above."
-            action={<Button className="h-9" onClick={() => open(`/api/reports/financial-summary/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
-        <p className="text-sm text-gray-700">The Watch List flags lines over budget, pending change orders that would push the project over, change orders stuck 30+ days, pay apps that don't agree or don't tie to the last one, unpaid pay apps past 30 days and outstanding lien releases.</p>
-      </Card>
+      <FinancialSummaryCard b={b} projectId={projectId} open={open} />
       <Card id="bva" title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (
@@ -778,6 +775,63 @@ function OwedByVendorCard({ b, projectId, open }: { b: ProjectBundle; projectId:
           </div>
         )}
       </div>
+    </Card>
+  );
+}
+
+type SnapRow = { id: number; kind: string; period: string; takenAt: string; takenBy: string | null; projected: number };
+/** The one report for leadership, with the contingency line and the snapshot to compare against. */
+function FinancialSummaryCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const snaps = useQuery<SnapRow[]>({ queryKey: [`/api/cost-projects/${projectId}/snapshots`] });
+  const list = snaps.data ?? [];
+  const todayEt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  const dayOf = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(iso));
+  const def = list.find((s) => dayOf(s.takenAt) < todayEt);
+  const [since, setSince] = useState<string>('');
+  const pick = since || (def ? String(def.id) : '0');
+  const label = (s: SnapRow) => s.kind === 'month'
+    ? `${new Date(s.period + '-15T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' })} Month-End`
+    : `${s.kind === 'baseline' ? 'Tracking Began' : 'Saved'} ${shortDate(dayOf(s.takenAt))}`;
+  const save = async () => {
+    try { await apiRequest(`/api/cost-projects/${projectId}/snapshots`, 'POST', {}); await qc.invalidateQueries({ queryKey: [`/api/cost-projects/${projectId}/snapshots`] }); toast({ title: 'Snapshot Saved', description: 'The next summary can compare against today.' }); }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
+  const rows = b.summary.rows;
+  const picked: string[] = Array.isArray((b.project as any).settings?.contingencyKeys) ? (b.project as any).settings.contingencyKeys : [];
+  const found = rows.filter((r) => /contingenc/i.test(r.description));
+  const setCont = async (key: string) => {
+    try { const nb = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { contingencyKeys: key === 'auto' ? [] : [key] }); qc.setQueryData([projectKey(projectId)], nb); toast({ title: 'Contingency Line Saved' }); }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
+  return (
+    <Card id="financial-summary" title="Project Financial Summary" what="One report for leadership: budget against committed, pending and projected; contingency used against work complete; what moved since the last snapshot and why; change orders by stage; contracts and payments; and a Watch List of what needs attention."
+          action={<Button className="h-9" onClick={() => open(`/api/reports/financial-summary/${projectId}?since=${pick}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      <div className="flex flex-wrap items-end gap-4 text-sm">
+        <label className="space-y-1"><span className="text-xs text-gray-600 block">Compare With</span>
+          <div className="w-96">
+            <Select value={pick} onValueChange={setSince}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="0">No Comparison</SelectItem>
+                {list.map((s) => <SelectItem key={s.id} value={String(s.id)}>{label(s)} · {money(s.projected)} projected</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div></label>
+        <Button variant="outline" className="h-9" onClick={save}>Save Snapshot Now</Button>
+        <label className="space-y-1"><span className="text-xs text-gray-600 block">Contingency Line</span>
+          <div className="w-72">
+            <Select value={picked[0] ?? 'auto'} onValueChange={setCont}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="auto">{found.length ? `Found by Name: ${found.map((r) => r.description).join(', ')}` : 'Found by Name (none found)'}</SelectItem>
+                {rows.map((r) => <SelectItem key={r.key} value={r.key}>{r.description}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div></label>
+      </div>
+      <p className="text-xs text-gray-600">A snapshot is saved on its own at the start of every month (the month just ended), so the summary can say what moved and why. {list.length ? `${list.length} saved so far.` : 'The first one is saved shortly after this goes live.'}</p>
     </Card>
   );
 }

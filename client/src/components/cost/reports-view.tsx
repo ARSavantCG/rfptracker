@@ -48,6 +48,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
     <div className="space-y-5">
       <div className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cost Reports</h3>
+      <Card id="financial-summary" title="Project Financial Summary" what="One report for leadership: budget against committed, pending and projected; change orders approved and pending by stage; contracts and payments; and a Watch List of what needs attention, worked out from everything above."
+            action={<Button className="h-9" onClick={() => open(`/api/reports/financial-summary/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+        <p className="text-sm text-gray-700">The Watch List flags lines over budget, pending change orders that would push the project over, change orders stuck 30+ days, pay apps that don't agree or don't tie to the last one, unpaid pay apps past 30 days and outstanding lien releases.</p>
+      </Card>
       <Card id="bva" title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (

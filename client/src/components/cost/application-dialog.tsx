@@ -145,7 +145,15 @@ export function ApplicationDialog({
   const toDateOf = (l: SovLineRow) => (prior.get(l.id)?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');
   const autoMap = useMemo(() => {
     const auto = contractLines.filter((l) => !(draft[l.id]?.retainage ?? '').trim());
-    const items = auto.map((l) => ({ id: l.id, exact: toDateOf(l) * rate })).filter((x) => Math.abs(x.exact) >= 0.0001);
+    // A line whose retainage was released (or cut) on an earlier pay app holds only what it
+    // held then plus the rate on the work billed since, not the rate on everything again.
+    const exactOf = (l: SovLineRow) => {
+      const p = prior.get(l.id);
+      if (!p || p.toDate === 0) return toDateOf(l) * rate;
+      const full = p.toDate * rate;
+      return p.retainage < full - 0.01 ? p.retainage + (toDateOf(l) - p.toDate) * rate : toDateOf(l) * rate;
+    };
+    const items = auto.map((l) => ({ id: l.id, exact: exactOf(l) })).filter((x) => Math.abs(x.exact) >= 0.0001);
     const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
     const target = retTarget.trim()
       ? Math.round((num(retTarget) - typed) * 100) / 100

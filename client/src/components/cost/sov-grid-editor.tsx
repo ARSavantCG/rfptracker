@@ -66,7 +66,7 @@ function allocationOf(r: Row) {
 const same = (a: Row, b: Row) => a.itemNo === b.itemNo && a.code === b.code && a.section.trim() === b.section.trim() && a.description.trim() === b.description.trim()
   && Math.abs(num(a.value) - num(b.value)) < 0.005 && a.map === b.map;
 
-export function SovGridEditor({ contractId, changeOrderId, label, lines, baseline, billedIds, projectId, onDone }: {
+export function SovGridEditor({ contractId, changeOrderId, label, lines, baseline, billedIds, billedOn, projectId, onDone }: {
   contractId: number;
   changeOrderId: number | null;
   label: string;
@@ -74,6 +74,8 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   baseline: BaselineLine[];
   /** Lines with billing against them — they can be edited, not deleted. */
   billedIds: Set<number>;
+  /** Where each billed line has an amount: 'Pay App 003', … */
+  billedOn?: Map<number, string[]>;
   projectId: number;
   onDone: () => void;
 }) {
@@ -123,7 +125,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   };
   const removeRow = (r: Row) => {
     if (r.id && billedIds.has(r.id)) {
-      toast({ title: 'Billed on a Pay App', description: 'This line has billing against it, so it stays. Set its value to zero instead.' });
+      toast({ title: 'Billed on a Pay App', description: `${r.description || 'This line'} has amounts on ${(billedOn?.get(r.id) ?? ['a pay app']).join(', ')}. Take them off there (work, stored and retainage to $0.00) and it can be removed; or set its value to zero.` });
       return;
     }
     touched.current = true;
@@ -321,7 +323,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                       </td>
                       <td className="px-1 py-1 text-center">
                         <button className={`p-1 ${billed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-700'}`}
-                                title={billed ? 'Billed on a pay app — set it to zero instead' : 'Remove this line'} onClick={() => removeRow(r)}>
+                                title={billed ? `Billed on ${(billedOn?.get(r.id!) ?? ['a pay app']).join(', ')}: take it off there first, or set it to zero` : 'Remove this line'} onClick={() => removeRow(r)}>
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>

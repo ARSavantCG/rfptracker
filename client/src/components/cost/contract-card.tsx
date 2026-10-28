@@ -85,7 +85,16 @@ export function ContractCard({
   useEffect(() => {
     if (autoOpened.current && lines.length > 0 && editing === 'base') { autoOpened.current = false; setEditing(null); }
   }, [lines.length]);
-  const billedIds = useMemo(() => new Set(applications.flatMap((a) => a.lines.map((l) => l.sovLineId))), [applications]);
+  // A line counts as billed only where a pay app has an amount on it (a row left at $0.00 doesn't).
+  const billedOn = useMemo(() => {
+    const m = new Map<number, string[]>();
+    for (const a of [...applications].sort((x, y) => x.number - y.number)) for (const l of a.lines) {
+      if (!(Math.abs(l.workThisPeriod) >= 0.005 || Math.abs(l.storedToDate) >= 0.005 || Math.abs(l.retainageToDate) >= 0.005)) continue;
+      m.set(l.sovLineId, [...(m.get(l.sovLineId) ?? []), `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(a.docNumber).padStart(3, '0')}`]);
+    }
+    return m;
+  }, [applications]);
+  const billedIds = useMemo(() => new Set(billedOn.keys()), [billedOn]);
   const removeContract = useMutation({
     mutationFn: () => apiRequest(`/api/cost-contracts/${contract.id}`, 'DELETE'),
     onSuccess: () => { refresh(); toast({ title: `${contract.counterparty} deleted` }); },
@@ -359,7 +368,7 @@ export function ContractCard({
                 </tr>
                 {editing === String(g.id ?? 'base') ? (
                   <SovGridEditor contractId={contract.id} changeOrderId={g.id} label={g.label} lines={g.lines}
-                                 baseline={baseline} billedIds={billedIds} projectId={projectId} onDone={() => setEditing(null)} />
+                                 baseline={baseline} billedIds={billedIds} billedOn={billedOn} projectId={projectId} onDone={() => setEditing(null)} />
                 ) : rolled.has(String(g.id ?? 'base')) ? null : g.lines.length === 0 ? (
                   <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-600">
                     {g.co ? <QuickCoLine co={g.co} contractId={contract.id} baseline={baseline} onDone={refresh} />

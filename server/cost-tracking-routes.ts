@@ -1871,11 +1871,17 @@ export function registerCostTrackingRoutes(app: Express): void {
     try {
       const id = intParam(req, 'id');
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
-      const billed = await db.select({ id: costApplicationLines.id })
-        .from(costApplicationLines).where(eq(costApplicationLines.sovLineId, id)).limit(1);
-      if (billed.length) {
-        return res.status(409).json({ message: 'This line has been billed on a pay app, so it cannot be deleted. Set its value to zero instead.' });
+      // Rows left at $0.00 on a pay app don't count as billing: they go with the line.
+      const rows = await db.select({ id: costApplicationLines.id, w: costApplicationLines.workThisPeriodCents, st: costApplicationLines.storedToDateCents, r: costApplicationLines.retainageToDateCents, app: costApplicationLines.applicationId })
+        .from(costApplicationLines).where(eq(costApplicationLines.sovLineId, id));
+      const live = rows.filter((x) => Number(x.w) || Number(x.st) || Number(x.r));
+      if (live.length) {
+        const apps = await db.select({ id: costApplications.id, doc: costApplications.docNumber, kind: costApplications.kind }).from(costApplications)
+          .where(inArray(costApplications.id, Array.from(new Set(live.map((x) => x.app)))));
+        const names = apps.sort((a, b) => (a.doc ?? 0) - (b.doc ?? 0)).map((a) => `${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${String(a.doc ?? 0).padStart(3, '0')}`).join(', ');
+        return res.status(409).json({ message: `This line has amounts on ${names}, so it cannot be deleted. Take them off there first, or set its value to zero.` });
       }
+      if (rows.length) await db.delete(costApplicationLines).where(inArray(costApplicationLines.id, rows.map((x) => x.id)));
       await db.delete(costSovLines).where(eq(costSovLines.id, id));
       res.json({ ok: true });
     } catch (e) { fail(res, e, 'delete the line'); }

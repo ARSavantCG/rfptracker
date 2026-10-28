@@ -6,7 +6,7 @@
  * check is cut: if line 8 here and line 8 there disagree, one of the two
  * pages is wrong.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { no3 } from '@shared/doc-number';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -401,8 +401,8 @@ export function ApplicationDialog({
     ...(() => {
       const base = contractLines.filter((l) => l.changeOrderId == null);
       const secs = Array.from(new Set(base.map((l) => (l.section ?? '').trim())));
-      if (secs.length < 2 && !secs[0]) return [{ label: 'Base Contract', lines: base }];
-      return secs.map((sec) => ({ label: `Base Contract — ${sec || 'No Section'}`, lines: base.filter((l) => (l.section ?? '').trim() === sec) }));
+      if (secs.length < 2 && !secs[0]) return [{ label: 'Base Contract', lines: base, co: false }];
+      return secs.map((sec) => ({ label: `Base Contract — ${sec || 'No Section'}`, lines: base.filter((l) => (l.section ?? '').trim() === sec), co: false }));
     })(),
     // A CO shows from its start app on — or on any app that already bills it.
     ...changeOrders.filter((c) => c.contractId === contract.id && c.status !== 'void'
@@ -410,8 +410,88 @@ export function ApplicationDialog({
       .map((c) => ({
       label: `${c.number}${c.title ? ` — ${c.title}` : ''}${c.status === 'pending' ? ' (pending)' : ''}`,
       lines: contractLines.filter((l) => l.changeOrderId === c.id),
+      co: true,
     })),
   ].filter((g) => g.lines.length);
+  // Two levels: Base Contract (when split by section) and Change Orders each roll up to one total.
+  const parts = [
+    { key: 'part:base', label: 'Base Contract', groups: groups.filter((g) => !g.co) },
+    { key: 'part:cos', label: 'Change Orders', groups: groups.filter((g) => g.co) },
+  ].filter((p) => p.groups.length).map((p) => ({ ...p, parent: p.key === 'part:cos' || p.groups.length > 1 }));
+  const toggleRolled = (k: string) => setRolled((r) => { const n = new Set(r); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const rollLinks = (
+    <span className="float-right font-normal normal-case tracking-normal">
+      <button className="text-blue-700 hover:underline mr-3" onClick={() => setRolled(new Set([...groups.map((x) => x.label), ...parts.filter((p) => p.parent).map((p) => p.key)]))}>Roll Up All</button>
+      <button className="text-blue-700 hover:underline" onClick={() => setRolled(new Set())}>Show All</button>
+    </span>
+  );
+  const renderGroup = (g: (typeof groups)[number], indent: boolean) => (
+              <tbody key={g.label}>
+                <tr className="bg-gray-100"><td colSpan={8} className={`py-1 text-xs font-semibold text-gray-800 ${indent ? 'pl-6 pr-2' : 'px-2'}`}>
+                  <button className="inline-flex items-center gap-1 hover:text-blue-800" onClick={() => toggleRolled(g.label)}
+                          title={rolled.has(g.label) ? 'Show its lines' : 'Roll up to its subtotal'}>
+                    {rolled.has(g.label) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}{g.label}
+                    {rolled.has(g.label) && <span className="font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'} rolled up</span>}
+                  </button>
+                  {!parts[0]?.parent && (groups.length > 1 || parts.some((p) => p.parent)) && g === groups[0] && rollLinks}
+                </td></tr>
+                {!rolled.has(g.label) && g.lines.map((l) => {
+                  const p = prior.get(l.id);
+                  const previous = (p?.completed ?? 0) + (p?.stored ?? 0);
+                  const toDate = (p?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');
+                  const over = toDate - l.scheduledValue > 0.005;
+                  return (
+                    <tr key={l.id} className="border-t">
+                      <td className="px-2 py-1">
+                        <div className="text-gray-900">{l.itemNo ? <span className="text-gray-500 mr-1">{l.itemNo}</span> : null}{l.description}</div>
+                        {aiCells[l.id]?.previous != null && Math.abs(aiCells[l.id].previous! - previous) > 0.005 && (
+                          <div className="text-[11px] text-red-700">Their previous {money(aiCells[l.id].previous!)} — ours {money(previous)}</div>
+                        )}
+                      </td>
+                      <td className="px-2 py-1 text-right tabular-nums">{money(l.scheduledValue)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-gray-600">{money(previous)}</td>
+                      <td className="px-2 py-1">
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'work')}`}
+                               value={entry === 'period' ? (draft[l.id]?.work ?? '') : (draft[l.id]?.toDate ?? '')}
+                               onValueChange={(v) => set(l.id, entry === 'period' ? 'work' : 'toDate', v)} />
+                        {aiNote(l.id, 'work')}
+                      </td>
+                      <td className="px-2 py-1">
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'stored')}`} value={draft[l.id]?.stored ?? ''} onValueChange={(v) => set(l.id, 'stored', v)} />
+                        {aiNote(l.id, 'stored')}
+                      </td>
+                      <td className={`px-2 py-1 text-right tabular-nums ${over ? 'text-red-700 font-semibold' : ''}`}
+                          title={over ? 'More than the scheduled value' : undefined}>{money(toDate)}</td>
+                      <td className="px-2 py-1 text-right tabular-nums text-gray-600">
+                        {l.scheduledValue ? `${((toDate / l.scheduledValue) * 100).toFixed(2)}%` : '—'}
+                      </td>
+                      <td className="px-2 py-1">
+                        <MoneyInput className={`h-8 ${aiTint(l.id, 'retainage')}`} value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
+                                    title={`Left blank: ${money(autoRetainage(l))} (${Number(contract?.retainagePct ?? 0).toFixed(2)}% of work to date)`} />
+                        {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
+                          <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
+                        )}
+                        {(() => {
+                          const held = prior.get(l.id)?.retainage ?? 0;
+                          const typed = (draft[l.id]?.retainage ?? '').trim();
+                          if (typed !== '' && num(typed) === 0 && held >= 0.005) return (
+                            <div className="text-[10px] text-right text-emerald-800 mt-0.5">Released {money(held)}
+                              {' '}<button type="button" className="text-blue-700 hover:underline" onClick={() => { setRetTyped((t) => { const n2 = new Set(t); n2.delete(l.id); return n2; }); setDraft((d) => ({ ...d, [l.id]: { ...d[l.id], retainage: '' } })); }}>Undo</button></div>
+                          );
+                          if (retainageOf(l) >= 0.005) return (
+                            <div className="text-right mt-0.5"><button type="button" className="text-[10px] text-blue-700 hover:underline" title="Sets this line's retainage to $0.00 so what's held on it is paid on this pay app"
+                              onClick={() => set(l.id, 'retainage', '0')}>Release</button></div>
+                          );
+                          return null;
+                        })()}
+                        {aiNote(l.id, 'retainage')}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {totalsRow(`${indent ? '\u2003' : ''}${g.label.startsWith('Base Contract — ') ? g.label.slice(16) : g.label.split(' — ')[0]} Subtotal`, g.lines, 'bg-gray-50 border-t font-medium')}
+              </tbody>
+  );
   const attached = app ? documents.filter((d) => d.applicationId === app.id) : [];
   const label = kind === 'invoice' ? 'Invoice' : 'Pay app';
 
@@ -572,77 +652,21 @@ export function ApplicationDialog({
                 <th className="px-2 py-1.5 text-right w-28">Retainage</th>
               </tr>
             </thead>
-            {groups.map((g) => (
-              <tbody key={g.label}>
-                <tr className="bg-gray-100"><td colSpan={8} className="px-2 py-1 text-xs font-semibold text-gray-800">
-                  <button className="inline-flex items-center gap-1 hover:text-blue-800" onClick={() => setRolled((r) => { const n = new Set(r); if (n.has(g.label)) n.delete(g.label); else n.add(g.label); return n; })}
-                          title={rolled.has(g.label) ? 'Show its lines' : 'Roll up to its subtotal'}>
-                    {rolled.has(g.label) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}{g.label}
-                    {rolled.has(g.label) && <span className="font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'} rolled up</span>}
-                  </button>
-                  {groups.length > 1 && g === groups[0] && (
-                    <span className="float-right font-normal">
-                      <button className="text-blue-700 hover:underline mr-3" onClick={() => setRolled(new Set(groups.map((x) => x.label)))}>Roll Up All</button>
-                      <button className="text-blue-700 hover:underline" onClick={() => setRolled(new Set())}>Show All</button>
-                    </span>
-                  )}
-                </td></tr>
-                {!rolled.has(g.label) && g.lines.map((l) => {
-                  const p = prior.get(l.id);
-                  const previous = (p?.completed ?? 0) + (p?.stored ?? 0);
-                  const toDate = (p?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');
-                  const over = toDate - l.scheduledValue > 0.005;
-                  return (
-                    <tr key={l.id} className="border-t">
-                      <td className="px-2 py-1">
-                        <div className="text-gray-900">{l.itemNo ? <span className="text-gray-500 mr-1">{l.itemNo}</span> : null}{l.description}</div>
-                        {aiCells[l.id]?.previous != null && Math.abs(aiCells[l.id].previous! - previous) > 0.005 && (
-                          <div className="text-[11px] text-red-700">Their previous {money(aiCells[l.id].previous!)} — ours {money(previous)}</div>
-                        )}
-                      </td>
-                      <td className="px-2 py-1 text-right tabular-nums">{money(l.scheduledValue)}</td>
-                      <td className="px-2 py-1 text-right tabular-nums text-gray-600">{money(previous)}</td>
-                      <td className="px-2 py-1">
-                        <MoneyInput className={`h-8 ${aiTint(l.id, 'work')}`}
-                               value={entry === 'period' ? (draft[l.id]?.work ?? '') : (draft[l.id]?.toDate ?? '')}
-                               onValueChange={(v) => set(l.id, entry === 'period' ? 'work' : 'toDate', v)} />
-                        {aiNote(l.id, 'work')}
-                      </td>
-                      <td className="px-2 py-1">
-                        <MoneyInput className={`h-8 ${aiTint(l.id, 'stored')}`} value={draft[l.id]?.stored ?? ''} onValueChange={(v) => set(l.id, 'stored', v)} />
-                        {aiNote(l.id, 'stored')}
-                      </td>
-                      <td className={`px-2 py-1 text-right tabular-nums ${over ? 'text-red-700 font-semibold' : ''}`}
-                          title={over ? 'More than the scheduled value' : undefined}>{money(toDate)}</td>
-                      <td className="px-2 py-1 text-right tabular-nums text-gray-600">
-                        {l.scheduledValue ? `${((toDate / l.scheduledValue) * 100).toFixed(2)}%` : '—'}
-                      </td>
-                      <td className="px-2 py-1">
-                        <MoneyInput className={`h-8 ${aiTint(l.id, 'retainage')}`} value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
-                                    title={`Left blank: ${money(autoRetainage(l))} (${Number(contract?.retainagePct ?? 0).toFixed(2)}% of work to date)`} />
-                        {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
-                          <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
-                        )}
-                        {(() => {
-                          const held = prior.get(l.id)?.retainage ?? 0;
-                          const typed = (draft[l.id]?.retainage ?? '').trim();
-                          if (typed !== '' && num(typed) === 0 && held >= 0.005) return (
-                            <div className="text-[10px] text-right text-emerald-800 mt-0.5">Released {money(held)}
-                              {' '}<button type="button" className="text-blue-700 hover:underline" onClick={() => { setRetTyped((t) => { const n2 = new Set(t); n2.delete(l.id); return n2; }); setDraft((d) => ({ ...d, [l.id]: { ...d[l.id], retainage: '' } })); }}>Undo</button></div>
-                          );
-                          if (retainageOf(l) >= 0.005) return (
-                            <div className="text-right mt-0.5"><button type="button" className="text-[10px] text-blue-700 hover:underline" title="Sets this line's retainage to $0.00 so what's held on it is paid on this pay app"
-                              onClick={() => set(l.id, 'retainage', '0')}>Release</button></div>
-                          );
-                          return null;
-                        })()}
-                        {aiNote(l.id, 'retainage')}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {totalsRow(`${g.label.startsWith('Base Contract — ') ? g.label.slice(16) : g.label.split(' — ')[0]} Subtotal`, g.lines, 'bg-gray-50 border-t font-medium')}
-              </tbody>
+            {parts.map((pt, pi) => !pt.parent ? pt.groups.map((g) => renderGroup(g, false)) : (
+              <Fragment key={pt.key}>
+                <tbody>
+                  <tr className="bg-gray-200"><td colSpan={8} className="px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-gray-900">
+                    <button className="inline-flex items-center gap-1 hover:text-blue-800" onClick={() => toggleRolled(pt.key)}
+                            title={rolled.has(pt.key) ? 'Show what is in it' : 'Roll up to one total'}>
+                      {rolled.has(pt.key) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{pt.label}
+                      <span className="font-normal normal-case tracking-normal text-gray-600">· {pt.key === 'part:cos' ? `${pt.groups.length} change order${pt.groups.length === 1 ? '' : 's'}` : `${pt.groups.length} sections`}{rolled.has(pt.key) ? ' rolled up' : ''}</span>
+                    </button>
+                    {pi === 0 && rollLinks}
+                  </td></tr>
+                </tbody>
+                {!rolled.has(pt.key) && pt.groups.map((g) => renderGroup(g, true))}
+                <tbody>{totalsRow(`${pt.label} Total`, pt.groups.flatMap((g) => g.lines), 'bg-gray-100 border-t-2 border-gray-300 font-semibold')}</tbody>
+              </Fragment>
             ))}
             <tfoot className="sticky bottom-0 z-10 bg-white shadow-[0_-1px_0_#374151]">
               {totalsRow('Total', groups.flatMap((g) => g.lines), 'font-semibold')}

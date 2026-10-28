@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Trash2, ClipboardPaste } from 'lucide-react';
+import { Plus, Trash2, ClipboardPaste, ArrowDownToLine } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { parseSovPaste } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
@@ -30,6 +30,7 @@ type Row = {
   id: number | null;            // null = new
   itemNo: string;
   code: string;
+  section: string;
   description: string;
   value: string;                // formatted money text
   map: string;                  // a baseline key, UNMAPPED, SPREAD, or SPLIT (keep the existing split)
@@ -49,11 +50,11 @@ function toRow(l: SovLineRow): Row {
     : l.allocationMode === 'direct' && l.allocations.length > 0 ? SPLIT
     : UNMAPPED;
   return {
-    rid: rid(), id: l.id, itemNo: l.itemNo ?? '', code: l.code ?? '', description: l.description,
+    rid: rid(), id: l.id, itemNo: l.itemNo ?? '', code: l.code ?? '', section: l.section ?? '', description: l.description,
     value: fmtMoneyText(String(l.scheduledValue)), map, split: map === SPLIT ? l.allocations : undefined,
   };
 }
-const blankRow = (map = UNMAPPED): Row => ({ rid: rid(), id: null, itemNo: '', code: '', description: '', value: '', map });
+const blankRow = (map = UNMAPPED, section = ''): Row => ({ rid: rid(), id: null, itemNo: '', code: '', section, description: '', value: '', map });
 
 /** What the API wants for a row's mapping. */
 function allocationOf(r: Row) {
@@ -62,7 +63,7 @@ function allocationOf(r: Row) {
   if (r.map === UNMAPPED) return { allocationMode: 'unallocated', allocations: [] };
   return { allocationMode: 'direct', allocations: [{ baselineKey: r.map, pct: 100 }] };
 }
-const same = (a: Row, b: Row) => a.itemNo === b.itemNo && a.code === b.code && a.description.trim() === b.description.trim()
+const same = (a: Row, b: Row) => a.itemNo === b.itemNo && a.code === b.code && a.section.trim() === b.section.trim() && a.description.trim() === b.description.trim()
   && Math.abs(num(a.value) - num(b.value)) < 0.005 && a.map === b.map;
 
 export function SovGridEditor({ contractId, changeOrderId, label, lines, baseline, billedIds, projectId, onDone }: {
@@ -111,7 +112,8 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
       const next = rows[i + 1];
       if (next && isBlank(next)) { descRefs.current[next.rid]?.focus(); return; }
     }
-    const nr = blankRow();
+    // A new line carries the section of the line it follows (type "Sitework" once, then keep entering).
+    const nr = blankRow(UNMAPPED, (after ? rows.find((x) => x.rid === after) : rows[rows.length - 1])?.section ?? '');
     setRows((rs) => {
       if (!after) return [...rs, nr];
       const i = rs.findIndex((x) => x.rid === after);
@@ -155,12 +157,12 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
       if (added.length) {
         await apiRequest(`/api/cost-contracts/${contractId}/sov-lines`, 'POST', {
           changeOrderId,
-          lines: added.map((r) => ({ itemNo: r.itemNo, code: r.code, description: r.description.trim(), scheduledValue: num(r.value), ...allocationOf(r) })),
+          lines: added.map((r) => ({ itemNo: r.itemNo, code: r.code, section: r.section.trim() || null, description: r.description.trim(), scheduledValue: num(r.value), ...allocationOf(r) })),
         });
       }
       for (const r of changed) {
         await apiRequest(`/api/cost-sov-lines/${r.id}`, 'PATCH', {
-          itemNo: r.itemNo, code: r.code, description: r.description.trim(), scheduledValue: num(r.value), ...allocationOf(r),
+          itemNo: r.itemNo, code: r.code, section: r.section.trim() || null, description: r.description.trim(), scheduledValue: num(r.value), ...allocationOf(r),
         });
       }
       for (const o of removed) {
@@ -206,12 +208,14 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
             </div>
           )}
 
+          <datalist id={`sections-${contractId}`}>{Array.from(new Set(rows.map((r) => r.section.trim()).filter(Boolean))).concat(['Sitework', 'Tenant Improvements'].filter((x) => !rows.some((r) => r.section.trim() === x))).map((x) => <option key={x} value={x} />)}</datalist>
           <div className="bg-white border rounded-md overflow-x-auto">
-            <table className="w-full text-sm min-w-[860px]">
+            <table className="w-full text-sm min-w-[1000px]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
                   <th className="px-2 py-1.5 w-20">Item</th>
                   <th className="px-2 py-1.5 w-36">Cost Code</th>
+                  <th className="px-2 py-1.5 w-48">Section</th>
                   <th className="px-2 py-1.5">Description</th>
                   <th className="px-2 py-1.5 w-40 text-right">Scheduled Value</th>
                   <th className="px-2 py-1.5 w-64">Budget Line</th>
@@ -226,6 +230,12 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                     <tr key={r.rid} className="border-b last:border-0">
                       <td className="px-1 py-1"><Input className="h-8 text-xs" value={r.itemNo} aria-label="Item" onChange={(e) => update(r.rid, { itemNo: e.target.value })} /></td>
                       <td className="px-1 py-1"><Input className="h-8 text-xs font-mono" value={r.code} aria-label="Cost code" onChange={(e) => update(r.rid, { code: e.target.value })} /></td>
+                      <td className="px-1 py-1"><div className="flex items-center gap-0.5">
+                        <Input className="h-8 text-xs" value={r.section} aria-label="Section" list={`sections-${contractId}`} autoComplete="off" onChange={(e) => update(r.rid, { section: e.target.value })} />
+                        {r.section.trim() && <button type="button" className="p-1 text-gray-400 hover:text-blue-700 shrink-0" title="Fill this section down to the next line that has one"
+                          onClick={() => setRows((rs) => { touched.current = true; const i = rs.findIndex((x) => x.rid === r.rid); const out = [...rs];
+                            for (let j = i + 1; j < out.length && !out[j].section.trim(); j++) out[j] = { ...out[j], section: r.section }; return out; })}><ArrowDownToLine className="h-3.5 w-3.5" /></button>}
+                      </div></td>
                       <td className="px-1 py-1">
                         <Input ref={(el) => { descRefs.current[r.rid] = el; }} className={`h-8 ${bad ? 'border-red-400' : ''}`} value={r.description} aria-label="Description"
                                onChange={(e) => update(r.rid, { description: e.target.value })} />

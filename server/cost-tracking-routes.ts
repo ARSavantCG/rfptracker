@@ -1740,6 +1740,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           contractId, changeOrderId: coId,
           itemNo: l.itemNo ? String(l.itemNo) : null,
           code: l.code ? String(l.code) : null,
+          section: l.section && String(l.section).trim() ? String(l.section).trim().slice(0, 80) : null,
           description: String(l.description).trim(),
           scheduledValueCents: toCents(l.scheduledValue),
           allocationMode: mode,
@@ -1760,6 +1761,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.description !== undefined) patch.description = String(b.description).trim() || 'Untitled';
       if (b.itemNo !== undefined) patch.itemNo = b.itemNo ? String(b.itemNo) : null;
       if (b.code !== undefined) patch.code = b.code ? String(b.code) : null;
+      if (b.section !== undefined) patch.section = b.section && String(b.section).trim() ? String(b.section).trim().slice(0, 80) : null;
       if (b.scheduledValue !== undefined) patch.scheduledValueCents = toCents(b.scheduledValue);
       if (b.allocationMode !== undefined && ALLOCATION_MODES.includes(b.allocationMode)) {
         patch.allocationMode = b.allocationMode;

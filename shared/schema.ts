@@ -2356,6 +2356,8 @@ export const costSovLines = pgTable("cost_sov_lines", {
   changeOrderId: integer("change_order_id"),
   itemNo: text("item_no"),                   // "1.13"
   code: text("code"),                        // "09-2100.00.S"
+  /** The G703 heading the line sits under on a contract with more than one part ("Sitework", "Tenant Improvements"): subtotals by section. */
+  section: text("section"),
   description: text("description").notNull(),
   scheduledValueCents: bigint("scheduled_value_cents", { mode: "number" }).notNull().default(0),
   allocationMode: text("allocation_mode").notNull().default("unallocated"), // direct | spread | unallocated

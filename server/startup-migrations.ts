@@ -138,6 +138,7 @@ const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_applications', column: 'contractor_g702', type: 'json' },
   { table: 'cost_applications', column: 'contractor_g703', type: 'json' },
   { table: 'cost_applications', column: 'retainage_adj_cents', type: 'integer' },
+  { table: 'cost_sov_lines', column: 'section', type: 'text' },
   { table: 'cost_applications', column: 'retainage_adj_note', type: 'text' },
 ];
 

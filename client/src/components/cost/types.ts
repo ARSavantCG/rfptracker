@@ -61,6 +61,8 @@ export interface SovLineRow {
   changeOrderId: number | null;
   itemNo: string | null;
   code: string | null;
+  /** G703 heading for contracts in parts (Sitework, Tenant Improvements); null = none. */
+  section?: string | null;
   description: string;
   scheduledValue: number;
   allocationMode: 'direct' | 'spread' | 'unallocated';

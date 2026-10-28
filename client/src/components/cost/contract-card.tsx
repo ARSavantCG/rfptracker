@@ -195,6 +195,21 @@ export function ContractCard({
               {` · retainage ${Number(contract.retainagePct).toFixed(2)}%`}
               {!open && ` · ${lines.length} line${lines.length === 1 ? '' : 's'} · ${applications.length} pay app${applications.length === 1 ? '' : 's'}`}
             </div>
+            {(() => {
+              // By G703 section across the contract (base and approved change orders).
+              const live = lines.filter((l) => l.changeOrderId == null || changeOrders.find((c) => c.id === l.changeOrderId)?.status === 'approved');
+              const secs = Array.from(new Set(live.map((l) => (l.section ?? '').trim()).filter(Boolean)));
+              if (!secs.length) return null;
+              const rest = live.filter((l) => !(l.section ?? '').trim());
+              const part = (name: string, ls: SovLineRow[]) => {
+                const t = ls.reduce((a, l) => a + l.scheduledValue, 0), d = ls.reduce((a, l) => a + (progress.get(l.id)?.toDate ?? 0), 0);
+                return <span key={name} className="whitespace-nowrap"><span className="font-semibold text-gray-800">{name}</span> {money(t)} · {pct(d, t)} complete</span>;
+              };
+              return <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+                {secs.map((sec) => part(sec, live.filter((l) => (l.section ?? '').trim() === sec)))}
+                {rest.length > 0 && part('No Section', rest)}
+              </div>;
+            })()}
           </div>
         </button>
         <div className="flex items-start gap-3">
@@ -322,22 +337,40 @@ export function ContractCard({
                   <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-600">
                     No lines yet — click <span className="font-medium">Enter lines</span> to type {g.co ? 'the change order\'s cost of work, insurance and fee' : 'the schedule of values'}, or paste it from Excel.
                   </td></tr>
-                ) : g.lines.map((l) => {
-                  const p = progress.get(l.id);
-                  return (
-                    <tr key={l.id} className="border-b hover:bg-blue-50/40 cursor-pointer" onClick={() => onEditLine(l)}>
-                      <td className="px-3 py-1.5 text-xs text-gray-500 tabular-nums">{l.itemNo || ''}</td>
-                      <td className="px-3 py-1.5">
-                        <div className="text-gray-900">{l.description}</div>
-                        {l.code && <div className="text-[11px] text-gray-500 font-mono">{l.code}</div>}
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{money(l.scheduledValue)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{money(p?.toDate ?? 0)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(p?.toDate ?? 0, l.scheduledValue)}</td>
-                      <td className="px-3 py-1.5 text-xs">{allocationLabel(l)}</td>
-                    </tr>
-                  );
-                })}
+                ) : (() => {
+                  const lineRow = (l: SovLineRow) => {
+                    const p = progress.get(l.id);
+                    return (
+                      <tr key={l.id} className="border-b hover:bg-blue-50/40 cursor-pointer" onClick={() => onEditLine(l)}>
+                        <td className="px-3 py-1.5 text-xs text-gray-500 tabular-nums">{l.itemNo || ''}</td>
+                        <td className="px-3 py-1.5">
+                          <div className="text-gray-900">{l.description}</div>
+                          {l.code && <div className="text-[11px] text-gray-500 font-mono">{l.code}</div>}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{money(l.scheduledValue)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">{money(p?.toDate ?? 0)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(p?.toDate ?? 0, l.scheduledValue)}</td>
+                        <td className="px-3 py-1.5 text-xs">{allocationLabel(l)}</td>
+                      </tr>
+                    );
+                  };
+                  // Lines under G703 sections (Sitework, Tenant Improvements): a heading and subtotal for each.
+                  const secs = Array.from(new Set(g.lines.map((l) => (l.section ?? '').trim())));
+                  if (secs.length < 2 && !secs[0]) return g.lines.map(lineRow);
+                  return secs.flatMap((sec) => {
+                    const ls = g.lines.filter((l) => (l.section ?? '').trim() === sec);
+                    const t = ls.reduce((a, l) => a + l.scheduledValue, 0), d = ls.reduce((a, l) => a + (progress.get(l.id)?.toDate ?? 0), 0);
+                    return [
+                      <tr key={`h-${sec}`} className="bg-slate-50 border-b"><td colSpan={6} className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{sec || 'No Section'}</td></tr>,
+                      ...ls.map(lineRow),
+                      <tr key={`t-${sec}`} className="border-b bg-slate-50/60 text-sm font-semibold">
+                        <td /><td className="px-3 py-1">{sec || 'No Section'} Subtotal</td>
+                        <td className="px-3 py-1 text-right tabular-nums">{money(t)}</td><td className="px-3 py-1 text-right tabular-nums">{money(d)}</td>
+                        <td className="px-3 py-1 text-right tabular-nums text-gray-600">{pct(d, t)}</td><td />
+                      </tr>,
+                    ];
+                  });
+                })()}
               </tbody>
             );
           })}

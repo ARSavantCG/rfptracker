@@ -381,7 +381,13 @@ export function ApplicationDialog({
 
   if (!contract) return null;
   const groups = [
-    { label: 'Base Contract', lines: contractLines.filter((l) => l.changeOrderId == null) },
+    // Base contract lines split by G703 section (Sitework, Tenant Improvements) when they have one: a subtotal each.
+    ...(() => {
+      const base = contractLines.filter((l) => l.changeOrderId == null);
+      const secs = Array.from(new Set(base.map((l) => (l.section ?? '').trim())));
+      if (secs.length < 2 && !secs[0]) return [{ label: 'Base Contract', lines: base }];
+      return secs.map((sec) => ({ label: `Base Contract — ${sec || 'No Section'}`, lines: base.filter((l) => (l.section ?? '').trim() === sec) }));
+    })(),
     // A CO shows from its start app on — or on any app that already bills it.
     ...changeOrders.filter((c) => c.contractId === contract.id && c.status !== 'void'
       && (c.startApp == null || c.startApp <= thisNumber || contractLines.some((l) => l.changeOrderId === c.id && draft[l.id] && (num(draft[l.id].work) || num(draft[l.id].stored) || num(draft[l.id].toDate)))))
@@ -597,7 +603,7 @@ export function ApplicationDialog({
                     </tr>
                   );
                 })}
-                {totalsRow(`${g.label.split(' — ')[0]} subtotal`, g.lines, 'bg-gray-50 border-t font-medium')}
+                {totalsRow(`${g.label.startsWith('Base Contract — ') ? g.label.slice(16) : g.label.split(' — ')[0]} Subtotal`, g.lines, 'bg-gray-50 border-t font-medium')}
               </tbody>
             ))}
             <tfoot className="sticky bottom-0 z-10 bg-white shadow-[0_-1px_0_#374151]">

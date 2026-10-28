@@ -142,6 +142,11 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
     try { const nb = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { fundingScopes: scopes }); queryClient.setQueryData([projectKey(projectId)], nb); }
     catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
+  // Scopes rolled up to their totals (Sitework, Tenant Improvements…), remembered in this browser.
+  const shutKey = `pm-budget-scopes-shut-${projectId}`;
+  const [shut, setShut] = useState<Set<string>>(() => { try { return new Set(JSON.parse(localStorage.getItem(shutKey) || '[]')); } catch { return new Set(); } });
+  const saveShut = (n: Set<string>) => { setShut(n); try { localStorage.setItem(shutKey, JSON.stringify(Array.from(n))); } catch { /* private window */ } };
+  const toggleShut = (k: string) => { const n = new Set(shut); if (n.has(k)) n.delete(k); else n.add(k); saveShut(n); };
   const update = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const mappedKeys = useMemo(() => new Set(bundle.sovLines.flatMap((l) => l.allocations.map((x) => x.baselineKey))), [bundle.sovLines]);
   const coKeys = useMemo(() => new Set(a.changeOrders.flatMap((c) => c.lines.map((l) => l.key))), [a]);
@@ -224,6 +229,12 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
           {hasCos && <Stat label={confirmed ? 'Revised Budget' : 'Budget with COs'} value={money(current)} />}
         </div>
 
+        {(bundle.scopeSetup ?? []).length > 0 && (
+          <div className="flex justify-end gap-3 text-xs -mb-1">
+            <button className="text-blue-700 hover:underline" onClick={() => saveShut(new Set([...(bundle.scopeSetup ?? []).map((sc) => sc.id), 'none']))}>Roll Up All Scopes</button>
+            <button className="text-blue-700 hover:underline" onClick={() => saveShut(new Set())}>Expand All</button>
+          </div>
+        )}
         <div className="overflow-x-auto border rounded-md">
           <table className={`w-full text-sm ${confirmed ? 'min-w-[1340px]' : 'min-w-[1060px]'}`}>
             <thead>
@@ -302,13 +313,30 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                   if (!idx.length) return [];
                   const sumPriced = r2(idx.reduce((t, { r }) => t + num(r.priced), 0));
                   const sumBudget = r2(idx.reduce((t, { r }) => t + num(r.priced) - num(r.discount) + (xfer.get(r.key) ?? 0) + (coByKey.get(r.key) ?? 0) + (addByKey.get(r.key) ?? 0), 0));
+                  const gk = String(gi === -1 ? 'none' : scopes[gi].id);
+                  const isShut = shut.has(gk);
+                  const sumOf = (f: (r: Row) => number) => r2(idx.reduce((t, { r }) => t + f(r), 0));
+                  // Subtotal across every column shown, so a rolled-up scope still reads in full.
+                  const mid = [
+                    showDiscount && sumOf((r) => num(r.discount)),
+                    confirmed && sumOf((r) => origBy.get(r.key) ?? 0),
+                    hasRev && sumOf((r) => revisionOf(r)),
+                    hasAdd && sumOf((r) => addByKey.get(r.key) ?? 0),
+                    hasXfer && sumOf((r) => xfer.get(r.key) ?? 0),
+                    hasCos && sumOf((r) => coByKey.get(r.key) ?? 0),
+                  ].filter((v) => v !== false) as number[];
                   return [
-                    <tr key={`h-${gi}`} className="bg-slate-50 border-b"><td colSpan={lead + 4} className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{name}</td></tr>,
-                    ...idx.map(({ r, i }) => rowEl(r, i)),
+                    <tr key={`h-${gi}`} className="bg-slate-50 border-b cursor-pointer hover:bg-slate-100" onClick={() => toggleShut(gk)}>
+                      <td colSpan={lead + 4} className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                        <span className="inline-flex items-center gap-1">{isShut ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}{name}
+                          {isShut && <span className="normal-case font-normal tracking-normal text-slate-500">· {idx.length} line{idx.length === 1 ? '' : 's'}</span>}</span>
+                      </td>
+                    </tr>,
+                    ...(isShut ? [] : idx.map(({ r, i }) => rowEl(r, i))),
                     <tr key={`t-${gi}`} className="border-b bg-slate-50/60 font-semibold">
-                      <td className="px-2 py-1" colSpan={3}>{name} Subtotal</td>
+                      <td className="px-2 py-1" colSpan={3}>{name} {isShut ? 'Total' : 'Subtotal'}</td>
                       <td className="px-2 py-1 text-right tabular-nums">{money(sumPriced)}</td>
-                      {Array.from({ length: lead - 3 }).map((_, k) => <td key={k} />)}
+                      {mid.map((v, k) => <td key={k} className="px-2 py-1 text-right tabular-nums">{Math.abs(v) >= 0.005 ? signedMoney(v) : ''}</td>)}
                       <td className="px-2 py-1 text-right tabular-nums">{money(sumBudget)}</td>
                       <td colSpan={2} />
                     </tr>,

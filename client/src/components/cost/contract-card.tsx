@@ -382,9 +382,16 @@ export function ContractCard({
                   return secs.flatMap((sec) => {
                     const ls = g.lines.filter((l) => (l.section ?? '').trim() === sec);
                     const t = ls.reduce((a, l) => a + l.scheduledValue, 0), d = ls.reduce((a, l) => a + (progress.get(l.id)?.toDate ?? 0), 0);
+                    const sk = `${g.id ?? 'base'}:${sec}`;
+                    const isShut = rolled.has(`sec:${sk}`);
                     return [
-                      <tr key={`h-${sec}`} className="bg-slate-50 border-b"><td colSpan={6} className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{sec || 'No Section'}</td></tr>,
-                      ...ls.map(lineRow),
+                      <tr key={`h-${sec}`} className="bg-slate-50 border-b cursor-pointer hover:bg-slate-100" onClick={() => toggleRoll(`sec:${sk}`)}>
+                        <td colSpan={6} className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                          <span className="inline-flex items-center gap-1">{isShut ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}{sec || 'No Section'}
+                            {isShut && <span className="normal-case font-normal tracking-normal text-slate-500">· {ls.length} line{ls.length === 1 ? '' : 's'}</span>}</span>
+                        </td>
+                      </tr>,
+                      ...(isShut ? [] : ls.map(lineRow)),
                       <tr key={`t-${sec}`} className="border-b bg-slate-50/60 text-sm font-semibold">
                         <td /><td className="px-3 py-1">{sec || 'No Section'} Subtotal</td>
                         <td className="px-3 py-1 text-right tabular-nums">{money(t)}</td><td className="px-3 py-1 text-right tabular-nums">{money(d)}</td>

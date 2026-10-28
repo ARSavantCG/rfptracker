@@ -47,6 +47,9 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
           <tbody>
             <Row name={f.confirmed ? 'Approved budget (capital partner)' : 'Budget (draft, not confirmed yet)'} value={f.original} />
             {Math.abs(f.revisions) >= 0.005 && <Row name="Budget revisions" sub="Lines edited after the budget was confirmed" value={f.revisions} />}
+            {((f as any).additionList ?? []).map((x: any, i: number) => (
+              <Row key={`add-${i}`} name={x.label} sub={x.source === 'amortized' ? 'Additional funding: landlord, repaid through rent' : x.source === 'tenant' ? 'Additional funding from the tenant' : 'Additional funding from the capital partner'} value={x.amount} />
+            ))}
             <Row name="Tenant-funded change orders" sub="Billable to the tenant, CM fee included" value={f.tenant} />
             <tr className="border-b">
               <td className="py-1.5 pr-3">
@@ -99,6 +102,9 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
         <table className="w-full">
           <tbody>
             <tr className="border-b font-medium"><td className="py-1.5">Original budget</td><td className="py-1.5 text-right tabular-nums">{money(st.original)}</td></tr>
+            {((f as any).additionList ?? []).map((x: any, i: number) => (
+              <tr key={`sa-${i}`} className="border-b"><td className="py-1.5 pr-3">{x.label}<div className="text-[11px] text-gray-500">Additional funding (not a change order)</div></td><td className="py-1.5 text-right tabular-nums">{signedMoney(x.amount)}</td></tr>
+            ))}
             {st.groups.map((g) => (
               <tr key={g.key} className="border-b align-top">
                 <td className="py-1.5 pl-3">

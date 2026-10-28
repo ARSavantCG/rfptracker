@@ -291,6 +291,7 @@ export async function loadProjectBundle(projectId: number) {
       original: bk.get(r.key)?.original ?? 0,
       revisions: bk.get(r.key)?.revisions ?? 0,
       transfers: bk.get(r.key)?.transfers ?? 0,
+      additions: bk.get(r.key)?.additions ?? 0,
       changeOrders: bk.get(r.key)?.changeOrders ?? 0,
     })),
   };
@@ -1227,6 +1228,60 @@ export function registerCostTrackingRoutes(app: Express): void {
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'withdraw the invoice'); }
+  });
+
+  // ---- additional funding (new money on a budget line that isn't a change order)
+  app.post('/api/cost-projects/:id/budget-additions', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      const b = req.body || {};
+      const key = String(b.key ?? '');
+      const line = baseline.find((x) => x.key === key);
+      if (!line) return res.status(400).json({ message: 'Pick the budget line the funding goes to.' });
+      const amount = Math.round(toCents(b.amount)) / 100;
+      if (!(Math.abs(amount) >= 0.005)) return res.status(400).json({ message: 'Enter the amount.' });
+      const source = ['amortized', 'tenant', 'partner'].includes(b.source) ? b.source : 'amortized';
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || '')) ? String(b.date) : todayEastern();
+      const x = { id: `f-${nanoid(8)}`, key, amount, source, label: String(b.label || 'Additional Funding').trim().slice(0, 120), date, note: String(b.note ?? '').trim().slice(0, 300), by: whoName(req) };
+      a.additions = [...a.additions, x as any];
+      if (a.status === 'confirmed') {
+        a.revisions = [...a.revisions, {
+          at: new Date().toISOString(), by: whoName(req),
+          total: Math.round((discountState(baseline, a).approvedTotal + coSummary(a.changeOrders).approved + a.additions.reduce((t, y) => t + y.amount, 0)) * 100) / 100,
+          note: `Additional funding ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}: ${x.label} on ${line.description}`,
+        }];
+      }
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'add the funding'); }
+  });
+
+  app.delete('/api/cost-projects/:id/budget-additions/:aid', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const a = normalizeApproval(project.budgetApproval);
+      const x = a.additions.find((y) => y.id === req.params.aid);
+      if (!x) return res.status(404).json({ message: 'Funding not found' });
+      a.additions = a.additions.filter((y) => y.id !== x.id);
+      if (a.status === 'confirmed') {
+        const baseline = (project.baseline || []) as BaselineLine[];
+        a.revisions = [...a.revisions, {
+          at: new Date().toISOString(), by: whoName(req),
+          total: Math.round((discountState(baseline, a).approvedTotal + coSummary(a.changeOrders).approved + a.additions.reduce((t, y) => t + y.amount, 0)) * 100) / 100,
+          note: `Additional funding removed: ${x.label} (${x.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})`,
+        }];
+      }
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'remove the funding'); }
   });
 
   // ---- budget transfers (money moved between lines; total unchanged)

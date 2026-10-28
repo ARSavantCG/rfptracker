@@ -289,6 +289,7 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
     <table class="t" style="flex:1"><thead><tr><th class="l">Sources of Funds</th><th>Amount</th></tr></thead><tbody>
       ${r(f.confirmed ? "Approved budget (capital partner)" : "Budget (draft)", f.original)}
       ${Math.abs(f.revisions) >= 0.005 ? r("Budget revisions", f.revisions, "Lines edited after confirmation") : ""}
+      ${((f as any).additionList ?? []).map((x: any) => r(x.label, x.amount, x.source === "amortized" ? "Additional funding: landlord, repaid through rent" : x.source === "tenant" ? "Additional funding from the tenant" : "Additional funding from the capital partner")).join("")}
       ${r("Tenant-funded change orders", f.tenant, "Billable to the tenant, CM fee included")}
       ${r(f.label, f.supplemental, f.supplemental > 0.005 ? "Needed beyond the budget and the tenant's share" : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money2(f.absorbed)} paid from the budget surplus` : "None needed")}
       ${r("Total funding", f.totalFunding, "", "total")}
@@ -298,6 +299,7 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
     </tbody></table>
     <table class="t" style="flex:1"><thead><tr><th class="l">Why the Budget Changed</th><th>Amount</th></tr></thead><tbody>
       ${r("Original budget", f.original, "", "sub")}
+      ${((f as any).additionList ?? []).map((x: any) => r(x.label, x.amount, "Additional funding (not a change order)")).join("")}
       ${(st?.groups || []).map((g) => r(g.label, g.total, `${g.cos.map((c) => c.number).join(", ")}${g.tenant ? ` · tenant pays ${money2(g.tenant)}` : ""}${g.absorbed ? ` · we absorb ${money2(g.absorbed)}` : ""}${g.funded ? ` (${money2(g.funded)} from budget lines)` : ""}`)).join("")}
       ${st && Math.abs(st.revisions) >= 0.005 ? r("Revisions", st.revisions, "Lines edited after confirmation") : ""}
       ${r("Revised budget", f.revised, st?.transferCount ? `${money2(st.moved)} moved between lines; total unchanged` : "", "sub")}
@@ -339,12 +341,12 @@ export function renderBudgetVsActualHtml(input: {
   if (!s.reconciles) notes.push("Lines do not add back to the contracts. Check Unallocated lines on the project page.");
 
   // Original → revised columns earn their width once something has moved a line.
-  const anyMv = (k: "revisions" | "transfers" | "changeOrders") => allRows.some((r) => Math.abs(r[k] ?? 0) >= 0.005);
-  const showRev = anyMv("revisions"), showTx = anyMv("transfers"), showCo = anyMv("changeOrders");
-  const showOriginal = showRev || showTx || showCo;
-  const cols = 8 + (showOriginal ? 1 : 0) + (showRev ? 1 : 0) + (showTx ? 1 : 0) + (showCo ? 1 : 0);
+  const anyMv = (k: "revisions" | "transfers" | "changeOrders" | "additions") => allRows.some((r) => Math.abs((r as any)[k] ?? 0) >= 0.005);
+  const showRev = anyMv("revisions"), showTx = anyMv("transfers"), showCo = anyMv("changeOrders"), showAdd = anyMv("additions");
+  const showOriginal = showRev || showTx || showCo || showAdd;
+  const cols = 8 + (showOriginal ? 1 : 0) + (showRev ? 1 : 0) + (showAdd ? 1 : 0) + (showTx ? 1 : 0) + (showCo ? 1 : 0);
   const mv = (v: number | undefined) => (v && Math.abs(v) >= 0.005 ? cell(v, "muted") : `<td class="num muted"></td>`);
-  const moves = (r: BvaRow) => (showOriginal ? cell(r.original ?? 0, "muted") : "") + (showRev ? mv(r.revisions) : "") + (showTx ? mv(r.transfers) : "") + (showCo ? mv(r.changeOrders) : "");
+  const moves = (r: BvaRow) => (showOriginal ? cell(r.original ?? 0, "muted") : "") + (showRev ? mv(r.revisions) : "") + (showAdd ? mv((r as any).additions) : "") + (showTx ? mv(r.transfers) : "") + (showCo ? mv(r.changeOrders) : "");
 
   const row = (r: BvaRow) => {
     const cls = r.key === UNALLOCATED_KEY ? ' class="unalloc"' : r.key === DEAL_DISCOUNT_KEY ? ' class="deal"' : "";
@@ -355,7 +357,7 @@ export function renderBudgetVsActualHtml(input: {
     const sum = (f: (r: BvaRow) => number) => rows.reduce((a, r) => a + f(r), 0);
     const v = sum((r) => r.variance);
     const m = (showOriginal ? cell(sum((r) => r.original ?? 0)) : "") + (showRev ? cell(sum((r) => r.revisions ?? 0)) : "")
-      + (showTx ? cell(sum((r) => r.transfers ?? 0)) : "") + (showCo ? cell(sum((r) => r.changeOrders ?? 0)) : "");
+      + (showAdd ? cell(sum((r) => (r as any).additions ?? 0)) : "") + (showTx ? cell(sum((r) => r.transfers ?? 0)) : "") + (showCo ? cell(sum((r) => r.changeOrders ?? 0)) : "");
     return `<tr class="${cls}"><td>${escapeHtml(label)}</td>${m}${cell(sum((r) => r.budget))}${cell(sum((r) => r.committed))}${cell(sum((r) => r.pending))}
       ${cell(sum((r) => r.toDate))}${cell(v, negCls(v))}${cell(sum((r) => r.committedTenant))}${cell(sum((r) => r.committedOutstanding))}</tr>`;
   };
@@ -372,7 +374,7 @@ export function renderBudgetVsActualHtml(input: {
   ${reportHeaderHtml({ title: "Budget vs Actual", eyebrow: "Cost Report", info, notes, draft: !!approval && approval.status !== "confirmed" })}
   ${fundingBox(input.funding, input.story)}
   <table class="t"><thead><tr>
-    <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}${showRev ? "<th>Revisions</th>" : ""}${showTx ? "<th>Transfers</th>" : ""}${showCo ? "<th>Approved COs</th>" : ""}<th>${showOriginal ? "Revised Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
+    <th>Description</th>${showOriginal ? "<th>Original Budget</th>" : ""}${showRev ? "<th>Revisions</th>" : ""}${showAdd ? "<th>Additional Funding</th>" : ""}${showTx ? "<th>Transfers</th>" : ""}${showCo ? "<th>Approved COs</th>" : ""}<th>${showOriginal ? "Revised Budget" : "Budget"}</th><th>Committed</th><th>Pending COs</th><th>Spent to Date</th>
     <th>Variance</th><th>Tenant Share</th><th>Outstanding Share</th></tr></thead><tbody>
     ${BUCKETS.map(([k, l]) => group(k, l)).join("")}
     ${sums(allRows, "Total", "total")}

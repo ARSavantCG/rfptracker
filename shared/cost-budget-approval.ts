@@ -165,7 +165,31 @@ export interface BudgetApproval {
   revisions: Array<{ at: string; by: string | null; total: number; note: string }>;
   changeOrders: BudgetCO[];
   transfers: BudgetTransfer[];
+  /** New money added to the budget that isn't a change order (an allowance the tenant exercised under the lease, say). */
+  additions: BudgetAddition[];
 }
+
+/**
+ * Additional funding: money added to the budget without a change order, e.g. the
+ * additional TI allowance PepsiCo exercised under its lease (repaid through rent)
+ * (Adolfo, 2026-10-28). It raises a budget line and is its own source of funds.
+ */
+export interface BudgetAddition {
+  id: string;
+  key: string;
+  amount: number;
+  label: string;
+  /** Who it comes from: the landlord repaid through rent, the tenant, or the capital partner. */
+  source: 'amortized' | 'tenant' | 'partner';
+  date: string;
+  note: string;
+  by: string | null;
+}
+export const ADDITION_SOURCES: ReadonlyArray<[BudgetAddition['source'], string]> = [
+  ['amortized', 'Additional Allowance (Repaid Through Rent)'],
+  ['tenant', 'Tenant Funds'],
+  ['partner', 'Capital Partner'],
+];
 
 /**
  * Money moved from one budget line to another — contingency to the office
@@ -191,7 +215,7 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 export function emptyApproval(): BudgetApproval {
   return {
     status: 'draft', lafTotal: null, lafLines: [], discount: 0, allocations: [],
-    confirmedAt: null, confirmedBy: null, original: null, originalTotal: null, revisions: [], changeOrders: [], transfers: [],
+    confirmedAt: null, confirmedBy: null, original: null, originalTotal: null, revisions: [], changeOrders: [], transfers: [], additions: [],
   };
 }
 
@@ -225,6 +249,11 @@ export function normalizeApproval(raw: any): BudgetApproval {
     id: String(t?.id ?? ''), fromKey: String(t?.fromKey ?? ''), toKey: String(t?.toKey ?? ''),
     amount: r2(num(t?.amount)), note: String(t?.note ?? ''), date: String(t?.date ?? '').slice(0, 10), by: t?.by ? String(t.by) : null,
   })).filter((t: BudgetTransfer) => t.id && t.fromKey && t.toKey && t.fromKey !== t.toKey && t.amount > 0) : [];
+  a.additions = Array.isArray(raw.additions) ? raw.additions.map((x: any) => ({
+    id: String(x?.id ?? ''), key: String(x?.key ?? ''), amount: r2(num(x?.amount)), label: String(x?.label ?? 'Additional Funding').slice(0, 120),
+    source: (['amortized', 'tenant', 'partner'].includes(x?.source) ? x.source : 'amortized') as BudgetAddition['source'],
+    date: String(x?.date ?? '').slice(0, 10), note: String(x?.note ?? '').slice(0, 300), by: x?.by ? String(x.by) : null,
+  })).filter((x: BudgetAddition) => x.id && x.key && Math.abs(x.amount) >= 0.005) : [];
   return a;
 }
 
@@ -372,6 +401,7 @@ export function effectiveBaseline(baseline: readonly BaselineLine[], a: BudgetAp
   const byKey = new Map<string, number>();
   for (const x of a.allocations) byKey.set(x.key, (byKey.get(x.key) ?? 0) + x.amount);
   let out: BaselineLine[] = (baseline || []).map((b) => ({ ...b, budget: r2(num(b.budget) - (byKey.get(b.key) ?? 0)) }));
+  out = applyAdditions(out, a.additions || []);
   out = applyTransfers(out, a.transfers || []);
   out = applyChangeOrders(out, a.changeOrders || [], cmKey);
   const { undistributed } = discountState(baseline, a);
@@ -620,6 +650,14 @@ export function transferNet(transfers: readonly BudgetTransfer[]): Map<string, n
   return m;
 }
 
+/** Add new money to its budget lines (additions on a line that has since been removed are skipped). */
+export function applyAdditions(lines: BaselineLine[], adds: readonly BudgetAddition[]): BaselineLine[] {
+  if (!adds.length) return lines;
+  const m = new Map<string, number>();
+  for (const x of adds) m.set(x.key, r2((m.get(x.key) ?? 0) + x.amount));
+  return lines.map((l) => (m.has(l.key) ? { ...l, budget: r2(num(l.budget) + m.get(l.key)!) } : l));
+}
+
 /** Move the money. A transfer touching a line that has since been removed is skipped whole, so nothing is lost on one side only. */
 export function applyTransfers(lines: BaselineLine[], transfers: readonly BudgetTransfer[]): BaselineLine[] {
   if (!transfers.length) return lines;
@@ -637,6 +675,8 @@ export type BudgetBreakdownRow = {
   /** Edits made to the line after it was confirmed. */
   revisions: number;
   transfers: number;
+  /** Additional funding added to the line (not a change order). */
+  additions: number;
   /** Approved budget change orders on the line (CM fee onto the CM line). */
   changeOrders: number;
   revised: number;
@@ -650,7 +690,8 @@ export type BudgetBreakdownRow = {
 export function budgetBreakdown(baseline: readonly BaselineLine[], a: BudgetApproval, cmKey: string | null = null): BudgetBreakdownRow[] {
   const all = effectiveBaseline(baseline, a, cmKey);
   const noCo = effectiveBaseline(baseline, { ...a, changeOrders: [] }, cmKey);
-  const bare = effectiveBaseline(baseline, { ...a, changeOrders: [], transfers: [] }, cmKey);
+  const noTx = effectiveBaseline(baseline, { ...a, changeOrders: [], transfers: [] }, cmKey);
+  const bare = effectiveBaseline(baseline, { ...a, changeOrders: [], transfers: [], additions: [] }, cmKey);
   const val = (rows: BaselineLine[], k: string) => num(rows.find((r) => r.key === k)?.budget);
   const confirmed = a.status === 'confirmed' && a.original != null;
   const orig = new Map((a.original || []).map((o) => [o.key, o]));
@@ -661,12 +702,13 @@ export function budgetBreakdown(baseline: readonly BaselineLine[], a: BudgetAppr
     const o = orig.get(k);
     const revised = r2(val(all, k));
     const changeOrders = r2(val(all, k) - val(noCo, k));
-    const transfers = r2(val(noCo, k) - val(bare, k));
+    const transfers = r2(val(noCo, k) - val(noTx, k));
+    const additions = r2(val(noTx, k) - val(bare, k));
     const original = confirmed ? r2(o?.budget ?? 0) : r2(val(bare, k));
     return {
       key: k, description: row?.description ?? o?.description ?? 'Removed line', bucket: row?.bucket ?? o?.bucket ?? 'misc',
-      original, transfers, changeOrders, revised,
-      revisions: r2(revised - original - transfers - changeOrders),
+      original, transfers, additions, changeOrders, revised,
+      revisions: r2(revised - original - transfers - additions - changeOrders),
     };
   });
 }
@@ -701,6 +743,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const original = r2(rows.reduce((t, r) => t + r.original, 0));
   const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
   const transfers = r2(rows.reduce((t, r) => t + r.transfers, 0));
+  const additions = r2(rows.reduce((t, r) => t + (r.additions ?? 0), 0));
   const revised = r2(rows.reduce((t, r) => t + r.revised, 0));
   const tenant = s.approvedBillable;
   const absorbed = s.approvedAbsorbed;
@@ -714,7 +757,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   let unmapped = 0;
   // Split: the project's cost to complete, and the CM fees (original, partner's and tenant's on change orders) set aside.
   let cmReserved = 0, projectCost = 0, cmCeiling = 0, cmOriginal = 0, spendable = 0;
-  const fundsInLater = () => r2(original + revisions + s.approvedBillable - need);
+  const fundsInLater = () => r2(original + revisions + additions + s.approvedBillable - need);
   if (cost.byKey) {
     // Lines bought out (anything committed): what's committed, under or over. Lines not yet: their budget.
     let committedLines = 0, openBudget = 0;
@@ -760,10 +803,12 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   } else {
     need = r2(Math.max(revised, projectedCost));
   }
-  const fundsIn = r2(original + revisions + tenant);
+  const fundsIn = r2(original + revisions + additions + tenant);
   const supplemental = r2(Math.max(0, need - fundsIn));
   return {
     original, revisions, transfers, tenant, absorbed, revised,
+    /** Additional funding (not change orders), by label. */
+    additions, additionList: (a.additions || []).map((x) => ({ label: x.label, source: x.source, amount: x.amount, date: x.date })),
     projectedCost, projectedOverrun,
     /** What the project needs to finish, and the surplus left in the budget after it. */
     need, surplus: r2(Math.max(0, fundsIn - need)),

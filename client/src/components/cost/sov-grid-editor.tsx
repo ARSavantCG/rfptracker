@@ -14,12 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Plus, Trash2, ClipboardPaste, ArrowDownToLine } from 'lucide-react';
+import { Plus, Trash2, ClipboardPaste, ArrowDownToLine, ListPlus } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { parseSovPaste } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
 import { MoneyInput } from './inputs';
-import { money, projectKey, type SovLineRow } from './types';
+import { money, projectKey, BUCKET_LABEL, type SovLineRow, type ProjectBundle } from './types';
 
 const UNMAPPED = '__unmapped__';
 const SPREAD = '__spread__';
@@ -138,6 +138,29 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   const added = live.filter((r) => r.id == null);
   const dirty = removed.length + changed.length + added.length > 0;
 
+  // ---- Import from the budget: one SOV line per budget line, mapped to it (Adolfo, 2026-10-28: the GC's SOV matches the budget).
+  const [imp, setImp] = useState<Set<string> | null>(null);
+  const bundle = queryClient.getQueryData<ProjectBundle>([projectKey(projectId)]);
+  const contract = bundle?.contracts.find((c) => c.id === contractId);
+  const budgetRows = (bundle?.summary.rows ?? baseline.map((b) => ({ key: b.key, description: b.description, bucket: b.bucket, budget: b.budget, committed: 0, pending: 0 }) as any))
+    .filter((r: any) => !String(r.key).startsWith('__'));
+  const scopeOf = (key: string) => (bundle?.scopeSetup ?? []).find((sc) => sc.lineKeys.includes(key))?.name ?? '';
+  const inGrid = new Set(rows.filter((r) => r.map && r.map !== UNMAPPED).map((r) => r.map));
+  const openImport = () => {
+    // Pre-ticked: this contract's kind of budget line, not already in the grid or committed on another contract.
+    setImp(new Set(budgetRows.filter((r: any) => (!contract || r.bucket === contract.bucket) && !inGrid.has(r.key) && !(Math.abs(r.committed) >= 0.005)).map((r: any) => r.key)));
+  };
+  const doImport = () => {
+    const picked = budgetRows.filter((r: any) => imp?.has(r.key));
+    if (!picked.length) return;
+    const start = rows.filter((r) => r.id != null || r.description.trim() || num(r.value)).length;
+    const incoming = picked.map((r: any, i: number) => ({ ...blankRow(r.key, scopeOf(r.key)), itemNo: String(start + i + 1), description: r.description, value: fmtMoneyText(String(Math.round(r.budget * 100) / 100)) }));
+    touched.current = true;
+    setRows((rs) => [...rs.filter((r) => r.id != null || r.description.trim() || num(r.value)), ...incoming]);
+    setImp(null);
+    toast({ title: `${incoming.length} line${incoming.length === 1 ? '' : 's'} added from the budget`, description: 'Each is mapped to its budget line. Check the amounts against the GC\'s SOV, then Save.' });
+  };
+
   const readPaste = () => {
     const parsed = parseSovPaste(paste ?? '');
     if (!parsed.lines.length) { toast({ title: 'Nothing Read', description: 'Each row needs a description and an amount.' }); return; }
@@ -187,6 +210,11 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="text-sm font-semibold text-gray-900">Editing {label}{dirty ? <span className="ml-2 text-xs font-medium text-amber-700">Unsaved Changes</span> : <span className="ml-2 text-xs font-medium text-green-700">✓ All Changes Saved</span>}</div>
             <div className="flex gap-2">
+              {changeOrderId == null && (
+                <Button size="sm" variant="outline" className="h-8" onClick={() => (imp ? setImp(null) : openImport())}>
+                  <ListPlus className="h-3.5 w-3.5 mr-1" /> Import from Budget
+                </Button>
+              )}
               <Button size="sm" variant="outline" className="h-8" onClick={() => setPaste(paste == null ? '' : null)}>
                 <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Paste from Excel or a G703
               </Button>
@@ -194,6 +222,38 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
               <Button size="sm" className="h-8" disabled={!dirty || saving || missingDesc.length > 0} onClick={save}>{saving ? 'Saving…' : 'Save Lines'}</Button>
             </div>
           </div>
+          {imp && (
+            <div className="bg-white border rounded-md p-2 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-xs text-gray-600">Each ticked budget line becomes a line here at its budget amount, mapped to that budget line{(bundle?.scopeSetup ?? []).length ? ', with its funding scope as the section' : ''}. Pre-ticked: {contract ? `${BUCKET_LABEL[contract.bucket] ?? contract.bucket} lines` : 'lines'} not on a contract yet.</p>
+                <div className="flex gap-3 text-xs">
+                  <button className="text-blue-700 hover:underline" onClick={() => setImp(new Set(budgetRows.map((r: any) => r.key)))}>Select All</button>
+                  <button className="text-blue-700 hover:underline" onClick={() => setImp(new Set())}>Clear</button>
+                </div>
+              </div>
+              <div className="max-h-72 overflow-y-auto border rounded">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {budgetRows.map((r: any) => (
+                      <tr key={r.key} className="border-b last:border-0">
+                        <td className="px-2 py-1 w-8"><input type="checkbox" className="h-4 w-4" checked={imp.has(r.key)} onChange={(e) => setImp((cur) => { const n = new Set(cur); if (e.target.checked) n.add(r.key); else n.delete(r.key); return n; })} /></td>
+                        <td className="px-2 py-1">{r.description}{scopeOf(r.key) && <span className="ml-2 text-[11px] text-gray-500">{scopeOf(r.key)}</span>}</td>
+                        <td className="px-2 py-1 text-[11px] text-gray-500">{inGrid.has(r.key) ? 'already in this grid' : Math.abs(r.committed) >= 0.005 ? `on a contract (${money(r.committed)})` : ''}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{money(r.budget)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-gray-600">{imp.size} selected · {money(budgetRows.filter((r: any) => imp.has(r.key)).reduce((t: number, r: any) => t + r.budget, 0))}</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setImp(null)}>Cancel</Button>
+                  <Button size="sm" disabled={!imp.size} onClick={doImport}>Add to Grid</Button>
+                </div>
+              </div>
+            </div>
+          )}
           {paste != null && (
             <div className="bg-white border rounded-md p-2 space-y-2">
               <p className="text-xs text-gray-600">

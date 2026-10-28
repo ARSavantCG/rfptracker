@@ -102,6 +102,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
       <G702CompareCard b={b} projectId={projectId} open={open} />
+      <SovCard b={b} projectId={projectId} open={open} />
       <Card id="rollforward" title="Billing Roll-Forward" what="What's been billed through the end of each pay app, by pay app and line by line. Each pay app's total to date should be the next one's Previous; flags where the contractor's doesn't carry forward."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/rollforward/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         <p className="text-sm text-gray-700">Prints landscape: one table by pay app (previous, this period, total to date, their line 4 and whether it rolls forward), then every line's total to date at the end of each pay app.</p>
@@ -692,6 +693,29 @@ export function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; project
 }
 
 /** A report, rolled up to one line; open it to set its filters and print. Remembers what was left open. */
+function SovCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const withLines = b.contracts.filter((c) => b.sovLines.some((l) => l.contractId === c.id));
+  const [cid, setCid] = useState<string>('all');
+  return (
+    <Card id="sov" title="Contract Schedule of Values" what="Each contract's SOV as a report: base contract by section, every change order, with billed to date, percent complete, balance to finish, retainage held and the budget line each maps to."
+          action={<Button variant="outline" className="h-9" disabled={!withLines.length} onClick={() => open(`/api/reports/sov/${projectId}${cid === 'all' ? '' : `?contract=${cid}`}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      {withLines.length ? (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-700">Contract</span>
+          <Select value={cid} onValueChange={setCid}>
+            <SelectTrigger className="h-8 w-72"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Contracts (One per Page)</SelectItem>
+              {withLines.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.counterparty}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-gray-500">Prints landscape, billed through the latest pay app.</span>
+        </div>
+      ) : <p className="text-sm text-gray-600">No contract lines entered yet.</p>}
+    </Card>
+  );
+}
+
 function Card({ id, title, what, summary, action, children, defaultOpen = false }: { id: string; title: string; what: string; summary?: string; action?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) {
   const storeKey = `pm-report-open-${id}`;
   const [isOpen, setOpen] = useState(() => { try { const v = localStorage.getItem(storeKey); return v == null ? defaultOpen : v === '1'; } catch { return defaultOpen; } });

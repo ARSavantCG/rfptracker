@@ -27,6 +27,7 @@ import { CO_STAGES } from "@shared/co-routing";
 import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-report";
 import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
+import { renderSovHtml } from "./sov-report";
 import { renderOwedHtml } from "./owed-report";
 import { renderAgingHtml } from "./aging-report";
 import { renderExecSummaryHtml } from "./exec-summary-report";
@@ -1265,6 +1266,31 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), outstandingOnly, ...o, generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
       console.error("Owed by vendor error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Contract SOV: a contract's schedule of values with billed to date (?contract=, else all; ?through= app number). */
+  app.get("/api/reports/sov/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const facts = await propertyFacts(b.project);
+      const cid = req.query.contract ? Number(req.query.contract) : null;
+      const through = req.query.through ? Number(req.query.through) : null;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderSovHtml({
+        info: infoRows(b.project, facts.propertyLabel, facts.rentableSf),
+        contracts: b.contracts.map((c: any) => ({ id: c.id, counterparty: c.counterparty, contractNumber: c.contractNumber, retainagePct: Number(c.retainagePct) || 0 })),
+        sovLines: b.sovLines as any, changeOrders: b.changeOrders as any, applications: b.applications as any[],
+        budgetNames: new Map((b.summary.rows as any[]).map((r) => [r.key, r.description])),
+        contractId: Number.isFinite(cid as number) ? cid : null, through: Number.isFinite(through as number) ? through : null,
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("SOV report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

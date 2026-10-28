@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X, ArrowUp, ArrowDown, Printer } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput, MoneyInput } from './inputs';
 import { CoStageControls, CoHigherTag } from './co-routing';
@@ -22,7 +22,7 @@ import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
-  money, pct, projectKey, BUCKET_LABEL, checkBadge,
+  money, pct, projectKey, BUCKET_LABEL, checkBadge, openReport,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow, type PaymentRow,
 } from './types';
 
@@ -346,6 +346,12 @@ export function ContractCard({
                                 title={editing != null ? 'Save or cancel the lines you are editing first' : undefined}
                                 onClick={() => setEditing(String(g.id ?? 'base'))}>
                           <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit Lines' : 'Enter Lines'}
+                        </Button>
+                      )}
+                      {g.id == null && lines.length > 0 && (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Print this contract's schedule of values: every line, billed to date, balance to finish and retainage"
+                                onClick={() => openReport(`/api/reports/sov/${projectId}?contract=${contract.id}`)}>
+                          <Printer className="h-3.5 w-3.5 mr-1" /> Print SOV
                         </Button>
                       )}
                     </div>

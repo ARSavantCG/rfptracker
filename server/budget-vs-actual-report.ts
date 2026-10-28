@@ -28,6 +28,7 @@ import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-
 import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
 import { renderOwedHtml } from "./owed-report";
+import { renderAgingHtml } from "./aging-report";
 import { renderExecSummaryHtml } from "./exec-summary-report";
 import { listSnapshots } from "./snapshots";
 import { coLog, type CoLogRow } from "@shared/co-log";
@@ -1212,6 +1213,36 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.send(renderExecSummaryHtml(b, { info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), today, generatedBy: generatedByName((req as any).user), since }));
     } catch (e: any) {
       console.error("Financial summary error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Pay App Aging: open pay apps by days outstanding (?asOf=, default today). */
+  app.get("/api/reports/aging/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const asOfRaw = String(req.query.asOf || "");
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : todayEastern();
+      const pos = positionAsOf(asOf, b.positionInput);
+      const dayOf = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v ?? "")).slice(0, 10);
+      const facts = await propertyFacts(b.project);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderAgingHtml({
+        info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
+        contracts: b.contracts.map((c: any) => ({ id: c.id, name: c.counterparty + (c.contractNumber ? ` #${c.contractNumber}` : "") })),
+        apps: (pos.applications as any[]).map((a) => {
+          const row: any = (b.applications as any[]).find((x) => x.id === a.applicationId);
+          const pays = (b.payments as any[]).filter((p) => p.applicationId === a.applicationId && dayOf(p.paidDate) <= asOf).map((p) => dayOf(p.paidDate)).sort();
+          return { ...a, enteredAt: row?.createdAt ? dayOf(row.createdAt) : null, lastPaid: pays.pop() ?? null };
+        }),
+        retainage: (pos.contracts as any[]).map((c) => ({ contractId: c.contractId, held: c.retainageHeld })),
+        generatedBy: generatedByName((req as any).user),
+      }));
+    } catch (e: any) {
+      console.error("Aging report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

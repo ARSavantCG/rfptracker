@@ -106,6 +106,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/rollforward/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
         <p className="text-sm text-gray-700">Prints landscape: one table by pay app (previous, this period, total to date, their line 4 and whether it rolls forward), then every line's total to date at the end of each pay app.</p>
       </Card>
+      <AgingCard b={b} projectId={projectId} open={open} />
       <PayoffCard b={b} projectId={projectId} />
       <OwedByVendorCard b={b} projectId={projectId} open={open} />
       <CoLogCard b={b} projectId={projectId} open={open} />
@@ -832,6 +833,31 @@ function FinancialSummaryCard({ b, projectId, open }: { b: ProjectBundle; projec
           </div></label>
       </div>
       <p className="text-xs text-gray-600">A snapshot is saved on its own at the start of every month (the month just ended), so the summary can say what moved and why. {list.length ? `${list.length} saved so far.` : 'The first one is saved shortly after this goes live.'}</p>
+    </Card>
+  );
+}
+
+/** Pay App Aging: open pay apps by days outstanding since the period-to date. */
+function AgingCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
+  const [asOf, setAsOf] = useState(todayIso());
+  const rows = b.position.applications.filter((a) => a.open > 0.005 && String(a.date).slice(0, 10) <= asOf);
+  const age = (d: string) => Math.max(0, Math.round((Date.parse(asOf + 'T12:00:00Z') - Date.parse(String(d).slice(0, 10) + 'T12:00:00Z')) / 86400000));
+  const buckets = [['Current (0–30)', 0, 30], ['31–60 Days', 31, 60], ['61–90 Days', 61, 90], ['Over 90 Days', 91, Infinity]] as const;
+  const sum = (lo: number, hi: number) => rows.filter((a) => { const d = age(a.date); return d >= lo && d <= hi; }).reduce((s, a) => s + a.open, 0);
+  const total = rows.reduce((s, a) => s + a.open, 0);
+  return (
+    <Card id="aging" title="Pay App Aging" what="Every pay app not yet paid in full, by days outstanding since its period-to date: Current, 31–60, 61–90 and Over 90, by contractor and pay app. Retainage is shown apart; it isn't past due."
+          summary={rows.length ? `${money(total)} Open · ${money(sum(61, Infinity))} Over 60 Days` : 'Nothing Open'}
+          action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/aging/${projectId}?asOf=${asOf}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+      <div className="flex flex-wrap items-end gap-6 text-sm">
+        <label className="space-y-1"><span className="text-xs text-gray-600 block">As Of</span>
+          <Input type="date" className="h-9 w-44" value={asOf} onChange={(e) => setAsOf(e.target.value)} /></label>
+        {buckets.map(([l, lo, hi]) => (
+          <div key={l}><div className="text-[11px] uppercase tracking-wide text-gray-500">{l}</div>
+            <div className={`font-semibold tabular-nums ${lo > 60 && sum(lo, hi) > 0.005 ? 'text-red-700' : ''}`}>{money(sum(lo, hi))}</div></div>
+        ))}
+        <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Total Open</div><div className="font-semibold tabular-nums">{money(total)}</div></div>
+      </div>
     </Card>
   );
 }

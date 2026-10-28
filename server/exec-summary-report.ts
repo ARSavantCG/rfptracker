@@ -6,7 +6,8 @@
  */
 import { coLog } from '@shared/co-log';
 import { threeWayCheck, waiversByPayApp, paidOfFrom, gcPaymentDue } from '@shared/cost-waivers';
-import { carryForwardCheck } from '@shared/cost-tracking';
+import { carryForwardCheck, UNALLOCATED_KEY } from '@shared/cost-tracking';
+import { DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
 import { financialFigures, figuresDiff, type FinancialFigures } from '@shared/financial-figures';
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
 
@@ -45,8 +46,17 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
 
   // ---- Watch list: what needs attention, worked out
   const watch: Item[] = [];
-  const over = (b.summary.rows as any[]).filter((r) => r.variance < -0.005).sort((p, q) => p.variance - q.variance);
+  const rowsAll = b.summary.rows as any[];
+  // A credit line (Deal Discount, a value engineering credit) has a negative budget and nothing
+  // committed to it: it isn't over, it's a credit not yet put on the lines it belongs to.
+  const isCredit = (r: any) => r.budget < -0.005 && Math.abs(r.committed) < 0.005 && Math.abs(r.pending ?? 0) < 0.005;
+  const unalloc = rowsAll.find((r) => r.key === UNALLOCATED_KEY && Math.abs(r.committed) >= 0.005);
+  const over = rowsAll.filter((r) => r.variance < -0.005 && !isCredit(r) && r.key !== UNALLOCATED_KEY).sort((p, q) => p.variance - q.variance);
+  const credits = rowsAll.filter(isCredit);
+  if (unalloc) watch.push({ level: 'amber', text: `${money0(unalloc.committed)} of contract and change order lines isn't mapped to a budget line yet (Unallocated), so it can't be measured against a budget. Map those lines on the Contracts tab.` });
   for (const r of over.slice(0, 5)) watch.push({ level: 'red', text: `${r.description} is committed ${money0(-r.variance)} over its budget (${money0(r.committed)} against ${money0(r.budget)}).` });
+  if (over.length > 5) watch.push({ level: 'red', text: `${over.length - 5} more line${over.length - 5 === 1 ? ' is' : 's are'} committed over budget: ${over.slice(5).map((r) => r.description).join(', ')}.` });
+  if (credits.length) watch.push({ level: 'info', text: `Credits not yet put on a budget line: ${credits.map((r) => `${r.key === DEAL_DISCOUNT_KEY ? 'Deal Discount (the LAF total less the priced budget)' : r.description} ${money0(r.budget)}`).join('; ')}. They lower the budget total; nothing is committed against them.` });
   if (pend > 0.005) {
     watch.push(afterPending < -0.005
       ? { level: 'red', text: `Pending change orders (${money0(pend)}) would put the project ${money0(-afterPending)} over budget if all are approved.` }
@@ -55,7 +65,7 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
   const stuck = pending.filter((c) => (c.routing.daysInStage ?? 0) >= 30).sort((p, q) => (q.routing.daysInStage ?? 0) - (p.routing.daysInStage ?? 0));
   if (stuck.length) watch.push({ level: 'amber', text: `${stuck.length} change order${stuck.length === 1 ? ' has' : 's have'} sat 30+ days in the same stage: ${stuck.slice(0, 4).map((c) => `${c.number} (${c.routing.label}${c.routing.with ? `, with ${c.routing.with}` : ''}, ${c.routing.daysInStage} days)`).join('; ')}.` });
   const unexecuted = approved.filter((c) => !c.executed);
-  if (unexecuted.length) watch.push({ level: 'amber', text: `${unexecuted.length} approved change order${unexecuted.length === 1 ? ' has' : 's have'} no executed copy on file: ${unexecuted.slice(0, 5).map((c) => c.number).join(', ')}.` });
+  if (unexecuted.length) watch.push({ level: 'amber', text: `${unexecuted.length} approved change order${unexecuted.length === 1 ? ' has' : 's have'} no executed copy on file: ${unexecuted.map((c) => c.number).join(', ')}.` });
 
   const apps = [...(b.applications as any[])].sort((p, q) => p.contractId - q.contractId || p.number - q.number);
   const label = (a: any) => `${cname(a.contractId)} ${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber ?? a.number)}`;
@@ -157,8 +167,15 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
 
   // Budget by bucket
   const buckets = new Map<string, { budget: number; committed: number; pending: number; toDate: number }>();
+  // By scope when the budget is grouped (Site Work, Tenant Improvements), else by category;
+  // Unallocated and the Deal Discount always on their own rows so neither hides in Miscellaneous.
+  const scopeOf = new Map<string, string>();
+  for (const sc of ((b as any).scopeSetup ?? []) as Array<{ name: string; lineKeys: string[] }>) for (const k of sc.lineKeys) if (!scopeOf.has(k)) scopeOf.set(k, sc.name);
+  const groupOf = (r: any) => r.key === UNALLOCATED_KEY ? 'Unallocated (Not Mapped to a Budget Line)'
+    : r.key === DEAL_DISCOUNT_KEY ? 'Deal Discount (per LAF)'
+    : scopeOf.get(r.key) ?? (scopeOf.size ? 'Other' : (BUCKET[r.bucket || 'misc'] ?? r.bucket));
   for (const r of b.summary.rows as any[]) {
-    const k = r.bucket || 'misc';
+    const k = groupOf(r);
     const cur = buckets.get(k) ?? { budget: 0, committed: 0, pending: 0, toDate: 0 };
     cur.budget += r.budget; cur.committed += r.committed; cur.pending += r.pending; cur.toDate += r.toDate;
     buckets.set(k, cur);
@@ -168,8 +185,8 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     return `<tr${cls}><td>${escapeHtml(name)}</td><td class="num">${money0(v.budget)}</td><td class="num">${money0(v.committed)}</td><td class="num">${money0(v.pending)}</td><td class="num">${money0(proj)}</td><td class="num" style="color:${rem < -0.5 ? '#991b1b' : '#166534'}">${rem < -0.5 ? `(${money0(-rem)})` : money0(rem)}</td><td class="num">${money0(v.toDate)}</td><td class="num">${pct(v.toDate, v.committed)}</td></tr>`;
   };
   const budgetHtml = `<h3 class="sec">Budget</h3>
-  <table class="t"><thead><tr><th class="l">Category</th><th>Budget</th><th>Committed</th><th>Pending COs</th><th>Projected</th><th>Remaining</th><th>Work Complete</th><th>% of Committed</th></tr></thead><tbody>
-    ${Array.from(buckets.entries()).map(([k, v]) => bRow(BUCKET[k] ?? k, v)).join('')}
+  <table class="t"><thead><tr><th class="l">${scopeOf.size ? 'Scope' : 'Category'}</th><th>Budget</th><th>Committed</th><th>Pending COs</th><th>Projected</th><th>Remaining</th><th>Work Complete</th><th>% of Committed</th></tr></thead><tbody>
+    ${Array.from(buckets.entries()).filter(([, v]) => Math.abs(v.budget) >= 0.005 || Math.abs(v.committed) >= 0.005 || Math.abs(v.pending) >= 0.005).map(([k, v]) => bRow(k, v)).join('')}
     ${bRow('Total', { budget, committed, pending: pend, toDate }, ' class="total"')}
   </tbody></table>
   ${over.length ? `<p class="hint">Over budget: ${over.map((r) => `${escapeHtml(r.description)} (${money0(-r.variance)})`).join('; ')}.</p>` : ''}`;

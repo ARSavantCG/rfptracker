@@ -615,6 +615,19 @@ export function ApplicationDialog({
                         {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
                           <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
                         )}
+                        {(() => {
+                          const held = prior.get(l.id)?.retainage ?? 0;
+                          const typed = (draft[l.id]?.retainage ?? '').trim();
+                          if (typed !== '' && num(typed) === 0 && held >= 0.005) return (
+                            <div className="text-[10px] text-right text-emerald-800 mt-0.5">Released {money(held)}
+                              {' '}<button type="button" className="text-blue-700 hover:underline" onClick={() => { setRetTyped((t) => { const n2 = new Set(t); n2.delete(l.id); return n2; }); setDraft((d) => ({ ...d, [l.id]: { ...d[l.id], retainage: '' } })); }}>Undo</button></div>
+                          );
+                          if (retainageOf(l) >= 0.005) return (
+                            <div className="text-right mt-0.5"><button type="button" className="text-[10px] text-blue-700 hover:underline" title="Sets this line's retainage to $0.00 so what's held on it is paid on this pay app"
+                              onClick={() => set(l.id, 'retainage', '0')}>Release</button></div>
+                          );
+                          return null;
+                        })()}
                         {aiNote(l.id, 'retainage')}
                       </td>
                     </tr>

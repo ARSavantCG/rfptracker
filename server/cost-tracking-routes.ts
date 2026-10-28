@@ -1715,6 +1715,20 @@ export function registerCostTrackingRoutes(app: Express): void {
     } catch (e) { fail(res, e, 'delete the change order'); }
   });
 
+  /** Change orders in the order arranged by hand (ids in order). */
+  app.put('/api/cost-contracts/:id/change-order-order', ...canEdit, async (req, res) => {
+    try {
+      const contractId = intParam(req, 'id');
+      if (contractId === null) return res.status(400).json({ message: 'Invalid ID' });
+      const ids: number[] = (Array.isArray(req.body?.ids) ? req.body.ids : []).map(Number).filter(Number.isFinite);
+      const mine = await db.select({ id: costChangeOrders.id }).from(costChangeOrders).where(eq(costChangeOrders.contractId, contractId));
+      const valid = new Set(mine.map((m) => m.id));
+      let i = 0;
+      for (const cid of ids) if (valid.has(cid)) await db.update(costChangeOrders).set({ sortOrder: i++ }).where(eq(costChangeOrders.id, cid));
+      res.json({ ok: true });
+    } catch (e) { fail(res, e, 'reorder the change orders'); }
+  });
+
   app.patch('/api/cost-change-orders/:id', ...canEdit, async (req, res) => {
     try {
       const id = intParam(req, 'id');

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput, MoneyInput } from './inputs';
 import { CoStageControls, CoHigherTag } from './co-routing';
@@ -157,6 +157,18 @@ export function ContractCard({
     onError: (e: any) => { refresh(); toast({ title: 'Some lines were not mapped', description: e?.message, variant: 'destructive' }); },
   });
 
+  // Change orders arranged by hand: swap with the neighbour, save the whole order.
+  const moveCo = useMutation({
+    mutationFn: async ({ i, d }: { i: number; d: -1 | 1 }) => {
+      const ids = changeOrders.map((c) => c.id);
+      const j = i + d;
+      if (j < 0 || j >= ids.length) return;
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      await apiRequest(`/api/cost-contracts/${contract.id}/change-order-order`, 'PUT', { ids });
+    },
+    onSuccess: () => refresh(),
+    onError: (e: any) => toast({ title: 'Not Moved', description: e?.message, variant: 'destructive' }),
+  });
   const groups: { id: number | null; label: string; co: ChangeOrderRow | null; lines: SovLineRow[] }[] = [
     { id: null, label: 'Base Contract', co: null, lines: lines.filter((l) => l.changeOrderId == null) },
     ...changeOrders.map((co) => ({
@@ -260,8 +272,17 @@ export function ContractCard({
                         {rolled.has(String(g.id ?? 'base')) && <span className="text-xs font-normal text-gray-500">· {g.lines.length} line{g.lines.length === 1 ? '' : 's'}</span>}
                       </button>
                       {g.co && <CoHigherTag co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} />}
+                      {g.co && changeOrders.length > 1 && (() => {
+                        const i = changeOrders.findIndex((c) => c.id === g.co!.id);
+                        return (
+                          <span className="inline-flex items-center font-normal">
+                            <button className="p-0.5 text-gray-400 hover:text-blue-700 disabled:opacity-30" disabled={i <= 0 || moveCo.isPending} title="Move up" onClick={() => moveCo.mutate({ i, d: -1 })}><ArrowUp className="h-3.5 w-3.5" /></button>
+                            <button className="p-0.5 text-gray-400 hover:text-blue-700 disabled:opacity-30" disabled={i >= changeOrders.length - 1 || moveCo.isPending} title="Move down" onClick={() => moveCo.mutate({ i, d: 1 })}><ArrowDown className="h-3.5 w-3.5" /></button>
+                          </span>
+                        );
+                      })()}
                     </div>
-                    {g.co && <div className="flex items-center gap-2 flex-nowrap font-normal">
+                    {g.co && <div className="flex items-center gap-2 flex-wrap font-normal">
                       <CoStageControls co={g.co} amount={g.lines.length ? total : g.co.proposedAmount || 0} fromLines={g.lines.length > 0} onChanged={refresh} />
                       {g.co && (() => {
                         const co = g.co!;
@@ -303,7 +324,7 @@ export function ContractCard({
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(total)}</td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(done)}</td>
                   <td className="px-3 py-1.5 text-right text-gray-600 tabular-nums">{pct(done, total)}</td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-1.5 whitespace-nowrap">
                     <div className="flex items-center gap-1 justify-end flex-wrap">
                       {unmapped.length > 0 && baseline.length > 0 && (
                         <div className="w-52">
@@ -335,7 +356,8 @@ export function ContractCard({
                                  baseline={baseline} billedIds={billedIds} projectId={projectId} onDone={() => setEditing(null)} />
                 ) : rolled.has(String(g.id ?? 'base')) ? null : g.lines.length === 0 ? (
                   <tr><td colSpan={6} className="px-3 py-2 text-xs text-gray-600">
-                    No lines yet — click <span className="font-medium">Enter lines</span> to type {g.co ? 'the change order\'s cost of work, insurance and fee' : 'the schedule of values'}, or paste it from Excel.
+                    {g.co ? <QuickCoLine co={g.co} contractId={contract.id} baseline={baseline} onDone={refresh} />
+                      : <>No lines yet: click <span className="font-medium">Enter Lines</span> to type the schedule of values, or paste it from Excel.</>}
                   </td></tr>
                 ) : (() => {
                   const lineRow = (l: SovLineRow) => {
@@ -681,6 +703,48 @@ function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrd
         <Paperclip className="h-3 w-3" /> {busy ? 'Saving…' : docs.length ? 'Add' : 'Attach Executed'}
         <input type="file" multiple className="hidden" disabled={busy} onChange={(e) => { const l = Array.from(e.target.files ?? []); e.target.value = ''; add(l); }} />
       </label>
+    </div>
+  );
+}
+
+/**
+ * A change order with no lines yet: its amount as one line, on a budget line or Unallocated
+ * until it's known (Adolfo, 2026-10-28). The full breakdown can still be entered later.
+ */
+function QuickCoLine({ co, contractId, baseline, onDone }: { co: ChangeOrderRow; contractId: number; baseline: BaselineLine[]; onDone: () => void }) {
+  const { toast } = useToast();
+  const [amount, setAmount] = useState(co.proposedAmount ? String(co.proposedAmount) : '');
+  const [key, setKey] = useState('__unallocated__');
+  const [busy, setBusy] = useState(false);
+  const add = async () => {
+    setBusy(true);
+    try {
+      await apiRequest(`/api/cost-contracts/${contractId}/sov-lines`, 'POST', { changeOrderId: co.id, lines: [{
+        itemNo: '1', description: `${co.number}${co.title ? ` ${co.title}` : ''}`.trim(), scheduledValue: parseAmount(amount),
+        ...(key === '__unallocated__' ? { allocationMode: 'unallocated', allocations: [] } : key === '__spread__' ? { allocationMode: 'spread', allocations: [] } : { allocationMode: 'direct', allocations: [{ baselineKey: key, pct: 100 }] }),
+      }] });
+      onDone();
+      toast({ title: `${co.number} Added`, description: key === '__unallocated__' ? 'Unallocated for now: map it to a budget line when you know where it goes.' : undefined });
+    } catch (e: any) { toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span>No lines yet. Add it as one line:</span>
+      <div className="w-40"><MoneyInput className="h-8 text-sm" value={amount} onValueChange={setAmount} aria-label="Change order amount" /></div>
+      <span>on</span>
+      <div className="w-64">
+        <Select value={key} onValueChange={setKey}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="pm-scope">
+            <SelectItem value="__unallocated__">Unallocated (Map Later)</SelectItem>
+            {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+            <SelectItem value="__spread__">Spread with the Work</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button size="sm" className="h-8" disabled={busy || !parseAmount(amount)} onClick={add}>Add</Button>
+      <span className="text-gray-500">or <span className="font-medium">Enter Lines</span> for the full breakdown.</span>
     </div>
   );
 }

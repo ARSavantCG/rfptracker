@@ -28,6 +28,7 @@ import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
 import { CmFeeSettings } from '@/components/cost/cm-fee-settings';
+import { FundingScopes } from '@/components/cost/funding-scopes';
 import { PercentInput } from '@/components/cost/inputs';
 import { ProjectNotes } from '@/components/cost/project-notes';
 import { SummaryTable } from '@/components/cost/summary-table';
@@ -273,6 +274,7 @@ export default function CostProject() {
 
           <TabsContent value="budget" className="mt-4 space-y-4">
             <FundingSummary bundle={b} projectId={id} />
+            <FundingScopes bundle={b} projectId={id} />
             <BudgetPanel bundle={b} projectId={id} />
             <BudgetChangeOrders bundle={b} projectId={id} />
             <CmFeeSettings projectId={id} baseline={p.baseline} cmFee={b.cmFee} source={b.cmSettings.source} tenantPct={b.cmSettings.tenantPct} tenantSource={b.cmSettings.tenantSource}

@@ -38,6 +38,7 @@ import { backupToObjectStorage, streamFromObjectStorage, downloadFromObjectStora
 import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
+import { normalizeScopes, computeScopes, absorbedByLine } from '@shared/funding-scopes';
 import { normalizeRead, matchRows, payAppPrompt, coKey, contractorG703From, normalizeContractorG703 } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
@@ -368,6 +369,9 @@ export async function loadProjectBundle(projectId: number) {
     breakdown,
     funding,
     story,
+    // Funding by scope (allowances, tenant funds, our site budget, each with its own overage rule).
+    scopeSetup: normalizeScopes(settings.fundingScopes),
+    scopes: computeScopes(normalizeScopes(settings.fundingScopes), summary.rows, absorbedByLine(approval.changeOrders)),
     g702ByContract: g702,
     approval: (() => {
       const ds = discountState(baseline, approval);
@@ -1327,6 +1331,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
       if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';
       if (b.invoiceBasisCapital !== undefined) next.invoiceBasisCapital = b.invoiceBasisCapital === 'billed' ? 'billed' : 'paid';
+      if (b.fundingScopes !== undefined) next.fundingScopes = normalizeScopes(b.fundingScopes);
       if (b.contingencyKeys !== undefined) next.contingencyKeys = Array.isArray(b.contingencyKeys) ? b.contingencyKeys.map(String).slice(0, 20) : [];
       if (b.supplementalLabel !== undefined) next.supplementalLabel = String(b.supplementalLabel ?? '').trim().slice(0, 60);
       await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));

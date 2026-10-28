@@ -88,6 +88,16 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     if (C.remaining < -0.005) watch.push({ level: 'red', text: `Contingency is overdrawn: ${money0(C.used)} used of ${money0(C.original)} (${C.usedPct.toFixed(0)}%).` });
     else if (C.usedPct > C.completePct + 10) watch.push({ level: 'amber', text: `Contingency is being used ahead of the work: ${C.usedPct.toFixed(0)}% used at ${C.completePct.toFixed(0)}% complete (${money0(C.remaining)} left).` });
   }
+  // Funding by scope: who covers the overages.
+  const SC = b.scopes;
+  if (SC?.scopes?.length) {
+    for (const s of SC.scopes) {
+      if (s.overageProjected > 0.005) watch.push(s.overage === 'tenant'
+        ? { level: 'amber', text: `${s.name} is projected ${money0(s.overageProjected)} over its allowances: billable to the tenant.` }
+        : { level: 'red', text: `${s.name} is projected ${money0(s.overageProjected)} over our budget for it: Supplemental funding needed.` });
+    }
+    if (SC.unassigned?.lines?.length) watch.push({ level: 'amber', text: `${SC.unassigned.lines.length} budget line${SC.unassigned.lines.length === 1 ? ' isn\'t' : 's aren\'t'} in any funding scope (${money0(SC.unassigned.projected)} projected): ${SC.unassigned.lines.slice(0, 4).join(', ')}.` });
+  }
   const rank = { red: 0, amber: 1, info: 2 } as const;
   watch.sort((p, q) => rank[p.level] - rank[q.level]);
   if (!watch.length) watch.push({ level: 'info', text: 'Nothing needs attention: every line is within budget, pay apps agree, and releases are in.' });
@@ -135,6 +145,14 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     <tr><td>${escapeHtml(C.names.join(', '))}</td><td class="num">${money0(C.original)}</td><td class="num">${money0(C.movedOut)}</td><td class="num">${money0(C.spent)}</td><td class="num"><strong>${money0(C.used)}</strong></td><td class="num" style="color:${C.remaining < -0.005 ? '#991b1b' : '#166534'}"><strong>${money0(C.remaining)}</strong></td><td class="num">${C.usedPct.toFixed(1)}%</td><td class="num">${C.completePct.toFixed(1)}%</td></tr>
   </tbody></table>
   ${C.inContracts.amount > 0.005 ? `<p class="hint">Also carried inside contracts (lines named contingency): ${money0(C.inContracts.amount)}, ${money0(C.inContracts.billed)} billed so far.</p>` : ''}` : '';
+  const scopeHtml = SC?.scopes?.length ? `<h3 class="sec">Funding by Scope</h3>
+  ${SC.scopes.map((s: any) => `<table class="t" style="margin-bottom:8px"><thead>
+    <tr><th class="l" style="text-transform:none;font-size:10px;color:#111827">${escapeHtml(s.name)} <span style="font-weight:400;color:#6b7280">· projected ${money0(s.projected)} · overage: ${s.overage === 'tenant' ? 'tenant pays' : 'Supplemental'}</span></th><th>Amount</th><th>Used at Projected</th><th>Left</th><th>Used to Date</th></tr></thead><tbody>
+    ${s.absorbed > 0.005 ? `<tr><td>Absorbed by us (change orders not billed to the tenant)</td><td class="num">—</td><td class="num">${money0(s.absorbed)}</td><td></td><td></td></tr>` : ''}
+    ${s.sources.map((x: any) => `<tr><td>${escapeHtml(x.label)}${x.kind === 'amortized' ? ' <span style="color:#6d28d9;font-size:9px">repaid through rent</span>' : ''}${x.kind === 'tenant' ? ` <span class="muted" style="font-size:9px">${money0(x.leftToDate)} on hand</span>` : ''}</td><td class="num">${money0(x.amount)}</td><td class="num">${money0(x.projected)}</td><td class="num">${money0(x.leftProjected)}</td><td class="num">${money0(x.toDate)}</td></tr>`).join('')}
+    <tr class="total"><td>${s.overageProjected > 0.005 ? (s.overage === 'tenant' ? 'Over the allowances: tenant pays' : 'Over our budget: Supplemental needed') : 'Within the funding'}</td><td class="num">${money0(s.funding)}</td><td class="num" style="color:${s.overageProjected > 0.005 ? '#991b1b' : '#166534'}">${money0(s.overageProjected)}</td><td class="num">${s.unused > 0.005 ? money0(s.unused) : ''}</td><td class="num">${s.overageToDate > 0.005 ? money0(s.overageToDate) : ''}</td></tr>
+  </tbody></table>`).join('')}
+  ${SC.amortized > 0.005 ? `<p class="hint">Additional allowance used at projected cost (repaid through rent): ${money0(SC.amortized)}.</p>` : ''}` : '';
   const watchHtml = `<h3 class="sec">Watch List</h3><ul class="watch">${watch.map((w) => `<li class="${w.level}">${escapeHtml(w.text)}</li>`).join('')}</ul>`;
 
   // Budget by bucket
@@ -214,6 +232,7 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
   ${watchHtml}
   ${sinceHtml}
   ${budgetHtml}
+  ${scopeHtml}
   ${contHtml}
   ${coHtml}
   ${payHtml}

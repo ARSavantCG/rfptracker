@@ -3,7 +3,7 @@
  * base contract first, then each change order as its own header with its own
  * lines (cost of work, insurance, fee) underneath — and its pay apps.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { no3 } from '@shared/doc-number';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -262,13 +262,38 @@ export function ContractCard({
               <th className="px-3 py-1.5">Budget Line</th>
             </tr>
           </thead>
-          {groups.map((g) => {
+          {groups.map((g, gi) => {
+            // Every change order rolls up together under one Change Orders heading (each still rolls up on its own).
+            const coGroups = groups.filter((x) => x.co && x.co.status !== 'void');
+            const firstCo = g.co && groups.findIndex((x) => x.co) === gi;
+            const cosShut = rolled.has('__cos');
+            const coHead = firstCo ? (() => {
+              // Approved only, as in the contract sum; pending shown beside it.
+              const ls = coGroups.filter((x) => x.co!.status === 'approved').flatMap((x) => x.lines);
+              const pend = coGroups.filter((x) => x.co!.status !== 'approved').flatMap((x) => x.lines).reduce((a, l) => a + l.scheduledValue, 0);
+              const t = ls.reduce((a, l) => a + l.scheduledValue, 0), d = ls.reduce((a, l) => a + (progress.get(l.id)?.toDate ?? 0), 0);
+              return (
+                <tbody key="__cos">
+                  <tr className="bg-slate-200 border-y cursor-pointer hover:bg-slate-300/70" onClick={() => toggleRoll('__cos')}>
+                    <td colSpan={2} className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-800">
+                      <span className="inline-flex items-center gap-1">{cosShut ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}Change Orders
+                        <span className="normal-case font-normal tracking-normal text-slate-600">· {coGroups.length} change order{coGroups.length === 1 ? '' : 's'}{cosShut ? ' rolled up' : ''}</span></span>
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{money(t)}{Math.abs(pend) >= 0.005 && <div className="text-[11px] font-normal text-amber-700">+ {money(pend)} pending</div>}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{money(d)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(d, t)}</td><td />
+                  </tr>
+                </tbody>
+              );
+            })() : null;
+            if (g.co && cosShut) return <Fragment key={g.id ?? 'base'}>{coHead}</Fragment>;
             const total = g.lines.reduce((s, l) => s + l.scheduledValue, 0);
             const done = g.lines.reduce((s, l) => s + (progress.get(l.id)?.toDate ?? 0), 0);
             const unmapped = g.lines.filter((l) => l.allocationMode === 'unallocated' || (l.allocationMode === 'direct' && l.allocations.length === 0));
             const isVoid = g.co?.status === 'void';
             return (
-              <tbody key={g.id ?? 'base'} className={isVoid ? 'opacity-50' : ''}>
+              <Fragment key={g.id ?? 'base'}>{coHead}
+              <tbody className={isVoid ? 'opacity-50' : ''}>
                 <tr className="bg-gray-100 border-y">
                   <td colSpan={2} className="px-3 py-1.5 font-semibold text-gray-900">
                     {/* Name on the first line; every change order's controls on the second, in the same order and widths, so they line up down the page. */}
@@ -416,6 +441,7 @@ export function ContractCard({
                   });
                 })()}
               </tbody>
+              </Fragment>
             );
           })}
         </table>

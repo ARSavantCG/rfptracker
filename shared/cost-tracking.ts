@@ -153,6 +153,45 @@ export function lineStatus(line: SovLine, cos: Map<number, ChangeOrder>): Change
  * again every month it sat on site. Summing column I would do the same to
  * retainage. Only E accumulates.
  */
+/**
+ * Retainage over a contract's life (Adolfo, 2026-10-28): withheld to date (every increase
+ * in retainage held, pay app by pay app), released (every decrease: a retainage release,
+ * whole or by line), and held now (withheld less released, which is G702 line 5). Per
+ * line, per pay app, and in total; accepted rounding adjustments count at the contract
+ * level. Pass one contract's pay apps.
+ */
+export interface RetainageMoves { withheld: number; released: number; held: number }
+export function retainageLedger(apps: readonly Application[]): RetainageMoves & {
+  lines: Map<number, RetainageMoves>;
+  byApp: Map<number, { withheld: number; released: number }>;
+} {
+  const sorted = [...apps].sort((a, b) => a.number - b.number);
+  const lines = new Map<number, RetainageMoves>();
+  const byApp = new Map<number, { withheld: number; released: number }>();
+  let prev = new Map<number, number>();
+  let adjPrev = 0, adjCum = 0, adjW = 0, adjR = 0;
+  for (const a of sorted) {
+    const cur = new Map<number, number>();
+    for (const l of a.lines) cur.set(l.sovLineId, (cur.get(l.sovLineId) ?? 0) + n(l.retainageToDate));
+    let w = 0, r = 0;
+    for (const id of Array.from(new Set([...Array.from(prev.keys()), ...Array.from(cur.keys())]))) {
+      const d = round2((cur.get(id) ?? 0) - (prev.get(id) ?? 0));
+      const m = lines.get(id) ?? { withheld: 0, released: 0, held: 0 };
+      if (d > 0) { m.withheld = round2(m.withheld + d); w += d; } else if (d < 0) { m.released = round2(m.released - d); r -= d; }
+      m.held = round2(cur.get(id) ?? 0);
+      lines.set(id, m);
+    }
+    adjCum = round2(adjCum + n(a.retainageAdj));
+    const da = round2(adjCum - adjPrev);
+    if (da > 0) { adjW += da; w += da; } else if (da < 0) { adjR -= da; r -= da; }
+    adjPrev = adjCum;
+    byApp.set(a.id, { withheld: round2(w), released: round2(r) });
+    prev = cur;
+  }
+  const tot = (k: 'withheld' | 'released' | 'held') => round2(Array.from(lines.values()).reduce((t, m) => t + m[k], 0));
+  return { lines, byApp, withheld: round2(tot('withheld') + adjW), released: round2(tot('released') + adjR), held: round2(tot('held') + adjCum) };
+}
+
 export function lineProgress(apps: readonly Application[]): Map<number, {
   completed: number; stored: number; toDate: number; retainage: number;
 }> {

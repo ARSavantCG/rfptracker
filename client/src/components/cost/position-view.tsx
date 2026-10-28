@@ -93,7 +93,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
         <Stat label="Billed to Date" value={money(t.billedToDate)} sub={`${t.pctComplete.toFixed(2)}% of ${money(t.contractSum)}`} />
         <Stat label="Paid" value={money(t.paid)} />
         <Stat label="Owed (Billed, Unpaid)" value={money(t.owed)} tone={t.owed > 0.005 ? 'text-red-700' : undefined} />
-        <Stat label="Retainage Held" value={money(t.retainageHeld)} sub={`Left to pay ${money(t.leftToPay)}`} />
+        <Stat label="Retainage Currently Held" value={money(t.retainageHeld)} sub={(t as any).retainageReleased > 0.005 ? `Withheld ${money((t as any).retainageWithheld)} · Released ${money((t as any).retainageReleased)}` : `Left to pay ${money(t.leftToPay)}`} />
       </div>
 
       {overpaid.length > 0 && (
@@ -106,7 +106,7 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
         <table className="w-full text-sm min-w-[860px]">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
-              <H left>Contract</H><H>Contract sum</H><H>Billed to date</H><H>%</H><H>Retainage</H>
+              <H left>Contract</H><H>Contract sum</H><H>Billed to date</H><H>%</H><H>Retainage Held</H>
               <H>Net billed</H><H>Paid</H><H>Owed</H><H>Left to pay</H>
             </tr>
           </thead>
@@ -144,6 +144,36 @@ export function PositionView({ bundle, projectId, onPay, onPackage }: {
           </tfoot>
         </table>
       </div>
+
+      {p.contracts.some((c) => c.retainageWithheld > 0.005) && (
+        <div className="bg-white border rounded-lg overflow-x-auto">
+          <div className="px-3 py-2 border-b text-sm font-semibold text-gray-800">Retainage
+            <span className="ml-2 font-normal text-xs text-gray-500">Withheld to date, less what's been released on pay apps, is what's held now.</span></div>
+          <table className="w-full text-sm min-w-[720px]">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-gray-600 border-b">
+                <H left>Contract</H><H>Withheld to Date</H><H>Released</H><H>Released &amp; Paid</H><H>Released, Not Yet Paid</H><H>Currently Held</H>
+              </tr>
+            </thead>
+            <tbody>
+              {p.contracts.filter((c) => c.retainageWithheld > 0.005).map((c) => (
+                <tr key={c.contractId} className="border-b last:border-0">
+                  <td className="px-3 py-1.5">{contractName.get(c.contractId)}</td>
+                  <D v={c.retainageWithheld} /><D v={c.retainageReleased} /><D v={c.retainagePaid} />
+                  <D v={c.retainageReleasedUnpaid} tone={c.retainageReleasedUnpaid > 0.005 ? 'text-red-700' : undefined} />
+                  <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{money(c.retainageHeld)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-800 font-semibold">
+                <td className="px-3 py-2">Total</td>
+                <D v={(t as any).retainageWithheld} /><D v={(t as any).retainageReleased} /><D v={(t as any).retainagePaid} /><D v={(t as any).retainageReleasedUnpaid} /><D v={t.retainageHeld} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
 
       <div className="bg-white border rounded-lg overflow-x-auto">
         <RollHead k="payapps" open={appsOpen} onToggle={toggleApps} title="Pay Apps & Invoices"

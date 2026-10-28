@@ -85,10 +85,11 @@ export function renderPayoffHtml(x: PayoffInput): string {
     <tr class="total"><td colspan="2">Total${multi ? '' : ` · ${escapeHtml(name(all[0].contractId))}`}</td><td class="num">${money2(r2(allTot.gross))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.due))}</td><td class="num">${money2(r2(allTot.paid))}</td><td></td><td class="num">${money2(r2(allTot.open))}</td><td class="num">${money2(r2(allTot.ret))}</td><td class="num">${money2(r2(allTot.payoff))}</td></tr>
   </tbody></table>` : '';
 
-  const retain = rows.some((r) => r.retainageHeld > 0.005) ? `
+  const anyRel = rows.some((r: any) => (r.retainageReleased ?? 0) > 0.005);
+  const retain = rows.some((r: any) => r.retainageHeld > 0.005 || (r.retainageReleased ?? 0) > 0.005) ? `
   <h3 class="sec">Retainage Held</h3>
-  <table class="t"><thead><tr><th class="l">Contractor</th><th>Contract Sum</th><th>Completed &amp; Stored</th><th>Rate</th><th>Retainage Held</th></tr></thead><tbody>
-    ${rows.filter((r) => r.retainageHeld > 0.005).map((r) => `<tr><td>${escapeHtml(name(r.contractId))}</td><td class="num">${money2(r.contractSum)}</td><td class="num">${money2(r.billedToDate)}</td><td class="num">${(x.contracts.find((c) => c.id === r.contractId)?.retainagePct ?? 0).toFixed(2)}%</td><td class="num"><strong>${money2(r.retainageHeld)}</strong></td></tr>`).join('')}
+  <table class="t"><thead><tr><th class="l">Contractor</th><th>Contract Sum</th><th>Completed &amp; Stored</th><th>Rate</th>${anyRel ? '<th>Withheld to Date</th><th>Released</th>' : ''}<th>Retainage Held</th></tr></thead><tbody>
+    ${rows.filter((r: any) => r.retainageHeld > 0.005 || (r.retainageReleased ?? 0) > 0.005).map((r: any) => `<tr><td>${escapeHtml(name(r.contractId))}</td><td class="num">${money2(r.contractSum)}</td><td class="num">${money2(r.billedToDate)}</td><td class="num">${(x.contracts.find((c) => c.id === r.contractId)?.retainagePct ?? 0).toFixed(2)}%</td>${anyRel ? `<td class="num">${money2(r.retainageWithheld ?? 0)}</td><td class="num">${money2(r.retainageReleased ?? 0)}${(r.retainageReleasedUnpaid ?? 0) > 0.005 ? `<div style="font-size:8.5px;color:#991b1b">${money2(r.retainageReleasedUnpaid)} not yet paid</div>` : ''}</td>` : ''}<td class="num"><strong>${money2(r.retainageHeld)}</strong></td></tr>`).join('')}
   </tbody></table>` : '';
 
   // Releases to collect once paid: an unconditional for each conditional on an open pay app,

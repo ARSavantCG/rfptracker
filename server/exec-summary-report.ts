@@ -111,7 +111,7 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     ${tile(afterPending < -0.005 ? 'Projected Over Budget' : 'Projected Under Budget', money0(Math.abs(afterPending)), `uncommitted today ${money0(uncommitted)}`, afterPending < -0.005 ? '#991b1b' : '#166534')}
     ${tile('Work Complete', money0(toDate), `${pct(toDate, committed)} of committed`)}
     ${tile('Paid to Date', money0(P.paid ?? 0), `${pct(P.paid ?? 0, committed)} of committed`)}
-    ${tile('Billed, Unpaid', money0(P.owed ?? 0), `plus ${money0(P.retainageHeld ?? 0)} retainage held`)}
+    ${tile('Billed, Unpaid', money0(P.owed ?? 0), `plus ${money0(P.retainageHeld ?? 0)} retainage held${(P.retainageReleased ?? 0) > 0.005 ? ` (${money0(P.retainageWithheld)} withheld, ${money0(P.retainageReleased)} released)` : ''}`)}
     ${C ? tile('Contingency Remaining', money0(C.remaining), `${C.usedPct.toFixed(0)}% used at ${C.completePct.toFixed(0)}% complete${C.inContracts.amount > 0.005 ? ` · ${money0(C.inContracts.amount - C.inContracts.billed)} more in contracts` : ''}`, C.remaining < -0.005 || C.usedPct > C.completePct + 10 ? '#b45309' : '#166534')
       : tile('Contingency', '—', 'No budget line named Contingency; pick one in the report settings')}
   </div>`;

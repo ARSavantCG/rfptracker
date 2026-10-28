@@ -485,6 +485,18 @@ export function renderCostPositionHtml(input: {
   <div class="legend">Billed to Date = work completed and stored. Net Billed = billed less retainage. Owed = net billed not yet paid.
     Left to Pay = contract sum less paid (owed + retainage + work not yet billed). Approved change orders only.</div>
 
+  ${(() => {
+    const rs = (p.contracts as any[]).filter((c) => (c.retainageWithheld ?? 0) > 0.005);
+    if (!rs.some((c) => (c.retainageReleased ?? 0) > 0.005)) return "";
+    const T = (k: string) => rs.reduce((s2, c) => s2 + (c[k] ?? 0), 0);
+    return `<h3 class="sec">Retainage</h3>
+  <table class="t"><thead><tr><th class="l">Contract</th><th>Withheld to Date</th><th>Released</th><th>Released &amp; Paid</th><th>Released, Not Yet Paid</th><th>Currently Held</th></tr></thead><tbody>
+    ${rs.map((c) => `<tr><td class="l">${escapeHtml(name.get(c.contractId) || "")}</td>${cell(c.retainageWithheld)}${cell(c.retainageReleased)}${cell(c.retainagePaid)}${cell(c.retainageReleasedUnpaid, c.retainageReleasedUnpaid > 0.005 ? "neg" : "")}${cell(c.retainageHeld)}</tr>`).join("")}
+    <tr class="total"><td class="l">Total</td>${cell(T("retainageWithheld"))}${cell(T("retainageReleased"))}${cell(T("retainagePaid"))}${cell(T("retainageReleasedUnpaid"))}${cell(T("retainageHeld"))}</tr>
+  </tbody></table>
+  <div class="legend">Withheld to Date = every amount held back on pay apps. Released = retainage paid out on a pay app (a release). Currently Held = withheld less released, the G702 line 5 on the latest pay app.</div>`;
+  })()}
+
   <h3 class="sec">Pay Apps &amp; Invoices</h3>
   <table class="t"><thead><tr><th class="l">No.</th><th class="l">Dated</th><th>Payment Due</th><th>Paid</th><th>Open</th><th class="l">Paid On</th><th class="l">G702 Check</th></tr></thead><tbody>
     ${appRows}

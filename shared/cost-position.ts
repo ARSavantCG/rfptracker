@@ -18,7 +18,7 @@
  *
  * Pure: no database import.
  */
-import { g702For, lineStatus, allocate, type SovLine, type ChangeOrder, type Application } from './cost-tracking';
+import { g702For, retainageLedger, lineStatus, allocate, type SovLine, type ChangeOrder, type Application } from './cost-tracking';
 
 export interface DatedApplication extends Application {
   /** ISO date: period end, or the date entered. */
@@ -47,6 +47,12 @@ export interface ContractPosition {
   billedToDate: number;
   pctComplete: number;
   retainageHeld: number;
+  /** Retainage over the contract's life: every amount withheld, and every amount released on a pay app. Held = withheld − released. */
+  retainageWithheld: number;
+  retainageReleased: number;
+  /** Released and paid (the pay app that released it is paid); the rest of released is still owed on that pay app. */
+  retainagePaid: number;
+  retainageReleasedUnpaid: number;
   netBilled: number;
   paid: number;
   owed: number;
@@ -102,6 +108,18 @@ export function positionAsOf(asOf: string, input: {
   const pays = (input.payments || []).filter((p) => day(p.paidDate) <= cutoff);
   const cos = new Map((input.changeOrders || []).map((c) => [c.id, c]));
 
+  const applications: ApplicationPosition[] = apps.map((a) => {
+    const g = g702For(a.contractId, a.number, {
+      lines: input.lines, changeOrders: input.changeOrders,
+      applications: apps.filter((x) => x.contractId === a.contractId),
+    });
+    const paid = r2(pays.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0));
+    return {
+      applicationId: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber ?? a.number, kind: a.kind ?? 'pay_app', date: day(a.date),
+      due: g.currentPaymentDue, paid, open: r2(g.currentPaymentDue - paid),
+    };
+  }).sort((x, y) => x.contractId - y.contractId || x.number - y.number);
+
   const contracts: ContractPosition[] = input.contractIds.map((contractId) => {
     const mine = apps.filter((a) => a.contractId === contractId);
     const last = mine.length ? Math.max(...mine.map((a) => a.number)) : null;
@@ -115,6 +133,9 @@ export function positionAsOf(asOf: string, input: {
     const myPays = pays.filter((p) => p.contractId === contractId);
     const paid = r2(myPays.reduce((s, p) => s + p.amount, 0));
     const net = r2(billed - held);
+    const led = retainageLedger(mine);
+    let relUnpaid = 0;
+    led.byApp.forEach((m, aid) => { if (m.released > 0.005) { const ap = applications.find((x) => x.applicationId === aid); relUnpaid += Math.max(0, Math.min(m.released, ap?.open ?? 0)); } });
     const pendingChanges = r2((input.lines || [])
       .filter((l) => l.contractId === contractId && lineStatus(l, cos) === 'pending')
       .reduce((s, l) => s + (Number(l.scheduledValue) || 0), 0));
@@ -125,6 +146,10 @@ export function positionAsOf(asOf: string, input: {
       billedToDate: r2(billed),
       pctComplete: contractSum ? r2((billed / contractSum) * 100) : 0,
       retainageHeld: r2(held),
+      retainageWithheld: last == null ? 0 : led.withheld,
+      retainageReleased: last == null ? 0 : led.released,
+      retainagePaid: last == null ? 0 : r2(led.released - relUnpaid),
+      retainageReleasedUnpaid: last == null ? 0 : r2(relUnpaid),
       netBilled: net,
       paid,
       owed: r2(net - paid),
@@ -134,18 +159,6 @@ export function positionAsOf(asOf: string, input: {
       unappliedPayments: r2(myPays.filter((p) => p.applicationId == null).reduce((s, p) => s + p.amount, 0)),
     };
   });
-
-  const applications: ApplicationPosition[] = apps.map((a) => {
-    const g = g702For(a.contractId, a.number, {
-      lines: input.lines, changeOrders: input.changeOrders,
-      applications: apps.filter((x) => x.contractId === a.contractId),
-    });
-    const paid = r2(pays.filter((p) => p.applicationId === a.id).reduce((s, p) => s + p.amount, 0));
-    return {
-      applicationId: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber ?? a.number, kind: a.kind ?? 'pay_app', date: day(a.date),
-      due: g.currentPaymentDue, paid, open: r2(g.currentPaymentDue - paid),
-    };
-  }).sort((x, y) => x.contractId - y.contractId || x.number - y.number);
 
   const directRows = (input.directCosts || []).filter((d) => day(d.date) <= cutoff);
   const direct = {
@@ -161,6 +174,8 @@ export function positionAsOf(asOf: string, input: {
   const totals = {
     contractSum: r2(sum('contractSum') + direct.total), billedToDate: r2(sum('billedToDate') + direct.total),
     retainageHeld: sum('retainageHeld'),
+    retainageWithheld: sum('retainageWithheld'), retainageReleased: sum('retainageReleased'),
+    retainagePaid: sum('retainagePaid'), retainageReleasedUnpaid: sum('retainageReleasedUnpaid'),
     netBilled: r2(sum('netBilled') + direct.total), paid: r2(sum('paid') + direct.total), owed: sum('owed'),
     leftToBill: sum('leftToBill'), leftToPay: sum('leftToPay'),
     pctComplete: 0,

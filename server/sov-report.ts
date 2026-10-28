@@ -6,7 +6,7 @@
  * Billed figures run through the latest pay app (or ?through=). One contract or all.
  */
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
-import { lineProgress } from '@shared/cost-tracking';
+import { lineProgress, retainageLedger } from '@shared/cost-tracking';
 
 const money2 = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -38,24 +38,32 @@ export function renderSovHtml(x: {
     const apps = x.applications.filter((a) => a.contractId === c.id && (x.through == null || a.number <= x.through)).sort((a, b) => a.number - b.number);
     const last = apps[apps.length - 1];
     const prog = lineProgress(apps as any);
+    const led = retainageLedger(apps as any);
+    // Once retainage has been released, show withheld / released / held instead of one column.
+    const rel = led.released > 0.005;
+    const cols = rel ? 10 : 8;
+    const lm = (id: number) => led.lines.get(id) ?? { withheld: 0, released: 0, held: 0 };
+    const dash = (v: number) => (Math.abs(v) >= 0.005 ? money2(v) : '<span class="muted">—</span>');
     const lines = x.sovLines.filter((l) => l.contractId === c.id);
     const cos = x.changeOrders.filter((co) => co.contractId === c.id && co.status !== 'void' && lines.some((l) => l.changeOrderId === co.id));
     const sum = (ls: Line[]) => {
       const s = r2(ls.reduce((t, l) => t + l.scheduledValue, 0));
       const d = r2(ls.reduce((t, l) => t + (prog.get(l.id)?.toDate ?? 0), 0));
       const ret = r2(ls.reduce((t, l) => t + (prog.get(l.id)?.retainage ?? 0), 0));
-      return { s, d, ret };
+      const w = r2(ls.reduce((t, l) => t + lm(l.id).withheld, 0));
+      const rl = r2(ls.reduce((t, l) => t + lm(l.id).released, 0));
+      return { s, d, ret, w, rl };
     };
     const row = (l: Line) => {
       const p = prog.get(l.id);
       const d = p?.toDate ?? 0;
-      return `<tr><td class="it">${escapeHtml(l.itemNo ?? '')}</td><td class="ind">${escapeHtml(l.description)}</td><td class="num">${money2(l.scheduledValue)}</td><td class="num">${money2(d)}</td><td class="num">${pct(d, l.scheduledValue)}</td><td class="num">${money2(r2(l.scheduledValue - d))}</td><td class="num">${(p?.retainage ?? 0) ? money2(p!.retainage) : '<span class="muted">—</span>'}</td><td class="bl">${budgetOf(l)}</td></tr>`;
+      return `<tr><td class="it">${escapeHtml(l.itemNo ?? '')}</td><td class="ind">${escapeHtml(l.description)}</td><td class="num">${money2(l.scheduledValue)}</td><td class="num">${money2(d)}</td><td class="num">${pct(d, l.scheduledValue)}</td><td class="num">${money2(r2(l.scheduledValue - d))}</td>${rel ? `<td class="num">${dash(lm(l.id).withheld)}</td><td class="num">${dash(lm(l.id).released)}</td>` : ''}<td class="num">${dash(p?.retainage ?? 0)}</td><td class="bl">${budgetOf(l)}</td></tr>`;
     };
     const total = (label: string, ls: Line[], cls: string) => {
       const t = sum(ls);
-      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td><td class="num">${money2(t.ret)}</td><td></td></tr>`;
+      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td>${rel ? `<td class="num">${money2(t.w)}</td><td class="num">${money2(t.rl)}</td>` : ''}<td class="num">${money2(t.ret)}</td><td></td></tr>`;
     };
-    const head = (label: string, cls: string) => `<tr class="${cls}"><td colspan="8">${escapeHtml(label)}</td></tr>`;
+    const head = (label: string, cls: string) => `<tr class="${cls}"><td colspan="${cols}">${escapeHtml(label)}</td></tr>`;
 
     const base = lines.filter((l) => l.changeOrderId == null);
     const secs = Array.from(new Set(base.map((l) => (l.section ?? '').trim())));
@@ -84,7 +92,7 @@ export function renderSovHtml(x: {
     const all = lines.filter((l) => l.changeOrderId == null || approved.some((co) => co.id === l.changeOrderId));
     body += total('Contract Total', all, 'grand');
     const pend = coBlock(pending, 'Pending Change Orders (Not in the Contract Sum)', 'Pending Total');
-    if (pend) body += '<tr class="gap"><td colspan="8"></td></tr>' + pend;
+    if (pend) body += `<tr class="gap"><td colspan="${cols}"></td></tr>` + pend;
     const t = sum(all);
     const adj = r2(apps.reduce((s, a) => s + (Number(a.retainageAdj) || 0), 0));
     const through = last ? `${last.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(last.docNumber)}${last.periodEnd ? ` (Period To ${shortD(last.periodEnd)})` : ''}` : 'No pay apps yet';
@@ -92,13 +100,14 @@ export function renderSovHtml(x: {
       ['Contract Sum to Date', money2(t.s)],
       ['Billed to Date', `${money2(t.d)} · ${pct(t.d, t.s)}`],
       ['Balance to Finish', money2(r2(t.s - t.d))],
+      ...(rel ? [['Retainage Withheld', money2(led.withheld)], ['Retainage Released', money2(led.released)]] : []),
       ['Retainage Held', money2(r2(t.ret + adj))],
     ];
     return `<section${ci ? ' class="pb"' : ''}>
       <h2 class="ct">${escapeHtml(c.counterparty)}${c.contractNumber ? ` · Contract #${escapeHtml(c.contractNumber)}` : ''}</h2>
       <div class="meta">Billed through ${escapeHtml(through)}${c.retainagePct ? ` · Retainage ${Number(c.retainagePct).toFixed(2)}%` : ''}</div>
       <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
-      <table class="t"><thead><tr><th class="l it">Item</th><th class="l">Description</th><th>Scheduled Value</th><th>Billed to Date</th><th>%</th><th>Balance to Finish</th><th>Retainage</th><th class="l">Budget Line</th></tr></thead>
+      <table class="t"><thead><tr><th class="l it">Item</th><th class="l">Description</th><th>Scheduled Value</th><th>Billed to Date</th><th>%</th><th>Balance to Finish</th>${rel ? '<th>Retainage Withheld</th><th>Retainage Released</th><th>Retainage Held</th>' : '<th>Retainage</th>'}<th class="l">Budget Line</th></tr></thead>
       <tbody>${body}</tbody></table>
       ${Math.abs(adj) >= 0.005 ? `<p class="hint">Retainage Held includes accepted rounding adjustments of ${money2(adj)}.</p>` : ''}
     </section>`;

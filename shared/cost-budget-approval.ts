@@ -127,6 +127,7 @@ export interface BudgetCO {
 }
 
 export const CO_REASONS = [
+  ['allowance', 'Additional allowance (lease)'],
   ['tenant', 'Tenant request'],
   ['scope', 'Missed scope'],
   ['unforeseen', 'Unforeseen condition'],

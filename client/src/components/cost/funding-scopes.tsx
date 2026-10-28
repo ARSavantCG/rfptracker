@@ -72,7 +72,7 @@ export function FundingScopes({ bundle, projectId }: { bundle: ProjectBundle; pr
                     </tr>
                   ))}
                   <tr className={`font-semibold ${s.overageProjected > 0.005 ? (s.overage === 'tenant' ? 'text-violet-800' : 'text-red-800') : 'text-green-800'}`}>
-                    <td className="px-3 py-1.5">{s.overageProjected > 0.005 ? (s.overage === 'tenant' ? 'Over the allowances: tenant pays' : 'Over our budget: Supplemental needed') : 'Within the funding'}</td>
+                    <td className="px-3 py-1.5">{!s.sources.length ? <span className="font-normal text-gray-600">Grouping only: no funding sources set</span> : s.overageProjected > 0.005 ? (s.overage === 'tenant' ? 'Over the allowances: tenant pays' : 'Over our budget: Supplemental needed') : 'Within the funding'}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{money(s.funding)}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{s.overageProjected > 0.005 ? money(s.overageProjected) : money(0)}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{s.unused > 0.005 ? money(s.unused) : ''}</td>

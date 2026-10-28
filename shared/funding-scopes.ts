@@ -107,8 +107,10 @@ export function computeScopes(scopes: readonly FundingScope[], rows: ReadonlyArr
       return { id: x.id, kind: x.kind, label: x.label, amount: r2(x.amount), projected: r2(p), toDate: r2(t), leftProjected: r2(x.amount - p), leftToDate: r2(x.amount - t) };
     });
     const funding = r2(s.sources.reduce((t, x) => t + x.amount, 0));
+    // A scope with no sources is only a grouping (Sitework, Tenant Improvements): no overage to anyone.
+    const grouping = !s.sources.length;
     return { id: s.id, name: s.name, overage: s.overage, lineKeys: s.lineKeys, lines: ls.map((r) => r.description), budget, committed, pending, projected, toDate, absorbed: ours, funding, sources,
-      overageProjected: r2(Math.max(0, restP)), overageToDate: r2(Math.max(0, restT)), unused: r2(Math.max(0, funding - (projected - ours))) };
+      overageProjected: grouping ? 0 : r2(Math.max(0, restP)), overageToDate: grouping ? 0 : r2(Math.max(0, restT)), unused: r2(Math.max(0, funding - (projected - ours))) };
   });
   const rest = rows.filter((r) => !used.has(r.key) && (Math.abs(r.budget) >= 0.005 || Math.abs(r.committed + r.pending) >= 0.005));
   return {

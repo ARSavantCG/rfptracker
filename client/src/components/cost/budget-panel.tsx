@@ -106,6 +106,17 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
   const hasRev = confirmed && rows.some((r) => Math.abs(revisionOf(r)) >= 0.005);
 
   const dirty = JSON.stringify(rows) !== JSON.stringify(fromServer()) || laf !== serverLaf();
+  /** Put a budget line in a scope (Sitework, Tenant Improvements…): saved at once, in Funding by Scope. */
+  const setScope = async (key: string, v: string) => {
+    let scopes = (bundle.scopeSetup ?? []).map((sc) => ({ ...sc, lineKeys: sc.lineKeys.filter((k) => k !== key) }));
+    if (v === '__new__') {
+      const name = window.prompt('Name for the new scope (e.g. Sitework, Tenant Improvements):')?.trim();
+      if (!name) return;
+      scopes = [...scopes, { id: Math.random().toString(36).slice(2, 10), name, lineKeys: [key], overage: 'tenant', sources: [] }];
+    } else if (v !== 'none') scopes = scopes.map((sc) => (sc.id === v ? { ...sc, lineKeys: [...sc.lineKeys, key] } : sc));
+    try { const nb = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { fundingScopes: scopes }); queryClient.setQueryData([projectKey(projectId)], nb); }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
   const update = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const mappedKeys = useMemo(() => new Set(bundle.sovLines.flatMap((l) => l.allocations.map((x) => x.baselineKey))), [bundle.sovLines]);
   const coKeys = useMemo(() => new Set(a.changeOrders.flatMap((c) => c.lines.map((l) => l.key))), [a]);
@@ -189,11 +200,12 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
         </div>
 
         <div className="overflow-x-auto border rounded-md">
-          <table className={`w-full text-sm ${confirmed ? 'min-w-[1180px]' : 'min-w-[900px]'}`}>
+          <table className={`w-full text-sm ${confirmed ? 'min-w-[1340px]' : 'min-w-[1060px]'}`}>
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
                 <th className="px-2 py-1.5 min-w-[220px]">Budget Line</th>
                 <th className="px-2 py-1.5 w-40">Contract</th>
+                <th className="px-2 py-1.5 w-44">Scope</th>
                 <th className="px-2 py-1.5 w-36 text-right">Priced</th>
                 {showDiscount && <th className="px-2 py-1.5 w-36 text-right">Discount</th>}
                 {confirmed && <th className="px-2 py-1.5 w-32 text-right" title="As confirmed">Original</th>}
@@ -206,7 +218,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => {
+              {(() => {
+                const rowEl = (r: Row, i: number) => {
                 const co = coByKey.get(r.key) ?? 0;
                 const tx = xfer.get(r.key) ?? 0;
                 const budget = r2(num(r.priced) - num(r.discount) + tx + co);
@@ -217,6 +230,17 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                       <Select value={r.bucket} onValueChange={(v) => update(i, { bucket: v })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent className="pm-scope">{Object.entries(BUCKET_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-1 py-1">
+                      <Select value={(bundle.scopeSetup ?? []).find((sc) => sc.lineKeys.includes(r.key))?.id ?? 'none'}
+                              disabled={!baseline.some((b: any) => b.key === r.key)} onValueChange={(v) => setScope(r.key, v)}>
+                        <SelectTrigger className="h-8 text-xs" title={baseline.some((b: any) => b.key === r.key) ? 'Which part of the project this line belongs to (Funding by Scope)' : 'Save the budget first'}><SelectValue /></SelectTrigger>
+                        <SelectContent className="pm-scope">
+                          <SelectItem value="none">None</SelectItem>
+                          {(bundle.scopeSetup ?? []).map((sc) => <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>)}
+                          <SelectItem value="__new__">New Scope…</SelectItem>
+                        </SelectContent>
                       </Select>
                     </td>
                     <td className="px-1 py-1"><MoneyInput className="h-8" value={r.priced} aria-label="Priced" onValueChange={(v) => update(i, { priced: v })} /></td>
@@ -239,10 +263,33 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                     </td>
                   </tr>
                 );
-              })}
+                };
+                const scopes = bundle.scopeSetup ?? [];
+                if (!scopes.length) return rows.map(rowEl);
+                // Grouped by scope (Sitework, Tenant Improvements…): a heading and subtotal each; lines in none at the end.
+                const groupOf = (k: string) => scopes.findIndex((sc) => sc.lineKeys.includes(k));
+                const lead = 3 + (showDiscount ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0) + (hasXfer ? 1 : 0) + (hasCos ? 1 : 0);
+                return [...scopes.map((sc, gi) => ({ name: sc.name, gi })), { name: 'Not in a Scope', gi: -1 }].flatMap(({ name, gi }) => {
+                  const idx = rows.map((r, i) => ({ r, i })).filter(({ r }) => groupOf(r.key) === gi);
+                  if (!idx.length) return [];
+                  const sumPriced = r2(idx.reduce((t, { r }) => t + num(r.priced), 0));
+                  const sumBudget = r2(idx.reduce((t, { r }) => t + num(r.priced) - num(r.discount) + (xfer.get(r.key) ?? 0) + (coByKey.get(r.key) ?? 0), 0));
+                  return [
+                    <tr key={`h-${gi}`} className="bg-slate-50 border-b"><td colSpan={lead + 4} className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{name}</td></tr>,
+                    ...idx.map(({ r, i }) => rowEl(r, i)),
+                    <tr key={`t-${gi}`} className="border-b bg-slate-50/60 font-semibold">
+                      <td className="px-2 py-1" colSpan={3}>{name} Subtotal</td>
+                      <td className="px-2 py-1 text-right tabular-nums">{money(sumPriced)}</td>
+                      {Array.from({ length: lead - 3 }).map((_, k) => <td key={k} />)}
+                      <td className="px-2 py-1 text-right tabular-nums">{money(sumBudget)}</td>
+                      <td colSpan={2} />
+                    </tr>,
+                  ];
+                });
+              })()}
               {showDiscount && Math.abs(unplaced) >= 0.005 && (
                 <tr className="bg-indigo-50/60 border-t">
-                  <td className="px-2 py-1.5 italic text-indigo-900" colSpan={3}>{unplaced >= 0 ? 'Deal discount' : 'Deal premium'} — not on a line yet</td>
+                  <td className="px-2 py-1.5 italic text-indigo-900" colSpan={4}>{unplaced >= 0 ? 'Deal discount' : 'Deal premium'} — not on a line yet</td>
                   <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{money(unplaced)}</td>
                   {confirmed && <td className="px-2 py-1.5 text-right tabular-nums text-indigo-900">{signedMoney(origBy.get(DEAL_DISCOUNT_KEY) ?? 0)}</td>}
                   {hasRev && <td />}
@@ -254,7 +301,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
               )}
               {Math.abs(coOther) >= 0.005 && (
                 <tr className="border-t">
-                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 4 : 3) + (hasXfer ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>Supplemental CM Fee <span className="text-[11px] text-gray-500">— CM fee on change orders, kept apart from the original CM fee</span></td>
+                  <td className="px-2 py-1.5 text-gray-700" colSpan={(showDiscount ? 5 : 4) + (hasXfer ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>Supplemental CM Fee <span className="text-[11px] text-gray-500">— CM fee on change orders, kept apart from the original CM fee</span></td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{signedMoney(coOther)}</td>
                   <td colSpan={2} />
@@ -263,7 +310,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-800 font-semibold">
-                <td className="px-2 py-2" colSpan={2}>Total{typedLaf != null && !hasCos ? ' (= LAF)' : ''}</td>
+                <td className="px-2 py-2" colSpan={3}>Total{typedLaf != null && !hasCos ? ' (= LAF)' : ''}</td>
                 <td className="px-2 py-2 text-right tabular-nums">{money(priced)}</td>
                 {showDiscount && <td className="px-2 py-2 text-right tabular-nums">{money(discount)}</td>}
                 {confirmed && <td className="px-2 py-2 text-right tabular-nums">{money(a.originalTotal ?? 0)}</td>}

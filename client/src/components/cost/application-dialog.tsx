@@ -153,6 +153,12 @@ export function ApplicationDialog({
     return spreadCents(items, target);
   }, [contractLines, draft, rate, retTarget, entry, prior]);
   const autoRetainage = (l: SovLineRow) => autoMap.get(l.id) ?? 0;
+  /** A retainage release: every line's retainage typed as $0.00. */
+  const releaseAll = () => {
+    setRetTarget('');
+    setRetTyped(new Set(contractLines.map((l) => l.id)));
+    setDraft((d) => Object.fromEntries(contractLines.map((l) => [l.id, { ...(d[l.id] ?? { work: '', stored: '', retainage: '', toDate: '' }), retainage: '0' }])));
+  };
   const retainageOf = (l: SovLineRow) => {
     const typed = draft[l.id]?.retainage;
     return typed === undefined || typed === '' ? autoRetainage(l) : num(typed);
@@ -222,6 +228,8 @@ export function ApplicationDialog({
 
   /** Retainage boxes typed in this window: those stay as typed when the work changes. */
   const [retTyped, setRetTyped] = useState<Set<number>>(new Set());
+  const releasing = contractLines.length > 0 && contractLines.every((l) => (draft[l.id]?.retainage ?? '').trim() !== '' && num(draft[l.id].retainage) === 0)
+    && contractLines.some((l) => toDateOf(l));
   const set = (id: number, field: keyof Draft, value: string) => {
     if (field === 'retainage') setRetTyped((t) => new Set(t).add(id));
     setDraft((d) => {
@@ -531,6 +539,15 @@ export function ApplicationDialog({
           <Button type="button" size="sm" variant={entry === 'toDate' ? 'default' : 'outline'} className="h-7"
                   onClick={() => switchEntry('toDate')}>Total to Date (G)</Button>
           <span>— whichever column is easier to copy off the G703. Retainage left blank is {Number(contract.retainagePct).toFixed(2)}% of work to date.</span>
+          {releasing ? (
+            <span className="ml-auto text-emerald-800 font-medium">Releasing all retainage: every line's retainage is $0.00, so line 8 pays out what was held.
+              {' '}<button type="button" className="text-blue-700 hover:underline font-normal" onClick={() => { setRetTyped(new Set()); setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }]))); }}>Undo</button></span>
+          ) : contractLines.some((l) => toDateOf(l)) && (
+            <Button type="button" size="sm" variant="outline" className="h-7 ml-auto" onClick={releaseAll}
+                    title="Sets retainage to $0.00 on every line. Use when this pay app releases the retainage held (substantial or final completion).">
+              Release All Retainage
+            </Button>
+          )}
         </div>
 
         <div className="overflow-auto border rounded-md max-h-[60vh]">
@@ -718,7 +735,12 @@ export function ApplicationDialog({
                         </div>
                       );
                     })()}
-                    {canSpread && (
+                    {canSpread && theirRet != null && Math.abs(theirRet) < 0.005 && (
+                      <button className="text-emerald-800 font-semibold hover:underline" onClick={releaseAll}>
+                        Their line 5 is $0.00: this is a retainage release. Release All Retainage
+                      </button>
+                    )}
+                    {canSpread && !(theirRet != null && Math.abs(theirRet) < 0.005) && (
                       <button className="text-blue-700 hover:underline" onClick={() => setRetTarget(theirs.retainage)}>
                         Spread the blank retainage boxes to match their line 5
                       </button>

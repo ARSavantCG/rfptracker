@@ -611,6 +611,7 @@ export function spreadCents(items: ReadonlyArray<{ id: number; exact: number }>,
   const out = new Map<number, number>();
   if (!items.length) return out;
   const targetC = Math.round(total * 100);
+  if (targetC === 0) { for (const it of items) out.set(it.id, 0); return out; }
   const sign = targetC < 0 ? -1 : 1;
   const parts = items.map((it) => {
     const c = Math.abs(it.exact * 100);

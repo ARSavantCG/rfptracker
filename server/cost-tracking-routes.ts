@@ -1241,8 +1241,8 @@ export function registerCostTrackingRoutes(app: Express): void {
       const a = normalizeApproval(project.budgetApproval);
       const b = req.body || {};
       const key = String(b.key ?? '');
-      const line = baseline.find((x) => x.key === key);
-      if (!line) return res.status(400).json({ message: 'Pick the budget line the funding goes to.' });
+      const line = key ? baseline.find((x) => x.key === key) : null;
+      if (key && !line) return res.status(400).json({ message: 'That budget line no longer exists.' });
       const amount = Math.round(toCents(b.amount)) / 100;
       if (!(Math.abs(amount) >= 0.005)) return res.status(400).json({ message: 'Enter the amount.' });
       const source = ['amortized', 'tenant', 'partner'].includes(b.source) ? b.source : 'amortized';
@@ -1253,12 +1253,36 @@ export function registerCostTrackingRoutes(app: Express): void {
         a.revisions = [...a.revisions, {
           at: new Date().toISOString(), by: whoName(req),
           total: Math.round((discountState(baseline, a).approvedTotal + coSummary(a.changeOrders).approved + a.additions.reduce((t, y) => t + y.amount, 0)) * 100) / 100,
-          note: `Additional funding ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}: ${x.label} on ${line.description}`,
+          note: `Additional funding ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}: ${x.label}${line ? ` on ${line.description}` : ' (not on a line yet)'}`,
         }];
       }
       await saveApproval(id, a);
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'add the funding'); }
+  });
+
+  /** Put additional funding on a budget line later (or take it off one). */
+  app.patch('/api/cost-projects/:id/budget-additions/:aid', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const baseline = (project.baseline || []) as BaselineLine[];
+      const a = normalizeApproval(project.budgetApproval);
+      const x = a.additions.find((y) => y.id === req.params.aid);
+      if (!x) return res.status(404).json({ message: 'Funding not found' });
+      const b = req.body || {};
+      if (b.key !== undefined) {
+        const key = String(b.key || '');
+        if (key && !baseline.some((l) => l.key === key)) return res.status(400).json({ message: 'That budget line no longer exists.' });
+        x.key = key;
+      }
+      if (b.label !== undefined) x.label = String(b.label || x.label).slice(0, 120);
+      if (b.note !== undefined) x.note = String(b.note || '').slice(0, 300);
+      await saveApproval(id, a);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'update the funding'); }
   });
 
   app.delete('/api/cost-projects/:id/budget-additions/:aid', ...canEdit, async (req, res) => {

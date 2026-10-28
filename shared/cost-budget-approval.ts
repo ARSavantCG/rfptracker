@@ -24,6 +24,8 @@
 import { UNALLOCATED_KEY, type BaselineLine } from './cost-tracking';
 
 export const DEAL_DISCOUNT_KEY = '__deal_discount__';
+/** Additional funding not yet put on a budget line: held on its own line until it is. */
+export const FUNDING_POOL_KEY = '__funding_pool__';
 
 export interface LafLine {
   description: string;
@@ -253,7 +255,7 @@ export function normalizeApproval(raw: any): BudgetApproval {
     id: String(x?.id ?? ''), key: String(x?.key ?? ''), amount: r2(num(x?.amount)), label: String(x?.label ?? 'Additional Funding').slice(0, 120),
     source: (['amortized', 'tenant', 'partner'].includes(x?.source) ? x.source : 'amortized') as BudgetAddition['source'],
     date: String(x?.date ?? '').slice(0, 10), note: String(x?.note ?? '').slice(0, 300), by: x?.by ? String(x.by) : null,
-  })).filter((x: BudgetAddition) => x.id && x.key && Math.abs(x.amount) >= 0.005) : [];
+  })).filter((x: BudgetAddition) => x.id && Math.abs(x.amount) >= 0.005) : [];
   return a;
 }
 
@@ -653,9 +655,13 @@ export function transferNet(transfers: readonly BudgetTransfer[]): Map<string, n
 /** Add new money to its budget lines (additions on a line that has since been removed are skipped). */
 export function applyAdditions(lines: BaselineLine[], adds: readonly BudgetAddition[]): BaselineLine[] {
   if (!adds.length) return lines;
+  const keys = new Set(lines.map((l) => l.key));
   const m = new Map<string, number>();
-  for (const x of adds) m.set(x.key, r2((m.get(x.key) ?? 0) + x.amount));
-  return lines.map((l) => (m.has(l.key) ? { ...l, budget: r2(num(l.budget) + m.get(l.key)!) } : l));
+  // Not on a line yet (or its line was removed): held on the Additional Funding line until it's assigned.
+  for (const x of adds) { const k = x.key && keys.has(x.key) ? x.key : FUNDING_POOL_KEY; m.set(k, r2((m.get(k) ?? 0) + x.amount)); }
+  const out = lines.map((l) => (m.has(l.key) ? { ...l, budget: r2(num(l.budget) + m.get(l.key)!) } : l));
+  if (m.has(FUNDING_POOL_KEY)) out.push({ key: FUNDING_POOL_KEY, description: 'Additional Funding (Not Assigned to a Line Yet)', bucket: 'misc', budget: m.get(FUNDING_POOL_KEY)!, tenantSharePct: 0 });
+  return out;
 }
 
 /** Move the money. A transfer touching a line that has since been removed is skipped whole, so nothing is lost on one side only. */

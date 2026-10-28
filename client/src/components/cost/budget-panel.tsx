@@ -73,16 +73,22 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
   const hasXfer = a.transfers.length > 0;
   // Additional funding (not change orders): by line, and the add form.
   const adds = (a as any).additions as Array<{ id: string; key: string; amount: number; label: string; source: string; date: string; note: string; by: string | null }> ?? [];
-  const addByKey = useMemo(() => { const m = new Map<string, number>(); for (const x of adds) m.set(x.key, r2((m.get(x.key) ?? 0) + x.amount)); return m; }, [adds]);
+  const addByKey = useMemo(() => { const m = new Map<string, number>(); for (const x of adds) if (x.key && baseline.some((b: any) => b.key === x.key)) m.set(x.key, r2((m.get(x.key) ?? 0) + x.amount)); return m; }, [adds, baseline]);
+  /** Additional funding not on a line yet: one pot, shown on its own row. */
+  const addPool = r2(adds.filter((x) => !x.key || !baseline.some((b: any) => b.key === x.key)).reduce((t, x) => t + x.amount, 0));
+  const assignFunding = async (id: string, key: string) => {
+    try { const data = await apiRequest(`/api/cost-projects/${projectId}/budget-additions/${id}`, 'PATCH', { key: key === '__none__' ? '' : key }); queryClient.setQueryData([projectKey(projectId)], data); toast({ title: key === '__none__' ? 'Taken Off the Line' : `Put on ${lineName(key)}` }); }
+    catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
   const hasAdd = adds.length > 0;
   const addTotal = r2(adds.reduce((t, x) => t + x.amount, 0));
   const [fForm, setFForm] = useState<{ key: string; amount: string; label: string; source: string; date: string; note: string } | null>(null);
   const addFunding = async () => {
     if (!fForm) return;
     try {
-      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-additions`, 'POST', { ...fForm, amount: parseAmount(fForm.amount) });
+      const data = await apiRequest(`/api/cost-projects/${projectId}/budget-additions`, 'POST', { ...fForm, key: fForm.key === '__none__' ? '' : fForm.key, amount: parseAmount(fForm.amount) });
       queryClient.setQueryData([projectKey(projectId)], data);
-      toast({ title: 'Funding Added', description: `${fForm.label} · ${lineName(fForm.key)}` });
+      toast({ title: 'Funding Added', description: `${fForm.label}${fForm.key && fForm.key !== '__none__' ? ` · ${lineName(fForm.key)}` : ' · not on a line yet'}` });
       setFForm(null);
     } catch (e: any) { toast({ title: 'Not Added', description: e?.message, variant: 'destructive' }); }
   };
@@ -309,6 +315,16 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                   ];
                 });
               })()}
+              {Math.abs(addPool) >= 0.005 && (
+                <tr className="bg-violet-50/60 border-t">
+                  <td className="px-2 py-1.5 text-violet-900" colSpan={4 + (showDiscount ? 1 : 0) + (confirmed ? 1 : 0) + (hasRev ? 1 : 0)}>Additional Funding <span className="text-[11px] text-violet-700">· not on a budget line yet; put it on a line below when you know where it goes</span></td>
+                  {hasAdd && <td className="px-2 py-1.5 text-right tabular-nums text-violet-800">{signedMoney(addPool)}</td>}
+                  {hasXfer && <td />}
+                  {hasCos && <td />}
+                  <td className="px-2 py-1.5 text-right tabular-nums font-medium">{signedMoney(addPool)}</td>
+                  <td colSpan={2} />
+                </tr>
+              )}
               {showDiscount && Math.abs(unplaced) >= 0.005 && (
                 <tr className="bg-indigo-50/60 border-t">
                   <td className="px-2 py-1.5 italic text-indigo-900" colSpan={4}>{unplaced >= 0 ? 'Deal discount' : 'Deal premium'} — not on a line yet</td>
@@ -356,7 +372,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
           </Button>
           {!fForm && baseline.length > 0 && (
             <Button variant="outline" size="sm" disabled={dirty} title={dirty ? 'Save the budget first' : 'New money that isn\'t a change order: an allowance the tenant exercised under the lease, say'}
-                    onClick={() => setFForm({ key: '', amount: '', label: 'Additional TI Allowance', source: 'amortized', date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()), note: '' })}>
+                    onClick={() => setFForm({ key: '__none__', amount: '', label: 'Additional TI Allowance', source: 'amortized', date: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()), note: '' })}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Additional Funding
             </Button>
           )}
@@ -419,10 +435,13 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                     <SelectItem value="partner">Capital Partner</SelectItem>
                   </SelectContent>
                 </Select></div>
-              <div className="lg:col-span-3 space-y-1"><div className="text-xs text-gray-600">Budget Line</div>
-                <Select value={fForm.key || undefined} onValueChange={(v) => setFForm({ ...fForm, key: v })}>
-                  <SelectTrigger className="h-9 data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose —" /></SelectTrigger>
-                  <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+              <div className="lg:col-span-3 space-y-1"><div className="text-xs text-gray-600">Budget Line (Optional)</div>
+                <Select value={fForm.key} onValueChange={(v) => setFForm({ ...fForm, key: v })}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent className="pm-scope">
+                    <SelectItem value="__none__">Not on a Line Yet</SelectItem>
+                    {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                  </SelectContent>
                 </Select></div>
               <div className="lg:col-span-2 space-y-1"><div className="text-xs text-gray-600">Amount</div>
                 <MoneyInput className="h-9" value={fForm.amount} onValueChange={(v) => setFForm({ ...fForm, amount: v })} /></div>
@@ -433,7 +452,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             </div>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setFForm(null)}>Cancel</Button>
-              <Button size="sm" disabled={!fForm.key || !num(fForm.amount)} onClick={addFunding}>Add Funding</Button>
+              <Button size="sm" disabled={!num(fForm.amount)} onClick={addFunding}>Add Funding</Button>
             </div>
           </div>
         )}
@@ -447,7 +466,16 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                   <tr key={x.id} className="border-b last:border-0">
                     <td className="py-1 pr-2 whitespace-nowrap">{shortDate(x.date)}</td>
                     <td className="py-1 pr-2 tabular-nums whitespace-nowrap font-medium">{money(x.amount)}</td>
-                    <td className="py-1 pr-2">{x.label} <span className="text-gray-500">· {x.source === 'amortized' ? 'landlord, repaid through rent' : x.source === 'tenant' ? 'tenant' : 'capital partner'} · on {lineName(x.key)}</span>{x.note ? <span className="text-gray-500"> · {x.note}</span> : null}</td>
+                    <td className="py-1 pr-2">{x.label} <span className="text-gray-500">· {x.source === 'amortized' ? 'landlord, repaid through rent' : x.source === 'tenant' ? 'tenant' : 'capital partner'}</span>{x.note ? <span className="text-gray-500"> · {x.note}</span> : null}</td>
+                    <td className="py-1 pr-2 w-64">
+                      <Select value={x.key && baseline.some((b: any) => b.key === x.key) ? x.key : '__none__'} onValueChange={(v) => assignFunding(x.id, v)}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent className="pm-scope">
+                          <SelectItem value="__none__">Not on a Line Yet</SelectItem>
+                          {baseline.map((b) => <SelectItem key={b.key} value={b.key}>On {b.description}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
                     <td className="py-1 pr-2 text-gray-500 whitespace-nowrap">{x.by || ''}</td>
                     <td className="py-1 text-right">
                       <button className="text-gray-400 hover:text-red-700" title="Remove this funding"

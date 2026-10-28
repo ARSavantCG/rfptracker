@@ -112,7 +112,7 @@ export function computeScopes(scopes: readonly FundingScope[], rows: ReadonlyArr
     return { id: s.id, name: s.name, overage: s.overage, lineKeys: s.lineKeys, lines: ls.map((r) => r.description), budget, committed, pending, projected, toDate, absorbed: ours, funding, sources,
       overageProjected: grouping ? 0 : r2(Math.max(0, restP)), overageToDate: grouping ? 0 : r2(Math.max(0, restT)), unused: r2(Math.max(0, funding - (projected - ours))) };
   });
-  const rest = rows.filter((r) => !used.has(r.key) && (Math.abs(r.budget) >= 0.005 || Math.abs(r.committed + r.pending) >= 0.005));
+  const rest = rows.filter((r) => !used.has(r.key) && !r.key.startsWith('__') && (Math.abs(r.budget) >= 0.005 || Math.abs(r.committed + r.pending) >= 0.005));
   return {
     scopes: out,
     absorbed: r2(out.reduce((t, s) => t + s.absorbed, 0)),

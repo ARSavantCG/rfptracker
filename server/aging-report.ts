@@ -44,7 +44,7 @@ export function renderAgingHtml(x: {
   </tbody></table>`;
   const detail = open.length ? `
   <h3 class="sec">By Pay App</h3>
-  <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Pay App</th><th class="l">Period To</th><th class="l">Entered</th><th>Payment Due</th><th>Paid</th><th>Open</th><th>Days Outstanding</th><th class="l" style="text-align:center">Aging</th></tr></thead><tbody>
+  <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Pay App</th><th class="l">Period To / Invoice Date</th><th class="l">Entered</th><th>Payment Due</th><th>Paid</th><th>Open</th><th>Days Outstanding</th><th class="l" style="text-align:center">Aging</th></tr></thead><tbody>
     ${open.map((a) => `<tr${a.bucket === 'over' || a.bucket === 'd90' ? ' style="background:#fef2f2"' : a.bucket === 'd60' ? ' style="background:#fffbeb"' : ''}><td>${escapeHtml(name(a.contractId))}</td><td class="nw">${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)}</td><td class="nw">${shortD(a.date)}</td><td class="nw">${a.enteredAt ? shortD(a.enteredAt) : '—'}</td><td class="num">${money2(a.due)}</td><td class="num">${money2(a.paid)}${a.lastPaid ? `<div class="muted" style="font-size:8.5px">last ${shortD(a.lastPaid)}</div>` : ''}</td><td class="num"><strong>${money2(a.open)}</strong></td><td class="num">${a.age}</td><td class="nw" style="text-align:center">${AGING_BUCKETS.find((b) => b.key === a.bucket)!.label}</td></tr>`).join('')}
   </tbody></table>` : '';
   const ret = x.retainage.filter((r) => r.held > 0.005);

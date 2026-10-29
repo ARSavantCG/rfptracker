@@ -55,7 +55,7 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
     }).join('');
     const byApp = `
     <h3 class="sec">By Pay App: Billed Through the End of Each</h3>
-    <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Period To</th><th>Previous</th><th>This Period</th><th>Total Billed to Date</th><th>Their G702 Line 4</th><th>Their Previous<br>(Line 4 Less This Period)</th><th style="text-align:center">Ties to Their<br>Last Pay App?</th></tr></thead>
+    <table class="t"><thead><tr><th class="l">Pay App</th><th class="l">Period To / Invoice Date</th><th>Previous</th><th>This Period</th><th>Total Billed to Date</th><th>Their G702 Line 4</th><th>Their Previous<br>(Line 4 Less This Period)</th><th style="text-align:center">Ties to Their<br>Last Pay App?</th></tr></thead>
     <tbody>${rows}</tbody></table>
     <p class="hint">Total billed to date at the end of one pay app should be the previous on the next. "Their previous" is their line 4 less this period's work: what they say was billed before this pay app. It should equal their line 4 on their last pay app; when it doesn't, their two G702s don't agree.${breaks ? ` <strong style="color:#991b1b">${breaks} pay app${breaks === 1 ? '' : 's'} where theirs doesn't tie.</strong>` : ''}</p>`;
 

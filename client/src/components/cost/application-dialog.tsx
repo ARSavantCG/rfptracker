@@ -509,10 +509,16 @@ export function ApplicationDialog({
             {docTaken && <div className="text-[11px] text-red-700">{label} {typedDoc} already exists on this contract</div>}</div>
           <div className="space-y-1"><Label>Invoice #</Label>
             <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} /></div>
-          <div className="space-y-1"><Label>Period From</Label>
-            <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
-          <div className="space-y-1"><Label>Period To</Label>
-            <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+          {/* An invoice has one date (kept where a pay app keeps its period-to, so it dates the same way). */}
+          {kind === 'invoice' ? (
+            <div className="space-y-1"><Label>Invoice Date</Label>
+              <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+          ) : (<>
+            <div className="space-y-1"><Label>Period From</Label>
+              <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
+            <div className="space-y-1"><Label>Period To</Label>
+              <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+          </>)}
         </div>
 
         {ai.on && (

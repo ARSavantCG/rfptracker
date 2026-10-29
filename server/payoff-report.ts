@@ -67,7 +67,7 @@ export function renderPayoffHtml(x: PayoffInput): string {
   const detail = all.length ? `
   <h3 class="sec">Pay Apps</h3>
   <table class="t pa"><thead>
-    <tr><th class="l" rowspan="2">Pay App</th><th class="l" rowspan="2">Period To</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">As Billed (G702)</th><th colspan="2" style="text-align:center;border-bottom:1px solid #d1d5db">Payments</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db;background:#e0e7ff">For the Payoff</th></tr>
+    <tr><th class="l" rowspan="2">Pay App</th><th class="l" rowspan="2">Period To / Invoice Date</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db">As Billed (G702)</th><th colspan="2" style="text-align:center;border-bottom:1px solid #d1d5db">Payments</th><th colspan="3" style="text-align:center;border-bottom:1px solid #d1d5db;background:#e0e7ff">For the Payoff</th></tr>
     <tr><th>Work Billed<br>(Before Retainage)</th><th>Retainage<br>Withheld</th><th>Payment Due<br>(Net, Line 8)</th><th>Paid<br>(Net)</th><th style="text-align:center">Paid On</th><th style="background:#e0e7ff">Still Due on<br>Pay App</th><th style="background:#e0e7ff">Retainage<br>Held</th><th style="background:#e0e7ff">Payoff</th></tr>
   </thead><tbody>
     ${all.map((a) => {

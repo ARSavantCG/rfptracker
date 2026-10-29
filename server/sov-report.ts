@@ -95,7 +95,7 @@ export function renderSovHtml(x: {
     if (pend) body += `<tr class="gap"><td colspan="${cols}"></td></tr>` + pend;
     const t = sum(all);
     const adj = r2(apps.reduce((s, a) => s + (Number(a.retainageAdj) || 0), 0));
-    const through = last ? `${last.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(last.docNumber)}${last.periodEnd ? ` (Period To ${shortD(last.periodEnd)})` : ''}` : 'No pay apps yet';
+    const through = last ? `${last.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(last.docNumber)}${last.periodEnd ? ` (${last.kind === 'invoice' ? 'Invoice Date' : 'Period To'} ${shortD(last.periodEnd)})` : ''}` : 'No pay apps yet';
     const tiles = [
       ['Contract Sum to Date', money2(t.s)],
       ['Billed to Date', `${money2(t.d)} · ${pct(t.d, t.s)}`],

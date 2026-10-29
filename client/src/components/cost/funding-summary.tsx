@@ -51,7 +51,6 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <Row key={`add-${i}`} name={x.label} sub={x.source === 'amortized' ? 'Additional funding: landlord, repaid through rent' : x.source === 'tenant' ? 'Additional funding from the tenant' : 'Additional funding from the capital partner'} value={x.amount} />
             ))}
             <Row name="Tenant-funded change orders" sub="The change orders as the tenant approved them" value={(f as any).tenantCos ?? f.tenant} />
-            {((f as any).tenantCm ?? 0) > 0.005 && <Row name="Tenant's CM fee on change orders" sub="Billed to the tenant with them — it pays the change order CM fees set aside below" value={(f as any).tenantCm} />}
             <tr className="border-b">
               <td className="py-1.5 pr-3">
                 {label === null ? (
@@ -78,8 +77,8 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <td className={`py-1.5 text-right tabular-nums ${f.supplemental > 0.005 ? 'text-red-800 font-medium' : ''}`}>{signedMoney(f.supplemental)}</td>
             </tr>
             <Row name="Total funding" value={f.totalFunding} strong />
-            <Row name="CM fees — set aside" value={f.cmReserved}
-                 sub={`Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + change order CM fees ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />
+            {(f.cmReserved > 0.005 || f.cmCeiling > 0.005) && <Row name="CM fees — set aside" value={f.cmReserved}
+                 sub={`Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + capital partner's fees on change orders ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />}
             <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups" value={f.projectCost} />
             <tr>
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
@@ -91,6 +90,16 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
             </tr>
           </tbody>
         </table>
+        {((f as any).tenantCm ?? 0) > 0.005 && (
+          <div className="mt-3 border-t pt-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-1">The tenant's cost of change orders <span className="normal-case font-normal text-gray-500">— not project funding</span></div>
+            <table className="w-full text-sm"><tbody>
+              <tr className="border-b"><td className="py-1 pr-3">Change orders as approved</td><td className="py-1 text-right tabular-nums">{money((f as any).tenantCos)}</td></tr>
+              <tr className="border-b"><td className="py-1 pr-3">Our CM fee on them<div className="text-[11px] text-gray-500">Fee income — tracked on the CM Fee Report</div></td><td className="py-1 text-right tabular-nums">{money((f as any).tenantCm)}</td></tr>
+              <tr className="font-semibold"><td className="py-1 pr-3">Tenant pays in all</td><td className="py-1 text-right tabular-nums">{money(f.tenant)}</td></tr>
+            </tbody></table>
+          </div>
+        )}
       </div>
       <div className="text-sm space-y-2">
         {f.overLines.length > 0 && (

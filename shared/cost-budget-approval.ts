@@ -765,7 +765,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   let unmapped = 0;
   // Split: the project's cost to complete, and the CM fees (original, partner's and tenant's on change orders) set aside.
   let cmReserved = 0, projectCost = 0, cmCeiling = 0, cmOriginal = 0, spendable = 0;
-  const fundsInLater = () => r2(original + revisions + additions + s.approvedBillable - need);
+  const fundsInLater = () => r2(original + revisions + additions + tenant - tenantCm - need);
   if (cost.byKey) {
     // Lines bought out (anything committed): what's committed, under or over. Lines not yet: their budget.
     let committedLines = 0, openBudget = 0;
@@ -792,7 +792,9 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     unmapped = unplaced;
     const coExtras = approved.reduce((t, c) => {
       const x = coTotals(c);
-      cmReserved += x.cm + x.cmAbsorbed;
+      // The tenant's CM fee is ours, paid by the tenant on top of their change orders: it isn't
+      // project funding, so it's neither a source nor a use here (shown below Total Funding).
+      cmReserved += x.cmAbsorbed;
       return t + x.markups + (c.links.length ? 0 : x.work);
     }, 0);
     projectCost = r2(committedLines + Math.max(openBudget, unplaced) + coExtras);
@@ -811,7 +813,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   } else {
     need = r2(Math.max(revised, projectedCost));
   }
-  const fundsIn = r2(original + revisions + additions + tenant);
+  const fundsIn = r2(original + revisions + additions + tenant - tenantCm);
   const supplemental = r2(Math.max(0, need - fundsIn));
   return {
     original, revisions, transfers, tenant, absorbed, revised,

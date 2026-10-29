@@ -297,12 +297,15 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
       ${Math.abs(f.revisions) >= 0.005 ? r("Budget revisions", f.revisions, "Lines edited after confirmation") : ""}
       ${((f as any).additionList ?? []).map((x: any) => r(x.label, x.amount, x.source === "amortized" ? "Additional funding: landlord, repaid through rent" : x.source === "tenant" ? "Additional funding from the tenant" : "Additional funding from the capital partner")).join("")}
       ${r("Tenant-funded change orders", (f as any).tenantCos ?? f.tenant, "The change orders as the tenant approved them")}
-      ${((f as any).tenantCm ?? 0) > 0.005 ? r("Tenant's CM fee on change orders", (f as any).tenantCm, "Billed to the tenant with them — it pays the change order CM fees set aside") : ""}
       ${r(f.label, f.supplemental, f.supplemental > 0.005 ? "Needed beyond the budget and the tenant's share" : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money2(f.absorbed)} paid from the budget surplus` : "None needed")}
       ${r("Total funding", f.totalFunding, "", "total")}
-      ${f.cmReserved != null ? r("CM fees — set aside", f.cmReserved, `Original CM fee ${money2(f.cmOriginal ?? 0)} (rate on the cost to complete; the ${money2(f.cmCeiling ?? 0)} budget is a ceiling)${(f.cmReserved - (f.cmOriginal ?? 0)) > 0.005 ? ` + change order CM fees ${money2(f.cmReserved - (f.cmOriginal ?? 0))}` : ""}`) : ""}
+      ${f.cmReserved != null && (f.cmReserved > 0.005 || (f.cmCeiling ?? 0) > 0.005) ? r("CM fees — set aside", f.cmReserved, `Original CM fee ${money2(f.cmOriginal ?? 0)} (rate on the cost to complete; the ${money2(f.cmCeiling ?? 0)} budget is a ceiling)${(f.cmReserved - (f.cmOriginal ?? 0)) > 0.005 ? ` + capital partner's fees on change orders ${money2(f.cmReserved - (f.cmOriginal ?? 0))}` : ""}`) : ""}
       ${f.projectCost != null ? r("Projected cost to complete", f.projectCost, "Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups") : ""}
       ${f.surplus != null && f.surplus > 0.005 ? r("Projected surplus", f.surplus, `Spendable ${money2(f.spendable ?? f.surplus)} after the CM fee it earns${f.contingency ? ` · contingency unspent ${money2(f.contingency)}` : ""}`) : ""}
+      ${((f as any).tenantCm ?? 0) > 0.005 ? `<tr><td colspan="2" style="padding-top:8px;font-weight:600">The tenant's cost of change orders <span class="muted" style="font-weight:400">— not project funding</span></td></tr>
+      ${r("Change orders as approved", (f as any).tenantCos)}
+      ${r("Our CM fee on them", (f as any).tenantCm, "Fee income — tracked on the CM Fee Report")}
+      ${r("Tenant pays in all", f.tenant, "", "sub")}` : ""}
     </tbody></table>
     <table class="t" style="flex:1"><thead><tr><th class="l">Why the Budget Changed</th><th>Amount</th></tr></thead><tbody>
       ${r("Original budget", f.original, "", "sub")}

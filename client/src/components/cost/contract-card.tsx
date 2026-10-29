@@ -662,6 +662,22 @@ function ContractDetails({ contract, documents, projectId }: { contract: Contrac
   return (
     <div className="px-4 py-3 border-b bg-gray-50/60 space-y-3">
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+        <div className="space-y-1 col-span-2">
+          <div className="text-xs text-gray-600">Company</div>
+          <Input className="h-8 text-sm" defaultValue={contract.counterparty} key={`cp-${contract.counterparty}`}
+                 onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== contract.counterparty) save({ counterparty: v }); else if (!v) e.target.value = contract.counterparty; }} />
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs text-gray-600">Category</div>
+          <Select value={contract.bucket} onValueChange={(v) => v !== contract.bucket && save({ bucket: v })}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent className="pm-scope">
+              {Object.entries(BUCKET_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
         <div className="space-y-1">
           <div className="text-xs text-gray-600">Contract #</div>
           <Input className="h-8 text-sm" defaultValue={contract.contractNumber ?? ''} key={`no-${contract.contractNumber ?? ''}`}

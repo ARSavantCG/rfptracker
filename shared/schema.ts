@@ -2469,6 +2469,7 @@ export const costDirectCosts = pgTable("cost_direct_costs", {
   method: text("method"),                     // card | check | ach | wire | other
   reference: text("reference"),               // last 4, check number, confirmation
   invoiceNumber: text("invoice_number"),      // the vendor's invoice number
+  chargeTo: text("charge_to"),                // tenant | landlord; null = by the budget line's tenant share
   baselineKey: text("baseline_key"),          // budget line; null = Unallocated
   reconciled: boolean("reconciled").notNull().default(false),
   notes: text("notes"),

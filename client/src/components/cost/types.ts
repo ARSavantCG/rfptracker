@@ -178,6 +178,8 @@ export interface DirectCostRow {
   reference: string | null;
   /** The vendor's invoice number. */
   invoiceNumber?: string | null;
+  /** Who pays it outright; null = by the budget line's tenant share. */
+  chargeTo?: 'tenant' | 'landlord' | null;
   key: string | null;
   reconciled: boolean;
   notes: string | null;

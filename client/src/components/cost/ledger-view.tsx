@@ -19,7 +19,7 @@ import { openDocument } from './contract-card';
 import { money, shortDate, todayIso, openReport, projectKey, PAY_METHODS, type ProjectBundle } from './types';
 
 const METHOD = Object.fromEntries(PAY_METHODS);
-const blank = () => ({ date: todayIso(), vendor: '', invoiceNumber: '', description: '', amount: '', method: 'card', reference: '', key: '', notes: '' });
+const blank = () => ({ date: todayIso(), vendor: '', invoiceNumber: '', description: '', amount: '', method: 'card', reference: '', key: '', chargeTo: '', notes: '' });
 const NONE = '__none__';
 /** Files dragged in — from the desktop, a folder, or an email attachment. */
 const droppedFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.files ?? []);
@@ -69,7 +69,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   };
   const add = useMutation({
     mutationFn: async () => {
-      const body = { ...form, amount: (Number.isFinite(parseAmount(form!.amount)) ? String(parseAmount(form!.amount)) : form!.amount.replace(/,/g, '')), key: form!.key || null };
+      const body = { ...form, chargeTo: form!.chargeTo || null, amount: (Number.isFinite(parseAmount(form!.amount)) ? String(parseAmount(form!.amount)) : form!.amount.replace(/,/g, '')), key: form!.key || null };
       const row: any = editId != null
         ? await apiRequest(`/api/cost-direct-costs/${editId}`, 'PATCH', body)
         : await apiRequest(`/api/cost-projects/${projectId}/direct-costs`, 'POST', body);
@@ -96,7 +96,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
     if (!d) return;
     setPayEdit(null); setReceipt(null); setEditId(id);
     setForm({ date: d.date, vendor: d.vendor, invoiceNumber: d.invoiceNumber ?? '', description: d.description ?? '', amount: d.amount.toFixed(2),
-      method: d.method ?? 'card', reference: d.reference ?? '', key: d.key ?? '', notes: d.notes ?? '' });
+      method: d.method ?? 'card', reference: d.reference ?? '', key: d.key ?? '', chargeTo: d.chargeTo ?? '', notes: d.notes ?? '' });
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
   };
   const startPayEdit = (id: number, label: string) => {
@@ -192,6 +192,16 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                 <SelectContent className="pm-scope">
                   <SelectItem value={NONE}>Unallocated — Choose Later</SelectItem>
                   {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Who Pays">
+              <Select value={form.chargeTo || NONE} onValueChange={(v) => setForm({ ...form, chargeTo: v === NONE ? '' : v })}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">
+                  <SelectItem value={NONE}>{(() => { const b = baseline.find((x) => x.key === form.key); return b ? `Per Budget Line (Tenant ${Number(b.tenantSharePct ?? 100).toFixed(0)}%)` : 'Per Budget Line (Not Billed Until Assigned)'; })()}</SelectItem>
+                  <SelectItem value="tenant">Tenant (100%)</SelectItem>
+                  <SelectItem value="landlord">Landlord (0% to Tenant)</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -338,6 +348,10 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                         </SelectContent>
                       </Select>
                     ) : <span className="text-xs text-gray-500">Per pay app</span>}
+                    {e.kind === 'direct' && (() => {
+                      const ct = bundle.directCosts.find((d) => d.id === e.id)?.chargeTo;
+                      return ct ? <div className={`mt-0.5 text-[11px] font-medium ${ct === 'tenant' ? 'text-violet-800' : 'text-slate-700'}`}>{ct === 'tenant' ? 'Tenant Pays' : 'Landlord Pays'}</div> : null;
+                    })()}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums font-medium">{money(e.amount)}</td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-gray-500">{money(e.running)}</td>

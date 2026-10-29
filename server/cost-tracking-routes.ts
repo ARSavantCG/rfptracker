@@ -232,7 +232,7 @@ export async function loadProjectBundle(projectId: number) {
     .where(eq(costDirectCosts.projectId, projectId)).orderBy(costDirectCosts.date, costDirectCosts.id);
   const directCosts = directRows.map((d) => ({
     id: d.id, date: isoDay(d.date), vendor: d.vendor, description: d.description,
-    amount: dollars(d.amountCents), method: d.method, reference: d.reference, invoiceNumber: d.invoiceNumber ?? null,
+    amount: dollars(d.amountCents), method: d.method, reference: d.reference, invoiceNumber: d.invoiceNumber ?? null, chargeTo: (d.chargeTo === 'tenant' || d.chargeTo === 'landlord') ? d.chargeTo : null,
     key: d.baselineKey, reconciled: d.reconciled, notes: d.notes,
   }));
 
@@ -431,8 +431,17 @@ export async function loadProjectBundle(projectId: number) {
     const cmCeiling = cmSettings.key ? r2c(breakdown.filter((r) => r.key === cmSettings.key).reduce((t, r) => t + r.revised - r.changeOrders, 0)) : 0;
     const draftFor = (type: 'fee' | 'reimbursable') => {
       const issued = ((settings.cmInvoices || []) as CmInvoiceRecord[]).filter((i) => streamOf(i) === type);
+      // Charges marked Tenant Pays or Landlord Pays move the tenant's share off their budget line's.
+      const lineShare = new Map(summary.rows.map((r) => [r.key, r.tenantSharePct] as [string, number]));
+      const chargeAdj = r2c(directCosts.filter((d) => d.chargeTo && d.key !== cmSettings.key).reduce((t, d) => {
+        const linePct = d.key && lineShare.has(d.key) ? lineShare.get(d.key)! : 0;
+        return t + (d.amount * ((d.chargeTo === 'tenant' ? 100 : 0) - linePct)) / 100;
+      }, 0));
       const calc = cmInvoiceCalc({
-        rows: summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
+        rows: [
+          ...summary.rows.map((r) => ({ key: r.key, description: r.description, toDate: r.toDate, tenantSharePct: r.tenantSharePct })),
+          ...(Math.abs(chargeAdj) >= 0.005 ? [{ key: '__charge_to__', description: 'Charges Marked Tenant or Landlord Pays', toDate: chargeAdj, tenantSharePct: 100 }] : []),
+        ],
         cmKey: cmSettings.key, pct: cmSettings.pct,
         previouslyInvoiced: issued.reduce((s, i) => s + (Number(i.due) || 0), 0),
       });
@@ -1537,6 +1546,7 @@ export function registerCostTrackingRoutes(app: Express): void {
     if (b.method !== undefined) out.method = METHODS.includes(String(b.method)) ? String(b.method) : null;
     if (b.reference !== undefined) out.reference = b.reference ? String(b.reference).slice(0, 120) : null;
     if (b.invoiceNumber !== undefined) out.invoiceNumber = String(b.invoiceNumber ?? '').trim().slice(0, 80) || null;
+    if (b.chargeTo !== undefined) out.chargeTo = b.chargeTo === 'tenant' || b.chargeTo === 'landlord' ? b.chargeTo : null;
     if (b.key !== undefined) out.baselineKey = b.key ? String(b.key) : null;
     if (b.reconciled !== undefined) out.reconciled = !!b.reconciled;
     if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;

@@ -399,7 +399,7 @@ export function billableItems(input: {
   lines: readonly SovLine[];
   changeOrders: readonly ChangeOrder[];
   applications: ReadonlyArray<DatedApplication & { kind?: string; invoiceNumber?: string | null }>;
-  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; key: string | null; method?: string | null; reference?: string | null }>;
+  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; key: string | null; method?: string | null; reference?: string | null; invoiceNumber?: string | null; chargeTo?: string | null }>;
   /** Tenant share by budget line, for work that is not linked change order work. */
   tenantPct: Map<string, number>;
   validKeys: Set<string>;
@@ -468,12 +468,13 @@ export function billableItems(input: {
   }
   for (const d of input.directCosts) {
     if (d.key && d.key === input.cmKey) continue;
-    const pct = d.key && input.validKeys.has(d.key) ? pctOf(d.key) : 0;
+    // Charged to the tenant or the landlord outright, else by the budget line's tenant share.
+    const pct = d.chargeTo === 'tenant' ? 100 : d.chargeTo === 'landlord' ? 0 : d.key && input.validKeys.has(d.key) ? pctOf(d.key) : 0;
     const how = [d.method === 'card' ? 'CC' : d.method ? d.method.toUpperCase() : '', d.reference || ''].filter(Boolean).join(' ');
     const billable = r2((d.amount * pct) / 100);
     out.push({
       ref: `direct-${d.id}`, date: d.date, vendor: d.vendor,
-      item: `${d.description || 'Charge'}${how ? ` (${how})` : ''}`,
+      item: `${d.description || 'Charge'}${d.invoiceNumber ? ` · Invoice #${d.invoiceNumber}` : ''}${how ? ` (${how})` : ''}`,
       amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2((d.amount * rate) / 100), suppP: 0, coAmount: 0,
     });
   }

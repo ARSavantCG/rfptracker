@@ -516,8 +516,35 @@ export function renderJobCostLedgerHtml(input: {
   from?: string | null;
   to?: string | null;
   generatedBy?: string | null;
+  /** Tenant's share of each entry ("direct-7", "payment-3"); null = not assigned to a budget line or a payer yet. */
+  shares?: Map<string, { tenant: number | null }>;
 }): string {
   const { ledger } = input;
+  const shareOf = (e: LedgerEntry) => input.shares?.get(`${e.kind}-${e.id}`);
+  const whoPays = (e: LedgerEntry) => {
+    const sh = shareOf(e);
+    if (!sh) return "";
+    if (sh.tenant == null) return '<span style="color:#b45309">Not Assigned</span>';
+    if (Math.abs(sh.tenant) < 0.005) return "Landlord";
+    if (Math.abs(sh.tenant - e.amount) < 0.005) return "Tenant";
+    return `Tenant ${money2(sh.tenant)}<div style="font-size:9px;color:#4b5563">Landlord ${money2(Math.round((e.amount - sh.tenant) * 100) / 100)}</div>`;
+  };
+  const resp = { tenant: { pay: 0, direct: 0 }, landlord: { pay: 0, direct: 0 }, none: { pay: 0, direct: 0 } };
+  for (const e of ledger.entries) {
+    const sh = shareOf(e); if (!sh) continue;
+    const k = e.kind === "payment" ? "pay" : "direct";
+    if (sh.tenant == null) { resp.none[k] += e.amount; continue; }
+    resp.tenant[k] += sh.tenant; resp.landlord[k] += e.amount - sh.tenant;
+  }
+  const r2x = (v: number) => Math.round(v * 100) / 100;
+  const respRows = ([["Tenant", resp.tenant], ["Landlord (Our Cost)", resp.landlord], ["Not Assigned Yet", resp.none]] as const)
+    .filter(([, v]) => Math.abs(v.pay) >= 0.005 || Math.abs(v.direct) >= 0.005);
+  const respHtml = input.shares && respRows.length ? `<h3 class="sec">By Who Pays</h3>
+  <table class="t" style="width:75%"><thead><tr><th class="l">Responsible</th><th>Contract Payments</th><th>Direct Costs</th><th>Total</th><th>Share</th></tr></thead><tbody>
+    ${respRows.map(([n, v]) => `<tr><td>${n}</td>${cell(r2x(v.pay))}${cell(r2x(v.direct))}${cell(r2x(v.pay + v.direct))}<td class="num">${ledger.total ? `${(((v.pay + v.direct) / ledger.total) * 100).toFixed(1)}%` : "—"}</td></tr>`).join("")}
+    <tr class="total"><td>Total</td>${cell(r2x(respRows.reduce((t, [, v]) => t + v.pay, 0)))}${cell(r2x(respRows.reduce((t, [, v]) => t + v.direct, 0)))}${cell(ledger.total)}<td></td></tr>
+  </tbody></table>
+  <div class="legend">Tenant = their share as billed on the tenant's invoice: each pay app at its lines' tenant shares (change orders at their own), each charge by its Who Pays or its budget line's share. Not Assigned Yet = charges with no budget line and no Who Pays.</div>` : "";
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
   const period = input.from || input.to
     ? `${input.from ? longDate(input.from) : "Start"} – ${input.to ? longDate(input.to) : "today"}`
@@ -546,13 +573,14 @@ export function renderJobCostLedgerHtml(input: {
   ${reportHeaderHtml({ title: "Job Cost Ledger", eyebrow: "Cost Report", info, notes })}
   <table class="t"><thead><tr>
     <th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">How Paid</th>
-    <th class="l">Budget Line</th><th>Amount</th><th>Running Total</th><th title="Reconciled">✓</th></tr></thead><tbody>
-    ${ledger.entries.length === 0 ? `<tr><td colspan="8" class="muted">No payments or charges in this period.</td></tr>` : ledger.entries.map((e) => `<tr>
+    <th class="l">Budget Line</th>${input.shares ? '<th class="l">Who Pays</th>' : ""}<th>Amount</th><th>Running Total</th><th title="Reconciled">✓</th></tr></thead><tbody>
+    ${ledger.entries.length === 0 ? `<tr><td colspan="${input.shares ? 9 : 8}" class="muted">No payments or charges in this period.</td></tr>` : ledger.entries.map((e) => `<tr>
       <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}${(e as any).invoiceNumber ? `<div style="font-size:9.5px;color:#4b5563">Invoice #${escapeHtml((e as any).invoiceNumber)}</div>` : ""}</td><td>${escapeHtml(e.description)}${e.notes ? `<div style="font-size:9.5px;color:#4b5563;font-style:italic">${escapeHtml(e.notes)}</div>` : ""}</td>
-      <td>${escapeHtml(how(e))}</td><td>${escapeHtml(e.budgetLine)}</td>${cell(e.amount)}${cell(e.running, "muted")}
+      <td>${escapeHtml(how(e))}</td><td>${escapeHtml(e.budgetLine)}</td>${input.shares ? `<td style="white-space:nowrap">${whoPays(e)}</td>` : ""}${cell(e.amount)}${cell(e.running, "muted")}
       <td class="c${e.reconciled ? "" : " open"}">${e.reconciled ? "✓" : "○"}</td></tr>`).join("")}
-    <tr class="total"><td colspan="5">Total</td>${cell(ledger.total)}<td></td><td></td></tr>
+    <tr class="total"><td colspan="${input.shares ? 6 : 5}">Total</td>${cell(ledger.total)}<td></td><td></td></tr>
   </tbody></table>
+  ${respHtml}
   ${payees.length > 1 ? `<h3 class="sec">By Payee</h3>
   <table class="t" style="width:60%"><thead><tr><th class="l">Paid To</th><th>Total</th></tr></thead><tbody>
     ${payees.map(([v, a]) => `<tr><td>${escapeHtml(v)}</td>${cell(a)}</tr>`).join("")}
@@ -1077,7 +1105,32 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const entries = inPeriod.map((e) => { running = Math.round((running + e.amount) * 100) / 100; return { ...e, running }; });
       const open = entries.filter((e) => !e.reconciled);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      // Who pays each entry: the tenant's share of it as on the tenant's invoice (each pay app's
+      // billable over its work; a charge's Who Pays or its budget line's share); the rest is ours.
+      const ratio = new Map<string, number>();
+      // A pay app with no work of its own (a retainage release) takes its contract's share overall.
+      const byVendor = new Map<string, { amt: number; bill: number }>();
+      for (const it of ((b as any).cmInvoiceDrafts?.tenant?.items ?? []) as any[]) {
+        if (Math.abs(Number(it.amount) || 0) < 0.005) continue;
+        ratio.set(it.ref, (Number(it.billable) || 0) / Number(it.amount));
+        if (/^(app|pay)-/.test(String(it.ref))) { const v = byVendor.get(it.vendor) ?? { amt: 0, bill: 0 }; v.amt += Number(it.amount); v.bill += Number(it.billable) || 0; byVendor.set(it.vendor, v); }
+      }
+      const shares = new Map<string, { tenant: number | null }>();
+      for (const e of entries) {
+        if (e.kind === "direct") {
+          const d: any = (b.directCosts as any[]).find((x) => x.id === e.id);
+          const unassigned = !d?.chargeTo && !d?.key;
+          shares.set(`direct-${e.id}`, { tenant: unassigned ? null : Math.round(e.amount * (ratio.get(`direct-${e.id}`) ?? (d?.chargeTo === "tenant" ? 1 : 0)) * 100) / 100 });
+        } else {
+          const p: any = (b.payments as any[]).find((x) => x.id === e.id);
+          const cv = byVendor.get((b.contracts as any[]).find((c) => c.id === p?.contractId)?.counterparty ?? "");
+          // The tenant's invoice lists payments (billed as paid) or pay apps (billed as billed).
+          const r = ratio.get(`payment-${e.id}`.replace("payment-", "pay-")) ?? (p?.applicationId ? ratio.get(`app-${p.applicationId}`) : undefined) ?? (cv && cv.amt ? cv.bill / cv.amt : undefined);
+          shares.set(`payment-${e.id}`, { tenant: r == null ? 0 : Math.round(e.amount * r * 100) / 100 });
+        }
+      }
       res.send(renderJobCostLedgerHtml({
+        shares,
         project: b.project, ...(await propertyFacts(b.project)),
         ledger: { entries, total: running, unreconciled: Math.round(open.reduce((s, e) => s + e.amount, 0) * 100) / 100, unreconciledCount: open.length },
         from, to, generatedBy: generatedByName((req as any).user),

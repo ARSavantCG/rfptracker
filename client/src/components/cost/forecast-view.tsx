@@ -122,7 +122,7 @@ export function ForecastView({ bundle: b, projectId }: { bundle: ProjectBundle; 
     </div>
   );
 
-  const num = (v: number, cls = '') => <td className={`px-1.5 py-1.5 text-right tabular-nums whitespace-nowrap ${cls}`}>{Math.abs(v) >= 0.005 ? signed(v) : <span className="text-gray-300">—</span>}</td>;
+  const num = (v: number, cls = '') => <td className={`px-2 py-1.5 text-right tabular-nums whitespace-nowrap ${cls}`}>{Math.abs(v) >= 0.005 ? signed(v) : <span className="text-gray-300">—</span>}</td>;
   const sumRows = (rows: ForecastRow[], k: keyof ForecastRow) => rows.reduce((t, r) => t + (r[k] as number), 0);
 
   return (
@@ -155,19 +155,19 @@ export function ForecastView({ bundle: b, projectId }: { bundle: ProjectBundle; 
       </div>
 
       <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="w-full text-[12.5px] min-w-[1040px] table-fixed">
+        <table className="w-full text-[12.5px]">
           <thead>
             <tr className="text-[10.5px] uppercase tracking-wide text-gray-600 border-b leading-tight align-bottom">
-              <th className="px-2 py-2 text-left">Budget Line</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Budget</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Committed</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Billed to Date</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Left on Commitments</th>
-              {showPend && <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Pending COs</th>}
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Forecast Items</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Est. to Complete</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Est. at Completion</th>
-              <th className="px-1.5 py-2 text-right whitespace-normal w-[96px]">Variance</th>
+              <th className="px-2 py-2 text-left min-w-[200px]">Budget Line</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Budget</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Committed</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Billed to Date</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Left on Commitments</th>
+              {showPend && <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Pending COs</th>}
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Forecast Items</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Est. to Complete</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Est. at Completion</th>
+              <th className="px-1.5 py-2 text-right whitespace-normal min-w-[84px]">Variance</th>
               <th className="w-7" />
             </tr>
           </thead>

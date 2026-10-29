@@ -25,6 +25,7 @@ import { LedgerView } from '@/components/cost/ledger-view';
 import { ProjectFilesList, DeletedFilesBin } from '@/components/cost/project-files';
 import { ReportsView, LenderPackagesCard, PayoffCard } from '@/components/cost/reports-view';
 import { ForecastView } from '@/components/cost/forecast-view';
+import { UnallocatedPanel } from '@/components/cost/unallocated-panel';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
@@ -216,6 +217,7 @@ export default function CostProject() {
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> Add budget lines on the Budget tab first — that's what contract lines are mapped to.
               </div>
             )}
+            <UnallocatedPanel bundle={b} projectId={id} onGoLedger={() => setTab('ledger')} />
             {b.contracts.map((c) => (
               <ContractCard key={c.id}
                 contract={c}

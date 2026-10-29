@@ -1515,6 +1515,12 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.fundingScopes !== undefined) next.fundingScopes = normalizeScopes(b.fundingScopes);
       if (b.contingencyKeys !== undefined) next.contingencyKeys = Array.isArray(b.contingencyKeys) ? b.contingencyKeys.map(String).slice(0, 20) : [];
       if (b.supplementalLabel !== undefined) next.supplementalLabel = String(b.supplementalLabel ?? '').trim().slice(0, 60);
+      // The header every report prints (project, owner, GC, prime contract, prepared by); blanks fall back to the project's own facts.
+      if (b.reportHeader !== undefined) {
+        const keys = ['projectName', 'shortName', 'projectNo', 'address', 'owner', 'generalContractor', 'primeContract', 'primeContractDate', 'preparedBy', 'preparedByTitle'];
+        const src = (b.reportHeader && typeof b.reportHeader === 'object') ? b.reportHeader : {};
+        next.reportHeader = Object.fromEntries(keys.map((k) => [k, String(src[k] ?? '').trim().slice(0, 200)]).filter(([, v]) => v));
+      }
       await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
       res.json(await loadProjectBundle(id));
     } catch (e) { fail(res, e, 'save the settings'); }

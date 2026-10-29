@@ -29,6 +29,7 @@ import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
 import { renderSovHtml } from "./sov-report";
 import { renderForecastHtml } from "./forecast-report";
+import { payAppSplits } from "@shared/responsibility";
 import { renderOwedHtml } from "./owed-report";
 import { renderAgingHtml } from "./aging-report";
 import { renderExecSummaryHtml } from "./exec-summary-report";
@@ -128,9 +129,12 @@ export interface ApprovalView {
 }
 
 function infoRows(project: CostReportProject, propertyLabel?: string, rentableSf?: number): ReportInfoRow[] {
+  const head = ((project as any).__headerRows ?? []) as ReportInfoRow[];
+  const hasAddr = head.some((r) => r.label === "Address" && String(r.value).trim());
   return [
+    ...head,
     { label: "Tenant", value: project.tenantName || "" },
-    { label: "Property", value: propertyLabel || "" },
+    { label: "Property", value: hasAddr ? "" : propertyLabel || "" },
     { label: "Rentable Area", value: rentableSf ? `${Math.round(rentableSf).toLocaleString("en-US")} SF` : "" },
   ];
 }
@@ -547,16 +551,19 @@ export function renderJobCostLedgerHtml(input: {
     ${respRows.map(([n, v]) => `<tr><td>${n}</td>${cell(r2x(v.pay))}${cell(r2x(v.direct))}${cell(r2x(v.pay + v.direct))}<td class="num">${ledger.total ? `${(((v.pay + v.direct) / ledger.total) * 100).toFixed(1)}%` : "—"}</td></tr>`).join("")}
     <tr class="total"><td>Total</td>${cell(r2x(respRows.reduce((t, [, v]) => t + v.pay, 0)))}${cell(r2x(respRows.reduce((t, [, v]) => t + v.direct, 0)))}${cell(ledger.total)}<td></td></tr>
   </tbody></table>
-  <div class="legend">Tenant = their share as billed on the tenant's invoice: each pay app at its lines' tenant shares (change orders at their own), each charge by its Who Pays or its budget line's share. Not Assigned Yet = charges with no budget line and no Who Pays.</div>` : "";
+  <div class="legend">Contract payments split by the pay app's own scope, line by line and net of retainage: Sitework lines to the landlord, Tenant Improvements lines to the tenant (lines with no section by their budget line's scope; change orders to the tenant). Charges by their Who Pays, else their budget line's tenant share. Not Assigned Yet = charges with no budget line and no Who Pays.</div>` : "";
   const info = infoRows(input.project, input.propertyLabel, input.rentableSf);
-  const period = input.from || input.to
-    ? `${input.from ? longDate(input.from) : "Start"} – ${input.to ? longDate(input.to) : "today"}`
-    : "All entries to date";
-  info.push({ label: "Period", value: period });
+  // Period, first and last entry, and the count: from the entries themselves, not a label.
+  const dates = ledger.entries.map((e) => e.date).filter(Boolean).sort();
+  const first = dates[0], last = dates[dates.length - 1];
+  if (first) info.push({ label: "Period Covered", value: `${longDate(first)} through ${longDate(last)}` });
+  if (first) info.push({ label: "First Entry", value: longDate(first) });
+  if (last) info.push({ label: "Last Entry", value: longDate(last) });
+  info.push({ label: "Entries in Report", value: String(ledger.entries.length) });
+  if (input.from || input.to) info.push({ label: "Filtered To", value: `${input.from ? longDate(input.from) : "the start"} through ${input.to ? longDate(input.to) : "today"}` });
   if (input.payee) info.push({ label: "Paid To", value: input.payee });
-  const notes = ledger.unreconciledCount
-    ? [`${ledger.unreconciledCount} ${ledger.unreconciledCount === 1 ? "entry is" : "entries are"} not yet reconciled (${money2(ledger.unreconciled)}), marked ○.`]
-    : [];
+  info.push({ label: "Report Printed", value: longDate(todayEastern()) });
+  const notes = [`${money2(ledger.total)} posted across ${ledger.entries.length} ${ledger.entries.length === 1 ? "entry" : "entries"}.${ledger.unreconciledCount ? ` Unreconciled: ${ledger.unreconciledCount} ${ledger.unreconciledCount === 1 ? "entry" : "entries"}, ${money2(ledger.unreconciled)} (marked ○).` : " All reconciled."}`];
   const METHOD: Record<string, string> = { card: "Card", check: "Check", ach: "ACH", wire: "Wire", other: "Other" };
   const how = (e: LedgerEntry) => {
     const m = e.method ? METHOD[e.method] || e.method : "";
@@ -1055,9 +1062,37 @@ export function renderBudgetLogHtml(input: {
   </body></html>`;
 }
 
-async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }) {
+/**
+ * The project's report header (Adolfo, 2026-10-29): one block every report prints, from one place —
+ * project, project no., address, owner, general contractor, prime contract, prepared by. Typed in the
+ * project's Report Header settings; blanks fall back to what the project already knows (its name, the
+ * property's address, the contractor contract and its number and date).
+ */
+export function reportHeaderRows(project: any, b: any, property: any): ReportInfoRow[] {
+  const h = ((project?.settings || {}) as any).reportHeader || {};
+  const t = (v: unknown) => String(v ?? "").trim();
+  const gcContract = ((b?.contracts ?? []) as any[]).find((c) => c.bucket === "contractor") ?? null;
+  const addr = property ? [t(property.streetAddress), [t(property.city), [t(property.state), t(property.zip)].filter(Boolean).join(" ")].filter(Boolean).join(", ")].filter(Boolean).join(", ") : "";
+  const longD = (d: unknown) => { const s = t(d).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s.slice(5, 7)}/${s.slice(8, 10)}/${s.slice(0, 4)}` : ""; };
+  const primeNo = t(h.primeContract) || t(gcContract?.contractNumber);
+  const primeDate = longD(h.primeContractDate) || longD(gcContract?.contractDate);
+  const prepared = [t(h.preparedBy), t(h.preparedByTitle)].filter(Boolean).join(", ");
+  return [
+    { label: "Project", value: t(h.projectName) || t(project?.name) },
+    { label: "Project No.", value: t(h.projectNo) || t(project?.projectNumber) },
+    { label: "Address", value: t(h.address) || addr },
+    { label: "Owner", value: t(h.owner) },
+    { label: "General Contractor", value: t(h.generalContractor) || t(gcContract?.counterparty) },
+    { label: "Prime Contract", value: primeNo ? `${primeNo}${primeDate ? `, dated ${primeDate}` : ""}` : "" },
+    { label: "Prepared by", value: prepared },
+  ];
+}
+
+async function propertyFacts(project: { propertyId: number | null; rfpId: number | null }, b?: any) {
   const property: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const rfp: any = project.rfpId ? await storage.getRfpRequest(project.rfpId).catch(() => undefined) : undefined;
+  // The shared header rides on the project object, so every report's info block picks it up.
+  (project as any).__headerRows = reportHeaderRows(project, b, property);
   return {
     propertyLabel: rfp ? rfpPropertyLabel(rfp, property) : (property?.name ?? ""),
     rentableSf: rfp ? rfpRentableSf(rfp, property) : 0,
@@ -1073,7 +1108,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderBudgetVsActualHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         summary: b.summary,
         funding: b.funding.confirmed || b.approval.changeOrders.length ? b.funding : null,
         story: b.story,
@@ -1123,16 +1158,22 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const entries = inPeriod.map((e) => { running = Math.round((running + e.amount) * 100) / 100; return { ...e, running }; });
       const open = entries.filter((e) => !e.reconciled);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      // Who pays each entry: the tenant's share of it as on the tenant's invoice (each pay app's
-      // billable over its work; a charge's Who Pays or its budget line's share); the rest is ours.
+      // Who pays each entry. A charge: its Who Pays, else its budget line's tenant share (as on the
+      // tenant's invoice). A contract payment: its pay app's own scope data, line by line (Sitework →
+      // landlord, Tenant Improvements → tenant, net of retainage), in proportion to the payment.
       const ratio = new Map<string, number>();
-      // A pay app with no work of its own (a retainage release) takes its contract's share overall.
-      const byVendor = new Map<string, { amt: number; bill: number }>();
       for (const it of ((b as any).cmInvoiceDrafts?.tenant?.items ?? []) as any[]) {
         if (Math.abs(Number(it.amount) || 0) < 0.005) continue;
         ratio.set(it.ref, (Number(it.billable) || 0) / Number(it.amount));
-        if (/^(app|pay)-/.test(String(it.ref))) { const v = byVendor.get(it.vendor) ?? { amt: 0, bill: 0 }; v.amt += Number(it.amount); v.bill += Number(it.billable) || 0; byVendor.set(it.vendor, v); }
       }
+      const splits = payAppSplits({
+        applications: b.applications as any[], lines: b.sovLines as any[],
+        scopes: ((b as any).scopeSetup ?? []) as any[],
+        tenantPct: new Map(((b.project.baseline || []) as any[]).map((x) => [x.key, Number(x.tenantSharePct ?? 100)])),
+      });
+      // A contract's overall split, for a payment not tied to a pay app.
+      const byContract = new Map<number, { t: number; n: number }>();
+      for (const a of b.applications as any[]) { const sp = splits.get(a.id); if (!sp) continue; const v = byContract.get(a.contractId) ?? { t: 0, n: 0 }; v.t += sp.tenant; v.n += sp.net; byContract.set(a.contractId, v); }
       const shares = new Map<string, { tenant: number | null }>();
       for (const e of entries) {
         if (e.kind === "direct") {
@@ -1141,15 +1182,55 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
           shares.set(`direct-${e.id}`, { tenant: unassigned ? null : Math.round(e.amount * (ratio.get(`direct-${e.id}`) ?? (d?.chargeTo === "tenant" ? 1 : 0)) * 100) / 100 });
         } else {
           const p: any = (b.payments as any[]).find((x) => x.id === e.id);
-          const cv = byVendor.get((b.contracts as any[]).find((c) => c.id === p?.contractId)?.counterparty ?? "");
-          // The tenant's invoice lists payments (billed as paid) or pay apps (billed as billed).
-          const r = ratio.get(`payment-${e.id}`.replace("payment-", "pay-")) ?? (p?.applicationId ? ratio.get(`app-${p.applicationId}`) : undefined) ?? (cv && cv.amt ? cv.bill / cv.amt : undefined);
-          shares.set(`payment-${e.id}`, { tenant: r == null ? 0 : Math.round(e.amount * r * 100) / 100 });
+          const sp = p?.applicationId ? splits.get(p.applicationId) : undefined;
+          const cv = byContract.get(p?.contractId);
+          const r = sp && Math.abs(sp.net) >= 0.005 ? sp.tenant / sp.net : cv && Math.abs(cv.n) >= 0.005 ? cv.t / cv.n : null;
+          shares.set(`payment-${e.id}`, { tenant: r == null ? null : Math.round(e.amount * r * 100) / 100 });
         }
+      }
+      // ?format=json: the same entries as rows for the Excel export (one row per entry, numbers as numbers).
+      if (req.query.format === "json") {
+        const facts = await propertyFacts(b.project, b);
+        const METHOD: Record<string, string> = { card: "Card", check: "Check", ach: "ACH", wire: "Wire", other: "Other" };
+        const invRe = /invoice\s*(?:no\.?|number|#)?\s*[:#]?\s*([A-Za-z0-9][\w\-\/#]*)/i;
+        const rows = entries.map((e, i) => {
+          let description = e.description, ref = "";
+          if (e.kind === "payment") {
+            const p: any = (b.payments as any[]).find((x) => x.id === e.id);
+            const a: any = p?.applicationId ? (b.applications as any[]).find((x) => x.id === p.applicationId) : null;
+            ref = a?.invoiceNumber ? String(a.invoiceNumber) : "";
+            if (ref) description = description.replace(` (${ref})`, "");
+          } else {
+            const d: any = (b.directCosts as any[]).find((x) => x.id === e.id);
+            ref = d?.invoiceNumber ? String(d.invoiceNumber) : "";
+            if (!ref) { const m = invRe.exec(String(d?.notes ?? "")) || invRe.exec(String(e.description ?? "")); if (m) ref = m[1]; }
+          }
+          const m = e.method ? METHOD[e.method] || e.method : "";
+          const r0 = e.reference || "";
+          const how = m && r0.toLowerCase().startsWith(m.toLowerCase()) ? r0 : [m, r0].filter(Boolean).join(" ");
+          const sh = shares.get(`${e.kind}-${e.id}`);
+          const t = sh?.tenant;
+          const whoPays = t == null ? "Not Assigned" : Math.abs(t) < 0.005 ? "Landlord" : Math.abs(t - e.amount) < 0.005 ? "Tenant" : "Split";
+          return {
+            n: i + 1, date: e.date, paidTo: e.vendor, description, ref, how, budgetLine: e.budgetLine, whoPays,
+            amount: e.amount, tenant: t == null ? null : t, landlord: t == null ? null : Math.round((e.amount - t) * 100) / 100,
+            reconciled: e.reconciled ? "Yes" : "No",
+          };
+        });
+        const head = ((b.project as any).__headerRows ?? []).filter((r: any) => String(r.value ?? "").trim());
+        const rh = (((b.project as any).settings || {}).reportHeader || {}) as any;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        return res.json({
+          header: [...head, ...(b.project.tenantName ? [{ label: "Tenant", value: b.project.tenantName }] : [])],
+          shortName: String(rh.shortName || head.find((r: any) => r.label === "Project")?.value || b.project.name || "Project"),
+          printed: todayEastern(), from, to, payee: payee || null, rows,
+          total: running, unreconciled: Math.round(open.reduce((s2, e) => s2 + e.amount, 0) * 100) / 100, unreconciledCount: open.length,
+          propertyLabel: facts.propertyLabel,
+        });
       }
       res.send(renderJobCostLedgerHtml({
         shares, payee: payee || null,
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         ledger: { entries, total: running, unreconciled: Math.round(open.reduce((s, e) => s + e.amount, 0) * 100) / 100, unreconciledCount: open.length },
         from, to, generatedBy: generatedByName((req as any).user),
       }));
@@ -1170,7 +1251,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const nameFor = (by: string | null) => (by && by.includes("@") && u?.email && by.toLowerCase() === String(u.email).toLowerCase() ? generatedByName(u) || by : by);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderBudgetLogHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         approval: { ...b.approval, confirmedBy: nameFor(b.approval.confirmedBy), revisions: b.approval.revisions.map((v) => ({ ...v, by: nameFor(v.by) })) },
         transfers: b.approval.transfers.map((t) => ({ date: t.date, amount: t.amount, note: t.note, by: nameFor(t.by), from: lineName(t.fromKey), to: lineName(t.toKey) })),
         budgetCos: b.approval.changeOrders.map((c) => {
@@ -1204,7 +1285,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (issuesOnly) parts.push("missing files and amounts that don't match only");
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderPayAppLogHtml({
-        project: b.project, ...(await propertyFacts(b.project)), groups,
+        project: b.project, ...(await propertyFacts(b.project, b)), groups,
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         filter: parts.length ? `${parts.join("; ")}.` : "",
         generatedBy: generatedByName((req as any).user),
@@ -1248,7 +1329,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }
       const apps = b.applications.map((a: any) => ({ id: a.id, contractId: a.contractId, number: a.number, docNumber: a.docNumber }));
       const paidOf = paidOfFrom(b.payments, (aid) => { const a: any = b.applications.find((x: any) => x.id === aid); return a ? gcPaymentDue(a, b.waivers, cname(a.contractId)).due : null; });
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderPayoffHtml({
         info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
@@ -1288,7 +1369,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       // Compare with the snapshot asked for (?since=id), else the latest taken before today.
       const snaps = await listSnapshots(id).catch(() => []);
@@ -1314,7 +1395,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfRaw) ? asOfRaw : todayEastern();
       const pos = positionAsOf(asOf, b.positionInput);
       const dayOf = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v ?? "")).slice(0, 10);
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderAgingHtml({
         info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf,
@@ -1344,7 +1425,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const cname = (cid: number) => b.contracts.find((c: any) => c.id === cid)?.counterparty ?? "";
       const outstandingOnly = req.query.outstanding === "1";
       const o = owedByVendor(b.applications as any[], b.waivers, cname, open, outstandingOnly);
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), outstandingOnly, ...o, generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
@@ -1360,7 +1441,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderForecastHtml(b, { info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), today: todayEastern(), generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
@@ -1376,7 +1457,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       const cid = req.query.contract ? Number(req.query.contract) : null;
       const through = req.query.through ? Number(req.query.through) : null;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -1401,7 +1482,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
       const b = await loadProjectBundle(id);
       if (!b) return res.status(404).json({ message: "Project not found" });
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderRollForwardHtml({
         info: infoRows(b.project, facts.propertyLabel, facts.rentableSf),
@@ -1428,7 +1509,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const picked = /^\d+$/.test(want) ? apps.filter((a) => a.id === Number(want))
         : want === "all" ? apps
         : apps.filter((a) => threeWayCheck(a, b.waivers, cname(a.contractId)).status === "off");
-      const facts = await propertyFacts(b.project);
+      const facts = await propertyFacts(b.project, b);
       const info = infoRows(b.project, facts.propertyLabel, facts.rentableSf);
       const sections = picked.map((a) => {
         const c: any = b.contracts.find((x: any) => x.id === a.contractId);
@@ -1454,7 +1535,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const rows = coLog(b.changeOrders as any, b.sovLines as any, b.documents as any, todayEastern());
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCoLogHtml({
-        project: b.project, ...(await propertyFacts(b.project)), rows,
+        project: b.project, ...(await propertyFacts(b.project, b)), rows,
         openOnly: String(req.query.open || "") === "1", history: String(req.query.history || "") === "1",
         contractName: (cid) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "Contract",
         appLabel: (cid, n) => { const a: any = b.applications.find((x: any) => x.contractId === cid && x.number === n); return a ? `${a.kind === "invoice" ? "Invoice" : "Pay App"} ${String(a.docNumber ?? n).padStart(3, "0")}` : "Next pay app"; },
@@ -1476,7 +1557,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const cname = (cid: number) => b.contracts.find((c) => c.id === cid)?.counterparty ?? "";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderWaiverLogHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         groups: (() => {
           // Only the pay apps asked for (?apps=12,15), and only what's outstanding (?outstanding=1).
           const want = new Set(String(req.query.apps || "").split(",").map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0));
@@ -1513,7 +1594,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const lineName = b.cmSettings.key ? b.project.baseline.find((l: any) => l.key === b.cmSettings.key)?.description ?? null : null;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCmFeeReportHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         rates: { partner: b.cmSettings.pct, tenant: b.cmSettings.tenantPct, line: lineName },
         billing: b.cmInvoiceDrafts,
         changeOrders: b.approval.changeOrders.filter((c) => c.status !== "void").map((c) => {
@@ -1560,7 +1641,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
           }).filter(Boolean) as CmInvoiceView["payApps"] };
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.send(renderCmInvoiceHtml({ project: b.project, ...(await propertyFacts(b.project)), invoice, generatedBy: generatedByName((req as any).user) }));
+      res.send(renderCmInvoiceHtml({ project: b.project, ...(await propertyFacts(b.project, b)), invoice, generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
       console.error("CM invoice report error:", e);
       res.status(500).json({ message: "Failed to generate the invoice", error: e?.message });
@@ -1581,7 +1662,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       const lineName = new Map(b.project.baseline.map((l: any) => [l.key, l.description]));
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderTenantCoHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         co: {
           number: co.number, title: co.title, date: co.date, status: co.status, cmFeePct: co.cmFee ? co.cmFeePct : 0,
           // Only what the tenant pays: each line at the tenant's share.
@@ -1632,7 +1713,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(renderCostPositionHtml({
-        project: b.project, ...(await propertyFacts(b.project)),
+        project: b.project, ...(await propertyFacts(b.project, b)),
         position: positionAsOf(asOf, input),
         contracts: b.contracts,
         // The fee is earned on what has been billed so far — today's figure, and only for the whole project.

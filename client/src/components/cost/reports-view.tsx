@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Printer, FileText, Trash2, ChevronRight, Download } from 'lucide-react';
+import { Printer, FileText, Trash2, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
+import { exportLedgerXlsx } from './ledger-export';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
 import { FundingSummary } from './funding-summary';
@@ -49,6 +50,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
     <div className="space-y-5">
       <div className="space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Cost Reports</h3>
+      <ReportHeaderCard b={b} projectId={projectId} />
       <FinancialSummaryCard b={b} projectId={projectId} open={open} />
       <Card id="bva" title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
@@ -99,6 +101,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
             const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to); if (payee !== 'all') q.set('payee', payee);
             open(`/api/reports/job-cost-ledger/${projectId}${q.toString() ? `?${q}` : ''}`);
           }}><Printer className="h-4 w-4 mr-1" /> Print</Button>
+          <Button variant="outline" className="h-9" onClick={() => {
+            const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to); if (payee !== 'all') q.set('payee', payee);
+            exportLedgerXlsx(projectId, q).catch((e) => toast({ title: 'Export Failed', description: e?.message, variant: 'destructive' }));
+          }}><FileSpreadsheet className="h-4 w-4 mr-1" /> Excel</Button>
         </div>
       </Card>
       <Card id="budget-log" title="Budget Log" what="Why the budget is what it is: the confirmation, then every transfer, change order and edit since, oldest first, with the budget after each."
@@ -718,6 +724,49 @@ export function LenderPackagesCard({ b, projectId }: { b: ProjectBundle; project
 }
 
 /** A report, rolled up to one line; open it to set its filters and print. Remembers what was left open. */
+/** The header every printed report carries: one place to set it (Adolfo, 2026-10-29). */
+function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: number }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const saved = (((b.project as any).settings || {}).reportHeader || {}) as Record<string, string>;
+  const [h, setH] = useState<Record<string, string>>(saved);
+  const gc = b.contracts.find((c) => c.bucket === 'contractor');
+  const fields: Array<[string, string, string, string?]> = [
+    ['projectName', 'Project', b.project.name],
+    ['projectNo', 'Project No.', b.project.projectNumber],
+    ['shortName', 'Short Name (for File Names)', b.project.name],
+    ['address', 'Address', "the property's address"],
+    ['owner', 'Owner', ''],
+    ['generalContractor', 'General Contractor', gc?.counterparty ?? ''],
+    ['primeContract', 'Prime Contract No.', (gc as any)?.contractNumber ?? ''],
+    ['primeContractDate', 'Prime Contract Date', (gc as any)?.contractDate ?? '', 'date'],
+    ['preparedBy', 'Prepared By', ''],
+    ['preparedByTitle', 'Title', ''],
+  ];
+  const dirty = fields.some(([k]) => (h[k] ?? '') !== (saved[k] ?? ''));
+  const save = async () => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { reportHeader: h });
+      qc.setQueryData([projectKey(projectId)], data); toast({ title: 'Report Header Saved' });
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
+  const filled = fields.filter(([k]) => (saved[k] ?? '').trim()).length;
+  return (
+    <Card id="report-header" title="Report Header" what="The block at the top of every printed report: project, project no., address, owner, general contractor, prime contract and who prepared it. Left blank, a field uses what the project already knows."
+          summary={`${filled} of ${fields.length} set`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {fields.map(([k, label, fallback, type]) => (
+          <Labeled key={k} label={label}>
+            <Input className="h-9" type={type === 'date' ? 'date' : 'text'} value={h[k] ?? ''} onChange={(e) => setH({ ...h, [k]: e.target.value })} />
+            {!(h[k] ?? '').trim() && fallback && <div className="text-[11px] text-gray-500 mt-0.5">Blank: uses {fallback}</div>}
+          </Labeled>
+        ))}
+      </div>
+      <div className="flex justify-end"><Button className="h-9" disabled={!dirty} onClick={save}>Save</Button></div>
+    </Card>
+  );
+}
+
 function SovCard({ b, projectId, open }: { b: ProjectBundle; projectId: number; open: (url: string) => void }) {
   const withLines = b.contracts.filter((c) => b.sovLines.some((l) => l.contractId === c.id));
   const [cid, setCid] = useState<string>('all');

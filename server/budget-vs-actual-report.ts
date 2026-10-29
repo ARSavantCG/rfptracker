@@ -456,7 +456,7 @@ export function renderCostPositionHtml(input: {
   const directTable = directRows.length === 0 ? "" : `
   <h3 class="sec">Direct Costs</h3>
   <table class="t"><thead><tr><th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">Budget Line</th><th class="l">Paid By</th><th>Amount</th></tr></thead><tbody>
-    ${directRows.map((d) => `<tr><td class="l">${escapeHtml(longDate(d.date))}</td><td class="l">${escapeHtml(d.vendor || "")}</td><td class="l">${escapeHtml(d.description || "")}</td>
+    ${directRows.map((d) => `<tr><td class="l">${escapeHtml(longDate(d.date))}</td><td class="l">${escapeHtml(d.vendor || "")}${(d as any).invoiceNumber ? `<div style="font-size:9px;color:#4b5563">Invoice #${escapeHtml((d as any).invoiceNumber)}</div>` : ""}</td><td class="l">${escapeHtml(d.description || "")}</td>
       <td class="l">${escapeHtml(d.key ? input.lineNames?.get(d.key) ?? "Removed line" : "Unallocated")}</td><td class="l">${escapeHtml(paidBy(d))}</td>${cell(d.amount)}</tr>`).join("")}
     <tr class="total"><td class="l" colspan="5">Total Direct Costs</td>${cell(p.direct.total)}</tr>
   </tbody></table>
@@ -548,7 +548,7 @@ export function renderJobCostLedgerHtml(input: {
     <th class="l">Date</th><th class="l">Paid To</th><th class="l">Description</th><th class="l">How Paid</th>
     <th class="l">Budget Line</th><th>Amount</th><th>Running Total</th><th title="Reconciled">✓</th></tr></thead><tbody>
     ${ledger.entries.length === 0 ? `<tr><td colspan="8" class="muted">No payments or charges in this period.</td></tr>` : ledger.entries.map((e) => `<tr>
-      <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}</td><td>${escapeHtml(e.description)}${e.notes ? `<div style="font-size:9.5px;color:#4b5563;font-style:italic">${escapeHtml(e.notes)}</div>` : ""}</td>
+      <td style="white-space:nowrap">${escapeHtml(longDate(e.date))}</td><td>${escapeHtml(e.vendor)}${(e as any).invoiceNumber ? `<div style="font-size:9.5px;color:#4b5563">Invoice #${escapeHtml((e as any).invoiceNumber)}</div>` : ""}</td><td>${escapeHtml(e.description)}${e.notes ? `<div style="font-size:9.5px;color:#4b5563;font-style:italic">${escapeHtml(e.notes)}</div>` : ""}</td>
       <td>${escapeHtml(how(e))}</td><td>${escapeHtml(e.budgetLine)}</td>${cell(e.amount)}${cell(e.running, "muted")}
       <td class="c${e.reconciled ? "" : " open"}">${e.reconciled ? "✓" : "○"}</td></tr>`).join("")}
     <tr class="total"><td colspan="5">Total</td>${cell(ledger.total)}<td></td><td></td></tr>

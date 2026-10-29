@@ -2468,6 +2468,7 @@ export const costDirectCosts = pgTable("cost_direct_costs", {
   amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
   method: text("method"),                     // card | check | ach | wire | other
   reference: text("reference"),               // last 4, check number, confirmation
+  invoiceNumber: text("invoice_number"),      // the vendor's invoice number
   baselineKey: text("baseline_key"),          // budget line; null = Unallocated
   reconciled: boolean("reconciled").notNull().default(false),
   notes: text("notes"),

@@ -232,7 +232,7 @@ export async function loadProjectBundle(projectId: number) {
     .where(eq(costDirectCosts.projectId, projectId)).orderBy(costDirectCosts.date, costDirectCosts.id);
   const directCosts = directRows.map((d) => ({
     id: d.id, date: isoDay(d.date), vendor: d.vendor, description: d.description,
-    amount: dollars(d.amountCents), method: d.method, reference: d.reference,
+    amount: dollars(d.amountCents), method: d.method, reference: d.reference, invoiceNumber: d.invoiceNumber ?? null,
     key: d.baselineKey, reconciled: d.reconciled, notes: d.notes,
   }));
 
@@ -315,7 +315,7 @@ export async function loadProjectBundle(projectId: number) {
   }));
   const positionInput = {
     contractIds, lines, changeOrders, applications: dated, payments,
-    directCosts: directCosts.map((d) => ({ id: d.id, date: d.date, amount: d.amount, vendor: d.vendor, description: d.description, method: d.method, reference: d.reference, key: d.key })),
+    directCosts: directCosts.map((d) => ({ id: d.id, date: d.date, amount: d.amount, vendor: d.vendor, description: d.description, method: d.method, reference: d.reference, invoiceNumber: d.invoiceNumber, key: d.key })),
   };
   // Through today, or through the latest pay app when one is dated ahead (period ending at
   // month end, entered before it): what's been entered counts (Adolfo, 2026-10-23).
@@ -1536,6 +1536,7 @@ export function registerCostTrackingRoutes(app: Express): void {
     if (b.description !== undefined) out.description = String(b.description ?? '').slice(0, 500);
     if (b.method !== undefined) out.method = METHODS.includes(String(b.method)) ? String(b.method) : null;
     if (b.reference !== undefined) out.reference = b.reference ? String(b.reference).slice(0, 120) : null;
+    if (b.invoiceNumber !== undefined) out.invoiceNumber = String(b.invoiceNumber ?? '').trim().slice(0, 80) || null;
     if (b.key !== undefined) out.baselineKey = b.key ? String(b.key) : null;
     if (b.reconciled !== undefined) out.reconciled = !!b.reconciled;
     if (b.notes !== undefined) out.notes = b.notes ? String(b.notes) : null;

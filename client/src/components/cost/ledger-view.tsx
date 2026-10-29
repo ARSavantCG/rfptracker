@@ -19,7 +19,7 @@ import { openDocument } from './contract-card';
 import { money, shortDate, todayIso, openReport, projectKey, PAY_METHODS, type ProjectBundle } from './types';
 
 const METHOD = Object.fromEntries(PAY_METHODS);
-const blank = () => ({ date: todayIso(), vendor: '', description: '', amount: '', method: 'card', reference: '', key: '', notes: '' });
+const blank = () => ({ date: todayIso(), vendor: '', invoiceNumber: '', description: '', amount: '', method: 'card', reference: '', key: '', notes: '' });
 const NONE = '__none__';
 /** Files dragged in — from the desktop, a folder, or an email attachment. */
 const droppedFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.files ?? []);
@@ -37,6 +37,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   const [dragRow, setDragRow] = useState<string | null>(null);
   const [dragPanel, setDragPanel] = useState(false);
   const [noteEdit, setNoteEdit] = useState<{ id: number; text: string } | null>(null);
+  const [invEdit, setInvEdit] = useState<{ id: number; text: string } | null>(null);
 
   const L = bundle.ledger;
   const baseline = bundle.project.baseline;
@@ -144,6 +145,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
             <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
             <Field label="Paid To" wide><Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} /></Field>
+            <Field label="Invoice #"><Input value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} /></Field>
             <Field label="For" wide><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
             <Field label="Amount"><MoneyInput value={form.amount} onValueChange={(v) => setForm({ ...form, amount: v })} /></Field>
             <Field label="How">
@@ -173,6 +175,16 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
           </div>
+          {(() => {
+            // The same invoice entered twice: same vendor and invoice number already on the ledger.
+            const inv = form.invoiceNumber.trim().toLowerCase(), ven = form.vendor.trim().toLowerCase();
+            const dup = inv ? bundle.directCosts.find((d) => (d.invoiceNumber ?? '').trim().toLowerCase() === inv && (!ven || d.vendor.trim().toLowerCase() === ven)) : null;
+            return dup ? (
+              <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2">
+                Invoice {dup.invoiceNumber} from {dup.vendor} is already on the ledger: {shortDate(dup.date)}, {money(dup.amount)}{dup.description ? ` (${dup.description})` : ''}. Check it isn't a duplicate.
+              </div>
+            ) : null;
+          })()}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => { setForm(null); setReceipt(null); }}>Cancel</Button>
             <Button disabled={!form.vendor.trim() || !form.amount || !form.date || add.isPending} onClick={() => add.mutate()}>
@@ -219,7 +231,23 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                              : patchPayment.mutate({ id: e.id, patch: { reconciled: ev.target.checked } }))} />
                   </td>
                   <td className="px-3 py-1.5 whitespace-nowrap">{shortDate(e.date)}</td>
-                  <td className="px-3 py-1.5">{e.vendor}</td>
+                  <td className="px-3 py-1.5">
+                    <div>{e.vendor}</div>
+                    {e.kind === 'direct' && (invEdit?.id === e.id ? (
+                      <Input autoFocus className="h-7 text-xs mt-1 w-32" value={invEdit.text} aria-label="Invoice number" placeholder="Invoice #"
+                             onChange={(ev) => setInvEdit({ id: e.id, text: ev.target.value })}
+                             onBlur={() => { patchDirect.mutate({ id: e.id, patch: { invoiceNumber: invEdit.text } }); setInvEdit(null); }}
+                             onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); if (ev.key === 'Escape') setInvEdit(null); }} />
+                    ) : (() => {
+                      const inv = bundle.directCosts.find((d) => d.id === e.id)?.invoiceNumber;
+                      return (
+                        <button className={`mt-0.5 text-[11px] inline-flex items-center gap-1 ${inv ? 'text-gray-700 hover:text-blue-700' : 'text-gray-400 hover:text-blue-700'}`}
+                                title="The vendor's invoice number" onClick={() => setInvEdit({ id: e.id, text: inv || '' })}>
+                          {inv ? <>Invoice #{inv}</> : <><Pencil className="h-3 w-3" />Add Invoice #</>}
+                        </button>
+                      );
+                    })())}
+                  </td>
                   <td className="px-3 py-1.5 text-gray-700">
                     <div>{e.description}</div>
                     {e.kind === 'direct' && (noteEdit?.id === e.id ? (

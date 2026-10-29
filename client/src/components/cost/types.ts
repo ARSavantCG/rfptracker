@@ -176,6 +176,8 @@ export interface DirectCostRow {
   amount: number;
   method: string | null;
   reference: string | null;
+  /** The vendor's invoice number. */
+  invoiceNumber?: string | null;
   key: string | null;
   reconciled: boolean;
   notes: string | null;

@@ -82,7 +82,7 @@ const day = (iso: string | null | undefined) => String(iso ?? '').slice(0, 10);
 /** A cost with no contract behind it: a permit fee, a utility deposit. Paid when dated. */
 export interface DirectCostIn {
   date: string; amount: number;
-  id?: number; vendor?: string; description?: string; method?: string | null; reference?: string | null; key?: string | null;
+  id?: number; vendor?: string; description?: string; method?: string | null; reference?: string | null; invoiceNumber?: string | null; key?: string | null;
 }
 
 export function positionAsOf(asOf: string, input: {
@@ -238,6 +238,8 @@ export interface LedgerEntry {
   description: string;
   method: string | null;
   reference: string | null;
+  /** The vendor's invoice number (direct costs). */
+  invoiceNumber?: string | null;
   /** Budget line name; for a pay app payment, "Per pay app". */
   budgetLine: string;
   amount: number;
@@ -253,7 +255,7 @@ export interface LedgerEntry {
  */
 export function buildLedger(input: {
   payments: ReadonlyArray<{ id: number; contractId: number; applicationId: number | null; amount: number; paidDate: string; reference?: string | null; method?: string | null; reconciled?: boolean }>;
-  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; method?: string | null; reference?: string | null; key?: string | null; reconciled?: boolean; notes?: string | null }>;
+  directCosts: ReadonlyArray<{ id: number; date: string; vendor: string; description: string; amount: number; method?: string | null; reference?: string | null; invoiceNumber?: string | null; key?: string | null; reconciled?: boolean; notes?: string | null }>;
   contractName: (id: number) => string;
   applicationLabel: (id: number | null) => string;
   budgetLineName: (key: string | null | undefined) => string;
@@ -268,7 +270,7 @@ export function buildLedger(input: {
     })),
     ...input.directCosts.map((d) => ({
       kind: 'direct' as const, id: d.id, date: day(d.date), vendor: d.vendor, description: d.description,
-      method: d.method ?? null, reference: d.reference ?? null, budgetLine: input.budgetLineName(d.key),
+      method: d.method ?? null, reference: d.reference ?? null, invoiceNumber: d.invoiceNumber ?? null, budgetLine: input.budgetLineName(d.key),
       amount: r2(d.amount), reconciled: !!d.reconciled, notes: d.notes ?? null,
     })),
   ]

@@ -753,6 +753,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const revised = r2(rows.reduce((t, r) => t + r.revised, 0));
   const tenant = s.approvedBillable;
   const absorbed = s.approvedAbsorbed;
+  // The tenant's CM fee on their change orders, shown apart so the change orders tie to what the tenant approved.
+  const tenantCm = r2(a.changeOrders.filter((c) => c.status === 'approved').reduce((t, c) => t + coTotals(c).cm, 0));
   const projectedCost = r2(cost.committed + cost.pending);
   const projectedOverrun = r2(Math.max(0, projectedCost - revised));
   const approved = a.changeOrders.filter((c) => c.status === 'approved');
@@ -813,6 +815,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   const supplemental = r2(Math.max(0, need - fundsIn));
   return {
     original, revisions, transfers, tenant, absorbed, revised,
+    /** Of `tenant`: the tenant's CM fee on change orders; the rest is the change orders as approved. */
+    tenantCm, tenantCos: r2(tenant - tenantCm),
     /** Additional funding (not change orders), by label. */
     additions, additionList: (a.additions || []).map((x) => ({ label: x.label, source: x.source, amount: x.amount, date: x.date })),
     projectedCost, projectedOverrun,

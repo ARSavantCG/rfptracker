@@ -296,7 +296,8 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
       ${r(f.confirmed ? "Approved budget (capital partner)" : "Budget (draft)", f.original)}
       ${Math.abs(f.revisions) >= 0.005 ? r("Budget revisions", f.revisions, "Lines edited after confirmation") : ""}
       ${((f as any).additionList ?? []).map((x: any) => r(x.label, x.amount, x.source === "amortized" ? "Additional funding: landlord, repaid through rent" : x.source === "tenant" ? "Additional funding from the tenant" : "Additional funding from the capital partner")).join("")}
-      ${r("Tenant-funded change orders", f.tenant, "Billable to the tenant, CM fee included")}
+      ${r("Tenant-funded change orders", (f as any).tenantCos ?? f.tenant, "The change orders as the tenant approved them")}
+      ${((f as any).tenantCm ?? 0) > 0.005 ? r("Tenant's CM fee on change orders", (f as any).tenantCm, "Billed to the tenant with them — it pays the change order CM fees set aside") : ""}
       ${r(f.label, f.supplemental, f.supplemental > 0.005 ? "Needed beyond the budget and the tenant's share" : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money2(f.absorbed)} paid from the budget surplus` : "None needed")}
       ${r("Total funding", f.totalFunding, "", "total")}
       ${f.cmReserved != null ? r("CM fees — set aside", f.cmReserved, `Original CM fee ${money2(f.cmOriginal ?? 0)} (rate on the cost to complete; the ${money2(f.cmCeiling ?? 0)} budget is a ceiling)${(f.cmReserved - (f.cmOriginal ?? 0)) > 0.005 ? ` + change order CM fees ${money2(f.cmReserved - (f.cmOriginal ?? 0))}` : ""}`) : ""}

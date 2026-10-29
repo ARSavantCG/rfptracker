@@ -50,7 +50,8 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
             {((f as any).additionList ?? []).map((x: any, i: number) => (
               <Row key={`add-${i}`} name={x.label} sub={x.source === 'amortized' ? 'Additional funding: landlord, repaid through rent' : x.source === 'tenant' ? 'Additional funding from the tenant' : 'Additional funding from the capital partner'} value={x.amount} />
             ))}
-            <Row name="Tenant-funded change orders" sub="Billable to the tenant, CM fee included" value={f.tenant} />
+            <Row name="Tenant-funded change orders" sub="The change orders as the tenant approved them" value={(f as any).tenantCos ?? f.tenant} />
+            {((f as any).tenantCm ?? 0) > 0.005 && <Row name="Tenant's CM fee on change orders" sub="Billed to the tenant with them — it pays the change order CM fees set aside below" value={(f as any).tenantCm} />}
             <tr className="border-b">
               <td className="py-1.5 pr-3">
                 {label === null ? (

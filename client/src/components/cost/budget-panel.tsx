@@ -240,8 +240,8 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
                 <th className="px-2 py-1.5 min-w-[220px]">Budget Line</th>
-                <th className="px-2 py-1.5 w-40">Contract</th>
-                <th className="px-2 py-1.5 w-44">Scope</th>
+                <th className="px-2 py-1.5 w-32">Contract</th>
+                <th className="px-2 py-1.5 w-36">Scope</th>
                 <th className="px-2 py-1.5 w-36 text-right">Priced</th>
                 {showDiscount && <th className="px-2 py-1.5 w-36 text-right">Discount</th>}
                 {confirmed && <th className="px-2 py-1.5 w-32 text-right" title="As confirmed">Original</th>}
@@ -250,8 +250,9 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                 {hasXfer && <th className="px-2 py-1.5 w-32 text-right">Transfers</th>}
                 {hasCos && <th className="px-2 py-1.5 w-32 text-right">Approved COs</th>}
                 <th className="px-2 py-1.5 w-36 text-right">{confirmed ? 'Revised Budget' : 'Budget'}</th>
-                <th className="px-2 py-1.5 w-28 text-right">Tenant Pays</th>
-                <th className="w-9" />
+                <th className="px-2 py-1.5 w-24 text-right">Tenant Pays</th>
+                {/* Pinned to the right edge so Remove is always in view, however wide the table scrolls. */}
+                <th className="w-9 sticky right-0 bg-gray-50" />
               </tr>
             </thead>
             <tbody>
@@ -290,7 +291,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                     {hasCos && <td className="px-2 py-1 text-right tabular-nums text-gray-700">{co ? signedMoney(co) : ''}</td>}
                     <td className="px-2 py-1 text-right tabular-nums font-medium">{signedMoney(budget)}</td>
                     <td className="px-1 py-1"><PercentInput className="h-8" value={r.tenantSharePct} aria-label="Tenant pays" onValueChange={(v) => update(i, { tenantSharePct: v })} /></td>
-                    <td className="px-1 text-center">
+                    <td className="px-1 text-center sticky right-0 bg-white shadow-[-1px_0_0_#e5e7eb]">
                       <button className="p-1 text-gray-400 hover:text-red-700" title="Remove this budget line"
                               onClick={() => {
                                 const why = [mappedKeys.has(r.key) && 'contract lines are mapped to it', coKeys.has(r.key) && 'a change order uses it'].filter(Boolean).join(' and ');

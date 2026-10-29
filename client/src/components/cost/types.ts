@@ -117,6 +117,8 @@ export interface ProjectBundle {
   /** Funding by scope: the setup, and what it works out to. */
   scopeSetup: import('@shared/funding-scopes').FundingScope[];
   scopes: import('@shared/funding-scopes').ScopesResult;
+  forecastSetup: import('@shared/forecast').ForecastSetup;
+  forecast: ReturnType<typeof import('@shared/forecast').computeForecast>;
   project: CostProjectRow;
   contracts: ContractRow[];
   changeOrders: ChangeOrderRow[];

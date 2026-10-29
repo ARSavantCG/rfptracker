@@ -24,6 +24,7 @@ import { PositionView } from '@/components/cost/position-view';
 import { LedgerView } from '@/components/cost/ledger-view';
 import { ProjectFilesList, DeletedFilesBin } from '@/components/cost/project-files';
 import { ReportsView, LenderPackagesCard, PayoffCard } from '@/components/cost/reports-view';
+import { ForecastView } from '@/components/cost/forecast-view';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
@@ -161,6 +162,7 @@ export default function CostProject() {
             <TabsTrigger value="ledger" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               Ledger{b.ledger.unreconciledCount > 0 && <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 rounded px-1 font-medium">{b.ledger.unreconciledCount}</span>}
             </TabsTrigger>
+            <TabsTrigger value="forecast" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Forecast</TabsTrigger>
             <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Reports</TabsTrigger>
             <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 pt-1 text-[15px] font-semibold text-gray-500 hover:text-gray-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none">Documents</TabsTrigger>
           </TabsList>
@@ -170,6 +172,9 @@ export default function CostProject() {
               <ProjectOverview bundle={b} />
             </TabsContent>
           )}
+          <TabsContent value="forecast" className="mt-4">
+            <ForecastView bundle={b} projectId={id} />
+          </TabsContent>
           <TabsContent value="reports" className="mt-4">
             <ReportsView bundle={b} projectId={id} onShowUnallocated={() => setTab('contracts')} onShowBudget={() => setTab('budget')} />
           </TabsContent>

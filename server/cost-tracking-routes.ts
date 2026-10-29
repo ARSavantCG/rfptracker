@@ -39,6 +39,7 @@ import archiver from 'archiver';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAi } from './lib/ai-switch';
 import { normalizeScopes, computeScopes, absorbedByLine } from '@shared/funding-scopes';
+import { normalizeForecast, computeForecast } from '@shared/forecast';
 import { normalizeRead, matchRows, payAppPrompt, coKey, contractorG703From, normalizeContractorG703 } from '@shared/cost-payapp-read';
 
 const AI_MODEL = 'claude-sonnet-4-5';
@@ -374,6 +375,9 @@ export async function loadProjectBundle(projectId: number) {
     // Funding by scope (allowances, tenant funds, our site budget, each with its own overage rule).
     scopeSetup: normalizeScopes(settings.fundingScopes),
     scopes: computeScopes(normalizeScopes(settings.fundingScopes), summary.rows, absorbedByLine(approval.changeOrders)),
+    // Estimate to complete: remaining on commitments + forecast items, by budget line.
+    forecastSetup: normalizeForecast(settings.forecast),
+    forecast: computeForecast(summary.rows, normalizeForecast(settings.forecast)),
     g702ByContract: g702,
     approval: (() => {
       const ds = discountState(baseline, approval);
@@ -1250,6 +1254,84 @@ export function registerCostTrackingRoutes(app: Express): void {
   });
 
   // ---- additional funding (new money on a budget line that isn't a change order)
+  // ---- Estimate to complete: forecast items by budget line, kept in the project's settings.
+  const saveForecast = async (id: number, f: ReturnType<typeof normalizeForecast>) => {
+    const [row] = await db.select({ settings: costProjects.settings }).from(costProjects).where(eq(costProjects.id, id));
+    const next = { ...((row?.settings as any) || {}), forecast: f };
+    await db.update(costProjects).set({ settings: next, updatedAt: new Date() }).where(eq(costProjects.id, id));
+  };
+  const forecastItemFrom = (b: any, prev?: any) => {
+    const amount = b.amount !== undefined ? Math.round(toCents(b.amount)) / 100 : prev?.amount;
+    if (!(Math.abs(Number(amount)) >= 0.005)) throw new UserError('Enter the amount.');
+    const description = b.description !== undefined ? String(b.description ?? '').trim().slice(0, 200) : prev?.description;
+    if (!description) throw new UserError('Say what it is for.');
+    return {
+      ...(prev || {}),
+      key: b.key !== undefined ? String(b.key || '') : prev?.key,
+      kind: b.kind !== undefined ? (['cost', 'change', 'adjust'].includes(b.kind) ? b.kind : 'cost') : prev?.kind ?? 'cost',
+      description, amount,
+      note: b.note !== undefined ? (String(b.note ?? '').trim().slice(0, 500) || null) : prev?.note ?? null,
+    };
+  };
+  app.post('/api/cost-projects/:id/forecast/items', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const f = normalizeForecast(((project.settings || {}) as any).forecast);
+      const it = { id: `fc-${nanoid(8)}`, ...forecastItemFrom(req.body || {}), date: todayEastern(), by: whoName(req) };
+      if (!it.key) return res.status(400).json({ message: 'Pick the budget line.' });
+      f.items = [...f.items, it as any];
+      await saveForecast(id, f);
+      res.json(await loadProjectBundle(id));
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'add the forecast item');
+    }
+  });
+  app.patch('/api/cost-projects/:id/forecast/items/:fid', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const f = normalizeForecast(((project.settings || {}) as any).forecast);
+      const i = f.items.findIndex((x) => x.id === req.params.fid);
+      if (i < 0) return res.status(404).json({ message: 'Forecast item not found' });
+      f.items[i] = forecastItemFrom(req.body || {}, f.items[i]) as any;
+      await saveForecast(id, f);
+      res.json(await loadProjectBundle(id));
+    } catch (e) {
+      if (e instanceof UserError) return res.status(400).json({ message: e.message });
+      fail(res, e, 'update the forecast item');
+    }
+  });
+  app.delete('/api/cost-projects/:id/forecast/items/:fid', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const f = normalizeForecast(((project.settings || {}) as any).forecast);
+      f.items = f.items.filter((x) => x.id !== req.params.fid);
+      await saveForecast(id, f);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'remove the forecast item'); }
+  });
+  app.put('/api/cost-projects/:id/forecast/options', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const f = normalizeForecast(((project.settings || {}) as any).forecast);
+      if (req.body?.includePending !== undefined) f.includePending = !!req.body.includePending;
+      await saveForecast(id, f);
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'save the forecast options'); }
+  });
+
   app.post('/api/cost-projects/:id/budget-additions', ...canEdit, async (req, res) => {
     try {
       const id = intParam(req, 'id');

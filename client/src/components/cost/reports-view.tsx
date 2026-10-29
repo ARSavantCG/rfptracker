@@ -102,6 +102,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <WaiverLogCard b={b} projectId={projectId} open={open} />
       <PayAppLogCard b={b} projectId={projectId} open={open} />
       <G702CompareCard b={b} projectId={projectId} open={open} />
+      <Card id="forecast" title="Estimate to Complete" what="Where the project lands: by budget line, what's billed, what's left on the commitments, forecast items, the estimate at completion and the variance to budget; then the commitments (billed, paid, retainage, still to bill). Forecast items are entered on the Forecast tab."
+            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/forecast/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+        <p className="text-sm text-gray-700">Estimate at completion {money(b.forecast.totals.eac)} against a budget of {money(b.forecast.totals.budget)}: {b.forecast.totals.variance < -0.005 ? `${money(-b.forecast.totals.variance)} over` : `${money(b.forecast.totals.variance)} under`}. {b.forecastSetup.items.length} forecast item{b.forecastSetup.items.length === 1 ? '' : 's'}.</p>
+      </Card>
       <SovCard b={b} projectId={projectId} open={open} />
       <Card id="rollforward" title="Billing Roll-Forward" what="What's been billed through the end of each pay app, by pay app and line by line. Each pay app's total to date should be the next one's Previous; flags where the contractor's doesn't carry forward."
             action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/rollforward/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>

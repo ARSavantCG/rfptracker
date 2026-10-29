@@ -86,6 +86,12 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
     }
   }
   if (cents) watch.push({ level: 'info', text: `${cents} unpaid pay app${cents === 1 ? '' : 's'} differ from the contractor's by cents (retainage rounding); accepted at approval.` });
+  // The forecast (Forecast tab): where the project lands with its forecast items.
+  const fc = (b as any).forecast;
+  if (fc && ((b as any).forecastSetup?.items?.length ?? 0) > 0) {
+    const v = fc.totals.variance;
+    watch.push({ level: v < -0.005 ? 'red' : 'info', text: `Forecast at completion ${money0(fc.totals.eac)} with ${(b as any).forecastSetup.items.length} forecast item${(b as any).forecastSetup.items.length === 1 ? '' : 's'} (${money0(fc.totals.forecast)}): ${v < -0.005 ? `${money0(-v)} over` : `${money0(v)} under`} the budget. See the Estimate to Complete report.` });
+  }
   const openApps = (pos.applications as any[]).filter((a) => a.open > 0.005);
   const late = openApps.filter((a) => daysBetween(isoDay(a.date), x.today) > 30);
   if (late.length) watch.push({ level: 'amber', text: `${late.length} pay app${late.length === 1 ? ' is' : 's are'} unpaid more than 30 days after the period ended: ${late.map((a) => `${cname(a.contractId)} ${a.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(a.docNumber)} (${money0(a.open)})`).join('; ')}.` });

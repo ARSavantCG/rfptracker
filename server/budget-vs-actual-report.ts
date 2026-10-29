@@ -28,6 +28,7 @@ import { renderG702CompareSection, renderG702CompareHtml } from "./g702-compare-
 import { renderPayoffHtml } from "./payoff-report";
 import { renderRollForwardHtml } from "./rollforward-report";
 import { renderSovHtml } from "./sov-report";
+import { renderForecastHtml } from "./forecast-report";
 import { renderOwedHtml } from "./owed-report";
 import { renderAgingHtml } from "./aging-report";
 import { renderExecSummaryHtml } from "./exec-summary-report";
@@ -1331,6 +1332,22 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       res.send(renderOwedHtml({ info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), asOf: todayEastern(), outstandingOnly, ...o, generatedBy: generatedByName((req as any).user) }));
     } catch (e: any) {
       console.error("Owed by vendor error:", e);
+      res.status(500).json({ message: "Failed to generate the report", error: e?.message });
+    }
+  });
+
+  /** Estimate to Complete: by budget line, with forecast items and commitments, for the executive team. */
+  app.get("/api/reports/forecast/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
+      const b = await loadProjectBundle(id);
+      if (!b) return res.status(404).json({ message: "Project not found" });
+      const facts = await propertyFacts(b.project);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(renderForecastHtml(b, { info: infoRows(b.project, facts.propertyLabel, facts.rentableSf), today: todayEastern(), generatedBy: generatedByName((req as any).user) }));
+    } catch (e: any) {
+      console.error("Forecast report error:", e);
       res.status(500).json({ message: "Failed to generate the report", error: e?.message });
     }
   });

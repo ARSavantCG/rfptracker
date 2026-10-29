@@ -2384,6 +2384,8 @@ export const costApplications = pgTable("cost_applications", {
   invoiceNumber: text("invoice_number"),
   periodStart: timestamp("period_start"),
   periodEnd: timestamp("period_end"),
+  /** An invoice's own date (it also has a service period); dates the invoice when set. */
+  invoiceDate: timestamp("invoice_date"),
   notes: text("notes"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

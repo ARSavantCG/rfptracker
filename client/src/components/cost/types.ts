@@ -80,6 +80,8 @@ export interface ApplicationRow {
   invoiceNumber: string | null;
   periodStart: string | null;
   periodEnd: string | null;
+  /** An invoice's own date. */
+  invoiceDate?: string | null;
   notes: string | null;
   lines: { id: number; sovLineId: number; workThisPeriod: number; storedToDate: number; retainageToDate: number }[];
   g702: G702;

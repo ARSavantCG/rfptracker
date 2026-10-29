@@ -32,6 +32,7 @@ interface ColumnMigration {
 const ADDITIVE_COLUMNS: ColumnMigration[] = [
   { table: 'cost_direct_costs', column: 'invoice_number', type: 'text' },
   { table: 'cost_direct_costs', column: 'charge_to', type: 'text' },
+  { table: 'cost_applications', column: 'invoice_date', type: 'timestamp' },
   { table: 'property_existing_improvements', column: 'area_sf', type: 'integer' },
   { table: 'property_existing_improvements', column: 'denominator_basis', type: 'text' },
   { table: 'rom_scope_items', column: 'calculation_basis', type: 'text' },

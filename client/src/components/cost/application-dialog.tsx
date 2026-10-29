@@ -64,6 +64,8 @@ export function ApplicationDialog({
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const isInv = kind === 'invoice';
   const [entry, setEntry] = useState<'period' | 'toDate'>('period');
   const [draft, setDraft] = useState<Record<number, Draft>>({});
   const [file, setFile] = useState<File | null>(null);
@@ -106,6 +108,7 @@ export function ApplicationDialog({
     setInvoiceNumber(app?.invoiceNumber ?? '');
     setPeriodStart(isoDate(app?.periodStart ?? null));
     setPeriodEnd(isoDate(app?.periodEnd ?? null));
+    setInvoiceDate(isoDate(app?.invoiceDate ?? null));
     setEntry('period');
     setFile(null);
     setAiResult(null);
@@ -347,7 +350,7 @@ export function ApplicationDialog({
       const contractorG702 = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
       // Their G703 as read, kept for the line-by-line comparison (left as is when not read this time).
       const contractorG703 = aiResult ? contractorG703From(aiResult, aiResult, aiResult.fileName, setupIds) : undefined;
-      const body = { docNumber: typedDoc, kind, contractorG702, contractorG703, retainageAdj: retAdj || null, retainageAdjNote: retAdj ? 'Rounding: accepted the contractor\'s retainage' : null, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, lines: outLines };
+      const body = { docNumber: typedDoc, kind, contractorG702, contractorG703, retainageAdj: retAdj || null, retainageAdjNote: retAdj ? 'Rounding: accepted the contractor\'s retainage' : null, invoiceNumber, periodStart: periodStart || null, periodEnd: periodEnd || null, ...(kind === 'invoice' ? { invoiceDate: invoiceDate || null } : {}), lines: outLines };
       const saved = app
         ? (await apiRequest(`/api/cost-applications/${app.id}`, 'PUT', body), { id: app.id })
         : await apiRequest(`/api/cost-contracts/${contract!.id}/applications`, 'POST', body);
@@ -502,23 +505,22 @@ export function ApplicationDialog({
           <DialogTitle>{app ? `${label} ${no3(app.docNumber)}` : `New ${label}`} — {contract.counterparty}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className={`grid grid-cols-2 gap-2 ${kind === 'invoice' ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
           <div className="space-y-1"><Label>No.</Label>
             <Input value={number} onChange={(e) => setNumber(e.target.value)} inputMode="numeric"
                    className={docTaken ? 'border-red-400' : ''} />
             {docTaken && <div className="text-[11px] text-red-700">{label} {typedDoc} already exists on this contract</div>}</div>
           <div className="space-y-1"><Label>Invoice #</Label>
             <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} /></div>
-          {/* An invoice has one date (kept where a pay app keeps its period-to, so it dates the same way). */}
-          {kind === 'invoice' ? (
+          <div className="space-y-1"><Label>Period From</Label>
+            <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
+          <div className="space-y-1"><Label>Period To</Label>
+            <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
+          {/* An invoice also has its own date; it dates the invoice (aging, positions). */}
+          {kind === 'invoice' && (
             <div className="space-y-1"><Label>Invoice Date</Label>
-              <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
-          ) : (<>
-            <div className="space-y-1"><Label>Period From</Label>
-              <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></div>
-            <div className="space-y-1"><Label>Period To</Label>
-              <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} /></div>
-          </>)}
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} /></div>
+          )}
         </div>
 
         {ai.on && (
@@ -682,12 +684,21 @@ export function ApplicationDialog({
 
         {preview && (
           <div className="border rounded-md p-3 bg-gray-50">
-            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">G702 — ours against the contractor's</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">{isInv ? "Invoice — ours against theirs" : "G702 — ours against the contractor's"}</div>
             {(() => {
               const theirsNum = Object.fromEntries(G702_CHECK_LINES.map(([k]) => [k, (theirs[k] ?? '').trim() ? num(theirs[k]) : null]));
               const ck = g702Check(preview, theirsNum as any);
               const byKey = new Map(ck.lines.map((l) => [l.key as string, l]));
-              const rows: [string, string, number][] = [
+              // An invoice has no G702: check it the way it reads (contract amount, earned to date,
+              // previously invoiced, this invoice), with retainage only when the contract holds any.
+              const rows: [string, string, number][] = isInv ? ([
+                ['3', 'Contract Amount', preview.contractSumToDate],
+                ['4', 'Earned to Date', preview.completedAndStored],
+                ...((Number(contract?.retainagePct) || 0) > 0 || Math.abs(preview.retainage) >= 0.005 ? [['5', 'Retainage', preview.retainage]] : []),
+                ['7', 'Previously Invoiced', preview.previousCertificates],
+                ['8', 'This Invoice', preview.currentPaymentDue],
+                ['9', 'Balance Remaining', preview.balanceToFinish],
+              ] as [string, string, number][]) : [
                 ['1', 'Original contract sum', preview.originalContractSum],
                 ['2', 'Net change by change orders', preview.netChangeOrders],
                 ['3', 'Contract sum to date', preview.contractSumToDate],
@@ -722,7 +733,7 @@ export function ApplicationDialog({
                         const c = k ? byKey.get(k) : null;
                         return (
                           <tr key={no} className={no === '8' ? 'font-semibold text-gray-900' : 'text-gray-700'}>
-                            <td className="py-0.5 pr-3">{no}  {label}</td>
+                            <td className="py-0.5 pr-3">{isInv ? label : `${no}  ${label}`}</td>
                             <td className={`py-0.5 pr-3 text-right tabular-nums ${no === '5' && retTarget.trim() ? 'text-amber-800' : ''}`}>{money(v)}</td>
                             <td className="py-0.5">
                               {k ? <MoneyInput className={`h-7 text-xs ${c?.ok === false ? 'border-red-400' : c?.ok ? 'border-green-400' : ''}`}
@@ -739,9 +750,9 @@ export function ApplicationDialog({
                     </tbody>
                   </table>
                   <div className="mt-2 pt-2 border-t flex items-center gap-3 flex-wrap text-xs">
-                    {ck.status === 'match' && <span className="text-green-800 font-medium">✓ Matches the contractor's G702 — current payment due {money(preview.currentPaymentDue)}.</span>}
-                    {ck.status === 'off' && <span className="text-red-800 font-medium">⚠ Doesn't match the contractor's G702{ck.dueDiff != null ? ` — payment due off ${money(Math.abs(ck.dueDiff))}` : ''}{ck.first && ck.first.key !== 'currentPaymentDue' ? `. Start with line ${ck.first.no}.` : '.'}</span>}
-                    {ck.status === 'none' && <span className="text-gray-600">Type their line 8 (and 3, 4, 5, 7 if you like) to check this pay app against theirs. It's saved with the pay app.</span>}
+                    {ck.status === 'match' && <span className="text-green-800 font-medium">{isInv ? `✓ Matches their invoice — this invoice ${money(preview.currentPaymentDue)}.` : `✓ Matches the contractor's G702 — current payment due ${money(preview.currentPaymentDue)}.`}</span>}
+                    {ck.status === 'off' && <span className="text-red-800 font-medium">⚠ Doesn't match {isInv ? 'their invoice' : "the contractor's G702"}{ck.dueDiff != null ? ` — ${isInv ? 'this invoice' : 'payment due'} off ${money(Math.abs(ck.dueDiff))}` : ''}{ck.first && ck.first.key !== 'currentPaymentDue' ? `. Start with ${isInv ? rows.find((x) => x[0] === ck.first!.no)?.[1] ?? `line ${ck.first.no}` : `line ${ck.first.no}`}.` : '.'}</span>}
+                    {ck.status === 'none' && <span className="text-gray-600">{isInv ? "Type their total this invoice (and contract amount, earned to date, previously invoiced if you like) to check it against theirs. It's saved with the invoice." : "Type their line 8 (and 3, 4, 5, 7 if you like) to check this pay app against theirs. It's saved with the pay app."}</span>}
                     {(() => {
                       // The third check: the GC's conditional for this pay app (and its line 8 typed in the package).
                       if (!app || !contract) return null;
@@ -775,14 +786,17 @@ export function ApplicationDialog({
                       if (cf.status === 'none') return null;
                       const pn = String(prevApp.docNumber).padStart(3, '0');
                       const bad = cf.status === 'off';
+                      const pk = prevApp.kind === 'invoice' ? 'Invoice' : 'Pay App';
                       return (
                         <div className={`w-full rounded-md border p-2 ${bad ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-green-300 bg-green-50 text-green-900'}`}>
-                          <div className="font-semibold">Carry-Forward Check: Their G702 Against Their Pay App {pn}</div>
+                          <div className="font-semibold">Carry-Forward Check: {isInv ? `Their Invoice Against Their ${prevApp.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${pn}` : `Their G702 Against Their Pay App ${pn}`}</div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5 mt-1 tabular-nums">
-                            {cf.implied != null && <div>Their line 4 less their Pay App {pn} line 4: <strong>{money(cf.implied)}</strong>{cf.period != null && <> · work this period on the lines: <strong>{money(cf.period)}</strong>{Math.abs(cf.periodDiff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.periodDiff!))})</span>}</>}</div>}
-                            {cf.line7 != null && cf.prevLine6 != null && <div>Their line 7: <strong>{money(cf.line7)}</strong> · their Pay App {pn} line 6: <strong>{money(cf.prevLine6)}</strong>{Math.abs(cf.line7Diff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.line7Diff!))})</span>}</div>}
+                            {cf.implied != null && <div>{isInv ? <>Their earned to date less their {pk} {pn}'s:</> : <>Their line 4 less their Pay App {pn} line 4:</>} <strong>{money(cf.implied)}</strong>{cf.period != null && <> · work this period on the lines: <strong>{money(cf.period)}</strong>{Math.abs(cf.periodDiff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.periodDiff!))})</span>}</>}</div>}
+                            {cf.line7 != null && cf.prevLine6 != null && <div>{isInv ? 'Their previously invoiced' : 'Their line 7'}: <strong>{money(cf.line7)}</strong> · their {pk} {pn} {isInv ? 'earned less retainage' : 'line 6'}: <strong>{money(cf.prevLine6)}</strong>{Math.abs(cf.line7Diff ?? 0) >= 0.005 && <span className="text-red-800 font-semibold"> (off {money(Math.abs(cf.line7Diff!))})</span>}</div>}
                           </div>
-                          <div className="mt-1">{bad ? `⚠ Their G702s don't chain: this one and Pay App ${pn}'s disagree. One of them is wrong; the one that matches the G703 lines is usually right.` : `✓ Their G702 carries forward from Pay App ${pn}.`}</div>
+                          <div className="mt-1">{isInv
+                            ? (bad ? `⚠ Their invoices don't chain: this one and ${pk} ${pn} disagree. One of them is wrong; the one that matches the lines is usually right.` : `✓ Their invoice carries forward from ${pk} ${pn}.`)
+                            : (bad ? `⚠ Their G702s don't chain: this one and Pay App ${pn}'s disagree. One of them is wrong; the one that matches the G703 lines is usually right.` : `✓ Their G702 carries forward from Pay App ${pn}.`)}</div>
                         </div>
                       );
                     })()}

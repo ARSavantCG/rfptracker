@@ -49,7 +49,7 @@ export function renderRollForwardHtml(x: RollForwardInput): string {
       const check = off == null ? '<td class="muted" style="text-align:center">—</td>'
         : Math.abs(off) < 0.005 ? '<td style="text-align:center;color:#166534">✓ Ties</td>'
         : `<td style="text-align:center;color:#991b1b;font-weight:700">Off ${money2(Math.abs(off))}</td>`;
-      return `<tr${off != null && Math.abs(off) >= 0.005 ? ' style="background:#fef2f2"' : ''}><td>${label(a)}</td><td>${shortD(a.periodEnd ?? a.createdAt)}</td>
+      return `<tr${off != null && Math.abs(off) >= 0.005 ? ' style="background:#fef2f2"' : ''}><td>${label(a)}</td><td>${shortD((a.kind === 'invoice' && a.invoiceDate) || a.periodEnd || a.createdAt)}</td>
         <td class="num">${money2(prev)}</td><td class="num">${money2(period)}</td><td class="num"><strong>${money2(totalAt[i])}</strong></td>
         <td class="num">${t4 != null ? money2(t4) : '<span class="muted">Not entered</span>'}</td><td class="num">${theirPrev != null ? money2(theirPrev) : '—'}</td>${check}</tr>`;
     }).join('');

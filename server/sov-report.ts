@@ -16,7 +16,7 @@ const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(2)}%` : 'â
 
 type Line = { id: number; contractId: number; changeOrderId: number | null; itemNo?: string | null; section?: string | null; description: string; scheduledValue: number; allocationMode?: string; allocations?: Array<{ baselineKey: string; pct: number }> };
 type Co = { id: number; contractId: number; number: string; title?: string | null; status: string };
-type App = { id: number; contractId: number; number: number; docNumber: number; kind?: string; periodEnd?: string | null; lines: any[]; retainageAdj?: number | null };
+type App = { id: number; contractId: number; number: number; docNumber: number; kind?: string; periodEnd?: string | null; invoiceDate?: string | null; lines: any[]; retainageAdj?: number | null };
 
 export function renderSovHtml(x: {
   info: ReportInfoRow[];
@@ -95,7 +95,7 @@ export function renderSovHtml(x: {
     if (pend) body += `<tr class="gap"><td colspan="${cols}"></td></tr>` + pend;
     const t = sum(all);
     const adj = r2(apps.reduce((s, a) => s + (Number(a.retainageAdj) || 0), 0));
-    const through = last ? `${last.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(last.docNumber)}${last.periodEnd ? ` (${last.kind === 'invoice' ? 'Invoice Date' : 'Period To'} ${shortD(last.periodEnd)})` : ''}` : 'No pay apps yet';
+    const through = last ? `${last.kind === 'invoice' ? 'Invoice' : 'Pay App'} ${nn(last.docNumber)}${last.kind === 'invoice' && last.invoiceDate ? ` (Invoice Date ${shortD(last.invoiceDate)})` : last.periodEnd ? ` (Period To ${shortD(last.periodEnd)})` : ''}` : 'No pay apps yet';
     const tiles = [
       ['Contract Sum to Date', money2(t.s)],
       ['Billed to Date', `${money2(t.d)} Â· ${pct(t.d, t.s)}`],

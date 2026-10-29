@@ -307,7 +307,8 @@ export async function loadProjectBundle(projectId: number) {
   const docs = docNumbers(apps);
   const dated: DatedApplication[] = applications.map((a) => {
     const row = apps.find((x) => x.id === a.id)!;
-    return { ...a, date: isoDay(row.periodEnd ?? row.createdAt), kind: row.kind, invoiceNumber: row.invoiceNumber, docNumber: docs.get(a.id) };
+    // An invoice dates from its invoice date when it has one; a pay app from its period-to.
+    return { ...a, date: isoDay((row.kind === 'invoice' && row.invoiceDate) || row.periodEnd || row.createdAt), kind: row.kind, invoiceNumber: row.invoiceNumber, docNumber: docs.get(a.id) };
   });
   const payments: Payment[] = payRows.map((p) => ({
     id: p.id, contractId: p.contractId, applicationId: p.applicationId ?? null,
@@ -2145,6 +2146,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         invoiceNumber: b.invoiceNumber ? String(b.invoiceNumber) : null,
         periodStart: b.periodStart ? new Date(b.periodStart) : null,
         periodEnd: b.periodEnd ? new Date(b.periodEnd) : null,
+        invoiceDate: b.invoiceDate ? new Date(b.invoiceDate) : null,
         notes: b.notes ? String(b.notes) : null,
         createdBy: who(req),
       }).returning();
@@ -2165,6 +2167,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.invoiceNumber !== undefined) patch.invoiceNumber = b.invoiceNumber ? String(b.invoiceNumber) : null;
       if (b.periodStart !== undefined) patch.periodStart = b.periodStart ? new Date(b.periodStart) : null;
       if (b.periodEnd !== undefined) patch.periodEnd = b.periodEnd ? new Date(b.periodEnd) : null;
+      if (b.invoiceDate !== undefined) patch.invoiceDate = b.invoiceDate ? new Date(b.invoiceDate) : null;
       if (b.notes !== undefined) patch.notes = b.notes ? String(b.notes) : null;
       if (b.contractorG702 !== undefined) patch.contractorG702 = normalizeContractorG702(b.contractorG702);
       if (b.contractorG703 !== undefined) patch.contractorG703 = normalizeContractorG703(b.contractorG703);

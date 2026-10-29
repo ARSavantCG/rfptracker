@@ -200,7 +200,7 @@ export function renderG702CompareSection(x: CompareInput): string {
       : `<div class="verdict" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:6px 10px;border-radius:6px;margin-top:6px">✓ Line by line, every G703 line agrees with theirs.</div>`)
     : '';
   return `
-  <h2 style="font-size:15px;margin:14px 0 6px">${escapeHtml(contract.counterparty)} — ${escapeHtml(label)}${app.invoiceNumber ? ` (${escapeHtml(app.invoiceNumber)})` : ''}${app.periodEnd ? ` · ${(app as any).kind === 'invoice' ? 'Invoice Date' : 'Period To'} ${escapeHtml(longDate(app.periodEnd))}` : ''}</h2>
+  <h2 style="font-size:15px;margin:14px 0 6px">${escapeHtml(contract.counterparty)} — ${escapeHtml(label)}${app.invoiceNumber ? ` (${escapeHtml(app.invoiceNumber)})` : ''}${app.kind === 'invoice' && app.invoiceDate ? ` · Invoice Date ${escapeHtml(longDate(app.invoiceDate))}` : ''}${app.periodEnd ? ` · Period To ${escapeHtml(longDate(app.periodEnd))}` : ''}</h2>
   ${verdict}
   ${cfBox}
   ${lineNote}

@@ -289,7 +289,8 @@ export function ContractCard({
             if (g.co && cosShut) return <Fragment key={g.id ?? 'base'}>{coHead}</Fragment>;
             const total = g.lines.reduce((s, l) => s + l.scheduledValue, 0);
             const done = g.lines.reduce((s, l) => s + (progress.get(l.id)?.toDate ?? 0), 0);
-            const unmapped = g.lines.filter((l) => l.allocationMode === 'unallocated' || (l.allocationMode === 'direct' && l.allocations.length === 0));
+            // Unmapped, or mapped to a budget line that's since been removed.
+            const unmapped = g.lines.filter((l) => l.allocationMode === 'unallocated' || (l.allocationMode === 'direct' && (l.allocations.length === 0 || l.allocations.every((a) => !baselineName.has(a.baselineKey)))));
             const isVoid = g.co?.status === 'void';
             return (
               <Fragment key={g.id ?? 'base'}>{coHead}

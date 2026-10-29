@@ -96,6 +96,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   const [saving, setSaving] = useState(false);
   const descRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const baselineName = new Map(baseline.map((b) => [b.key, b.description]));
+  const known = (m: string) => m === UNMAPPED || m === SPREAD || m === SPLIT || baselineName.has(m);
 
   const [focusRid, setFocusRid] = useState<string | null>(null);
   // Focus once the row is on screen, so the first keystroke lands in it.
@@ -308,8 +309,10 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                       </td>
                       <td className="px-1 py-1">
                         <Select value={r.map} onValueChange={(v) => update(r.rid, { map: v })}>
-                          <SelectTrigger className={`h-8 text-xs ${r.map === UNMAPPED ? 'text-amber-800 border-amber-300' : ''}`}><SelectValue /></SelectTrigger>
+                          <SelectTrigger className={`h-8 text-xs ${r.map === UNMAPPED || !known(r.map) ? 'text-amber-800 border-amber-300' : ''}`}><SelectValue /></SelectTrigger>
                           <SelectContent className="pm-scope">
+                            {/* Its budget line was removed or renamed away: say so, so it gets re-mapped. */}
+                            {!known(r.map) && <SelectItem value={r.map}>Removed Budget Line — Pick One</SelectItem>}
                             <SelectItem value={UNMAPPED}>Not Mapped Yet</SelectItem>
                             {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                             <SelectItem value={SPREAD}>Spread with the Work (GCs, Insurance, Fee)</SelectItem>

@@ -4,7 +4,7 @@
  * charges and anything else with no contract are added here. Tick each one
  * off against the bank or card statement.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { parseAmount } from '@shared/format';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,11 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   const refresh = () => queryClient.invalidateQueries({ queryKey: [projectKey(projectId)] });
   const [show, setShow] = useState<'all' | 'open'>('all');
   const [form, setForm] = useState<ReturnType<typeof blank> | null>(null);
+  /** The charge being edited in the form above; null = adding a new one. */
+  const [editId, setEditId] = useState<number | null>(null);
+  /** A contract payment being edited: date, amount, how, reference. */
+  const [payEdit, setPayEdit] = useState<{ id: number; label: string; paidDate: string; amount: string; method: string; reference: string } | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -64,11 +69,14 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   };
   const add = useMutation({
     mutationFn: async () => {
-      const row: any = await apiRequest(`/api/cost-projects/${projectId}/direct-costs`, 'POST', { ...form, amount: (Number.isFinite(parseAmount(form!.amount)) ? String(parseAmount(form!.amount)) : form!.amount.replace(/,/g, '')), key: form!.key || null });
+      const body = { ...form, amount: (Number.isFinite(parseAmount(form!.amount)) ? String(parseAmount(form!.amount)) : form!.amount.replace(/,/g, '')), key: form!.key || null };
+      const row: any = editId != null
+        ? await apiRequest(`/api/cost-direct-costs/${editId}`, 'PATCH', body)
+        : await apiRequest(`/api/cost-projects/${projectId}/direct-costs`, 'POST', body);
       if (receipt) await upload(receipt, { directCostId: row.id });
       return row;
     },
-    onSuccess: () => { refresh(); setForm(null); setReceipt(null); toast({ title: 'Added to the Ledger' }); },
+    onSuccess: () => { refresh(); setForm(null); setReceipt(null); toast({ title: editId != null ? 'Charge Updated' : 'Added to the Ledger' }); setEditId(null); },
     onError: (e: any) => { refresh(); fail('Not added')(e); },
   });
   const patchDirect = useMutation({
@@ -82,6 +90,29 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
   const removePayment = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-payments/${id}`, 'DELETE'),
     onSuccess: () => { refresh(); toast({ title: 'Payment Removed' }); }, onError: fail('Not removed'),
+  });
+  const startEdit = (id: number) => {
+    const d = bundle.directCosts.find((x) => x.id === id);
+    if (!d) return;
+    setPayEdit(null); setReceipt(null); setEditId(id);
+    setForm({ date: d.date, vendor: d.vendor, invoiceNumber: d.invoiceNumber ?? '', description: d.description ?? '', amount: d.amount.toFixed(2),
+      method: d.method ?? 'card', reference: d.reference ?? '', key: d.key ?? '', notes: d.notes ?? '' });
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
+  const startPayEdit = (id: number, label: string) => {
+    const p = bundle.payments.find((x) => x.id === id) as any;
+    if (!p) return;
+    setForm(null); setEditId(null);
+    setPayEdit({ id, label, paidDate: String(p.paidDate).slice(0, 10), amount: Number(p.amount).toFixed(2), method: p.method ?? 'wire', reference: p.reference ?? '' });
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
+  const savePay = useMutation({
+    mutationFn: () => apiRequest(`/api/cost-payments/${payEdit!.id}`, 'PATCH', {
+      paidDate: payEdit!.paidDate, method: payEdit!.method, reference: payEdit!.reference,
+      amount: Number.isFinite(parseAmount(payEdit!.amount)) ? String(parseAmount(payEdit!.amount)) : payEdit!.amount.replace(/,/g, ''),
+    }),
+    onSuccess: () => { refresh(); setPayEdit(null); toast({ title: 'Payment Updated' }); },
+    onError: fail('Not Saved'),
   });
   const removeDirect = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/cost-direct-costs/${id}`, 'DELETE'),
@@ -135,13 +166,13 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           ))}
         </div>
         <div className="flex gap-2 items-end flex-wrap">
-          {!form && <Button onClick={() => setForm(blank())}><Plus className="h-4 w-4 mr-1" /> Charge</Button>}
+          {!form && <Button onClick={() => { setEditId(null); setPayEdit(null); setForm(blank()); }}><Plus className="h-4 w-4 mr-1" /> Charge</Button>}
         </div>
       </div>
 
       {form && (
-        <div className="bg-white border rounded-lg p-3 space-y-2">
-          <div className="text-sm font-medium text-gray-900">Add a charge with no contract — a permit fee, parking, reprographics</div>
+        <div ref={formRef} className={`bg-white border rounded-lg p-3 space-y-2 ${editId != null ? 'border-blue-400 ring-1 ring-blue-200' : ''}`}>
+          <div className="text-sm font-medium text-gray-900">{editId != null ? 'Edit Charge' : 'Add a charge with no contract — a permit fee, parking, reprographics'}</div>
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
             <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
             <Field label="Paid To" wide><Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} /></Field>
@@ -178,7 +209,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
           {(() => {
             // The same invoice entered twice: same vendor and invoice number already on the ledger.
             const inv = form.invoiceNumber.trim().toLowerCase(), ven = form.vendor.trim().toLowerCase();
-            const dup = inv ? bundle.directCosts.find((d) => (d.invoiceNumber ?? '').trim().toLowerCase() === inv && (!ven || d.vendor.trim().toLowerCase() === ven)) : null;
+            const dup = inv ? bundle.directCosts.find((d) => d.id !== editId && (d.invoiceNumber ?? '').trim().toLowerCase() === inv && (!ven || d.vendor.trim().toLowerCase() === ven)) : null;
             return dup ? (
               <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2">
                 Invoice {dup.invoiceNumber} from {dup.vendor} is already on the ledger: {shortDate(dup.date)}, {money(dup.amount)}{dup.description ? ` (${dup.description})` : ''}. Check it isn't a duplicate.
@@ -186,10 +217,31 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
             ) : null;
           })()}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { setForm(null); setReceipt(null); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setForm(null); setReceipt(null); setEditId(null); }}>Cancel</Button>
             <Button disabled={!form.vendor.trim() || !form.amount || !form.date || add.isPending} onClick={() => add.mutate()}>
-              {add.isPending ? 'Adding…' : 'Add to Ledger'}
+              {add.isPending ? 'Saving…' : editId != null ? 'Save Changes' : 'Add to Ledger'}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {payEdit && (
+        <div ref={formRef} className="bg-white border border-blue-400 ring-1 ring-blue-200 rounded-lg p-3 space-y-2">
+          <div className="text-sm font-medium text-gray-900">Edit Payment: {payEdit.label}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <Field label="Date Paid"><Input type="date" value={payEdit.paidDate} onChange={(e) => setPayEdit({ ...payEdit, paidDate: e.target.value })} /></Field>
+            <Field label="Amount"><MoneyInput value={payEdit.amount} onValueChange={(v) => setPayEdit({ ...payEdit, amount: v })} /></Field>
+            <Field label="How">
+              <Select value={payEdit.method} onValueChange={(v) => setPayEdit({ ...payEdit, method: v })}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">{PAY_METHODS.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Wire / Check #"><Input value={payEdit.reference} onChange={(e) => setPayEdit({ ...payEdit, reference: e.target.value })} /></Field>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPayEdit(null)}>Cancel</Button>
+            <Button disabled={!payEdit.paidDate || !payEdit.amount || savePay.isPending} onClick={() => savePay.mutate()}>{savePay.isPending ? 'Saving…' : 'Save Changes'}</Button>
           </div>
         </div>
       )}
@@ -303,11 +355,19 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                             <input type="file" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) attach.mutate({ files: [f], target: { directCostId: e.id } }); ev.target.value = ''; }} />
                           </label>
                         )}
+                        <button className="text-gray-400 hover:text-blue-700 align-middle mr-1" title="Edit this charge" onClick={() => startEdit(e.id)}>
+                          <Pencil className="h-3.5 w-3.5 inline" />
+                        </button>
                         <button className="text-gray-400 hover:text-red-700 align-middle" title="Remove"
                                 onClick={() => { if (window.confirm(`Remove ${money(e.amount)} to ${e.vendor} from the ledger?`)) removeDirect.mutate(e.id); }}>
                           <Trash2 className="h-3.5 w-3.5 inline" />
                         </button>
                       </>
+                    )}
+                    {e.kind === 'payment' && (
+                      <button className="text-gray-400 hover:text-blue-700 align-middle mr-1" title="Edit this payment" onClick={() => startPayEdit(e.id, `${e.vendor} · ${e.description}`)}>
+                        <Pencil className="h-3.5 w-3.5 inline" />
+                      </button>
                     )}
                     {e.kind === 'payment' && (
                       <button className="text-gray-400 hover:text-red-700 align-middle" title="Remove this payment"

@@ -301,3 +301,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - Contract card: 'Change Orders' heading above the first CO rolls every change order up to one row (approved total, + pending beside it); each CO still rolls up on its own. Key '__cos' in the per-contract rolled set.
 - Contract details: Company (counterparty) and Category (bucket) editable at the top of each contract card's details; save on leaving the box / picking.
 - Direct costs: invoice_number column (ADDITIVE_COLUMNS). Ledger form has Invoice #, warns when the same vendor + invoice # is already on the ledger; each row shows 'Invoice #…' under Paid To, click to edit. Printed Job Cost Ledger and Pay App Status direct table show it.
+- Ledger editing: pencil on a charge opens the charge form prefilled (Edit Charge → PATCH, receipt optional); pencil on a contract payment opens Edit Payment (date paid, amount, how, wire/check #).

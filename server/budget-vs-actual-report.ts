@@ -557,8 +557,6 @@ export function renderJobCostLedgerHtml(input: {
   const dates = ledger.entries.map((e) => e.date).filter(Boolean).sort();
   const first = dates[0], last = dates[dates.length - 1];
   if (first) info.push({ label: "Period Covered", value: `${longDate(first)} through ${longDate(last)}` });
-  if (first) info.push({ label: "First Entry", value: longDate(first) });
-  if (last) info.push({ label: "Last Entry", value: longDate(last) });
   info.push({ label: "Entries in Report", value: String(ledger.entries.length) });
   if (input.from || input.to) info.push({ label: "Filtered To", value: `${input.from ? longDate(input.from) : "the start"} through ${input.to ? longDate(input.to) : "today"}` });
   if (input.payee) info.push({ label: "Paid To", value: input.payee });
@@ -1082,7 +1080,6 @@ export function reportHeaderRows(project: any, b: any, property: any): ReportInf
     { label: "Project No.", value: t(h.projectNo) || t(project?.projectNumber) },
     { label: "Address", value: t(h.address) || addr },
     { label: "Owner", value: t(h.owner) },
-    { label: "General Contractor", value: t(h.generalContractor) || t(gcContract?.counterparty) },
     { label: "Prime Contract", value: primeNo ? `${primeNo}${primeDate ? `, dated ${primeDate}` : ""}` : "" },
     { label: "Prepared by", value: prepared },
   ];

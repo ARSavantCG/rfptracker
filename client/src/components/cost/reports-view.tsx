@@ -737,7 +737,6 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
     ['shortName', 'Short Name (for File Names)', b.project.name],
     ['address', 'Address', "the property's address"],
     ['owner', 'Owner', ''],
-    ['generalContractor', 'General Contractor', gc?.counterparty ?? ''],
     ['primeContract', 'Prime Contract No.', (gc as any)?.contractNumber ?? ''],
     ['primeContractDate', 'Prime Contract Date', (gc as any)?.contractDate ?? '', 'date'],
     ['preparedBy', 'Prepared By', ''],

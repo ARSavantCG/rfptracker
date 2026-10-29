@@ -7,7 +7,7 @@
 import { coLog } from '@shared/co-log';
 import { threeWayCheck, waiversByPayApp, paidOfFrom, gcPaymentDue } from '@shared/cost-waivers';
 import { carryForwardCheck, UNALLOCATED_KEY } from '@shared/cost-tracking';
-import { DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
+import { DEAL_DISCOUNT_KEY, FUNDING_POOL_KEY } from '@shared/cost-budget-approval';
 import { financialFigures, figuresDiff, type FinancialFigures } from '@shared/financial-figures';
 import { REPORT_SHELL_CSS, reportHeaderHtml, reportFooterHtml, escapeHtml, type ReportInfoRow } from './lib/report-shell';
 
@@ -134,7 +134,9 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
 
   // ---- Since the last snapshot: what moved, and the change orders and pay apps behind it
   let sinceHtml = '';
-  if (x.since) {
+  // A snapshot taken before anything was entered (an empty project) compares against nothing: skip it.
+  const emptySnap = x.since && Math.abs(Number(x.since.data?.budget) || 0) < 0.005 && Math.abs(Number(x.since.data?.committed) || 0) < 0.005;
+  if (x.since && !emptySnap) {
     const D = figuresDiff(x.since.data, F);
     const when = new Date(x.since.takenAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'long', day: 'numeric', year: 'numeric' });
     const label = x.since.kind === 'month' ? `${new Date(x.since.period + '-15T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' })} month-end (saved ${when})` : x.since.kind === 'baseline' ? `tracking began, ${when}` : when;
@@ -179,6 +181,7 @@ export function renderExecSummaryHtml(b: any, x: { info: ReportInfoRow[]; today:
   for (const sc of ((b as any).scopeSetup ?? []) as Array<{ name: string; lineKeys: string[] }>) for (const k of sc.lineKeys) if (!scopeOf.has(k)) scopeOf.set(k, sc.name);
   const groupOf = (r: any) => r.key === UNALLOCATED_KEY ? 'Unallocated (Not Mapped to a Budget Line)'
     : r.key === DEAL_DISCOUNT_KEY ? 'Deal Discount (per LAF)'
+    : r.key === FUNDING_POOL_KEY ? 'Additional Funding (Not on a Line Yet)'
     : scopeOf.get(r.key) ?? (scopeOf.size ? 'Other' : (BUCKET[r.bucket || 'misc'] ?? r.bucket));
   for (const r of b.summary.rows as any[]) {
     const k = groupOf(r);

@@ -393,7 +393,10 @@ export async function loadProjectBundle(projectId: number) {
     // What the tenant pays for: change orders only (the original scope is in the capital
     // partner's budget), or their LAF share of the original scope too. Projects that
     // already invoiced the tenant for costs keep that until changed.
-    const tenantCosOnly = (settings.tenantBills ?? (settings.invoiceType === 'reimbursable' ? 'all' : 'cos')) !== 'all';
+    // The capital partner's fee on the landlord's work only; the tenant's share of the original
+    // scope (allowance work) carries the tenant's fee, so the tenant's side has to count it.
+    const partnerLandlordOnly = settings.partnerFeeOn === 'landlord';
+    const tenantCosOnly = !partnerLandlordOnly && (settings.tenantBills ?? (settings.invoiceType === 'reimbursable' ? 'all' : 'cos')) !== 'all';
     // Projected at completion, so the team sees what's still to come, not only what's billable now.
     const cosApproved = approval.changeOrders.filter((c) => c.status === 'approved');
     const cosPending = approval.changeOrders.filter((c) => c.status === 'pending');
@@ -408,12 +411,15 @@ export async function loadProjectBundle(projectId: number) {
       const share = Number(baseline.find((x) => x.key === r.key)?.tenantSharePct ?? 100);
       return t + ((r.revised - r.changeOrders) * share) / 100;
     }, 0));
+    // Landlord-only partner fee: the partner's base is the landlord's share of the original budget.
+    const origAll = r2c(breakdown.filter((r) => notCm(r.key)).reduce((t, r) => t + r.revised - r.changeOrders, 0));
+    const partnerShare = partnerLandlordOnly && Math.abs(origAll) >= 0.005 ? Math.max(0, (origAll - origTenantBase) / origAll) : 1;
     const budgetOf = (k: string | null) => (k ? summary.rows.find((r) => r.key === k)?.budget ?? 0 : 0);
     const sumCo = (cs: typeof cosApproved, f: (t: ReturnType<typeof coTotals>) => number) => r2c(cs.reduce((t, c) => t + f(coTotals(c)), 0));
     const projection = {
       fee: {
-        original: r2c(origTotal - origBase), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
-        pending: sumCo(cosPending, (t) => t.cmAbsorbed), budget: r2c(budgetOf(cmSettings.key) + budgetOf(CO_CM_KEY)), base: origBase,
+        original: r2c((origTotal - origBase) * partnerShare), changeOrders: sumCo(cosApproved, (t) => t.cmAbsorbed),
+        pending: sumCo(cosPending, (t) => t.cmAbsorbed), budget: r2c(budgetOf(cmSettings.key) + budgetOf(CO_CM_KEY)), base: r2c(origBase * partnerShare),
         // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.
         // Change order amounts the partner's fee is figured on: all the work, or the tenant's share, per change order.
         coBase: sumCo(cosApproved, (t) => t.partnerBase), pendingBase: sumCo(cosPending, (t) => t.partnerBase),
@@ -468,6 +474,7 @@ export async function loadProjectBundle(projectId: number) {
         cmKey: cmSettings.key,
         contractName: (cid) => contracts.find((c) => c.id === cid)?.counterparty ?? 'Contract',
         coLinks, rate: cmSettings.pct, tenantRate: cmSettings.tenantPct,
+        partnerLandlordOnly,
         credits: type === 'reimbursable'
           ? approval.changeOrders.filter((c) => c.status === 'approved' && c.credit > 0).map((c) => ({ id: c.id, date: c.date ?? todayEastern(), number: c.number, amount: c.credit }))
           : [],
@@ -519,7 +526,9 @@ export async function loadProjectBundle(projectId: number) {
       };
       const earnedOn = (list: typeof items) => {
         const x = capFee(invoiceCalc({ type, items: list, pct: invPct, previouslyInvoiced: 0 }));
-        return { base: type === 'fee' ? r2c(list.reduce((t, i) => t + i.amount, 0)) : x.costs, fee: r2c(x.fee + x.suppFee) };
+        // Landlord-only: the partner's base is the work its fee is on (each item's fee ÷ the rate).
+        const partnerBase = partnerLandlordOnly ? r2c(list.reduce((t, i) => t + (i.pAmount ?? i.amount) + (i.coAmount ?? 0), 0)) : r2c(list.reduce((t, i) => t + i.amount, 0));
+        return { base: type === 'fee' ? partnerBase : x.costs, fee: r2c(x.fee + x.suppFee) };
       };
       const earnedBilled = earnedOn(items), earnedPaid = earnedOn(paidList);
       const inv = capFee(invoiceCalc({ type, items: chosen, pct: invPct, previouslyInvoiced: calc.previous }));
@@ -1414,6 +1423,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.cmUncapped !== undefined) next.cmUncapped = !!b.cmUncapped;
       if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
+      if (b.partnerFeeOn !== undefined) next.partnerFeeOn = b.partnerFeeOn === 'landlord' ? 'landlord' : 'all';
       if (b.tenantBillMode !== undefined) next.tenantBillMode = b.tenantBillMode === 'full' ? 'full' : 'incurred';
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);

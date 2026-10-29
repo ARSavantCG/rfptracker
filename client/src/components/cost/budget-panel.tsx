@@ -338,7 +338,14 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
                       <td className="px-2 py-1 text-right tabular-nums">{money(sumPriced)}</td>
                       {mid.map((v, k) => <td key={k} className="px-2 py-1 text-right tabular-nums">{Math.abs(v) >= 0.005 ? signedMoney(v) : ''}</td>)}
                       <td className="px-2 py-1 text-right tabular-nums">{money(sumBudget)}</td>
-                      <td colSpan={2} />
+                      <td colSpan={2} className="px-1 py-1 text-[11px] font-normal text-gray-600 whitespace-nowrap">
+                        {/* Set the tenant share on every line in the scope at once (e.g. Site Work 0%, Tenant Improvements 100%). */}
+                        <span title="Set Tenant Pays on every line in this group">All:</span>{' '}
+                        {(['100', '0'] as const).map((v) => (
+                          <button key={v} type="button" className="text-blue-700 hover:underline ml-1"
+                                  onClick={() => { const set = new Set(idx.map(({ i }) => i)); setRows(rows.map((r, j) => (set.has(j) ? { ...r, tenantSharePct: `${v}.00` } : r))); }}>{v}%</button>
+                        ))}
+                      </td>
                     </tr>,
                   ];
                 });

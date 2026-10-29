@@ -344,6 +344,8 @@ export interface BillableItem {
   suppFee?: number;
   /** Capital partner invoice: partner rate × billable original work. */
   feeP?: number;
+  /** The original work the capital partner's fee is on (all of it, or the landlord's share only). */
+  pAmount?: number;
   /** Capital partner invoice: partner rate × all change order work in this item. */
   suppP?: number;
   /** Older records only. */
@@ -413,6 +415,11 @@ export function billableItems(input: {
   tenantRate?: number;
   /** Credits to the tenant, as items (reimbursable invoices). */
   credits?: ReadonlyArray<{ id: string; date: string; number: string; amount: number }>;
+  /**
+   * The capital partner's fee on the landlord's share of the original work only: the tenant's
+   * share (allowance work) carries the tenant's fee instead (PepsiCo, 2026-10-28). Default: all of it.
+   */
+  partnerLandlordOnly?: boolean;
 }): BillableItem[] {
   const links = input.coLinks ?? new Map<number, CoFeeLink>();
   const rate = input.rate ?? 0;
@@ -462,7 +469,7 @@ export function billableItems(input: {
         item: `${label} ${String(a.docNumber ?? a.number).padStart(3, '0')}${a.invoiceNumber ? ` (${a.invoiceNumber})` : ''}`,
         amount: r2(amount), billable: r2(billable),
         // The capital partner's fee is on all the original work (the project's cost), not the tenant's share of it.
-        fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2((origAmount * rate) / 100), suppP: r2(suppP), coAmount: r2(coAmount),
+        fee: r2((origBillable * tRate) / 100), suppFee: r2(suppFee), feeP: r2(((input.partnerLandlordOnly ? origAmount - origBillable : origAmount) * rate) / 100), pAmount: r2(input.partnerLandlordOnly ? origAmount - origBillable : origAmount), suppP: r2(suppP), coAmount: r2(coAmount),
       });
     }
   }
@@ -475,7 +482,7 @@ export function billableItems(input: {
     out.push({
       ref: `direct-${d.id}`, date: d.date, vendor: d.vendor,
       item: `${d.description || 'Charge'}${d.invoiceNumber ? ` · Invoice #${d.invoiceNumber}` : ''}${how ? ` (${how})` : ''}`,
-      amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2((d.amount * rate) / 100), suppP: 0, coAmount: 0,
+      amount: r2(d.amount), billable, fee: r2((billable * tRate) / 100), suppFee: 0, feeP: r2(((input.partnerLandlordOnly ? d.amount - billable : d.amount) * rate) / 100), pAmount: r2(input.partnerLandlordOnly ? d.amount - billable : d.amount), suppP: 0, coAmount: 0,
     });
   }
   for (const c of input.credits || []) {
@@ -510,7 +517,7 @@ export function paidItems(billed: readonly BillableItem[], payments: ReadonlyArr
       item: `Payment — ${info?.item ?? 'pay app'}${p.reference ? ` (${p.reference})` : ''}`,
       amount: r2(p.amount), billable: share(src?.billable),
       // Only items that carry their own fees pass them on; otherwise the flat rate applies.
-      ...(src?.fee !== undefined ? { fee: share(src.fee), suppFee: share(src.suppFee), feeP: share(src.feeP), suppP: share(src.suppP), coAmount: share(src.coAmount) } : {}),
+      ...(src?.fee !== undefined ? { fee: share(src.fee), suppFee: share(src.suppFee), feeP: share(src.feeP), ...(src.pAmount !== undefined ? { pAmount: share(src.pAmount) } : {}), suppP: share(src.suppP), coAmount: share(src.coAmount) } : {}),
     });
   }
   return out.sort((x, y) => x.date.localeCompare(y.date) || x.vendor.localeCompare(y.vendor));
@@ -535,7 +542,7 @@ export function invoiceCalc(input: { type: InvoiceType; items: readonly Billable
   const sum = (f: (i: BillableItem) => number | undefined) => r2(input.items.reduce((s, i) => s + (f(i) ?? 0), 0));
   // The capital partner's original fee is figured once on the total (rate × original work), so it ties to
   // the cent with base × rate instead of drifting by the rounding of each item.
-  const origWork = r2(input.items.reduce((s, i) => s + (i.amount - (i.coAmount ?? 0)), 0));
+  const origWork = r2(input.items.reduce((s, i) => s + (i.pAmount ?? (i.amount - (i.coAmount ?? 0))), 0));
   const fee = !split ? r2((costs * input.pct) / 100) : partner ? r2((origWork * input.pct) / 100) : sum((i) => i.fee);
   const suppFee = !split ? 0 : partner ? sum((i) => i.suppP ?? i.suppFee) : sum((i) => i.suppFee);
   const cpFee = 0;

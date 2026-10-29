@@ -262,9 +262,20 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
             </SelectContent>
           </Select>
         </Labeled>}
+        {!tenant && (
+          <Labeled label="Partner's Fee On">
+            <Select value={(b.project as any).settings?.partnerFeeOn === 'landlord' ? 'landlord' : 'all'} onValueChange={(v) => saveSetting({ partnerFeeOn: v }, 'Saved')}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="all">All Original Work</SelectItem>
+                <SelectItem value="landlord">Landlord Work Only — the tenant's share carries the tenant's fee</SelectItem>
+              </SelectContent>
+            </Select>
+          </Labeled>
+        )}
         {tenant && !full && (
           <Labeled label="Tenant Pays For">
-            <Select value={d.tenantCosOnly ? 'cos' : 'all'} onValueChange={(v) => saveSetting({ tenantBills: v }, 'Saved')}>
+            <Select value={d.tenantCosOnly ? 'cos' : 'all'} disabled={(b.project as any).settings?.partnerFeeOn === 'landlord'} onValueChange={(v) => saveSetting({ tenantBills: v }, 'Saved')}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent className="pm-scope">
                 <SelectItem value="cos">Change orders only — the original scope is in the budget</SelectItem>

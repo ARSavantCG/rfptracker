@@ -519,6 +519,8 @@ export function renderJobCostLedgerHtml(input: {
   generatedBy?: string | null;
   /** Tenant's share of each entry ("direct-7", "payment-3"); null = not assigned to a budget line or a payer yet. */
   shares?: Map<string, { tenant: number | null }>;
+  /** Only this payee's entries. */
+  payee?: string | null;
 }): string {
   const { ledger } = input;
   const shareOf = (e: LedgerEntry) => input.shares?.get(`${e.kind}-${e.id}`);
@@ -551,6 +553,7 @@ export function renderJobCostLedgerHtml(input: {
     ? `${input.from ? longDate(input.from) : "Start"} – ${input.to ? longDate(input.to) : "today"}`
     : "All entries to date";
   info.push({ label: "Period", value: period });
+  if (input.payee) info.push({ label: "Paid To", value: input.payee });
   const notes = ledger.unreconciledCount
     ? [`${ledger.unreconciledCount} ${ledger.unreconciledCount === 1 ? "entry is" : "entries are"} not yet reconciled (${money2(ledger.unreconciled)}), marked ○.`]
     : [];
@@ -582,10 +585,22 @@ export function renderJobCostLedgerHtml(input: {
     <tr class="total"><td colspan="${input.shares ? 6 : 5}">Total</td>${cell(ledger.total)}<td></td><td></td></tr>
   </tbody></table>
   ${respHtml}
-  ${payees.length > 1 ? `<h3 class="sec">By Payee</h3>
-  <table class="t" style="width:60%"><thead><tr><th class="l">Paid To</th><th>Total</th></tr></thead><tbody>
-    ${payees.map(([v, a]) => `<tr><td>${escapeHtml(v)}</td>${cell(a)}</tr>`).join("")}
-    <tr class="total"><td>Total</td>${cell(ledger.total)}</tr></tbody></table>` : ""}
+  ${payees.length > 1 ? (() => {
+    // Each payee split by who's responsible (Tenant / Landlord / Not Assigned), when the shares are known.
+    const split = new Map<string, { t: number; l: number; n: number }>();
+    for (const e of ledger.entries) {
+      const sh = shareOf(e); const cur = split.get(e.vendor) ?? { t: 0, l: 0, n: 0 };
+      if (!sh) cur.l += 0; else if (sh.tenant == null) cur.n += e.amount; else { cur.t += sh.tenant; cur.l += e.amount - sh.tenant; }
+      split.set(e.vendor, cur);
+    }
+    const withSplit = !!input.shares;
+    const anyNone = Array.from(split.values()).some((v) => Math.abs(v.n) >= 0.005);
+    const tot = Array.from(split.values()).reduce((a, v) => ({ t: a.t + v.t, l: a.l + v.l, n: a.n + v.n }), { t: 0, l: 0, n: 0 });
+    return `<h3 class="sec">By Payee</h3>
+  <table class="t" style="width:${withSplit ? 85 : 60}%"><thead><tr><th class="l">Paid To</th>${withSplit ? `<th>Tenant</th><th>Landlord</th>${anyNone ? "<th>Not Assigned</th>" : ""}` : ""}<th>Total</th></tr></thead><tbody>
+    ${payees.map(([v, a]) => { const x = split.get(v) ?? { t: 0, l: 0, n: 0 }; return `<tr><td>${escapeHtml(v)}</td>${withSplit ? `${cell(r2x(x.t))}${cell(r2x(x.l))}${anyNone ? cell(r2x(x.n)) : ""}` : ""}${cell(a)}</tr>`; }).join("")}
+    <tr class="total"><td>Total</td>${withSplit ? `${cell(r2x(tot.t))}${cell(r2x(tot.l))}${anyNone ? cell(r2x(tot.n)) : ""}` : ""}${cell(ledger.total)}</tr></tbody></table>`;
+  })() : ""}
   <div class="legend">Payments against pay apps and invoices are split across budget lines by each line's schedule of values; see Budget vs Actual for that split.</div>
   ${reportFooterHtml({ generatedBy: input.generatedBy })}
   </body></html>`;
@@ -1101,7 +1116,9 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
       if (!b) return res.status(404).json({ message: "Project not found" });
       // Re-filter the bundle's ledger for the period; running totals restart at the period's start.
       const all = b.ledger.entries;
-      const inPeriod = all.filter((e) => (!from || e.date >= from) && (!to || e.date <= to));
+      // One payee (?payee=Priority Permit) or everyone.
+      const payee = String(req.query.payee || "").trim();
+      const inPeriod = all.filter((e) => (!from || e.date >= from) && (!to || e.date <= to) && (!payee || e.vendor === payee));
       let running = 0;
       const entries = inPeriod.map((e) => { running = Math.round((running + e.amount) * 100) / 100; return { ...e, running }; });
       const open = entries.filter((e) => !e.reconciled);
@@ -1131,7 +1148,7 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
         }
       }
       res.send(renderJobCostLedgerHtml({
-        shares,
+        shares, payee: payee || null,
         project: b.project, ...(await propertyFacts(b.project)),
         ledger: { entries, total: running, unreconciled: Math.round(open.reduce((s, e) => s + e.amount, 0) * 100) / 100, unreconciledCount: open.length },
         from, to, generatedBy: generatedByName((req as any).user),

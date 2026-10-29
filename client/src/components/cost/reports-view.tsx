@@ -32,6 +32,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   const [asOf, setAsOf] = useState(todayIso());
   const [scope, setScope] = useState('all');
   const [from, setFrom] = useState('');
+  const [payee, setPayee] = useState('all');
   const [to, setTo] = useState('');
   const saveSetting = async (patch: Record<string, string>, ok: string) => {
     try {
@@ -85,8 +86,17 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         <div className="flex items-end gap-2 flex-wrap">
           <Labeled label="From"><Input type="date" className="h-9 w-40" value={from} onChange={(e) => setFrom(e.target.value)} /></Labeled>
           <Labeled label="To"><Input type="date" className="h-9 w-40" value={to} onChange={(e) => setTo(e.target.value)} /></Labeled>
+          <Labeled label="Paid To">
+            <Select value={payee} onValueChange={setPayee}>
+              <SelectTrigger className="h-9 w-64"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="all">Everyone</SelectItem>
+                {Array.from(new Set(b.ledger.entries.map((e) => e.vendor))).sort().map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Labeled>
           <Button variant="outline" className="h-9" onClick={() => {
-            const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to);
+            const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to); if (payee !== 'all') q.set('payee', payee);
             open(`/api/reports/job-cost-ledger/${projectId}${q.toString() ? `?${q}` : ''}`);
           }}><Printer className="h-4 w-4 mr-1" /> Print</Button>
         </div>

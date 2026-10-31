@@ -815,6 +815,13 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   }
   const fundsIn = r2(original + revisions + additions + tenant - tenantCm);
   const supplemental = r2(Math.max(0, need - fundsIn));
+  // Why total funding differs from the revised budget: each approved change order adds its full cost to
+  // the budget, but only the tenant's share is new money — our share (and the capital partner's CM fee
+  // on it) is paid from inside the budget, less any Supplemental Funding.
+  const budgetGapItems = approved.map((c) => {
+    const x = coTotals(c);
+    return { number: c.number, ours: r2(x.budgetIncrease - (x.tenant - x.cm) - x.cmAbsorbed), partnerFee: r2(x.cmAbsorbed) };
+  }).filter((g) => Math.abs(g.ours) + Math.abs(g.partnerFee) >= 0.005);
   return {
     original, revisions, transfers, tenant, absorbed, revised,
     /** Of `tenant`: the tenant's CM fee on change orders; the rest is the change orders as approved. */
@@ -838,6 +845,10 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     /** Absorbed change orders paid from the budget's surplus. */
     absorbedFromSurplus: r2(Math.max(0, absorbed - supplemental)),
     totalFunding: r2(fundsIn + supplemental),
+    /** Revised budget − total funding, and the change orders behind it. */
+    budgetGap: r2(revised - fundsIn - supplemental), budgetGapItems,
+    /** Total funding less the CM fees set aside: what's there for project costs. */
+    availableForCost: r2(fundsIn + supplemental - cmReserved),
     projectedVariance: r2(revised - projectedCost),
     pendingChangeOrders: s.pending,
   };

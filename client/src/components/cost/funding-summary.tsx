@@ -77,8 +77,20 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
               <td className={`py-1.5 text-right tabular-nums ${f.supplemental > 0.005 ? 'text-red-800 font-medium' : ''}`}>{signedMoney(f.supplemental)}</td>
             </tr>
             <Row name="Total funding" value={f.totalFunding} strong />
-            {(f.cmReserved > 0.005 || f.cmCeiling > 0.005) && <Row name="CM fees — set aside" value={f.cmReserved}
-                 sub={`Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + capital partner's fees on change orders ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />}
+            {Math.abs((f as any).budgetGap ?? 0) >= 0.005 && (
+              <tr className="border-b"><td className="py-1.5 pr-3 text-gray-600" colSpan={2}>
+                <div className="text-[11px] text-gray-500">
+                  {money(Math.abs((f as any).budgetGap))} {(f as any).budgetGap > 0 ? 'less' : 'more'} than the revised budget ({money(f.revised)}): change orders add their full cost to the budget, but only the tenant's share is new money.
+                  {' '}{((f as any).budgetGapItems ?? []).map((g: any) => `${g.number}: our share ${money(g.ours)}${g.partnerFee >= 0.005 ? ` + capital partner's CM fee ${money(g.partnerFee)}` : ''}`).join(' · ')}
+                  {f.supplemental > 0.005 ? ` — less ${f.label} ${money(f.supplemental)}` : ' — paid from the budget\'s surplus.'}
+                </div>
+              </td></tr>
+            )}
+            {f.cmReserved > 0.005 && <>
+              <Row name="Less: CM fees — set aside" value={-f.cmReserved}
+                   sub={`Ours — not available for project costs. Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + capital partner's fees on change orders ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />
+              <Row name="Available for project costs" value={(f as any).availableForCost ?? f.totalFunding - f.cmReserved} strong />
+            </>}
             <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups" value={f.projectCost} />
             <tr>
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">

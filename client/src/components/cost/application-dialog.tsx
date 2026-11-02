@@ -481,11 +481,19 @@ export function ApplicationDialog({
                             <div className="text-[10px] text-right text-emerald-800 mt-0.5">Released {money(held)}
                               {' '}<button type="button" className="text-blue-700 hover:underline" onClick={() => { setRetTyped((t) => { const n2 = new Set(t); n2.delete(l.id); return n2; }); setDraft((d) => ({ ...d, [l.id]: { ...d[l.id], retainage: '' } })); }}>Undo</button></div>
                           );
+                          // Held vs the contract rate on work to date: a difference means some was released (or held over) on this line.
+                          const expect = retainageCents(toDate * rate), heldNow = retainageOf(l), off = Math.round((heldNow - expect) * 100) / 100;
+                          const note = rate > 0 && Math.abs(off) >= 0.05 ? (
+                            <div className={`text-[10px] text-right tabular-nums mt-0.5 ${off < 0 ? 'text-emerald-800' : 'text-red-700'}`}
+                                 title={`${(rate * 100).toFixed(2)}% of ${money(toDate)} is ${money(expect)}`}>
+                              {(rate * 100).toFixed(0)}% = {money(expect)} · {off < 0 ? `${money(-off)} released` : `${money(off)} over`}
+                            </div>
+                          ) : null;
                           if (retainageOf(l) >= 0.005) return (
-                            <div className="text-right mt-0.5"><button type="button" className="text-[10px] text-blue-700 hover:underline" title="Sets this line's retainage to $0.00 so what's held on it is paid on this pay app"
-                              onClick={() => set(l.id, 'retainage', '0')}>Release</button></div>
+                            <>{note}<div className="text-right mt-0.5"><button type="button" className="text-[10px] text-blue-700 hover:underline" title="Sets this line's retainage to $0.00 so what's held on it is paid on this pay app"
+                              onClick={() => set(l.id, 'retainage', '0')}>Release</button></div></>
                           );
-                          return null;
+                          return note;
                         })()}
                         {aiNote(l.id, 'retainage')}
                       </td>

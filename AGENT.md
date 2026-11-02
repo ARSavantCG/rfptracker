@@ -328,3 +328,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Contract card "Map N unmapped to…": ★ Where <tenant CO> priced it (linked budget CO home line) at top; bulk map then resyncs the linked tenant CO.
 
 - 2026-11-02 Contract card lines: Budget Line cell is an inline dropdown (budget lines, Spread, Split… opens the line editor); split lines stay a link to the editor. Linked tenant CO re-prices after.
+
+- 2026-11-02 Per-line retainage check vs contract rate: pay app dialog note under each line (rate = expected · $X released / $X over, ≥ $0.05), SOV report "Held vs N%" column (✓ / (released) / over) with totals and legend.

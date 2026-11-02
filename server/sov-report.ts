@@ -41,7 +41,16 @@ export function renderSovHtml(x: {
     const led = retainageLedger(apps as any);
     // Once retainage has been released, show withheld / released / held instead of one column.
     const rel = led.released > 0.005;
-    const cols = rel ? 10 : 8;
+    // Each line's held retainage against the contract rate on billed to date: a difference means
+    // something was released (or held over) on that line (Adolfo, 2026-11-02).
+    const rate = (Number(c.retainagePct) || 0) / 100;
+    const chk = rate > 0;
+    const cols = (rel ? 10 : 8) + (chk ? 1 : 0);
+    const diffCell = (held: number, billed: number) => {
+      if (!chk) return '';
+      const v = r2(held - Math.floor(billed * rate * 100 + 1e-6) / 100);
+      return Math.abs(v) < 0.05 ? '<td class="num muted">✓</td>' : `<td class="num" style="color:${v < 0 ? '#047857' : '#b91c1c'};font-weight:600">${v < 0 ? `(${money2(-v)})` : money2(v)}</td>`;
+    };
     const lm = (id: number) => led.lines.get(id) ?? { withheld: 0, released: 0, held: 0 };
     const dash = (v: number) => (Math.abs(v) >= 0.005 ? money2(v) : '<span class="muted">—</span>');
     const lines = x.sovLines.filter((l) => l.contractId === c.id);
@@ -57,11 +66,11 @@ export function renderSovHtml(x: {
     const row = (l: Line) => {
       const p = prog.get(l.id);
       const d = p?.toDate ?? 0;
-      return `<tr><td class="it">${escapeHtml(l.itemNo ?? '')}</td><td class="ind">${escapeHtml(l.description)}</td><td class="num">${money2(l.scheduledValue)}</td><td class="num">${money2(d)}</td><td class="num">${pct(d, l.scheduledValue)}</td><td class="num">${money2(r2(l.scheduledValue - d))}</td>${rel ? `<td class="num">${dash(lm(l.id).withheld)}</td><td class="num">${dash(lm(l.id).released)}</td>` : ''}<td class="num">${dash(p?.retainage ?? 0)}</td><td class="bl">${budgetOf(l)}</td></tr>`;
+      return `<tr><td class="it">${escapeHtml(l.itemNo ?? '')}</td><td class="ind">${escapeHtml(l.description)}</td><td class="num">${money2(l.scheduledValue)}</td><td class="num">${money2(d)}</td><td class="num">${pct(d, l.scheduledValue)}</td><td class="num">${money2(r2(l.scheduledValue - d))}</td>${rel ? `<td class="num">${dash(lm(l.id).withheld)}</td><td class="num">${dash(lm(l.id).released)}</td>` : ''}<td class="num">${dash(p?.retainage ?? 0)}</td>${diffCell(p?.retainage ?? 0, d)}<td class="bl">${budgetOf(l)}</td></tr>`;
     };
     const total = (label: string, ls: Line[], cls: string) => {
       const t = sum(ls);
-      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td>${rel ? `<td class="num">${money2(t.w)}</td><td class="num">${money2(t.rl)}</td>` : ''}<td class="num">${money2(t.ret)}</td><td></td></tr>`;
+      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td>${rel ? `<td class="num">${money2(t.w)}</td><td class="num">${money2(t.rl)}</td>` : ''}<td class="num">${money2(t.ret)}</td>${chk ? (() => { const ex = r2(ls.reduce((a, l) => a + Math.floor((prog.get(l.id)?.toDate ?? 0) * rate * 100 + 1e-6) / 100, 0)); const v = r2(t.ret - ex); return Math.abs(v) < 0.05 ? '<td class="num muted">✓</td>' : `<td class="num" style="font-weight:600">${v < 0 ? `(${money2(-v)})` : money2(v)}</td>`; })() : ''}<td></td></tr>`;
     };
     const head = (label: string, cls: string) => `<tr class="${cls}"><td colspan="${cols}">${escapeHtml(label)}</td></tr>`;
 
@@ -107,8 +116,9 @@ export function renderSovHtml(x: {
       <h2 class="ct">${escapeHtml(c.counterparty)}${c.contractNumber ? ` · Contract #${escapeHtml(c.contractNumber)}` : ''}</h2>
       <div class="meta">Billed through ${escapeHtml(through)}${c.retainagePct ? ` · Retainage ${Number(c.retainagePct).toFixed(2)}%` : ''}</div>
       <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
-      <table class="t"><thead><tr><th class="l it">Item</th><th class="l">Description</th><th>Scheduled Value</th><th>Billed to Date</th><th>%</th><th>Balance to Finish</th>${rel ? '<th>Retainage Withheld</th><th>Retainage Released</th><th>Retainage Held</th>' : '<th>Retainage</th>'}<th class="l">Budget Line</th></tr></thead>
+      <table class="t"><thead><tr><th class="l it">Item</th><th class="l">Description</th><th>Scheduled Value</th><th>Billed to Date</th><th>%</th><th>Balance to Finish</th>${rel ? '<th>Retainage Withheld</th><th>Retainage Released</th><th>Retainage Held</th>' : '<th>Retainage</th>'}${chk ? `<th title="Retainage held less ${(rate * 100).toFixed(2)}% of billed to date. ✓ = as expected; (green) = less held, i.e. released; red = more held than the rate">Held vs ${(rate * 100).toFixed(0)}%</th>` : ''}<th class="l">Budget Line</th></tr></thead>
       <tbody>${body}</tbody></table>
+      ${chk ? `<p class="hint">Held vs ${(rate * 100).toFixed(0)}%: each line's retainage held less ${(rate * 100).toFixed(2)}% of its billed to date. ✓ means it's as expected; an amount in (parentheses) is less held than the rate — retainage released on that line; a red amount is more held than the rate.</p>` : ''}
       ${Math.abs(adj) >= 0.005 ? `<p class="hint">Retainage Held includes accepted rounding adjustments of ${money2(adj)}.</p>` : ''}
     </section>`;
   }).join('');

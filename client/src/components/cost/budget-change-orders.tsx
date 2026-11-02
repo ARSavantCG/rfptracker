@@ -109,6 +109,18 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
       return apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true });
     }, `${co.number}: line ${label}`);
   };
+  // Every line of a vendor change order onto one budget line at once, then one re-price.
+  const assignAll = (co: BudgetCO, ids: number[], key: string) => {
+    if (!ids.length || key === '__split__' || key === '__spread__') return;
+    run(async () => {
+      for (const id of ids) {
+        await apiRequest(`/api/cost-sov-lines/${id}`, 'PATCH', key === CO_UNASSIGNED_KEY
+          ? { allocationMode: 'unallocated', allocations: [] }
+          : { allocationMode: 'direct', allocations: [{ baselineKey: key, pct: 100 }] });
+      }
+      return apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true });
+    }, `${co.number}: ${ids.length} line${ids.length === 1 ? '' : 's'} ${key === CO_UNASSIGNED_KEY ? 'unassigned' : `on ${name.get(key) ?? 'the budget line'}`}`);
+  };
   const coLines = (ccoId: number) => r2(bundle.sovLines.filter((l) => l.changeOrderId === ccoId).reduce((s, l) => s + l.scheduledValue, 0));
   const linkedIds = new Set(cos.flatMap((c) => c.links.map((l) => l.contractCoId)));
   const contractName = (id: number | null) => bundle.contracts.find((c) => c.id === id)?.counterparty ?? 'a contract';
@@ -161,7 +173,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   return (
                     <Fragment key={l.contractCoId}>
                     <tr>
-                      <td className="pr-3 py-0.5 text-gray-800">{contractName(l.contractId)} {cco?.number ?? '(removed)'}{cco?.title ? <span className="text-gray-500"> — {cco.title}</span> : null}</td>
+                      <td className="pr-3 py-0.5 text-gray-800 max-w-[380px]">{contractName(l.contractId)} {cco?.number ?? '(removed)'}{cco?.title ? <span className="text-gray-500"> — {cco.title}</span> : null}</td>
                       <td className="pr-3 py-0.5 text-right tabular-nums">{money(amt)}
                         {Math.abs(live - amt) >= 0.005 && <span className="text-amber-800" title="The vendor's change order has changed since it was priced in"> → now {money(live)}</span>}</td>
                       <td className="pr-1 py-0.5 text-gray-500">Tenant pays</td>
@@ -194,9 +206,33 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                         )}
                       </td>
                     </tr>
+                    {mapOpen[mapKey] && vls.length > 1 && (() => {
+                      // Where this change order priced it (its biggest budget line): the likely home for all of it.
+                      const home = co.lines.filter((x) => x.fromCoId === l.contractCoId && name.has(x.key)).sort((p, q) => Math.abs(q.amount) - Math.abs(p.amount))[0]?.key;
+                      return (
+                        <tr className="text-gray-800">
+                          <td className="pr-3 py-1 pl-4 font-medium" colSpan={2}>All {vls.length} lines — one budget line</td>
+                          <td className="pr-1 py-1 text-gray-500">Budget line</td>
+                          <td colSpan={4} className="pr-3 py-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-72">
+                                <Select value="" onValueChange={(v) => assignAll(co, vls.map((x) => x.id), v)}>
+                                  <SelectTrigger className="h-6 text-xs"><SelectValue placeholder="Put them all on…" /></SelectTrigger>
+                                  <SelectContent className="pm-scope">
+                                    {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                                    <SelectItem value={CO_UNASSIGNED_KEY}>Unassigned for Now</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {home && <button className="text-blue-700 hover:underline whitespace-nowrap" onClick={() => assignAll(co, vls.map((x) => x.id), home)}>All on {name.get(home)}</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })()}
                     {mapOpen[mapKey] && vls.map((x) => (
                       <tr key={`m${x.id}`} className="text-gray-700">
-                        <td className="pr-3 py-0.5 pl-4">{x.itemNo ? `${x.itemNo} · ` : ''}{x.description}</td>
+                        <td className="pr-3 py-0.5 pl-4 max-w-[380px]">{x.itemNo ? `${x.itemNo} · ` : ''}{x.description}</td>
                         <td className="pr-3 py-0.5 text-right tabular-nums">{money(x.scheduledValue)}</td>
                         <td className="pr-1 py-0.5 text-gray-500">Budget line</td>
                         <td colSpan={4} className="pr-3 py-0.5">
@@ -265,7 +301,7 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
               <input type="file" multiple className="hidden" onChange={(e) => { if (e.target.files?.length) upload(co.id, e.target.files); e.target.value = ''; }} />
             </label>
             {totals(co.id).tenantWork > 0.005 && (
-              <button className="text-blue-700 hover:underline inline-flex items-center gap-1 ml-auto"
+              <button className="text-blue-700 hover:underline inline-flex items-center gap-1 font-medium"
                       onClick={async () => { if (!(await openReport(`/api/reports/tenant-co/${projectId}?co=${encodeURIComponent(co.id)}`))) toast({ title: 'Report Failed', variant: 'destructive' }); }}>
                 <Printer className="h-3.5 w-3.5" /> Tenant Change Order
               </button>
@@ -376,10 +412,10 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                   <Fragment key={co.id}>
                   <tr className={`align-top ${co.status === 'void' ? 'opacity-50' : ''}`}>
                     <td className="px-3 py-2 font-medium whitespace-nowrap">{co.number}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 min-w-[300px]">
                       <div>{co.title || '—'} <span className="ml-1 text-[11px] font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">{reasonLabel(co.reason)}</span></div>
                       <div className="text-[11px] text-gray-600">
-                        {co.lines.map((l) => `${name.get(l.key) ?? 'Removed line'} ${money(l.amount)}${(l.tenantPct ?? 100) !== 100 ? ` (tenant ${Number(l.tenantPct).toFixed(2)}%)` : ''}`).join(' · ')}
+                        {co.lines.map((l, i) => <div key={i}>{name.get(l.key) ?? (l.key === CO_UNASSIGNED_KEY || /unalloc/i.test(l.key) ? 'Unassigned' : 'Removed line')} {money(l.amount)}{(l.tenantPct ?? 100) !== 100 ? ` (tenant ${Number(l.tenantPct).toFixed(2)}%)` : ''}</div>)}
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-gray-700">{shortDate(co.date)}</td>

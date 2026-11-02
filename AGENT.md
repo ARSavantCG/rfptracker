@@ -322,3 +322,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Not on a Budget Line panel: vendor CO lines linked to a tenant (budget) CO get a suggestion (that CO's budget lines priced from this vendor CO, by amount share; else all its lines). Per-row "Use CO-01", bulk "Map N to Their Tenant Change Order", and tenant COs in the picker.
 
 - 2026-11-02 Mapping panel "Show" picker: lines not on a budget line, or the contract lines on any budget line (over-budget lines first) to re-map. "Spent to Date" labels renamed "Work Complete". Supplemental sub-text: projected need, not yet approved; approved = Additional Funding.
+
+- 2026-11-02 Budget CO row: "All N lines — one budget line" (bulk assign a vendor CO's lines + one resync; "All on <where it was priced>" shortcut). For column min width, CO lines stacked; Tenant Change Order print link no longer pushed off-screen.

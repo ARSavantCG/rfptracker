@@ -314,3 +314,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - Contracts tab: 'Not on a Budget Line' panel (unallocated-panel.tsx) lists every committed contract line whose money lands in Unallocated (not mapped, removed line, partly mapped, spread with nothing to follow) with amount + why + map-to (single or bulk), plus ledger charges with no line; ties to the summary's Unallocated committed. Forecast table: auto layout (no table-fixed) so big numbers never overlap.
 
 - 2026-11-02 Tenant CO invoice billed in part: settings coBillPct (share at approval, default 100) and coBalanceDate (Substantial Completion; bills the balance). Draft/record carry coTotal, coBillPct, coBalanceDate, coBalance; toDate = what is billable now. Reports > Tenant Invoice card has both fields when Billing Method = Change Orders in Full.
+
+- 2026-11-02 Invoices print "Make checks payable to (Entity)" above Notes: reportHeader.payableTo, else reportHeader.owner. Field on the Report Header card.

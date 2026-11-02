@@ -672,6 +672,9 @@ export function renderCmInvoiceHtml(input: {
   // Change orders billed in part at approval, the balance at Substantial Completion.
   const split = full && (inv.coBillPct ?? 100) < 100;
   const r2i = (v: number) => Math.round(v * 100) / 100;
+  // Who the checks go to: the owning entity (Report Header "Make Checks Payable To", else its Owner).
+  const hdr = ((input.project as any)?.settings?.reportHeader ?? {}) as Record<string, string>;
+  const payTo = String(hdr.payableTo ?? "").trim() || String(hdr.owner ?? "").trim();
   return `<!doctype html><html><head><meta charset="utf-8"><title>${reimb ? "Reimbursement Invoice" : "CM Fee Invoice"}</title><style>
     ${REPORT_SHELL_CSS}${TABLE_CSS}
     .due { margin-top: 10px; margin-left: auto; width: 55%; border-collapse: collapse; font-size: 12px; }
@@ -731,6 +734,8 @@ export function renderCmInvoiceHtml(input: {
   <table class="t"><thead><tr><th class="l">Contractor</th><th class="l">Through Pay App</th><th class="l">Period Ending</th><th>Billed to Date</th></tr></thead><tbody>
     ${inv.payApps.map((p) => `<tr><td>${escapeHtml(p.contract)}</td><td>No. ${p.number}</td><td>${escapeHtml(longDate(p.date))}</td>${cell(p.billedToDate)}</tr>`).join("")}
   </tbody></table>` : ""}
+
+  ${payTo ? `<div style="margin:14px 0 4px;text-align:center;font-size:12.5px">Make checks payable to <strong>(${escapeHtml(payTo)})</strong></div>` : ""}
 
   <h3 class="sec">Notes</h3>
   <ol class="notes">

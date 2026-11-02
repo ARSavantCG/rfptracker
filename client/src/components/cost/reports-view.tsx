@@ -750,6 +750,7 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
     ['shortName', 'Short Name (for File Names)', b.project.name],
     ['address', 'Address', "the property's address"],
     ['owner', 'Owner', ''],
+    ['payableTo', 'Make Checks Payable To (Invoices)', 'the Owner'],
     ['primeContract', 'Prime Contract No.', (gc as any)?.contractNumber ?? ''],
     ['primeContractDate', 'Prime Contract Date', (gc as any)?.contractDate ?? '', 'date'],
     ['preparedBy', 'Prepared By', ''],
@@ -764,7 +765,7 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
   };
   const filled = fields.filter(([k]) => (saved[k] ?? '').trim()).length;
   return (
-    <Card id="report-header" title="Report Header" what="The block at the top of every printed report: project, project no., address, owner, general contractor, prime contract and who prepared it. Left blank, a field uses what the project already knows."
+    <Card id="report-header" title="Report Header" what="The block at the top of every printed report: project, project no., address, owner, general contractor, prime contract and who prepared it — and on invoices, who checks are payable to. Left blank, a field uses what the project already knows."
           summary={`${filled} of ${fields.length} set`}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {fields.map(([k, label, fallback, type]) => (

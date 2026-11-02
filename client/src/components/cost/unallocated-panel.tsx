@@ -24,6 +24,8 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
+  // What's listed: lines not on a budget line (''), or the lines on one budget line (to re-map them).
+  const [view, setView] = useState('');
   const baseline = b.project.baseline ?? [];
   const nameOf = new Map(baseline.map((x) => [x.key, x.description]));
 
@@ -56,28 +58,36 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
     for (const l of b.sovLines) {
       const co = l.changeOrderId != null ? cos.get(l.changeOrderId) : null;
       if (co && co.status !== 'approved') continue; // pending/void aren't committed
-      const share = lineShares(l as unknown as SovLine, lines.filter((x) => x.contractId === l.contractId), valid).get(UNALLOCATED_KEY) ?? 0;
+      const shares = lineShares(l as unknown as SovLine, lines.filter((x) => x.contractId === l.contractId), valid);
+      const share = shares.get(view || UNALLOCATED_KEY) ?? 0;
       const amount = Math.round(l.scheduledValue * share * 100) / 100;
       if (Math.abs(amount) < 0.005) continue;
       const al = l.allocations ?? [];
-      const why = l.allocationMode === 'unallocated' || (l.allocationMode === 'direct' && al.length === 0) ? 'Not mapped'
+      const why = view ? (l.allocationMode === 'spread' ? `Spread — ${Math.round(share * 100)}% lands here` : share > 0.995 ? 'All on this line' : `${Math.round(share * 100)}% on this line`)
+        : l.allocationMode === 'unallocated' || (l.allocationMode === 'direct' && al.length === 0) ? 'Not mapped'
         : l.allocationMode === 'spread' ? 'Spread, but nothing in its group is mapped'
         : al.every((a) => !valid.has(a.baselineKey)) ? `Mapped to a removed line${al[0] && nameOf.get(al[0].baselineKey) ? '' : ''}`
         : `Partly mapped (${Math.round((1 - share) * 100)}% placed)`;
       out.push({
         id: l.id, contract: b.contracts.find((c) => c.id === l.contractId)?.counterparty ?? 'Contract',
         group: co ? `${co.number}${co.title ? ` — ${co.title}` : ''}` : 'Base Contract', item: l.itemNo ?? '', description: l.description, amount, why,
-        suggest: suggestFor(l.changeOrderId),
+        suggest: view ? null : suggestFor(l.changeOrderId),
       });
     }
     out.sort((x, y) => x.contract.localeCompare(y.contract) || x.group.localeCompare(y.group) || Math.abs(y.amount) - Math.abs(x.amount));
-    const charges = b.directCosts.filter((d) => !d.key || !valid.has(d.key));
+    const charges = view ? [] : b.directCosts.filter((d) => !d.key || !valid.has(d.key));
     return { rows: out, charges };
-  }, [b.sovLines, b.changeOrders, b.contracts, b.summary.rows, b.directCosts, b.approval]);
+  }, [b.sovLines, b.changeOrders, b.contracts, b.summary.rows, b.directCosts, b.approval, view]);
+  // Budget lines committed over budget: usually lines mapped to the wrong place.
+  const overLines = b.summary.rows.filter((r) => r.key !== UNALLOCATED_KEY && r.committed - r.budget >= 0.005)
+    .sort((x, y) => (y.committed - y.budget) - (x.committed - x.budget));
 
   const totalLines = Math.round(rows.reduce((t, r) => t + r.amount, 0) * 100) / 100;
   const totalCharges = Math.round(charges.reduce((t, d) => t + d.amount, 0) * 100) / 100;
-  if (!rows.length && !charges.length) return null;
+  if (!view && !rows.length && !charges.length && !overLines.length) return null;
+  const viewName = view ? nameOf.get(view) ?? 'this line' : '';
+  const viewRow = view ? b.summary.rows.find((r) => r.key === view) : null;
+  const unTotal = totalLines + totalCharges;
 
   const bcoOpts = (b.approval?.changeOrders ?? []).filter((c) => c.status !== 'void' && c.lines.some((x) => nameOf.has(x.key)));
   const allocOf = (key: string): Alloc[] | null => {
@@ -143,12 +153,25 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
       <button className="w-full flex items-center gap-2 px-3 py-2 text-left" onClick={() => setOpen(!open)}>
         {open ? <ChevronDown className="h-4 w-4 text-amber-800" /> : <ChevronRight className="h-4 w-4 text-amber-800" />}
         <AlertTriangle className="h-4 w-4 text-amber-700" />
-        <span className="font-semibold text-amber-900">Not on a Budget Line: {money(totalLines + totalCharges)}</span>
-        <span className="text-sm text-amber-900">· {rows.length} contract line{rows.length === 1 ? '' : 's'} ({money(totalLines)}){charges.length ? ` · ${charges.length} ledger charge${charges.length === 1 ? '' : 's'} (${money(totalCharges)})` : ''}</span>
+        <span className="font-semibold text-amber-900">{view ? `On ${viewName}: ${money(totalLines)}` : `Not on a Budget Line: ${money(unTotal)}`}</span>
+        <span className="text-sm text-amber-900">· {rows.length} contract line{rows.length === 1 ? '' : 's'}{!view && charges.length ? ` · ${charges.length} ledger charge${charges.length === 1 ? '' : 's'} (${money(totalCharges)})` : ''}{!view && overLines.length ? ` · ${overLines.length} budget line${overLines.length === 1 ? '' : 's'} committed over budget` : ''}</span>
         <span className="ml-auto text-xs text-amber-800">{open ? 'Hide' : 'Show and map them'}</span>
       </button>
       {open && (
         <div className="px-3 pb-3 space-y-2">
+          <div className="flex items-center gap-2 text-sm flex-wrap">
+            <span className="text-gray-700">Show</span>
+            <Select value={view || '__none__'} onValueChange={(v) => { setView(v === '__none__' ? '' : v); setPicked(new Set()); }}>
+              <SelectTrigger className="h-8 text-xs w-[26rem]"><SelectValue /></SelectTrigger>
+              <SelectContent className="pm-scope">
+                <SelectItem value="__none__">Lines not on a budget line ({money(unTotal)})</SelectItem>
+                {overLines.map((r) => <SelectItem key={r.key} value={r.key}>⚠ On {r.description} — over by {money(r.committed - r.budget)}</SelectItem>)}
+                {b.summary.rows.filter((r) => r.key !== UNALLOCATED_KEY && !overLines.includes(r) && Math.abs(r.committed) >= 0.005).map((r) =>
+                  <SelectItem key={r.key} value={r.key}>On {r.description} ({money(r.committed)})</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {viewRow && <span className="text-xs text-gray-600">Budget {money(viewRow.budget)} · committed {money(viewRow.committed)}{viewRow.committed - viewRow.budget >= 0.005 ? <span className="text-red-700"> · over {money(viewRow.committed - viewRow.budget)}</span> : null}. Re-map what doesn't belong here.</span>}
+          </div>
           {rows.length > 0 && (
             <>
               <div className="flex items-center gap-2 text-sm">
@@ -166,7 +189,7 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
                   <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
                     <th className="px-2 py-1.5 w-8"><input type="checkbox" className="h-4 w-4" checked={allPicked} onChange={() => setPicked(allPicked ? new Set() : new Set(rows.map((r) => r.id)))} /></th>
                     <th className="px-2 py-1.5 text-left">Contract</th><th className="px-2 py-1.5 text-left">Base / Change Order</th>
-                    <th className="px-2 py-1.5 text-left">Line</th><th className="px-2 py-1.5 text-right">Not on a Line</th>
+                    <th className="px-2 py-1.5 text-left">Line</th><th className="px-2 py-1.5 text-right">{view ? 'On This Line' : 'Not on a Line'}</th>
                     <th className="px-2 py-1.5 text-left">Why</th><th className="px-2 py-1.5 text-left">Map To</th>
                   </tr></thead>
                   <tbody>
@@ -186,7 +209,7 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
                         </div></td>
                       </tr>
                     ))}
-                    <tr className="border-t-2 font-semibold"><td /><td className="px-2 py-1.5" colSpan={3}>Contract lines</td><td className="px-2 py-1.5 text-right tabular-nums">{money(totalLines)}</td><td colSpan={2} /></tr>
+                    <tr className="border-t-2 font-semibold"><td /><td className="px-2 py-1.5" colSpan={3}>Contract lines{view ? ` on ${viewName}` : ''}</td><td className="px-2 py-1.5 text-right tabular-nums">{money(totalLines)}</td><td colSpan={2} /></tr>
                   </tbody>
                 </table>
               </div>

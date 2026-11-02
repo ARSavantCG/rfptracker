@@ -68,7 +68,7 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
               <th className="px-3 py-2 text-right">{showOrig ? 'Revised Budget' : 'Budget'}</th>
               <th className="px-3 py-2 text-right">Committed</th>
               {hasPending && <th className="px-3 py-2 text-right" title="Change orders not yet approved">Pending COs</th>}
-              <th className="px-3 py-2 text-right">Spent to Date</th>
+              <th className="px-3 py-2 text-right">Work Complete</th>
               <th className="px-3 py-2 text-right">% Spent</th>
               <th className="px-3 py-2 text-right" title="Budget less committed. In parentheses when over.">Variance</th>
             </tr>

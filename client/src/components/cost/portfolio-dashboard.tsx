@@ -38,7 +38,7 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
             <Tile label="Revised Budget" value={money(sum((d) => d.budget))} />
             <Tile label="Committed" value={money(sum((d) => d.committed))} />
-            <Tile label="Spent to Date" value={money(sum((d) => d.spent))} />
+            <Tile label="Work Complete" value={money(sum((d) => d.spent))} />
             <Tile label="Vendors Owed" value={money(vendor.owed)} tone={vendor.owed > 0.005 ? 'text-red-700' : undefined} sub={`Retainage Held ${money(vendor.retainage)}`} />
             <Tile label="Earned, Not Invoiced" value={money(fee.earnedNotInvoiced)} tone="text-amber-700" sub={`Costs Paid ${money(fee.earnedNotInvoicedPaid)} · Invoiced, Not Paid ${money(fee.invoicedUnpaid)}`} />
           </div>

@@ -320,3 +320,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Invoice Terms: reportHeader.paymentTerms prints under Invoice Date as typed; "Net N" also prints Due Date = invoice date + N days.
 
 - 2026-11-02 Not on a Budget Line panel: vendor CO lines linked to a tenant (budget) CO get a suggestion (that CO's budget lines priced from this vendor CO, by amount share; else all its lines). Per-row "Use CO-01", bulk "Map N to Their Tenant Change Order", and tenant COs in the picker.
+
+- 2026-11-02 Mapping panel "Show" picker: lines not on a budget line, or the contract lines on any budget line (over-budget lines first) to re-map. "Spent to Date" labels renamed "Work Complete". Supplemental sub-text: projected need, not yet approved; approved = Additional Funding.

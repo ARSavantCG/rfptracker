@@ -136,7 +136,7 @@ export default function CostProject() {
           {[
             ['Budget', money(b.summary.totals.budget), ''],
             ['Committed', money(b.summary.totals.committed), ''],
-            ['Spent to Date', money(b.summary.totals.toDate), ''],
+            ['Work Complete', money(b.summary.totals.toDate), ''],
             ['Paid', money(b.position.totals.paid), ''],
             ['Owed', money(b.position.totals.owed), b.position.totals.owed > 0.005 ? 'text-red-700' : ''],
             ['Variance', signedMoney(b.summary.totals.variance), b.summary.totals.variance < -0.005 ? 'text-red-700' : 'text-green-700'],

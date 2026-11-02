@@ -133,7 +133,7 @@ export default function CostProjects() {
                   <th className="px-3 py-2">Tenant</th>
                   <th className="px-3 py-2 text-right">Budget</th>
                   <th className="px-3 py-2 text-right">Committed</th>
-                  <th className="px-3 py-2 text-right">Spent to Date</th>
+                  <th className="px-3 py-2 text-right">Work Complete</th>
                   <th className="px-3 py-2 text-right">Variance</th>
                 </tr>
               </thead>

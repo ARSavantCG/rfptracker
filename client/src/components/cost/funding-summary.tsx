@@ -70,7 +70,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                 )}
                 <div className="text-[11px] text-gray-500">
                   {f.supplemental > 0.005
-                    ? "Needed beyond the budget and the tenant's share"
+                    ? "Projected need beyond the budget and the tenant's share — not yet approved; once the owner approves it, add it as Additional Funding"
                     : f.absorbed > 0.005 ? `None needed — absorbed change orders ${money(f.absorbed)} are paid from the budget surplus` : 'None needed'}
                 </div>
               </td>

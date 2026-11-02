@@ -20,6 +20,7 @@ import { ThreeWayBadge } from './three-way';
 import { threeWayCheck } from '@shared/cost-waivers';
 import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
+import { SplitLinesDialog } from './split-lines-dialog';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
   money, pct, projectKey, BUCKET_LABEL, checkBadge, openReport,
@@ -53,6 +54,8 @@ export function ContractCard({
   const ai = useAiStatus();
   // The base contract and each change order roll up to their header line; remembered per contract.
   const rollKey = `pm-rolled-${contract.id}`;
+  // The group whose lines are being split (Split Lines dialog), by group id ('base' for the base contract).
+  const [splitting, setSplitting] = useState<string | null>(null);
   const [rolled, setRolled] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(rollKey) || '[]')); } catch { return new Set(); }
   });
@@ -395,6 +398,19 @@ export function ContractCard({
                                 onClick={() => setEditing(String(g.id ?? 'base'))}>
                           <Pencil className="h-3.5 w-3.5 mr-1" /> {g.lines.length ? 'Edit Lines' : 'Enter Lines'}
                         </Button>
+                      )}
+                      {g.lines.length > 0 && baseline.length > 1 && editing == null && (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Put one split (e.g. 20% Office Expansion / 80% New Office Area) on many lines at once"
+                                onClick={() => setSplitting(String(g.id ?? 'base'))}>
+                          Split Lines
+                        </Button>
+                      )}
+                      {splitting === String(g.id ?? 'base') && (
+                        <SplitLinesDialog open label={g.label} lines={g.lines} baseline={baseline} projectId={projectId} onClose={() => setSplitting(null)}
+                          after={async () => {
+                            const bco = g.co ? tenantCos.find((t) => t.status !== 'void' && (t.links ?? []).some((k) => k.contractCoId === g.co!.id)) : null;
+                            if (bco) await apiRequest(`/api/cost-projects/${projectId}/budget-cos/${bco.id}`, 'PATCH', { resync: true });
+                          }} />
                       )}
                       {g.id == null && lines.length > 0 && (
                         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Print this contract's schedule of values: every line, billed to date, balance to finish and retainage"

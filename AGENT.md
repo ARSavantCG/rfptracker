@@ -334,3 +334,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 retainageLedger: accepted rounding adjustments no longer count as withheld/released (returned as adjustment, in held only). SOV: Held tile notes the adjustment; Held vs N% total sums only off lines (≥$0.05) so per-line cents don't add up to a false total.
 
 - 2026-11-02 Financial Summary "Through" (?asOf=): loadProjectBundle(id, {asOf}) drops pay apps dated after it (invoice date / period end / created), payments, ledger charges; contractor COs approved after it (startAppNumber > last kept app, else approvedDate/createdAt) count as void; budget COs / additions / transfers dated after it dropped. Picker lists past pay app period ends + Another Date.
+
+- 2026-11-02 Split Lines dialog (split-lines-dialog.tsx) on each contract group header: one split (budget lines + %, must total 100) applied to ticked lines (default: spread/unmapped); linked tenant CO re-priced after. Note: Spread follows the group's mapped lines — with only Design+Permit mapped, Accordia's spread lines all landed on Design.

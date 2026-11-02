@@ -203,34 +203,58 @@ async function nextProjectNumber(): Promise<string> {
  * Everything about one project, in dollars, with the arithmetic done.
  * The report and the screen both read this, so they cannot disagree.
  */
-export async function loadProjectBundle(projectId: number) {
-  const [project] = await db.select().from(costProjects).where(eq(costProjects.id, projectId));
-  if (!project) return null;
+export async function loadProjectBundle(projectId: number, opts: { asOf?: string | null } = {}) {
+  const [project0] = await db.select().from(costProjects).where(eq(costProjects.id, projectId));
+  if (!project0) return null;
+  // Closed off at a date (?asOf=YYYY-MM-DD, Adolfo 2026-11-02): pay apps, payments and charges after it are
+  // left off, and change orders approved after it (on a later pay app, or a later date) aren't counted.
+  const asOf = opts.asOf && /^\d{4}-\d{2}-\d{2}$/.test(opts.asOf) ? opts.asOf : null;
+  const onOrBefore = (d: unknown) => !asOf || (d != null && isoDay(d as any) <= asOf);
+  const project = asOf ? (() => {
+    const raw: any = project0.budgetApproval ? JSON.parse(JSON.stringify(project0.budgetApproval)) : null;
+    if (raw) {
+      if (Array.isArray(raw.changeOrders)) raw.changeOrders = raw.changeOrders.map((c: any) => (c?.status === 'approved' && c.date && String(c.date).slice(0, 10) > asOf ? { ...c, status: 'void' } : c));
+      if (Array.isArray(raw.additions)) raw.additions = raw.additions.filter((x: any) => !x?.date || String(x.date).slice(0, 10) <= asOf);
+      if (Array.isArray(raw.transfers)) raw.transfers = raw.transfers.filter((x: any) => !x?.date || String(x.date).slice(0, 10) <= asOf);
+    }
+    return { ...project0, budgetApproval: raw };
+  })() : project0;
 
   const contracts = await db.select().from(costContracts)
     .where(eq(costContracts.projectId, projectId)).orderBy(costContracts.id);
   const contractIds = contracts.map((c) => c.id);
   const none = contractIds.length === 0;
 
-  const cos = none ? [] : await db.select().from(costChangeOrders)
+  const cos0 = none ? [] : await db.select().from(costChangeOrders)
     .where(inArray(costChangeOrders.contractId, contractIds))
     .orderBy(costChangeOrders.sortOrder, costChangeOrders.id);
   const sov = none ? [] : await db.select().from(costSovLines)
     .where(inArray(costSovLines.contractId, contractIds))
     .orderBy(costSovLines.sortOrder, costSovLines.id);
-  const apps = none ? [] : await db.select().from(costApplications)
+  const apps = (none ? [] : await db.select().from(costApplications)
     .where(inArray(costApplications.contractId, contractIds))
-    .orderBy(costApplications.contractId, costApplications.number);
+    .orderBy(costApplications.contractId, costApplications.number))
+    .filter((a) => onOrBefore((a.kind === 'invoice' && a.invoiceDate) || a.periodEnd || a.createdAt));
+  // A change order approved after the cut-off: on a later pay app ("Approved on App 008"), else by its date.
+  const lastApp = new Map<number, number>();
+  for (const a of apps) lastApp.set(a.contractId, Math.max(lastApp.get(a.contractId) ?? 0, a.number));
+  const cos = asOf ? cos0.map((c) => {
+    if (c.status !== 'approved') return c;
+    const inPeriod = c.startAppNumber != null ? c.startAppNumber <= (lastApp.get(c.contractId) ?? 0) : onOrBefore(c.approvedDate ?? c.createdAt);
+    return inPeriod ? c : { ...c, status: 'void' };
+  }) : cos0;
   const appIds = apps.map((a) => a.id);
   const appLines = appIds.length === 0 ? [] : await db.select().from(costApplicationLines)
     .where(inArray(costApplicationLines.applicationId, appIds));
   const waiverRows = await db.select().from(costWaivers).where(eq(costWaivers.projectId, projectId)).orderBy(costWaivers.id);
   const documents = await db.select().from(costDocuments)
     .where(and(eq(costDocuments.projectId, projectId), isNull(costDocuments.deletedAt))).orderBy(desc(costDocuments.createdAt));
-  const payRows = none ? [] : await db.select().from(costPayments)
-    .where(inArray(costPayments.contractId, contractIds)).orderBy(costPayments.paidDate, costPayments.id);
-  const directRows = await db.select().from(costDirectCosts)
-    .where(eq(costDirectCosts.projectId, projectId)).orderBy(costDirectCosts.date, costDirectCosts.id);
+  const payRows = (none ? [] : await db.select().from(costPayments)
+    .where(inArray(costPayments.contractId, contractIds)).orderBy(costPayments.paidDate, costPayments.id))
+    .filter((p) => onOrBefore(p.paidDate));
+  const directRows = (await db.select().from(costDirectCosts)
+    .where(eq(costDirectCosts.projectId, projectId)).orderBy(costDirectCosts.date, costDirectCosts.id))
+    .filter((d) => onOrBefore(d.date));
   const directCosts = directRows.map((d) => ({
     id: d.id, date: isoDay(d.date), vendor: d.vendor, description: d.description,
     amount: dollars(d.amountCents), method: d.method, reference: d.reference, invoiceNumber: d.invoiceNumber ?? null, chargeTo: (d.chargeTo === 'tenant' || d.chargeTo === 'landlord') ? d.chargeTo : null,

@@ -902,7 +902,23 @@ function FinancialSummaryCard({ b, projectId, open }: { b: ProjectBundle; projec
   const list = snaps.data ?? [];
   const todayEt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
   const dayOf = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(iso));
-  const def = list.find((s) => dayOf(s.takenAt) < todayEt);
+  // Run through today, or close it off at a pay app's period (or any date): later pay apps, payments,
+  // charges and change orders approved after it are left off.
+  const [through, setThrough] = useState('');
+  const [custom, setCustom] = useState('');
+  const asOf = through === 'custom' ? custom : through;
+  const cutoffs = (() => {
+    const m = new Map<string, string[]>();
+    for (const a of b.applications) {
+      const d = ((a.kind === 'invoice' && a.invoiceDate) || a.periodEnd || '').slice(0, 10);
+      if (!d || d >= todayEt) continue;
+      const c = b.contracts.find((x) => x.id === a.contractId);
+      m.set(d, [...(m.get(d) ?? []), `${c?.counterparty?.split(/[ ,]/)[0] ?? ''} ${a.kind === 'invoice' ? 'Inv' : 'App'} ${String(a.docNumber).padStart(3, '0')}`.trim()]);
+    }
+    return Array.from(m).sort((x, y) => (x[0] < y[0] ? 1 : -1));
+  })();
+  const ref = asOf || todayEt;
+  const def = list.find((s) => dayOf(s.takenAt) < ref);
   const [since, setSince] = useState<string>('');
   const pick = since || (def ? String(def.id) : '0');
   const label = (s: SnapRow) => s.kind === 'month'
@@ -921,8 +937,22 @@ function FinancialSummaryCard({ b, projectId, open }: { b: ProjectBundle; projec
   };
   return (
     <Card id="financial-summary" title="Project Financial Summary" what="One report for leadership: budget against committed, pending and projected; contingency used against work complete; what moved since the last snapshot and why; change orders by stage; contracts and payments; and a Watch List of what needs attention."
-          action={<Button className="h-9" onClick={() => open(`/api/reports/financial-summary/${projectId}?since=${pick}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+          action={<Button className="h-9" onClick={() => open(`/api/reports/financial-summary/${projectId}?since=${pick}${asOf ? `&asOf=${asOf}` : ''}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
       <div className="flex flex-wrap items-end gap-4 text-sm">
+        <label className="space-y-1"><span className="text-xs text-gray-600 block">Through</span>
+          <div className="flex items-center gap-2">
+            <div className="w-80">
+              <Select value={through || 'today'} onValueChange={(v) => { setThrough(v === 'today' ? '' : v); setSince(''); }}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent className="pm-scope">
+                  <SelectItem value="today">Today — everything entered</SelectItem>
+                  {cutoffs.map(([d, who]) => <SelectItem key={d} value={d}>{shortDate(d)} — {who.join(', ')}</SelectItem>)}
+                  <SelectItem value="custom">Another Date…</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {through === 'custom' && <Input type="date" className="h-9 w-40" max={todayEt} value={custom} onChange={(e) => setCustom(e.target.value)} />}
+          </div></label>
         <label className="space-y-1"><span className="text-xs text-gray-600 block">Compare With</span>
           <div className="w-96">
             <Select value={pick} onValueChange={setSince}>
@@ -945,6 +975,7 @@ function FinancialSummaryCard({ b, projectId, open }: { b: ProjectBundle; projec
             </Select>
           </div></label>
       </div>
+      {asOf && <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded px-2 py-1">Closed off at {shortDate(asOf)}: pay apps and invoices dated after it, payments and ledger charges after it, contractor change orders approved on a later pay app (or after that date), and tenant change orders and added funding dated after it are left off.</p>}
       <p className="text-xs text-gray-600">A snapshot is saved on its own at the start of every month (the month just ended), so the summary can say what moved and why. {list.length ? `${list.length} saved so far.` : 'The first one is saved shortly after this goes live.'}</p>
     </Card>
   );

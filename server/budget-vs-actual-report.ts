@@ -1395,13 +1395,16 @@ export function registerBudgetVsActualReportRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id, 10);
       if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid ID" });
-      const b = await loadProjectBundle(id);
+      // Closed off at a date (?asOf=): pay apps, payments, charges and change orders after it are left off.
+      const asOfQ = String(req.query.asOf || "");
+      const asOf = /^\d{4}-\d{2}-\d{2}$/.test(asOfQ) && asOfQ < todayEastern() ? asOfQ : null;
+      const b = await loadProjectBundle(id, { asOf });
       if (!b) return res.status(404).json({ message: "Project not found" });
       const facts = await propertyFacts(b.project, b);
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      // Compare with the snapshot asked for (?since=id), else the latest taken before today.
+      // Compare with the snapshot asked for (?since=id), else the latest taken before the report date.
       const snaps = await listSnapshots(id).catch(() => []);
-      const today = todayEastern();
+      const today = asOf ?? todayEastern();
       const want = req.query.since ? Number(req.query.since) : null;
       const dayOf = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(iso));
       const since = want === 0 ? null : (want ? snaps.find((s) => s.id === want) : snaps.find((s) => dayOf(s.takenAt) < today)) ?? null;

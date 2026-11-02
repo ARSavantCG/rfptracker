@@ -486,7 +486,7 @@ export function ApplicationDialog({
                           const note = rate > 0 && Math.abs(off) >= 0.05 ? (
                             <div className={`text-[10px] text-right tabular-nums mt-0.5 ${off < 0 ? 'text-emerald-800' : 'text-red-700'}`}
                                  title={`${(rate * 100).toFixed(2)}% of ${money(toDate)} is ${money(expect)}`}>
-                              {(rate * 100).toFixed(0)}% = {money(expect)} · {off < 0 ? `${money(-off)} released` : `${money(off)} over`}
+                              {(rate * 100).toFixed(0)}% = {money(expect)} · {off < 0 ? `${money(-off)} less held (released or under-withheld)` : `${money(off)} over`}
                             </div>
                           ) : null;
                           if (retainageOf(l) >= 0.005) return (

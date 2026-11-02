@@ -125,8 +125,16 @@ export function positionAsOf(asOf: string, input: {
     const last = mine.length ? Math.max(...mine.map((a) => a.number)) : null;
     const g = g702For(contractId, last ?? 0, { lines: input.lines, changeOrders: input.changeOrders, applications: mine });
     // Contract sum from the lines directly, so a contract with no application yet still shows it.
+    // As of the date: a change order first on a later pay app ("Approved on App 008") isn't in the sum yet.
+    const inSum = (l: SovLine) => {
+      if (lineStatus(l, cos) !== 'approved') return false;
+      const start = l.changeOrderId != null ? (cos.get(l.changeOrderId) as any)?.startApp : null;
+      if (start == null || (last != null && start <= last)) return true;
+      // Its pay app exists but falls after the date: not in the sum then. Not billed yet at all: it counts.
+      return !(input.applications || []).some((a) => a.contractId === contractId && a.number === start);
+    };
     const contractSum = r2((input.lines || [])
-      .filter((l) => l.contractId === contractId && lineStatus(l, cos) === 'approved')
+      .filter((l) => l.contractId === contractId && inSum(l))
       .reduce((s, l) => s + (Number(l.scheduledValue) || 0), 0));
     const billed = last == null ? 0 : g.completedAndStored;
     const held = last == null ? 0 : g.retainage;

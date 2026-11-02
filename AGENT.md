@@ -352,3 +352,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 resyncLinked: PATCHing a vendor CO line's mapping re-places its tenant CO lines (only when vendor amounts still equal what was priced). Budget CO row: "Place the Unassigned $X on Budget Lines". Drill-down: SummaryTable(bundle) — Budget / Committed / Pending / Work Complete amounts open DrillDialog (contract lines × share, ledger charges; budget = original, revisions, transfers, additions, tenant CO lines + markups).
 
 - 2026-11-02 linesFromVendors: vendor CO lines set to Spread follow that CO's direct-mapped work in proportion (before: fell back to the CO's Unassigned line). Fallback never picks Unallocated. "Place the Unassigned" link fixed (Unassigned is in the name map).
+
+- 2026-11-02 positionAsOf contract sum: a CO whose start pay app exists but falls after the as-of date is left out (Pay App Status / Payoff / Aging as of a past date). Not-yet-billed approved COs still count.

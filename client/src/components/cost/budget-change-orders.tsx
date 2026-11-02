@@ -269,10 +269,10 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
                 Put on Its Own Budget Line
               </button>
             )}
-            {!drift && co.links.length > 0 && co.lines.some((l) => l.fromCoId != null && !name.has(l.key)) && (
+            {!drift && co.links.length > 0 && co.lines.some((l) => l.fromCoId != null && (l.key === CO_UNASSIGNED_KEY || !name.has(l.key))) && (
               <button className="text-amber-800 hover:underline" title="Some of this change order sits on Unassigned. If the vendor's lines are mapped now, this puts it on their budget lines."
                       onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true }), `${co.number} placed on budget lines`)}>
-                Place the Unassigned {money(co.lines.filter((l) => l.fromCoId != null && !name.has(l.key)).reduce((t, l) => t + l.amount, 0))} on Budget Lines
+                Place the Unassigned {money(co.lines.filter((l) => l.fromCoId != null && (l.key === CO_UNASSIGNED_KEY || !name.has(l.key))).reduce((t, l) => t + l.amount, 0))} on Budget Lines
               </button>
             )}
             {drift && (

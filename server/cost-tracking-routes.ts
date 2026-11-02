@@ -1001,14 +1001,23 @@ export function registerCostTrackingRoutes(app: Express): void {
       // Where this vendor's unmapped lines sat before (not a line one of its lines has since been mapped to).
       const mappedKeys = new Set(vlines.filter((v) => v.allocationMode === 'direct')
         .flatMap((v) => ((v.allocations || []) as Array<{ baselineKey: string }>).map((x) => x.baselineKey)));
-      const fallback = current.find((l) => l.fromCoId === cco.id && !mappedKeys.has(l.key))?.key
-        ?? current.find((l) => l.fromCoId == null)?.key ?? null;
+      const fallback = current.find((l) => l.fromCoId === cco.id && !mappedKeys.has(l.key) && l.key !== UNALLOCATED_KEY)?.key
+        ?? current.find((l) => l.fromCoId == null && l.key !== UNALLOCATED_KEY)?.key ?? null;
       const byKey = new Map<string, number>();
+      // "Spread with the work" lines (fee, insurance) follow this change order's mapped work, in proportion.
+      const work = new Map<string, number>();
+      for (const v of vlines) {
+        const alloc = ((v.allocations || []) as Array<{ baselineKey: string; pct: number }>).filter((x) => keys.has(x.baselineKey) && Number(x.pct) > 0);
+        if (v.allocationMode === 'direct' && alloc.length) for (const x of alloc) work.set(x.baselineKey, (work.get(x.baselineKey) ?? 0) + (dollars(v.scheduledValueCents) * Number(x.pct)) / 100);
+      }
+      const workTotal = Array.from(work.values()).reduce((t, v) => t + v, 0);
       for (const v of vlines) {
         const amt = dollars(v.scheduledValueCents);
         const alloc = ((v.allocations || []) as Array<{ baselineKey: string; pct: number }>).filter((x) => keys.has(x.baselineKey) && Number(x.pct) > 0);
         if (v.allocationMode === 'direct' && alloc.length) {
           for (const x of alloc) byKey.set(x.baselineKey, (byKey.get(x.baselineKey) ?? 0) + (amt * Number(x.pct)) / 100);
+        } else if (v.allocationMode === 'spread' && Math.abs(workTotal) >= 0.005) {
+          for (const [k2, w] of Array.from(work)) byKey.set(k2, (byKey.get(k2) ?? 0) + (amt * w) / workTotal);
         } else {
           // Not mapped yet: the line chosen in the form, else Unallocated until it is mapped (then Re-price).
           const k2 = fallback ?? UNALLOCATED_KEY;

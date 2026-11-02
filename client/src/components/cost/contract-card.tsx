@@ -28,8 +28,10 @@ import {
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen, waivers = [],
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen, waivers = [], tenantCos = [],
 }: {
+  /** Tenant (budget) change orders: a vendor change order linked to one maps where it was priced. */
+  tenantCos?: import('@shared/cost-budget-approval').BudgetCO[];
   /** For the three-way check on each pay app (the GC's conditional and typed line 8). */
   waivers?: import('@shared/cost-waivers').Waiver[];
   contract: ContractRow;
@@ -153,13 +155,16 @@ export function ContractCard({
   });
   /** Map every unmapped line in a group in one go — most of a GC's lines land on one or two budget lines. */
   const bulkMap = useMutation({
-    mutationFn: async ({ ids, key }: { ids: number[]; key: string }) => {
+    mutationFn: async ({ ids, key, coId }: { ids: number[]; key: string; coId?: number | null }) => {
       for (const id of ids) {
         await apiRequest(`/api/cost-sov-lines/${id}`, 'PATCH',
           key === '__spread__'
             ? { allocationMode: 'spread', allocations: [] }
             : { allocationMode: 'direct', allocations: [{ baselineKey: key, pct: 100 }] });
       }
+      // The tenant change order it's priced into follows (its unassigned part moves to the line chosen).
+      const bco = coId != null ? tenantCos.find((t) => t.status !== 'void' && (t.links ?? []).some((k) => k.contractCoId === coId)) : null;
+      if (bco) await apiRequest(`/api/cost-projects/${projectId}/budget-cos/${bco.id}`, 'PATCH', { resync: true });
       return ids.length;
     },
     onSuccess: (n: number) => { refresh(); toast({ title: `${n} line${n === 1 ? '' : 's'} mapped` }); },
@@ -363,11 +368,19 @@ export function ContractCard({
                     <div className="flex items-center gap-1 justify-end flex-wrap">
                       {unmapped.length > 0 && baseline.length > 0 && (
                         <div className="w-52">
-                          <Select value="" disabled={bulkMap.isPending} onValueChange={(v) => v && bulkMap.mutate({ ids: unmapped.map((l) => l.id), key: v })}>
+                          <Select value="" disabled={bulkMap.isPending} onValueChange={(v) => v && bulkMap.mutate({ ids: unmapped.map((l) => l.id), key: v.startsWith('__home__:') ? v.slice(9) : v, coId: g.co?.id ?? null })}>
                             <SelectTrigger className="h-7 text-xs border-amber-300 bg-amber-50 text-amber-900 data-[placeholder]:text-amber-900">
                               <SelectValue placeholder={`Map ${unmapped.length} unmapped to…`} />
                             </SelectTrigger>
                             <SelectContent className="pm-scope">
+                              {(() => {
+                                // Linked to a tenant change order: offer where that change order priced it.
+                                const coId = g.co?.id;
+                                const bco = coId != null ? tenantCos.find((t) => t.status !== 'void' && (t.links ?? []).some((k) => k.contractCoId === coId)) : null;
+                                const names = new Map(baseline.map((b) => [b.key, b.description]));
+                                const home = bco?.lines.filter((x) => x.fromCoId === coId && names.has(x.key)).sort((p, q) => Math.abs(q.amount) - Math.abs(p.amount))[0]?.key;
+                                return bco && home ? <SelectItem value={`__home__:${home}`}>★ Where {bco.number} priced it — {names.get(home)}</SelectItem> : null;
+                              })()}
                               {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
                               <SelectItem value="__spread__">Spread with the Work</SelectItem>
                             </SelectContent>

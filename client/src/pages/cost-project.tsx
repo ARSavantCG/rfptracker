@@ -222,6 +222,7 @@ export default function CostProject() {
               <ContractCard key={c.id}
                 contract={c}
                 waivers={b.waivers}
+                tenantCos={b.approval?.changeOrders ?? []}
                 changeOrders={b.changeOrders.filter((co) => co.contractId === c.id)}
                 lines={b.sovLines.filter((l) => l.contractId === c.id)}
                 applications={b.applications.filter((a) => a.contractId === c.id)}

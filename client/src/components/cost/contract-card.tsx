@@ -426,7 +426,30 @@ export function ContractCard({
                         <td className="px-3 py-1.5 text-right tabular-nums">{money(l.scheduledValue)}</td>
                         <td className="px-3 py-1.5 text-right tabular-nums">{money(p?.toDate ?? 0)}</td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(p?.toDate ?? 0, l.scheduledValue)}</td>
-                        <td className="px-3 py-1.5 text-xs">{allocationLabel(l)}</td>
+                        <td className="px-3 py-1 text-xs" onClick={(e) => e.stopPropagation()}>
+                          {l.allocationMode === 'direct' && (l.allocations.length > 1 || (l.allocations[0] && l.allocations[0].pct < 99.995)) ? (
+                            // Split over several lines: shown as is, changed in the line editor.
+                            <button className="text-left hover:underline" title="Split over several budget lines — click to change the split" onClick={() => onEditLine(l)}>{allocationLabel(l)}</button>
+                          ) : baseline.length > 0 ? (
+                            <div className="w-60">
+                              <Select value={l.allocationMode === 'spread' ? '__spread__' : l.allocationMode === 'direct' && l.allocations[0] && baselineName.has(l.allocations[0].baselineKey) ? l.allocations[0].baselineKey : ''}
+                                      disabled={bulkMap.isPending}
+                                      onValueChange={(v) => {
+                                        if (v === '__split__') { onEditLine(l); return; }
+                                        if (v) bulkMap.mutate({ ids: [l.id], key: v, coId: l.changeOrderId ?? null });
+                                      }}>
+                                <SelectTrigger className={`h-7 text-xs ${l.allocationMode === 'direct' && l.allocations.length && baselineName.has(l.allocations[0].baselineKey) ? '' : l.allocationMode === 'spread' ? 'text-gray-600' : 'border-amber-300 bg-amber-50 text-amber-900 data-[placeholder]:text-amber-900'}`}>
+                                  <SelectValue placeholder="Not mapped — pick…" />
+                                </SelectTrigger>
+                                <SelectContent className="pm-scope">
+                                  {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                                  <SelectItem value="__spread__">Spread with the Work</SelectItem>
+                                  <SelectItem value="__split__">Split over Several Lines…</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : allocationLabel(l)}
+                        </td>
                       </tr>
                     );
                   };

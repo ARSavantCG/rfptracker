@@ -326,3 +326,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Budget CO row: "All N lines — one budget line" (bulk assign a vendor CO's lines + one resync; "All on <where it was priced>" shortcut). For column min width, CO lines stacked; Tenant Change Order print link no longer pushed off-screen.
 
 - 2026-11-02 Contract card "Map N unmapped to…": ★ Where <tenant CO> priced it (linked budget CO home line) at top; bulk map then resyncs the linked tenant CO.
+
+- 2026-11-02 Contract card lines: Budget Line cell is an inline dropdown (budget lines, Spread, Split… opens the line editor); split lines stay a link to the editor. Linked tenant CO re-prices after.

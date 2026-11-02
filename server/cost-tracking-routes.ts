@@ -321,6 +321,7 @@ export async function loadProjectBundle(projectId: number, opts: { asOf?: string
     })),
   };
   const funding0 = fundingSources(breakdown, approval, { committed: summary0.totals.committed, pending: summary0.totals.pending, cmRate: cmSettings.pct, cmUncapped: cmSettings.cmUncapped,
+    buyoutComplete: !!((project.settings || {}) as any).buyoutComplete,
     byKey: new Map(summary0.rows.map((r) => [r.key, { committed: r.committed, pending: r.pending }])) });
   const story = budgetStory(approval, funding0);
   const funding = {
@@ -1559,6 +1560,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
       if (b.partnerFeeOn !== undefined) next.partnerFeeOn = b.partnerFeeOn === 'landlord' ? 'landlord' : 'all';
+      if (b.buyoutComplete !== undefined) next.buyoutComplete = !!b.buyoutComplete;
       if (b.tenantBillMode !== undefined) next.tenantBillMode = b.tenantBillMode === 'full' ? 'full' : 'incurred';
       if (b.coBillPct !== undefined) {
         const v = Number(b.coBillPct);

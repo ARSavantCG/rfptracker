@@ -744,7 +744,9 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     /** The capital partner's CM fee rate: earned on what's spent, up to the CM fee budget (a ceiling). */
     cmRate?: number;
     /** The fee isn't capped at the CM fee budget (earned on supplemental spending too). */
-    cmUncapped?: boolean }) {
+    cmUncapped?: boolean;
+    /** Buyout complete: lines with nothing committed have nothing left to buy (other contracts cover them). */
+    buyoutComplete?: boolean }) {
   const s = coSummary(a.changeOrders);
   const original = r2(rows.reduce((t, r) => t + r.original, 0));
   const revisions = r2(rows.reduce((t, r) => t + r.revisions, 0));
@@ -763,6 +765,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
   let contingency = 0;
   const overLines: Array<{ key: string; description: string; over: number }> = [];
   let unmapped = 0;
+  // Lines counted at their budget because nothing is committed on them yet (not bought out).
+  const openLines: Array<{ key: string; description: string; budget: number }> = [];
   // Split: the project's cost to complete, and the CM fees (original, partner's and tenant's on change orders) set aside.
   let cmReserved = 0, projectCost = 0, cmCeiling = 0, cmOriginal = 0, spendable = 0;
   const fundsInLater = () => r2(original + revisions + additions + tenant - tenantCm - need);
@@ -783,7 +787,7 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
       if (Math.abs(committed) >= 0.005) {
         committedLines += committed;
         if (!isCont && committed - r.revised >= 0.005) overLines.push({ key: r.key, description: r.description, over: r2(committed - r.revised) });
-      } else if (!isCont) openBudget += pre;
+      } else if (!isCont && !cost.buyoutComplete) { openBudget += pre; if (Math.abs(pre) >= 0.005) openLines.push({ key: r.key, description: r.description, budget: r2(pre) }); }
     }
     // Cost not mapped to a budget line yet (Unallocated) belongs to lines that look un-bought: count
     // whichever is larger, so the same dollars aren't counted twice.
@@ -840,6 +844,8 @@ export function fundingSources(rows: readonly BudgetBreakdownRow[], a: BudgetApp
     contingency: r2(contingency), overLines,
     /** Committed cost not mapped to a budget line yet — the projection is rougher until it is. */
     unmapped,
+    /** Lines still counted at budget (nothing committed); empty once buyout is marked complete. */
+    openLines: openLines.sort((x, y) => y.budget - x.budget), buyoutComplete: !!cost.buyoutComplete,
     /** Only the shortfall: absorbed costs the budget surplus can't cover. */
     supplemental,
     /** Absorbed change orders paid from the budget's surplus. */

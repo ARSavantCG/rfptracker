@@ -346,3 +346,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Line allocation dialog: each split row has % and $; $ typed sets % = $/scheduled (8 dp). "Last line takes the rest".
 
 - 2026-11-02 Contract SOV Excel (sov-export.ts, client-side): button next to Print SOV; one row per line with Group/Status columns, billed, balance, retainage withheld/released/held, held vs rate, budget line(s) with split $; totals = approved only.
+
+- 2026-11-02 fundingSources: openLines (lines with nothing committed counted at budget) shown under Projected cost to complete; setting buyoutComplete → those count $0 (contracts cover them). "Projected under revised budget" notes it includes CM fee budget + contingency; after-fee figure is the surplus/shortfall.

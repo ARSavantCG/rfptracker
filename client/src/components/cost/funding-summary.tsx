@@ -31,6 +31,13 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
     } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
 
+  const setBuyout = async (on: boolean) => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', { buyoutComplete: on });
+      queryClient.setQueryData([projectKey(projectId)], data);
+      toast({ title: on ? 'Buyout marked complete' : 'Buyout reopened' });
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
   const Row = ({ name, sub, value, strong, tone }: { name: React.ReactNode; sub?: string; value: number; strong?: boolean; tone?: string }) => (
     <tr className={strong ? 'border-t-2 border-gray-800 font-semibold' : 'border-b last:border-0'}>
       <td className="py-1.5 pr-3">{name}{sub ? <div className="text-[11px] text-gray-500 font-normal">{sub}</div> : null}</td>
@@ -91,7 +98,19 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                    sub={`Ours — not available for project costs. Original CM fee ${money(f.cmOriginal)} (the rate on the cost to complete — the ${money(f.cmCeiling)} CM fee budget is a ceiling)${f.cmReserved - f.cmOriginal > 0.005 ? ` + capital partner's fees on change orders ${money(f.cmReserved - f.cmOriginal)}` : ''}`} />
               <Row name="Available for project costs" value={(f as any).availableForCost ?? f.totalFunding - f.cmReserved} strong />
             </>}
-            <Row name="Projected cost to complete" sub="Lines with contracts at what's committed; lines not bought out yet at budget (contingency excluded); plus change order markups" value={f.projectCost} />
+            <tr className="border-b">
+              <td className="py-1.5 pr-3">Projected cost to complete
+                <div className="text-[11px] text-gray-500">Lines with contracts at what's committed{(f as any).buyoutComplete ? ' — buyout complete, nothing left to buy' : '; lines not bought out yet at budget'} (contingency excluded); plus change order markups</div>
+                {((f as any).openLines ?? []).length > 0 && (
+                  <div className="text-[11px] text-amber-800 mt-0.5">
+                    Still counted at budget (nothing committed): {((f as any).openLines as any[]).map((l) => `${l.description} ${money(l.budget)}`).join(' · ')}.
+                    {' '}If your contracts already cover these, <button className="underline font-medium" onClick={() => setBuyout(true)}>mark buyout complete</button>.
+                  </div>
+                )}
+                {(f as any).buyoutComplete && <div className="text-[11px] text-gray-600 mt-0.5">Buyout marked complete. <button className="underline" onClick={() => setBuyout(false)}>Undo</button></div>}
+              </td>
+              <td className="py-1.5 text-right tabular-nums">{signedMoney(f.projectCost)}</td>
+            </tr>
             <tr>
               <td className="py-1.5 pr-3 font-medium">{f.surplus > 0.005 ? 'Projected surplus' : 'Projected shortfall'}<div className="text-[11px] text-gray-500 font-normal">
                 {f.surplus > 0.005 ? `You can spend ${money(f.spendable)} of it — the rest is the CM fee that spending earns` : `Covered by ${f.label}`}
@@ -145,7 +164,8 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
             )}
             <tr className="border-t-2 border-gray-800 font-semibold"><td className="py-1.5">Revised budget</td><td className="py-1.5 text-right tabular-nums">{money(st.revised)}</td></tr>
             <tr className="border-b"><td className="py-1.5">Projected cost <span className="text-[11px] text-gray-500">committed + pending change orders</span></td><td className="py-1.5 text-right tabular-nums">{money(f.projectedCost)}</td></tr>
-            <tr><td className="py-1.5 font-medium">{over ? 'Projected over revised budget' : 'Projected under revised budget'}</td>
+            <tr><td className="py-1.5 font-medium">{over ? 'Projected over revised budget' : 'Projected under revised budget'}
+              {f.cmCeiling > 0.005 && <div className="text-[11px] text-gray-500 font-normal">Includes the CM fee budget ({money(f.cmCeiling)}) and contingency — not money to spend. After CM fees, see the projected {f.surplus > 0.005 ? `surplus ${money(f.surplus)}` : `shortfall ${money(f.supplemental)}`} at left.</div>}</td>
               <td className={`py-1.5 text-right tabular-nums font-semibold ${over ? 'text-red-700' : 'text-green-700'}`}>{money(Math.abs(f.projectedVariance))}</td></tr>
           </tbody>
         </table>

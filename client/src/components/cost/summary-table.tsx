@@ -9,11 +9,15 @@ import { AlertTriangle } from 'lucide-react';
 import type { BudgetVsActual } from '@shared/cost-tracking';
 import { UNALLOCATED_KEY } from '@shared/cost-tracking';
 import { DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
-import { money, signedMoney, pct, BUCKET_LABEL, type CmFee } from './types';
+import { useState } from 'react';
+import { money, signedMoney, pct, BUCKET_LABEL, type CmFee, type ProjectBundle } from './types';
+import { DrillDialog, type DrillMetric } from './drill-dialog';
 
 type Row = BudgetVsActual['rows'][number] & { original?: number; revisions?: number; transfers?: number; changeOrders?: number };
 
-export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: {
+export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote, bundle }: {
+  /** With the bundle, every amount opens what's in it. */
+  bundle?: ProjectBundle;
   summary: BudgetVsActual & { rows: Row[] };
   onShowUnallocated?: () => void;
   cmFee?: CmFee | null;
@@ -22,6 +26,11 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
 }) {
   const totals = summary.totals;
   const rows = summary.rows as Row[];
+  const [drill, setDrill] = useState<{ key: string; metric: DrillMetric } | null>(null);
+  // An amount you can click to see what's in it.
+  const D = ({ k, m, children }: { k: string; m: DrillMetric; children: React.ReactNode }) => bundle
+    ? <button type="button" className="tabular-nums hover:underline hover:text-blue-700 decoration-dotted underline-offset-2" title="What's in this number" onClick={() => setDrill({ key: k, metric: m })}>{children}</button>
+    : <>{children}</>;
   const hasPending = Math.abs(totals.pending) >= 0.005;
   // Original → revised columns, shown once anything has moved a line.
   const sumOf = (k: 'original' | 'revisions' | 'transfers' | 'changeOrders') => Math.round(rows.reduce((t, r) => t + (r[k] ?? 0), 0) * 100) / 100;
@@ -93,10 +102,10 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
                   {showRev && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.revisions)}</td>}
                   {showTx && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.transfers)}</td>}
                   {showCo && <td className="px-3 py-1.5 text-right tabular-nums text-gray-700">{mv(r.changeOrders)}</td>}
-                  <td className={`px-3 py-1.5 text-right tabular-nums ${showOrig ? 'font-medium' : ''}`}>{isUnallocated ? '—' : signedMoney(r.budget)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">{money(r.committed)}</td>
-                  {hasPending && <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{r.pending ? money(r.pending) : ''}</td>}
-                  <td className="px-3 py-1.5 text-right tabular-nums">{money(r.toDate)}</td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${showOrig ? 'font-medium' : ''}`}>{isUnallocated && Math.abs(r.budget) < 0.005 ? '—' : <D k={r.key} m="budget">{signedMoney(r.budget)}</D>}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums"><D k={r.key} m="committed">{money(r.committed)}</D></td>
+                  {hasPending && <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{r.pending ? <D k={r.key} m="pending">{money(r.pending)}</D> : ''}</td>}
+                  <td className="px-3 py-1.5 text-right tabular-nums"><D k={r.key} m="toDate">{money(r.toDate)}</D></td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(r.toDate, r.committed)}</td>
                   <td className={`px-3 py-1.5 text-right tabular-nums ${isDeal ? 'text-indigo-800' : r.variance < 0 ? 'text-red-700 font-medium' : ''}`}>
                     {isUnallocated ? '—' : signedMoney(r.variance)}
@@ -138,6 +147,7 @@ export function SummaryTable({ summary, onShowUnallocated, cmFee, budgetNote }: 
                 sub={`of ${money(cmFee.supplemental.budget)} · on ${money(cmFee.supplemental.work)} change order work${cmFee.supplemental.earnedCp ? ` · ${money(cmFee.supplemental.earnedCp)} from the owner` : ''}`} />
         )}
       </div>
+      {bundle && drill && <DrillDialog b={bundle} rowKey={drill.key} metric={drill.metric} onClose={() => setDrill(null)} />}
     </div>
   );
 }

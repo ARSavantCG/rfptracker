@@ -348,3 +348,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Contract SOV Excel (sov-export.ts, client-side): button next to Print SOV; one row per line with Group/Status columns, billed, balance, retainage withheld/released/held, held vs rate, budget line(s) with split $; totals = approved only.
 
 - 2026-11-02 fundingSources: openLines (lines with nothing committed counted at budget) shown under Projected cost to complete; setting buyoutComplete → those count $0 (contracts cover them). "Projected under revised budget" notes it includes CM fee budget + contingency; after-fee figure is the surplus/shortfall.
+
+- 2026-11-02 resyncLinked: PATCHing a vendor CO line's mapping re-places its tenant CO lines (only when vendor amounts still equal what was priced). Budget CO row: "Place the Unassigned $X on Budget Lines". Drill-down: SummaryTable(bundle) — Budget / Committed / Pending / Work Complete amounts open DrillDialog (contract lines × share, ledger charges; budget = original, revisions, transfers, additions, tenant CO lines + markups).

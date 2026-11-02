@@ -61,7 +61,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (
           <p className="text-sm text-gray-600">Nothing committed yet — add the contracts first.</p>
         ) : (
-          <SummaryTable summary={b.summary} cmFee={b.cmFee} onShowUnallocated={onShowUnallocated}
+          <SummaryTable bundle={b} summary={b.summary} cmFee={b.cmFee} onShowUnallocated={onShowUnallocated}
             budgetNote={b.approval.status === 'confirmed' ? <FundingSummary bundle={b} projectId={projectId} /> : (
               <div className="text-sm bg-amber-50 border border-amber-300 text-amber-900 rounded-md p-2.5">
                 Draft budget — {b.approval.lafTotal == null ? 'not yet checked against the LAF.' : `LAF entered (${money(b.approval.lafTotal)}), not yet confirmed.`}{' '}

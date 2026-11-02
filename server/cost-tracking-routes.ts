@@ -1022,6 +1022,35 @@ export function registerCostTrackingRoutes(app: Express): void {
     return out;
   };
 
+  // A vendor change order line was mapped, re-valued, added or removed: the tenant change order it's
+  // priced into follows on its own (Adolfo, 2026-11-02: $638.46 stayed "Unassigned" on CO-01 after its
+  // PCCO lines were mapped, because nothing re-priced it).
+  const resyncLinked = async (ccoId: number | null | undefined) => {
+    if (ccoId == null) return;
+    try {
+      const [cco] = await db.select().from(costChangeOrders).where(eq(costChangeOrders.id, ccoId));
+      if (!cco) return;
+      const [k] = await db.select().from(costContracts).where(eq(costContracts.id, cco.contractId));
+      if (!k) return;
+      const project = await loadProject(k.projectId);
+      if (!project) return;
+      const a = normalizeApproval(project.budgetApproval);
+      const co = a.changeOrders.find((c) => c.links.some((l) => l.contractCoId === ccoId));
+      if (!co) return;
+      // Only re-places the money: if the vendor's amounts moved since it was priced, leave the price
+      // alone (that's "Use the Vendors' Current Prices", a choice).
+      const vend = await db.select({ v: costSovLines.scheduledValueCents, co: costSovLines.changeOrderId }).from(costSovLines)
+        .where(inArray(costSovLines.changeOrderId, co.links.map((l) => l.contractCoId)));
+      for (const l of co.links) {
+        const live = Math.round(vend.filter((x) => x.co === l.contractCoId).reduce((t, x) => t + Number(x.v), 0));
+        const priced = Math.round(co.lines.filter((x) => x.fromCoId === l.contractCoId).reduce((t, x) => t + x.amount, 0) * 100);
+        if (Math.abs(live - priced) > 1) return;
+      }
+      co.lines = await linesFromVendors(k.projectId, co.links, co.lines, (project.baseline || []) as BaselineLine[]);
+      await saveApproval(k.projectId, a);
+    } catch (e) { console.error('Re-pricing the linked tenant change order failed:', e); }
+  };
+
   const saveCos = async (id: number, project: any, a: BudgetApproval, req: Request, note: string) => {
     const baseline = (project.baseline || []) as BaselineLine[];
     const before = normalizeApproval(project.budgetApproval);
@@ -2032,6 +2061,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.allocations !== undefined) patch.allocations = cleanAllocations(b.allocations);
       const [row] = await db.update(costSovLines).set(patch).where(eq(costSovLines.id, id)).returning();
       if (!row) return res.status(404).json({ message: 'Line not found' });
+      if (row.changeOrderId != null && (patch.allocationMode !== undefined || patch.allocations !== undefined)) await resyncLinked(row.changeOrderId);
       res.json(row);
     } catch (e) { fail(res, e, 'update the line'); }
   });

@@ -77,7 +77,20 @@ export function renderSovHtml(x: {
     };
     const total = (label: string, ls: Line[], cls: string) => {
       const t = sum(ls);
-      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td>${rel ? `<td class="num">${money2(t.w)}</td><td class="num">${money2(t.rl)}</td>` : ''}<td class="num">${money2(t.ret)}</td>${chk ? (() => { const ex = r2(ls.reduce((a, l) => a + Math.floor((prog.get(l.id)?.toDate ?? 0) * rate * 100 + 1e-6) / 100, 0)); const v = r2(t.ret - ex); if (Math.abs(v) < 0.05) return '<td class="num muted">✓</td>'; const under = r2(v + t.rl); const parts: string[] = []; if (t.rl >= 0.005) parts.push(`${money2(t.rl)} released`); if (Math.abs(under) >= 0.05) parts.push(`${money2(Math.abs(under))} ${under < 0 ? 'under-withheld' : 'over-withheld'}`); return `<td class="num" style="font-size:8.5px;line-height:1.25;font-weight:700">${parts.join('<br>')}</td>`; })() : ''}<td></td></tr>`;
+      return `<tr class="${cls}"><td></td><td>${escapeHtml(label)}</td><td class="num">${money2(t.s)}</td><td class="num">${money2(t.d)}</td><td class="num">${pct(t.d, t.s)}</td><td class="num">${money2(r2(t.s - t.d))}</td>${rel ? `<td class="num">${money2(t.w)}</td><td class="num">${money2(t.rl)}</td>` : ''}<td class="num">${money2(t.ret)}</td>${chk ? (() => {
+        // Only lines that are off count (each line's cents of rounding are its own, not a difference).
+        let v = 0, rl = 0;
+        for (const l of ls) {
+          const held = prog.get(l.id)?.retainage ?? 0, d = r2(held - Math.floor((prog.get(l.id)?.toDate ?? 0) * rate * 100 + 1e-6) / 100);
+          if (Math.abs(d) >= 0.05) { v += d; rl += lm(l.id).released; }
+        }
+        v = r2(v); rl = r2(rl);
+        if (Math.abs(v) < 0.05) return '<td class="num muted">✓</td>';
+        const under = r2(v + rl); const parts: string[] = [];
+        if (rl >= 0.005) parts.push(`${money2(rl)} released`);
+        if (Math.abs(under) >= 0.05) parts.push(`${money2(Math.abs(under))} ${under < 0 ? 'under-withheld' : 'over-withheld'}`);
+        return `<td class="num" style="font-size:8.5px;line-height:1.25;font-weight:700">${parts.join('<br>')}</td>`;
+      })() : ''}<td></td></tr>`;
     };
     const head = (label: string, cls: string) => `<tr class="${cls}"><td colspan="${cols}">${escapeHtml(label)}</td></tr>`;
 
@@ -117,7 +130,7 @@ export function renderSovHtml(x: {
       ['Billed to Date', `${money2(t.d)} · ${pct(t.d, t.s)}`],
       ['Balance to Finish', money2(r2(t.s - t.d))],
       ...(rel ? [['Retainage Withheld', money2(led.withheld)], ['Retainage Released', money2(led.released)]] : []),
-      ['Retainage Held', money2(r2(t.ret + adj))],
+      ['Retainage Held', `${money2(r2(t.ret + adj))}${Math.abs(adj) >= 0.005 ? `<div style="font-size:9px;font-weight:400;color:#6b7280">incl. ${money2(adj)} rounding adjustment</div>` : ''}`],
     ];
     return `<section${ci ? ' class="pb"' : ''}>
       <h2 class="ct">${escapeHtml(c.counterparty)}${c.contractNumber ? ` · Contract #${escapeHtml(c.contractNumber)}` : ''}</h2>
@@ -126,7 +139,7 @@ export function renderSovHtml(x: {
       <table class="t"><thead><tr><th class="l it">Item</th><th class="l">Description</th><th>Scheduled Value</th><th>Billed to Date</th><th>%</th><th>Balance to Finish</th>${rel ? '<th>Retainage Withheld</th><th>Retainage Released</th><th>Retainage Held</th>' : '<th>Retainage</th>'}${chk ? `<th title="Retainage held against ${(rate * 100).toFixed(2)}% of billed to date, and why it differs">Held vs ${(rate * 100).toFixed(0)}%</th>` : ''}<th class="l">Budget Line</th></tr></thead>
       <tbody>${body}</tbody></table>
       ${chk ? `<p class="hint">Held vs ${(rate * 100).toFixed(0)}%: each line's retainage held against ${(rate * 100).toFixed(2)}% of its billed to date. ✓ = as expected. "Released" = retainage paid out on that line. "Under-withheld" = the contractor held back less than ${(rate * 100).toFixed(0)}% on that line's billings — nothing was released; ask them why (a lower rate on fees or general conditions, or their rounding).</p>` : ''}
-      ${Math.abs(adj) >= 0.005 ? `<p class="hint">Retainage Held includes accepted rounding adjustments of ${money2(adj)}.</p>` : ''}
+      ${Math.abs(adj) >= 0.005 ? `<p class="hint">The ${money2(adj)} rounding adjustment is the contractor's cents, accepted on their G702 — it's in Retainage Held (top) but on no line, so the table's held total is ${money2(adj)} ${adj > 0 ? 'less' : 'more'}. Differences of a few cents on a line are rounding and show ✓.</p>` : ''}
     </section>`;
   }).join('');
 

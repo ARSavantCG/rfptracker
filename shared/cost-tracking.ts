@@ -162,6 +162,8 @@ export function lineStatus(line: SovLine, cos: Map<number, ChangeOrder>): Change
  */
 export interface RetainageMoves { withheld: number; released: number; held: number }
 export function retainageLedger(apps: readonly Application[]): RetainageMoves & {
+  /** Accepted rounding adjustments, in what's held (not withheld or released). */
+  adjustment: number;
   lines: Map<number, RetainageMoves>;
   byApp: Map<number, { withheld: number; released: number }>;
 } {
@@ -181,15 +183,16 @@ export function retainageLedger(apps: readonly Application[]): RetainageMoves & 
       m.held = round2(cur.get(id) ?? 0);
       lines.set(id, m);
     }
+    // Accepted rounding adjustments (their cents) aren't retainage withheld or released: kept apart,
+    // in what's held only (Adolfo, 2026-11-02: a −$0.01 adjustment read as "$0.01 released").
     adjCum = round2(adjCum + n(a.retainageAdj));
-    const da = round2(adjCum - adjPrev);
-    if (da > 0) { adjW += da; w += da; } else if (da < 0) { adjR -= da; r -= da; }
     adjPrev = adjCum;
     byApp.set(a.id, { withheld: round2(w), released: round2(r) });
     prev = cur;
   }
   const tot = (k: 'withheld' | 'released' | 'held') => round2(Array.from(lines.values()).reduce((t, m) => t + m[k], 0));
-  return { lines, byApp, withheld: round2(tot('withheld') + adjW), released: round2(tot('released') + adjR), held: round2(tot('held') + adjCum) };
+  void adjW; void adjR;
+  return { lines, byApp, withheld: tot('withheld'), released: tot('released'), held: round2(tot('held') + adjCum), adjustment: adjCum };
 }
 
 export function lineProgress(apps: readonly Application[]): Map<number, {

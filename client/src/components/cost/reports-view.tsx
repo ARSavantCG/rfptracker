@@ -4,6 +4,7 @@
  * fees and billing (the capital partner's and the tenant's invoices).
  */
 import { useEffect, useMemo, useState } from 'react';
+import { exportBvaXlsx } from './bva-export';
 import { MoneyInput } from './inputs';
 import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
@@ -53,7 +54,10 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
       <ReportHeaderCard b={b} projectId={projectId} />
       <FinancialSummaryCard b={b} projectId={projectId} open={open} />
       <Card id="bva" title="Budget vs Actual" what="Sources of funds, then each budget line from original to revised (transfers, change orders), against committed, spent and variance."
-            action={<Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>}>
+            action={<div className="flex gap-2">
+              <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/budget-vs-actual/${projectId}`)}><Printer className="h-4 w-4 mr-1" /> Print</Button>
+              <Button variant="outline" className="h-9" onClick={() => exportBvaXlsx(b)}><FileSpreadsheet className="h-4 w-4 mr-1" /> Excel</Button>
+            </div>}>
         {b.contracts.length === 0 && b.directCosts.length === 0 ? (
           <p className="text-sm text-gray-600">Nothing committed yet — add the contracts first.</p>
         ) : (

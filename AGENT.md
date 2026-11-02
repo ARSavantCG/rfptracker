@@ -316,3 +316,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Tenant CO invoice billed in part: settings coBillPct (share at approval, default 100) and coBalanceDate (Substantial Completion; bills the balance). Draft/record carry coTotal, coBillPct, coBalanceDate, coBalance; toDate = what is billable now. Reports > Tenant Invoice card has both fields when Billing Method = Change Orders in Full.
 
 - 2026-11-02 Invoices print "Make checks payable to (Entity)" above Notes: reportHeader.payableTo, else reportHeader.owner. Field on the Report Header card.
+
+- 2026-11-02 Invoice Terms: reportHeader.paymentTerms prints under Invoice Date as typed; "Net N" also prints Due Date = invoice date + N days.

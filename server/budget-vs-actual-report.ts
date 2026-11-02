@@ -661,6 +661,17 @@ export function renderCmInvoiceHtml(input: {
     { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },
     { label: "Invoice Date", value: longDate(inv.date) },
   ];
+  // Payment terms (Report Header): printed as typed; "Net 30" (any days) also prints the due date.
+  const terms = String((((input.project as any)?.settings?.reportHeader ?? {}) as any).paymentTerms ?? "").trim();
+  if (terms) {
+    info.push({ label: "Terms", value: terms });
+    const net = /\bnet\s*(\d{1,3})\b/i.exec(terms);
+    if (net && /^\d{4}-\d{2}-\d{2}/.test(inv.date)) {
+      const [y, m, d] = inv.date.slice(0, 10).split("-").map(Number);
+      const due = new Date(Date.UTC(y, m - 1, d + Number(net[1])));
+      info.push({ label: "Due Date", value: longDate(due.toISOString().slice(0, 10)) });
+    }
+  }
   const title = reimb && inv.mode === "full" ? "Change Order Invoice" : reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
   const costWord = paid ? "paid" : "billed";
   const showRet = !!inv.items?.some((i) => i.retainage !== undefined && Math.abs(i.retainage) >= 0.005);

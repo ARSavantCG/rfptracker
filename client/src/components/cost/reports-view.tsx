@@ -751,6 +751,7 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
     ['address', 'Address', "the property's address"],
     ['owner', 'Owner', ''],
     ['payableTo', 'Make Checks Payable To (Invoices)', 'the Owner'],
+    ['paymentTerms', 'Payment Terms (Invoices)', ''],
     ['primeContract', 'Prime Contract No.', (gc as any)?.contractNumber ?? ''],
     ['primeContractDate', 'Prime Contract Date', (gc as any)?.contractDate ?? '', 'date'],
     ['preparedBy', 'Prepared By', ''],
@@ -772,6 +773,7 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
           <Labeled key={k} label={label}>
             <Input className="h-9" type={type === 'date' ? 'date' : 'text'} value={h[k] ?? ''} onChange={(e) => setH({ ...h, [k]: e.target.value })} />
             {!(h[k] ?? '').trim() && fallback && <div className="text-[11px] text-gray-500 mt-0.5">Blank: uses {fallback}</div>}
+            {k === 'paymentTerms' && <div className="text-[11px] text-gray-500 mt-0.5">E.g. "Due upon receipt, per Lease Exhibit B, Section 5" or "Net 30" (prints the due date). Blank: not printed.</div>}
           </Labeled>
         ))}
       </div>

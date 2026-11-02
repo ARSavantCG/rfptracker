@@ -561,6 +561,11 @@ export async function loadProjectBundle(projectId: number) {
             markups: t.markups, credit: t.credit, total: t.tenant, retainage: 0, paid: 0 };
         });
         const full = invoiceCalc({ type, items: coItems, pct: invPct, previouslyInvoiced: calc.previous });
+        // Part now, the balance at Substantial Completion (Adolfo, 2026-11-02: Accordia's lease — tenant pays
+        // half of Excess Costs at the time of the change, the rest upon Substantial Completion).
+        const coBillPct = Number.isFinite(Number(settings.coBillPct)) && Number(settings.coBillPct) > 0 ? Math.min(100, Number(settings.coBillPct)) : 100;
+        const coBalanceDate: string | null = coBillPct < 100 && settings.coBalanceDate ? String(settings.coBalanceDate) : null;
+        const coBillable = coBillPct >= 100 || coBalanceDate ? full.toDate : r2c((full.toDate * coBillPct) / 100);
         return {
           ...calc, type, basis, billTo, stream: 'tenant' as const, mode: 'full' as const,
           incurred: r2c(items.reduce((t, i) => t + i.amount, 0)),
@@ -569,7 +574,8 @@ export async function loadProjectBundle(projectId: number) {
           feeInvoiced: issued.length ? r2c((Number(issued[issued.length - 1].earned) || 0) + (Number(issued[issued.length - 1].suppFee) || 0)) : 0,
           invoices: issued.length, tenantCosOnly, earnedBilled, earnedPaid,
           projected: (() => { const pr = projection.reimbursable; return { ...pr, fee: r2c(pr.original + pr.changeOrders) }; })(),
-          base: full.costs, earned: full.fee, suppFee: full.suppFee, cpFee: 0, toDate: full.toDate, due: full.due, pct: invPct,
+          base: full.costs, earned: full.fee, suppFee: full.suppFee, cpFee: 0, toDate: coBillable, due: r2c(coBillable - calc.previous), pct: invPct,
+          coTotal: full.toDate, coBillPct, coBalanceDate, coBalance: r2c(full.toDate - coBillable),
           supplementalCos: cosApproved.filter((c) => coTotals(c).cm > 0).map((c) => c.number),
           items: coItems.map((it) => ({ ...it, thisInvoice: issued.length > 0 && !covered.has(it.ref) })),
           lines: [] as typeof calc.lines,
@@ -660,6 +666,8 @@ export interface CmInvoiceRecord {
   basis?: 'paid' | 'billed';
   /** Tenant invoice: billed as costs are incurred, or each approved change order in full. */
   mode?: 'incurred' | 'full';
+  /** Change orders billed in part: their total, the share billed at approval, the Substantial Completion date (balance billed), what's left. */
+  coTotal?: number; coBillPct?: number; coBalanceDate?: string | null; coBalance?: number;
   billTo?: string;
   toDate?: number;
   issuedBy: string | null;
@@ -1200,6 +1208,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       list.push({ number, date, base: d.base, pct: d.pct, earned: d.earned, previous: d.previous, due: d.due,
         lines: d.lines, payApps: payAppsFor(b), items: d.items, type: d.type, basis: d.basis, billTo: d.billTo, toDate: d.toDate,
         suppFee: d.suppFee, cpFee: d.cpFee, supplementalCos: d.supplementalCos, mode: (d as any).mode,
+        coTotal: (d as any).coTotal, coBillPct: (d as any).coBillPct, coBalanceDate: (d as any).coBalanceDate, coBalance: (d as any).coBalance,
         issuedBy: whoName(req), issuedAt: new Date().toISOString() });
       settings.cmInvoices = list;
       await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
@@ -1508,6 +1517,12 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
       if (b.partnerFeeOn !== undefined) next.partnerFeeOn = b.partnerFeeOn === 'landlord' ? 'landlord' : 'all';
       if (b.tenantBillMode !== undefined) next.tenantBillMode = b.tenantBillMode === 'full' ? 'full' : 'incurred';
+      if (b.coBillPct !== undefined) {
+        const v = Number(b.coBillPct);
+        if (!Number.isFinite(v) || v <= 0 || v > 100) return res.status(400).json({ message: 'The share billed at approval must be a percentage above 0, up to 100.' });
+        next.coBillPct = v;
+      }
+      if (b.coBalanceDate !== undefined) next.coBalanceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.coBalanceDate ?? '')) ? String(b.coBalanceDate) : null;
       if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
       if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
       if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';

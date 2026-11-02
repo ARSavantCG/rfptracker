@@ -3,7 +3,7 @@
  * line: open one to set its filters and print. Cost reports first, then CM
  * fees and billing (the capital partner's and the tenant's invoices).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MoneyInput } from './inputs';
 import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
@@ -35,7 +35,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
   const [from, setFrom] = useState('');
   const [payee, setPayee] = useState('all');
   const [to, setTo] = useState('');
-  const saveSetting = async (patch: Record<string, string>, ok: string) => {
+  const saveSetting = async (patch: Record<string, string | number | null>, ok: string) => {
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/settings`, 'PUT', patch);
       queryClient.setQueryData([projectKey(projectId)], data);
@@ -219,7 +219,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
 /** One party's invoice: the capital partner's (CM fee only) or the tenant's (costs + CM fee). Own numbers, own "previously invoiced". */
 function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
   d: CmInvoiceDraft; bundle: ProjectBundle; projectId: number;
-  open: (url: string) => void; saveSetting: (patch: Record<string, string>, ok: string) => Promise<void>;
+  open: (url: string) => void; saveSetting: (patch: Record<string, string | number | null>, ok: string) => Promise<void>;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -273,6 +273,17 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
             </Select>
           </Labeled>
         )}
+        {full && (
+          <Labeled label="Billed at Approval (% — the balance at Substantial Completion)">
+            <PctField value={(b.project as any).settings?.coBillPct ?? 100} onSave={(v) => saveSetting({ coBillPct: v }, 'Saved')} />
+          </Labeled>
+        )}
+        {full && ((b.project as any).settings?.coBillPct ?? 100) < 100 && (
+          <Labeled label="Substantial Completion Date (bills the balance)">
+            <Input type="date" className="h-9" defaultValue={(b.project as any).settings?.coBalanceDate ?? ''}
+                   onBlur={(e) => { const v = e.target.value || null; if (v !== ((b.project as any).settings?.coBalanceDate ?? null)) saveSetting({ coBalanceDate: v }, v ? 'Balance now due' : 'Cleared'); }} />
+          </Labeled>
+        )}
         {!full && <Labeled label={tenant ? 'Costs Counted' : 'Fee Figured On'}>
           <Select value={d.basis} onValueChange={(v) => saveSetting({ [basisKey]: v }, 'Saved')}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -315,7 +326,9 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
         <Fig label="Approved Change Orders" value={String(d.items.length)} />
         <Fig label="Work, Markups, Less Credits" value={money(d.base)} />
         <Fig label="CM Fee" value={money(d.suppFee)} />
-        <Fig label="Total Change Orders" value={money(d.toDate)} />
+        <Fig label="Total Change Orders" value={money((d as any).coTotal ?? d.toDate)} />
+        {((d as any).coBillPct ?? 100) < 100 && <Fig label={(d as any).coBalanceDate ? 'Billed to Date (balance included)' : `Billed at Approval (${(d as any).coBillPct}%)`} value={money(d.toDate)} />}
+        {((d as any).coBalance ?? 0) > 0.005 && <Fig label="Balance at Substantial Completion" value={money((d as any).coBalance)} />}
         <Fig label="Previously Invoiced" value={money(d.previous)} />
         <Fig label="Due Now" value={money(d.due)} strong />
       </div> : <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
@@ -956,5 +969,18 @@ function AgingCard({ b, projectId, open }: { b: ProjectBundle; projectId: number
         <div><div className="text-[11px] uppercase tracking-wide text-gray-500">Total Open</div><div className="font-semibold tabular-nums">{money(total)}</div></div>
       </div>
     </Card>
+  );
+}
+
+/** A percentage, saved when it changes and you leave the box. */
+function PctField({ value, onSave }: { value: number; onSave: (v: number) => void }) {
+  const [v, setV] = useState(String(value));
+  useEffect(() => setV(String(value)), [value]);
+  return (
+    <div className="flex items-center gap-1">
+      <Input className="h-9 w-24 text-right" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)}
+             onBlur={() => { const n = Number(v); if (Number.isFinite(n) && n > 0 && n <= 100 && n !== value) onSave(n); else setV(String(value)); }} />
+      <span className="text-sm text-gray-600">%</span>
+    </div>
   );
 }

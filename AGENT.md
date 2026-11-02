@@ -344,3 +344,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Budget vs Actual Excel (bva-export.ts, client-side from the bundle): sheet 1 every budget line (original → revised, committed, pending, work complete, retainage, % spent, variance) + totals, header block, autofilter; sheet 2 Sources of Funds. Button next to Print.
 
 - 2026-11-02 Line allocation dialog: each split row has % and $; $ typed sets % = $/scheduled (8 dp). "Last line takes the rest".
+
+- 2026-11-02 Contract SOV Excel (sov-export.ts, client-side): button next to Print SOV; one row per line with Group/Status columns, billed, balance, retainage withheld/released/held, held vs rate, budget line(s) with split $; totals = approved only.

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useAiStatus } from '@/hooks/use-ai-status';
-import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X, ArrowUp, ArrowDown, Printer } from 'lucide-react';
+import { Plus, FileText, AlertTriangle, Paperclip, Pencil, Trash2, FolderOpen, ChevronDown, ChevronRight, DollarSign, X, ArrowUp, ArrowDown, Printer, FileSpreadsheet } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { PercentInput, MoneyInput } from './inputs';
 import { CoStageControls, CoHigherTag } from './co-routing';
@@ -21,6 +21,7 @@ import { threeWayCheck } from '@shared/cost-waivers';
 import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { SplitLinesDialog } from './split-lines-dialog';
+import { exportSovXlsx } from './sov-export';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
   money, pct, projectKey, BUCKET_LABEL, checkBadge, openReport,
@@ -30,8 +31,9 @@ import { BudgetLineItem } from './co-funds';
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
-  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen, waivers = [], tenantCos = [],
+  onEditLine, onPaste, onOpenApplication, payments = [], onPay, onPackage, defaultOpen, waivers = [], tenantCos = [], projectName,
 }: {
+  projectName?: string;
   /** Tenant (budget) change orders: a vendor change order linked to one maps where it was priced. */
   tenantCos?: import('@shared/cost-budget-approval').BudgetCO[];
   /** For the three-way check on each pay app (the GC's conditional and typed line 8). */
@@ -417,6 +419,12 @@ export function ContractCard({
                         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Print this contract's schedule of values: every line, billed to date, balance to finish and retainage"
                                 onClick={() => openReport(`/api/reports/sov/${projectId}?contract=${contract.id}`)}>
                           <Printer className="h-3.5 w-3.5 mr-1" /> Print SOV
+                        </Button>
+                      )}
+                      {g.id == null && lines.length > 0 && (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Download this contract's schedule of values to Excel: every line, billed, balance, retainage and budget line"
+                                onClick={() => exportSovXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications, baseline })}>
+                          <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
                         </Button>
                       )}
                     </div>

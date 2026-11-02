@@ -225,6 +225,7 @@ export default function CostProject() {
                 contract={c}
                 waivers={b.waivers}
                 tenantCos={b.approval?.changeOrders ?? []}
+                projectName={(b.project as any).settings?.reportHeader?.projectName || b.project.name}
                 changeOrders={b.changeOrders.filter((co) => co.contractId === c.id)}
                 lines={b.sovLines.filter((l) => l.contractId === c.id)}
                 applications={b.applications.filter((a) => a.contractId === c.id)}

@@ -14,6 +14,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Trash2, Plus } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type SovLineRow } from './types';
+import { BudgetLineItem } from './co-funds';
 
 type Mode = 'direct' | 'spread' | 'unallocated';
 
@@ -101,7 +102,7 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
                     <div className="flex-1 min-w-0">
                       <Select value={r.baselineKey || undefined} onValueChange={(v) => setRows(rows.map((x, j) => (j === i ? { ...x, baselineKey: v } : x)))}>
                         <SelectTrigger className="h-9 data-[placeholder]:text-gray-900"><SelectValue placeholder="— choose a budget line —" /></SelectTrigger>
-                        <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                        <SelectContent className="pm-scope">{baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}</SelectContent>
                       </Select>
                     </div>
                     <div className="w-28">

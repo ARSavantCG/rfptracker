@@ -20,6 +20,7 @@ import { parseSovPaste } from '@shared/cost-tracking';
 import { fmtMoneyText, parseAmount } from '@shared/format';
 import { MoneyInput } from './inputs';
 import { money, projectKey, BUCKET_LABEL, type SovLineRow, type ProjectBundle } from './types';
+import { BudgetLineItem } from './co-funds';
 
 const UNMAPPED = '__unmapped__';
 const SPREAD = '__spread__';
@@ -314,7 +315,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
                             {/* Its budget line was removed or renamed away: say so, so it gets re-mapped. */}
                             {!known(r.map) && <SelectItem value={r.map}>Removed Budget Line — Pick One</SelectItem>}
                             <SelectItem value={UNMAPPED}>Not Mapped Yet</SelectItem>
-                            {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                            {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
                             <SelectItem value={SPREAD}>Spread with the Work (GCs, Insurance, Fee)</SelectItem>
                             {r.split && (
                               <SelectItem value={SPLIT}>

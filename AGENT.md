@@ -336,3 +336,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Financial Summary "Through" (?asOf=): loadProjectBundle(id, {asOf}) drops pay apps dated after it (invoice date / period end / created), payments, ledger charges; contractor COs approved after it (startAppNumber > last kept app, else approvedDate/createdAt) count as void; budget COs / additions / transfers dated after it dropped. Picker lists past pay app period ends + Another Date.
 
 - 2026-11-02 Split Lines dialog (split-lines-dialog.tsx) on each contract group header: one split (budget lines + %, must total 100) applied to ticked lines (default: spread/unmapped); linked tenant CO re-priced after. Note: Spread follows the group's mapped lines — with only Design+Permit mapped, Accordia's spread lines all landed on Design.
+
+- 2026-11-02 co-funds.tsx: CoFundsProvider (cost-project) + BudgetLineItem — budget-line pickers (contract card, SOV editor, split/allocation dialogs, unmapped panel, ledger) show the tenant COs that added to each line ("· CO-01 +$X"). Tenant COs raise existing LAF lines; no separate CO budget line.

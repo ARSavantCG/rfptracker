@@ -26,6 +26,7 @@ import {
   money, pct, projectKey, BUCKET_LABEL, checkBadge, openReport,
   type ContractRow, type ChangeOrderRow, type SovLineRow, type ApplicationRow, type DocumentRow, type PaymentRow,
 } from './types';
+import { BudgetLineItem } from './co-funds';
 
 export function ContractCard({
   contract, changeOrders, lines, applications, documents, baseline, g702, projectId,
@@ -384,7 +385,7 @@ export function ContractCard({
                                 const home = bco?.lines.filter((x) => x.fromCoId === coId && names.has(x.key)).sort((p, q) => Math.abs(q.amount) - Math.abs(p.amount))[0]?.key;
                                 return bco && home ? <SelectItem value={`__home__:${home}`}>★ Where {bco.number} priced it — {names.get(home)}</SelectItem> : null;
                               })()}
-                              {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                              {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
                               <SelectItem value="__spread__">Spread with the Work</SelectItem>
                             </SelectContent>
                           </Select>
@@ -458,7 +459,7 @@ export function ContractCard({
                                   <SelectValue placeholder="Not mapped — pick…" />
                                 </SelectTrigger>
                                 <SelectContent className="pm-scope">
-                                  {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                                  {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
                                   <SelectItem value="__spread__">Spread with the Work</SelectItem>
                                   <SelectItem value="__split__">Split over Several Lines…</SelectItem>
                                 </SelectContent>
@@ -855,7 +856,7 @@ function QuickCoLine({ co, contractId, baseline, onDone }: { co: ChangeOrderRow;
           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent className="pm-scope">
             <SelectItem value="__unallocated__">Unallocated (Map Later)</SelectItem>
-            {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+            {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
             <SelectItem value="__spread__">Spread with the Work</SelectItem>
           </SelectContent>
         </Select>

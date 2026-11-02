@@ -14,6 +14,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { lineShares, UNALLOCATED_KEY, type SovLine } from '@shared/cost-tracking';
 import { money, projectKey, type ProjectBundle } from './types';
+import { BudgetLineItem } from './co-funds';
 
 type Alloc = { baselineKey: string; pct: number };
 type Row = { id: number; contract: string; group: string; item: string; description: string; amount: number; why: string; suggest: { label: string; allocations: Alloc[] } | null };
@@ -139,7 +140,7 @@ export function UnallocatedPanel({ bundle: b, projectId, onGoLedger }: { bundle:
     <Select value="" disabled={busy} onValueChange={(v) => v && onPick(v)}>
       <SelectTrigger className="h-8 text-xs w-56"><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent className="pm-scope">
-        {baseline.map((x) => <SelectItem key={x.key} value={x.key}>{x.description}</SelectItem>)}
+        {baseline.map((x) => <BudgetLineItem key={x.key} k={x.key} description={x.description} />)}
         {bcoOpts.length > 0 && <div className="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-gray-500 border-t mt-1">Tenant Change Orders — its budget lines</div>}
         {bcoOpts.map((c) => <SelectItem key={c.id} value={`__bco__:${c.id}`}>{c.number}{c.title ? ` — ${c.title}` : ''}</SelectItem>)}
         <SelectItem value="__spread__">Spread with the Work</SelectItem>

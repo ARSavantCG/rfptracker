@@ -15,6 +15,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Trash2 } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type SovLineRow } from './types';
+import { BudgetLineItem } from './co-funds';
 
 export function SplitLinesDialog({ open, onClose, label, lines, baseline, projectId, after }: {
   open: boolean; onClose: () => void; label: string; lines: SovLineRow[]; baseline: BaselineLine[]; projectId: number;
@@ -61,7 +62,7 @@ export function SplitLinesDialog({ open, onClose, label, lines, baseline, projec
                 <div className="flex-1">
                   <Select value={r.key || undefined} onValueChange={(v) => setRows((x) => x.map((y, j) => (j === i ? { ...y, key: v } : y)))}>
                     <SelectTrigger className="h-8 text-sm data-[placeholder]:text-gray-500"><SelectValue placeholder="Budget line…" /></SelectTrigger>
-                    <SelectContent className="pm-scope">{baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}</SelectContent>
+                    <SelectContent className="pm-scope">{baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}</SelectContent>
                   </Select>
                 </div>
                 <Input className="h-8 w-24 text-right" inputMode="decimal" placeholder="0" value={r.pct}

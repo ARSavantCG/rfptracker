@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MoneyInput } from './inputs';
 import { openDocument } from './contract-card';
 import { money, shortDate, todayIso, openReport, projectKey, PAY_METHODS, type ProjectBundle } from './types';
+import { BudgetLineItem } from './co-funds';
 
 const METHOD = Object.fromEntries(PAY_METHODS);
 const blank = () => ({ date: todayIso(), vendor: '', invoiceNumber: '', description: '', amount: '', method: 'card', reference: '', key: '', chargeTo: '', notes: '' });
@@ -194,7 +195,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                 <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent className="pm-scope">
                   <SelectItem value={NONE}>Unallocated — Choose Later</SelectItem>
-                  {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                  {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
                 </SelectContent>
               </Select>
             </Field>
@@ -347,7 +348,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
                         </SelectTrigger>
                         <SelectContent className="pm-scope">
                           <SelectItem value={NONE}>Unallocated</SelectItem>
-                          {baseline.map((b) => <SelectItem key={b.key} value={b.key}>{b.description}</SelectItem>)}
+                          {baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}
                         </SelectContent>
                       </Select>
                     ) : <span className="text-xs text-gray-500">Per pay app</span>}

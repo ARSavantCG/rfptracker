@@ -26,6 +26,7 @@ import { ProjectFilesList, DeletedFilesBin } from '@/components/cost/project-fil
 import { ReportsView, LenderPackagesCard, PayoffCard } from '@/components/cost/reports-view';
 import { ForecastView } from '@/components/cost/forecast-view';
 import { UnallocatedPanel } from '@/components/cost/unallocated-panel';
+import { CoFundsProvider } from '@/components/cost/co-funds';
 import { ProjectOverview } from '@/components/cost/project-overview';
 import { useAuth } from '@/hooks/useAuth';
 import { PackageDialog } from '@/components/cost/package-dialog';
@@ -116,6 +117,7 @@ export default function CostProject() {
   const localFiles = b.documents.filter((d) => d.storage === 'local').length;
 
   return (
+    <CoFundsProvider cos={b.approval?.changeOrders ?? []}>
     <div className="min-h-screen bg-gray-50 pm-scope">
       <Navigation />
       <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4">
@@ -353,5 +355,6 @@ export default function CostProject() {
         onClose={() => setAppState(null)}
       />
     </div>
+    </CoFundsProvider>
   );
 }

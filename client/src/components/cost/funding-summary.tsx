@@ -163,7 +163,7 @@ export function FundingSummary({ bundle, projectId }: { bundle: ProjectBundle; p
                 <td className="py-1.5 text-right tabular-nums">{signedMoney(st.revisions)}</td></tr>
             )}
             <tr className="border-t-2 border-gray-800 font-semibold"><td className="py-1.5">Revised budget</td><td className="py-1.5 text-right tabular-nums">{money(st.revised)}</td></tr>
-            <tr className="border-b"><td className="py-1.5">Projected cost <span className="text-[11px] text-gray-500">committed + pending change orders</span></td><td className="py-1.5 text-right tabular-nums">{money(f.projectedCost)}</td></tr>
+            <tr className="border-b"><td className="py-1.5">Projected cost <span className="text-[11px] text-gray-500">contracts + ledger charges + pending change orders</span></td><td className="py-1.5 text-right tabular-nums">{money(f.projectedCost)}</td></tr>
             <tr><td className="py-1.5 font-medium">{over ? 'Projected over revised budget' : 'Projected under revised budget'}
               {f.cmCeiling > 0.005 && <div className="text-[11px] text-gray-500 font-normal">Includes the CM fee budget ({money(f.cmCeiling)}) and contingency — not money to spend. After CM fees, see the projected {f.surplus > 0.005 ? `surplus ${money(f.surplus)}` : `shortfall ${money(f.supplemental)}`} at left.</div>}</td>
               <td className={`py-1.5 text-right tabular-nums font-semibold ${over ? 'text-red-700' : 'text-green-700'}`}>{money(Math.abs(f.projectedVariance))}</td></tr>

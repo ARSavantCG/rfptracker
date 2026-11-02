@@ -314,7 +314,7 @@ function fundingBox(f?: FundingView | null, st?: StoryView | null): string {
       ${(st?.groups || []).map((g) => r(g.label, g.total, `${g.cos.map((c) => c.number).join(", ")}${g.tenant ? ` · tenant pays ${money2(g.tenant)}` : ""}${g.absorbed ? ` · we absorb ${money2(g.absorbed)}` : ""}${g.funded ? ` (${money2(g.funded)} from budget lines)` : ""}`)).join("")}
       ${st && Math.abs(st.revisions) >= 0.005 ? r("Revisions", st.revisions, "Lines edited after confirmation") : ""}
       ${r("Revised budget", f.revised, st?.transferCount ? `${money2(st.moved)} moved between lines; total unchanged` : "", "sub")}
-      ${r("Projected cost", f.projectedCost, "Committed plus pending change orders")}
+      ${r("Projected cost", f.projectedCost, "Committed (contracts and change orders, plus ledger charges) and pending change orders. Spent to date is already inside committed")}
       <tr class="total"><td>${over ? "Projected over revised budget" : "Projected under revised budget"}${(f.cmCeiling ?? 0) > 0.005 ? `<div class="muted" style="font-size:9px;font-weight:400">Includes the CM fee budget (${money2(f.cmCeiling ?? 0)}) and contingency — not money to spend. After CM fees: projected ${f.surplus != null && f.surplus > 0.005 ? `surplus ${money2(f.surplus)}` : `shortfall ${money2(f.supplemental)}`} (Sources of Funds).</div>` : ""}</td><td class="num${over ? " neg" : ""}">${money2(Math.abs(f.projectedVariance))}</td></tr>
     </tbody></table></div>`;
 }

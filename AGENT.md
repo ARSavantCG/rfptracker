@@ -338,3 +338,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Split Lines dialog (split-lines-dialog.tsx) on each contract group header: one split (budget lines + %, must total 100) applied to ticked lines (default: spread/unmapped); linked tenant CO re-priced after. Note: Spread follows the group's mapped lines — with only Design+Permit mapped, Accordia's spread lines all landed on Design.
 
 - 2026-11-02 co-funds.tsx: CoFundsProvider (cost-project) + BudgetLineItem — budget-line pickers (contract card, SOV editor, split/allocation dialogs, unmapped panel, ledger) show the tenant COs that added to each line ("· CO-01 +$X"). Tenant COs raise existing LAF lines; no separate CO budget line.
+
+- 2026-11-02 Budget CO PATCH {ownLine:true}: adds baseline line co-<id> ("CO-01 — title", $0, contractor), moves the CO lines + markups to it, maps linked vendor CO SOV lines to it, re-prices. Button "Put on Its Own Budget Line" on each tenant CO row.

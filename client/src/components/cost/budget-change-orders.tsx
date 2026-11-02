@@ -260,6 +260,15 @@ export function BudgetChangeOrders({ bundle, projectId }: { bundle: ProjectBundl
             {co.estimate != null && co.links.length > 0 && Math.abs(co.estimate - work) >= 0.005 && (
               <span className="text-gray-600">Estimate was {money(co.estimate)} ({signedMoney(r2(work - co.estimate))} with vendor prices)</span>
             )}
+            {!co.lines.every((l) => l.key === `co-${co.id}`) && co.status !== 'void' && (
+              <button className="text-blue-700 hover:underline" title="Give this change order a budget line of its own ($0 original + this change order), instead of adding it onto the LAF lines. The vendors' change order lines are mapped to it."
+                      onClick={() => {
+                        if (!window.confirm(`Put ${co.number} on its own budget line, "${co.number}${co.title ? ` — ${co.title}` : ''}"? Its money moves off the LAF lines it's on now, and ${co.links.length ? "the linked vendor change orders' lines are mapped to it" : 'its lines go on it'}.`)) return;
+                        run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { ownLine: true }), `${co.number} on its own budget line`);
+                      }}>
+                Put on Its Own Budget Line
+              </button>
+            )}
             {drift && (
               <button className="text-amber-800 hover:underline" title="Update this change order to the vendors' current amounts"
                       onClick={() => run(() => apiRequest(`/api/cost-projects/${projectId}/budget-cos/${co.id}`, 'PATCH', { resync: true }), `${co.number} re-priced`)}>

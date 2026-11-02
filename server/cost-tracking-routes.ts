@@ -1106,13 +1106,31 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (id === null) return res.status(400).json({ message: 'Invalid ID' });
       const project = await loadProject(id);
       if (!project) return res.status(404).json({ message: 'Project not found' });
-      const baseline = (project.baseline || []) as BaselineLine[];
+      let baseline = (project.baseline || []) as BaselineLine[];
       const a = normalizeApproval(project.budgetApproval);
       const i = a.changeOrders.findIndex((c) => c.id === req.params.coId);
       if (i < 0) return res.status(404).json({ message: 'Change order not found' });
       const cur = a.changeOrders[i];
       const b = req.body || {};
       const next = normalizeCO({ ...cur, ...pick(b, ['number', 'title', 'date', 'status', 'billable', 'lines', 'cmFee', 'credit', 'cmOnAbsorbed', 'reason', 'markups', 'partnerFee', 'partnerFeeBasis', 'cmFeePct', 'partnerFeePct', 'cmFeeAmount', 'fundedFrom']) })!;
+      // Its own budget line (Adolfo, 2026-11-02): the change order's money on a line of its own — "CO-01 — …",
+      // $0 original — instead of raised onto the LAF lines; the vendors' change order lines map to it.
+      let ownNote = '';
+      if (b.ownLine === true) {
+        const key = `co-${cur.id}`;
+        if (!baseline.some((x) => x.key === key)) {
+          baseline = [...baseline, { key, description: `${next.number}${next.title ? ` — ${next.title}` : ''}`.slice(0, 140), bucket: 'contractor', budget: 0, tenantSharePct: 100 } as BaselineLine];
+          await db.update(costProjects).set({ baseline: baseline as any, updatedAt: new Date() }).where(eq(costProjects.id, id));
+        }
+        const ccoIds = cur.links.map((l) => l.contractCoId);
+        if (ccoIds.length) {
+          await db.update(costSovLines).set({ allocationMode: 'direct', allocations: [{ baselineKey: key, pct: 100 }] as any })
+            .where(inArray(costSovLines.changeOrderId, ccoIds));
+        }
+        next.lines = next.lines.map((l) => ({ ...l, key }));
+        next.markups = (next.markups || []).map((m) => ({ ...m, key }));
+        ownNote = ' — on its own budget line';
+      }
       const keys = new Set([...baseline.map((x) => x.key), UNALLOCATED_KEY]);
       if (next.lines.some((l) => !keys.has(l.key))) return res.status(400).json({ message: 'Each line needs a budget line.' });
       if (next.fundedFrom.some((f) => !baseline.some((x) => x.key === f.key))) return res.status(400).json({ message: 'Pick the budget line each amount is paid from.' });
@@ -1162,6 +1180,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         linkNote = ' — unlinked from the vendors';
       }
       if (b.resync === true && links.length) { derive = true; linkNote = ' — re-priced from the vendors'; }
+      if (ownNote) { derive = links.length > 0; linkNote = ownNote; }
       if (links.some((l) => a.changeOrders.some((c, j) => j !== i && c.links.some((x) => x.contractCoId === l.contractCoId)))) {
         throw new UserError('One of those vendor change orders is already linked to another tenant change order.');
       }

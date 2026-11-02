@@ -342,3 +342,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-02 Budget CO PATCH {ownLine:true}: adds baseline line co-<id> ("CO-01 — title", $0, contractor), moves the CO lines + markups to it, maps linked vendor CO SOV lines to it, re-prices. Button "Put on Its Own Budget Line" on each tenant CO row.
 
 - 2026-11-02 Budget vs Actual Excel (bva-export.ts, client-side from the bundle): sheet 1 every budget line (original → revised, committed, pending, work complete, retainage, % spent, variance) + totals, header block, autofilter; sheet 2 Sources of Funds. Button next to Print.
+
+- 2026-11-02 Line allocation dialog: each split row has % and $; $ typed sets % = $/scheduled (8 dp). "Last line takes the rest".

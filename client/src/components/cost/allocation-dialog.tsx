@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MoneyInput, PercentInput } from './inputs';
+import { MoneyInput, SharePercentInput as PercentInput } from './inputs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -30,6 +30,8 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
   const [rows, setRows] = useState<{ baselineKey: string; pct: string }[]>([]);
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
+  // Typed in dollars instead of a percentage (Adolfo, 2026-11-02): the % is worked out from it.
+  const [amt, setAmt] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!line) return;
@@ -61,7 +63,7 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
 
   return (
     <Dialog open={!!line} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="pm-scope w-[96vw] sm:max-w-lg max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
+      <DialogContent className="pm-scope w-[96vw] sm:max-w-xl max-h-[92vh] overflow-y-auto grid-cols-[minmax(0,1fr)]">
         <DialogHeader><DialogTitle>{line?.itemNo ? `${line.itemNo} · ` : ''}{line?.code || 'SOV Line'}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -105,12 +107,25 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
                         <SelectContent className="pm-scope">{baseline.map((b) => <BudgetLineItem key={b.key} k={b.key} description={b.description} />)}</SelectContent>
                       </Select>
                     </div>
-                    <div className="w-28">
+                    <div className="w-24">
                       <PercentInput value={String(r.pct)} className="h-9"
-                                    onValueChange={(v) => setRows(rows.map((x, j) => (j === i ? { ...x, pct: v } : x)))} />
+                                    onValueChange={(v) => { setRows(rows.map((x, j) => (j === i ? { ...x, pct: v } : x))); setAmt((a) => { const n = { ...a }; delete n[i]; return n; }); }} />
+                    </div>
+                    <div className="w-32" title="Or type the dollars for this budget line — the % is worked out from it">
+                      <MoneyInput className="h-9" aria-label="Amount"
+                        value={amt[i] ?? (Math.round(((parseFloat(r.pct) || 0) / 100) * (parseFloat(value) || 0) * 100) / 100).toFixed(2)}
+                        onValueChange={(v) => setAmt((a) => ({ ...a, [i]: v }))}
+                        onBlur={() => {
+                          const typed = amt[i];
+                          if (typed == null) return;
+                          const sv = parseFloat(value) || 0;
+                          const dollars = parseFloat(String(typed).replace(/[$,\s]/g, '')) || 0;
+                          if (sv > 0) setRows((rs) => rs.map((x, j) => (j === i ? { ...x, pct: String(Math.round((dollars / sv) * 100 * 1e8) / 1e8) } : x)));
+                          setAmt((a) => { const n = { ...a }; delete n[i]; return n; });
+                        }} />
                     </div>
                     <Button type="button" variant="ghost" size="icon" className="h-9 w-9"
-                            onClick={() => setRows(rows.filter((_, j) => j !== i))} disabled={rows.length === 1}>
+                            onClick={() => { setRows(rows.filter((_, j) => j !== i)); setAmt({}); }} disabled={rows.length === 1}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -120,6 +135,13 @@ export function AllocationDialog({ line, baseline, projectId, onClose }: {
                           onClick={() => setRows([...rows, { baselineKey: '', pct: String(Math.max(0, 100 - total)) }])}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Split
                   </Button>
+                  {rows.length > 1 && Math.abs(total - 100) >= 0.01 && total < 100 && (
+                    <button type="button" className="text-xs text-blue-700 hover:underline" onClick={() => {
+                      const last = rows.length - 1;
+                      const others = rows.reduce((t, r, j) => t + (j === last ? 0 : parseFloat(r.pct) || 0), 0);
+                      setRows(rows.map((x, j) => (j === last ? { ...x, pct: String(Math.round((100 - others) * 1e8) / 1e8) } : x))); setAmt({});
+                    }}>Last line takes the rest</button>
+                  )}
                   <span className={`text-xs ${Math.abs(total - 100) < 0.01 ? 'text-gray-600' : 'text-amber-700'}`}>
                     {Math.abs(total - 100) < 0.01
                       ? '100% placed'

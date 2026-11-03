@@ -1299,6 +1299,26 @@ export function registerCostTrackingRoutes(app: Express): void {
   });
 
   /** Payment received on an issued invoice (date and amount); amount null clears it. */
+  /** Who an issued invoice is billed to (the tenant's legal entity, say). Amounts don't change. */
+  app.patch('/api/cost-projects/:id/cm-invoices/:number/bill-to', ...canEdit, async (req, res) => {
+    try {
+      const id = intParam(req, 'id');
+      if (id === null) return res.status(400).json({ message: 'Invalid ID' });
+      const project = await loadProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      const settings: any = { ...(project.settings || {}) };
+      const list: CmInvoiceRecord[] = [...(settings.cmInvoices || [])];
+      const i = list.findIndex((x) => x.number === req.params.number);
+      if (i < 0) return res.status(404).json({ message: 'Invoice not found' });
+      const billTo = String(req.body?.billTo ?? '').trim().slice(0, 200);
+      if (!billTo) return res.status(400).json({ message: 'Enter who the invoice is billed to.' });
+      list[i] = { ...list[i], billTo };
+      settings.cmInvoices = list;
+      await db.update(costProjects).set({ settings, updatedAt: new Date() }).where(eq(costProjects.id, id));
+      res.json(await loadProjectBundle(id));
+    } catch (e) { fail(res, e, 'change who the invoice is billed to'); }
+  });
+
   app.patch('/api/cost-projects/:id/cm-invoices/:number/payment', ...canEdit, async (req, res) => {
     try {
       const id = intParam(req, 'id');

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Printer, FileText, Trash2, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
+import { Printer, FileText, Trash2, ChevronRight, Download, FileSpreadsheet, Pencil } from 'lucide-react';
 import { exportLedgerXlsx } from './ledger-export';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SummaryTable } from './summary-table';
@@ -353,13 +353,14 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       {mine.length > 0 && (
         <table className="w-full text-sm">
           <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued By</th><th className="py-1 pl-4">Paid</th><th className="w-28" />
+            <th className="py-1">Invoice</th><th className="py-1">Date</th><th className="py-1">Bill To</th><th className="py-1 text-right">Amount</th><th className="py-1 pl-4">Issued By</th><th className="py-1 pl-4">Paid</th><th className="w-28" />
           </tr></thead>
           <tbody>
             {mine.map((inv, i) => (
               <tr key={inv.number} className="border-b last:border-0">
                 <td className="py-1.5 font-medium">{inv.number}</td>
                 <td className="py-1.5">{shortDate(inv.date)}</td>
+                <td className="py-1.5"><BillToCell inv={inv} projectId={projectId} fallback={d.billTo} /></td>
                 <td className="py-1.5 text-right tabular-nums">{money(inv.due)}</td>
                 <td className="py-1.5 pl-4 text-gray-600">{inv.issuedBy || ''}</td>
                 <td className="py-1.5 pl-4"><PaidCell inv={inv} projectId={projectId} /></td>
@@ -377,6 +378,34 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
     </Card>
   );
 }
+/** Who an issued invoice is billed to — changed here (it reprints with it); the amounts stay. */
+function BillToCell({ inv, projectId, fallback }: { inv: any; projectId: number; fallback: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [edit, setEdit] = useState<string | null>(null);
+  const cur = inv.billTo || fallback || '';
+  const save = async () => {
+    try {
+      const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(inv.number)}/bill-to`, 'PATCH', { billTo: edit });
+      qc.setQueryData([projectKey(projectId)], data); setEdit(null);
+      toast({ title: `${inv.number} now billed to ${edit}`, description: 'Reprint it to send the corrected copy.' });
+    } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
+  };
+  if (edit !== null) return (
+    <span className="inline-flex items-center gap-1">
+      <Input className="h-7 w-56 text-sm" value={edit} autoFocus onChange={(e) => setEdit(e.target.value)}
+             onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEdit(null); }} />
+      <Button size="sm" className="h-7" onClick={save}>Save</Button>
+      <Button size="sm" variant="ghost" className="h-7" onClick={() => setEdit(null)}>Cancel</Button>
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1.5">{cur || '—'}
+      <button className="text-gray-400 hover:text-gray-700" title="Change who this invoice is billed to" onClick={() => setEdit(cur)}><Pencil className="h-3 w-3" /></button>
+    </span>
+  );
+}
+
 /** When the invoice was paid and how much came in — feeds "fee paid" on the dashboards. */
 function PaidCell({ inv, projectId }: { inv: CmInvoiceRow; projectId: number }) {
   const { toast } = useToast();

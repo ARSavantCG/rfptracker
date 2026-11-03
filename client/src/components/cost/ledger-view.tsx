@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Printer, Plus, Trash2, Paperclip, Upload, Pencil, FileSpreadsheet } from 'lucide-react';
 import { exportLedgerXlsx } from './ledger-export';
+import { LedgerExcel } from './ledger-io';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { MoneyInput } from './inputs';
@@ -170,6 +171,7 @@ export function LedgerView({ bundle, projectId }: { bundle: ProjectBundle; proje
         <div className="flex gap-2 items-end flex-wrap">
           <Button variant="outline" onClick={print}><Printer className="h-4 w-4 mr-1" /> Print</Button>
           <Button variant="outline" onClick={() => { const q = new URLSearchParams(); if (from) q.set('from', from); if (to) q.set('to', to); exportLedgerXlsx(projectId, q).catch((e) => toast({ title: 'Export Failed', description: e?.message, variant: 'destructive' })); }}><FileSpreadsheet className="h-4 w-4 mr-1" /> Excel</Button>
+          <LedgerExcel bundle={bundle} projectId={projectId} />
           {!form && <Button onClick={() => { setEditId(null); setPayEdit(null); setForm(blank()); }}><Plus className="h-4 w-4 mr-1" /> Charge</Button>}
         </div>
       </div>

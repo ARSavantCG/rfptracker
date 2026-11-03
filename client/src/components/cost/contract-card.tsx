@@ -22,6 +22,7 @@ import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { SplitLinesDialog } from './split-lines-dialog';
 import { exportSovXlsx } from './sov-export';
+import { SovImport } from './sov-import';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
   money, pct, projectKey, BUCKET_LABEL, checkBadge, openReport,
@@ -421,11 +422,14 @@ export function ContractCard({
                           <Printer className="h-3.5 w-3.5 mr-1" /> Print SOV
                         </Button>
                       )}
-                      {g.id == null && lines.length > 0 && (
+                      {g.id == null && (
                         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Download this contract's schedule of values to Excel: every line, billed, balance, retainage and budget line"
                                 onClick={() => exportSovXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications, baseline })}>
                           <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
                         </Button>
+                      )}
+                      {g.id == null && (
+                        <SovImport contract={contract} changeOrders={changeOrders} lines={lines} baseline={baseline} projectId={projectId} />
                       )}
                     </div>
                   </td>

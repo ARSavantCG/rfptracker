@@ -23,6 +23,7 @@ import { CheckCircle2, Lock, Plus, Trash2, ChevronDown, ChevronRight, ArrowRight
 import { rollUp, transferNet, DEAL_DISCOUNT_KEY } from '@shared/cost-budget-approval';
 import { fmtMoneyText, fmtPctText, parseAmount } from '@shared/format';
 import { MoneyInput, PercentInput } from './inputs';
+import { BudgetExcel } from './budget-io';
 import { money, signedMoney, projectKey, shortDate, BUCKET_LABEL, type ProjectBundle } from './types';
 
 const num = (s: string | number | null | undefined) => {
@@ -204,6 +205,7 @@ export function BudgetPanel({ bundle, projectId }: { bundle: ProjectBundle; proj
           </p>
         </div>
         <div className="flex gap-2">
+          <BudgetExcel bundle={bundle} projectId={projectId} />
           {confirmed ? (
             <Button variant="ghost" size="sm" onClick={() => { if (window.confirm('Put this budget back to draft? The original budget snapshot is cleared and you confirm again.')) post('reopen', 'Budget back to draft'); }}>
               Reopen as Draft

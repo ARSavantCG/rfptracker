@@ -48,7 +48,7 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
             <VendorDonutCard d={vendor} title="Vendor Billings — All Projects" />
             {recv.total > 0.005 && <ReceivableDonutCard d={recv} title="Tenant Billings — All Projects" />}
           </div>
-          <ScheduleCard rows={schedule} showProject title="Schedule — All Contracts" />
+          <ScheduleCard rows={schedule} showProject title="Schedule — All Contracts" collapsible defaultOpen={false} storageKey="cost.portfolio.schedule.open" />
         </>
       )}
     </div>

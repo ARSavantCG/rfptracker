@@ -105,7 +105,31 @@ export function scheduleCounts(rows: readonly ScheduleRow[]) {
   return c;
 }
 
+/**
+ * What we've billed others and are owed (Adolfo, 2026-11-03): tenant invoices (change orders,
+ * reimbursements) — received, invoiced and not paid (and how much is past 30 days), ready to invoice
+ * now, and due later (e.g. the balance at Substantial Completion). Adds up to what the tenant owes in all.
+ */
+export type ReceivableDonut = { total: number; received: number; invoicedUnpaid: number; over30: number; readyToInvoice: number; laterDue: number; openCount: number };
+export function receivableDonut(x: { invoices: ReadonlyArray<{ date: string; due: number; paidAmount?: number | null }>; readyToInvoice: number; laterDue: number; today: string }): ReceivableDonut {
+  let billed = 0, received = 0, over30 = 0, openCount = 0;
+  const days = (a: string, b: string) => Math.floor((Date.parse(b + 'T12:00:00Z') - Date.parse(a.slice(0, 10) + 'T12:00:00Z')) / 86400000);
+  for (const i of x.invoices) {
+    const due = Number(i.due) || 0;
+    if (due <= 0) continue;
+    const paid = Math.min(due, Number(i.paidAmount) || 0);
+    billed += due; received += paid;
+    const open = due - paid;
+    if (open > 0.005) { openCount++; if (days(i.date, x.today) > 30) over30 += open; }
+  }
+  const ready = Math.max(0, x.readyToInvoice), later = Math.max(0, x.laterDue);
+  return { total: r2(billed + ready + later), received: r2(received), invoicedUnpaid: r2(billed - received), over30: r2(over30), readyToInvoice: r2(ready), laterDue: r2(later), openCount };
+}
+export const zeroReceivable: ReceivableDonut = { total: 0, received: 0, invoicedUnpaid: 0, over30: 0, readyToInvoice: 0, laterDue: 0, openCount: 0 };
+
 export interface ProjectDashboard {
+  /** Billed to the tenant (and other sources): received, outstanding, still to invoice. */
+  receivable?: ReceivableDonut;
   fee: FeeDonut;
   feeByParty: { capital: FeeDonut; tenant: FeeDonut };
   vendor: VendorDonut;

@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
-import type { FeeDonut, VendorDonut, ScheduleRow, ScheduleStatus } from '@shared/cost-dashboard';
+import type { FeeDonut, VendorDonut, ScheduleRow, ScheduleStatus, ReceivableDonut } from '@shared/cost-dashboard';
 import { money } from './types';
 
 type Slice = { label: string; value: number; color: string; hint?: string };
@@ -66,6 +66,17 @@ export function VendorDonutCard({ d, title = 'Vendor Billings' }: { d: VendorDon
       { label: 'Approved, Not Paid', value: d.owed, color: '#dc2626', hint: 'Owed on pay apps and invoices' },
       { label: 'Retainage Held', value: d.retainage, color: '#7c3aed' },
       { label: 'Not Yet Billed', value: d.notBilled, color: '#d1d5db' },
+    ]} />;
+}
+
+/** What we've billed the tenant (and other sources) and are owed. */
+export function ReceivableDonutCard({ d, title = 'Tenant Billings' }: { d: ReceivableDonut; title?: string }) {
+  return <Donut title={title} subtitle={`What we bill others: received, outstanding, and still to invoice`} centerLabel="Billable" centerValue={d.total}
+    slices={[
+      { label: 'Received', value: d.received, color: '#15803d', hint: 'Payments recorded on issued invoices' },
+      { label: 'Invoiced, Not Paid', value: d.invoicedUnpaid, color: '#dc2626', hint: d.openCount ? `${d.openCount} open invoice${d.openCount === 1 ? '' : 's'}${d.over30 > 0.005 ? ` · ${money(d.over30)} over 30 days` : ''}` : undefined },
+      { label: 'Ready to Invoice', value: d.readyToInvoice, color: '#2563eb', hint: 'The draft tenant invoice — issue it on Reports' },
+      { label: 'Due Later', value: d.laterDue, color: '#d1d5db', hint: 'e.g. the change order balance at Substantial Completion' },
     ]} />;
 }
 

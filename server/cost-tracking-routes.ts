@@ -27,7 +27,7 @@ import {
 } from '@shared/cost-budget-approval';
 import { positionAsOf, detectCmFee, cmFeeEarned, buildLedger, cmInvoiceCalc, billableItems, paidItems, invoiceCalc, coFeeLinks, supplementalCmEarned, type DatedApplication, type Payment } from '@shared/cost-position';
 import { and, eq, inArray, like, desc, isNull, isNotNull, sql } from 'drizzle-orm';
-import { feePaid, feeDonut, vendorDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
+import { feePaid, feeDonut, vendorDonut, receivableDonut, scheduleRows, type ProjectDashboard } from '@shared/cost-dashboard';
 import {
   budgetVsActual, g702For, lineProgress, g702Check, normalizeContractorG702, retainageCents, changeOrderStarts, docNumbers, newAppNumbers, formatProjectNumber, UNALLOCATED_KEY,
   type BaselineLine, type SovLine, type ChangeOrder, type Application, type AllocationMode,
@@ -3037,6 +3037,12 @@ export function dashboardFor(b: any): ProjectDashboard {
     fee: feeDonut([cap, ten]),
     feeByParty: { capital: feeDonut([cap]), tenant: feeDonut([ten]) },
     vendor: vendorDonut(b.position.totals),
+    receivable: receivableDonut({
+      invoices: (b.cmInvoices as any[]).filter((i) => i.type === 'reimbursable'),
+      readyToInvoice: Number(b.cmInvoiceDrafts.tenant?.due) || 0,
+      laterDue: Number((b.cmInvoiceDrafts.tenant as any)?.coBalance) || 0,
+      today: todayEastern(),
+    }),
     schedule: scheduleRows(b.contracts as any, (id) => Number(pctOf.get(id) ?? 0), todayEastern()),
     spent: b.summary.totals.toDate, budget: b.summary.totals.budget, committed: b.summary.totals.committed,
   };

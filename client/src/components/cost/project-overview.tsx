@@ -1,6 +1,6 @@
 /** One project at a glance (admins): totals, CM fee, vendor billings, schedule. Starts simple. */
 import { money, type ProjectBundle } from './types';
-import { FeeDonutCard, VendorDonutCard, ScheduleCard, Tile } from './dashboard-widgets';
+import { FeeDonutCard, VendorDonutCard, ReceivableDonutCard, ScheduleCard, Tile } from './dashboard-widgets';
 
 export function ProjectOverview({ bundle: b }: { bundle: ProjectBundle }) {
   const d = b.dashboard;
@@ -17,9 +17,10 @@ export function ProjectOverview({ bundle: b }: { bundle: ProjectBundle }) {
         <Tile label={f && f.supplemental > 0.005 ? 'Projected Shortfall' : 'Projected Surplus'} value={money(f ? (f.supplemental > 0.005 ? f.supplemental : f.surplus) : 0)}
               tone={f && f.supplemental > 0.005 ? 'text-red-700' : 'text-green-700'} sub={f && f.surplus > 0.005 ? `Spendable ${money(f.spendable)}` : undefined} />
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+      <div className={`grid grid-cols-1 ${d.receivable && d.receivable.total > 0.005 ? 'lg:grid-cols-2 2xl:grid-cols-3' : 'xl:grid-cols-2'} gap-3`}>
         <FeeDonutCard d={d.fee} subtitle={`Capital partner ${money(d.feeByParty.capital.anticipated)} · tenant ${money(d.feeByParty.tenant.anticipated)} anticipated`} />
         <VendorDonutCard d={d.vendor} />
+        {d.receivable && d.receivable.total > 0.005 && <ReceivableDonutCard d={d.receivable} />}
       </div>
       <ScheduleCard rows={d.schedule} />
     </div>

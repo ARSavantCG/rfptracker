@@ -358,3 +358,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-03 Issued invoices: Bill To column with edit (PATCH cm-invoices/:number/bill-to); amounts unchanged, reprint carries it. Bill To on the card sets future invoices.
 
 - 2026-11-03 Excel round trips: excel-io.ts (readTemplate finds header row, amount/percent/isoDate), import-preview.tsx (Add/Update/No change/Skipped, Apply). Budget (budget-io.tsx: Line ID match, then name; adds; kept if missing; PATCH baseline + approval note). Contract SOV (sov-export now has Line ID + How To; sov-import.tsx: update by Line ID, add by Group; Budget Line text incl. splits). Ledger charges (ledger-io.tsx: Template/Import by Charge ID).
+
+- 2026-11-03 Tenant Billings donut: receivableDonut (shared/cost-dashboard) from issued tenant (reimbursable) invoices — received, invoiced not paid (+ over 30 days), ready to invoice (tenant draft due), due later (coBalance). Project overview + portfolio, shown when > $0.

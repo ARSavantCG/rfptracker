@@ -2,9 +2,9 @@
 import { shortProjectName } from '@shared/project-name';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { feeDonut, type ProjectDashboard, type FeeDonut, type VendorDonut } from '@shared/cost-dashboard';
+import { feeDonut, zeroReceivable, type ProjectDashboard, type FeeDonut, type VendorDonut, type ReceivableDonut } from '@shared/cost-dashboard';
 import { money } from './types';
-import { FeeDonutCard, VendorDonutCard, ScheduleCard, Tile } from './dashboard-widgets';
+import { FeeDonutCard, VendorDonutCard, ReceivableDonutCard, ScheduleCard, Tile } from './dashboard-widgets';
 
 type Row = { id: number; name: string; projectNumber?: string | null; status?: string | null; dashboard?: ProjectDashboard };
 
@@ -23,6 +23,7 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
   if (!live.length) return null;
   const fee = live.reduce((t, p) => addFee(t, p.dashboard!.fee), zeroFee);
   const vendor = live.reduce((t, p) => addVendor(t, p.dashboard!.vendor), zeroVendor);
+  const recv = live.reduce((t, p) => { const r = p.dashboard!.receivable; return r ? (Object.fromEntries(Object.keys(t).map((k) => [k, (t as any)[k] + ((r as any)[k] ?? 0)])) as ReceivableDonut) : t; }, zeroReceivable);
   const sum = (f: (d: ProjectDashboard) => number) => live.reduce((t, p) => t + f(p.dashboard!), 0);
   const schedule = live.flatMap((p) => p.dashboard!.schedule.map((r) => ({ ...r, project: shortProjectName(p.name) })));
   const behind = schedule.filter((r) => r.status === 'late' || r.status === 'behind').length;
@@ -42,9 +43,10 @@ export function PortfolioDashboard({ projects }: { projects: Row[] }) {
             <Tile label="Vendors Owed" value={money(vendor.owed)} tone={vendor.owed > 0.005 ? 'text-red-700' : undefined} sub={`Retainage Held ${money(vendor.retainage)}`} />
             <Tile label="Earned, Not Invoiced" value={money(fee.earnedNotInvoiced)} tone="text-amber-700" sub={`Costs Paid ${money(fee.earnedNotInvoicedPaid)} · Invoiced, Not Paid ${money(fee.invoicedUnpaid)}`} />
           </div>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className={`grid grid-cols-1 ${recv.total > 0.005 ? 'lg:grid-cols-2 2xl:grid-cols-3' : 'xl:grid-cols-2'} gap-3`}>
             <FeeDonutCard d={fee} subtitle="All active projects, capital partner and tenant" />
             <VendorDonutCard d={vendor} title="Vendor Billings — All Projects" />
+            {recv.total > 0.005 && <ReceivableDonutCard d={recv} title="Tenant Billings — All Projects" />}
           </div>
           <ScheduleCard rows={schedule} showProject title="Schedule — All Contracts" />
         </>

@@ -89,7 +89,14 @@ const STATUS: Record<ScheduleStatus, { label: string; cls: string }> = {
 };
 
 /** Billing against the calendar: the bar is % billed, the line is % of the time gone. */
-export function ScheduleCard({ rows, title = 'Schedule — Billing vs Time', showProject }: { rows: Array<ScheduleRow & { project?: string }>; title?: string; showProject?: boolean }) {
+export function ScheduleCard({ rows, title = 'Schedule — Billing vs Time', showProject, collapsible = false, defaultOpen = true, storageKey }: { rows: Array<ScheduleRow & { project?: string }>; title?: string; showProject?: boolean; collapsible?: boolean; defaultOpen?: boolean; storageKey?: string }) {
+  // Collapsible cards remember their state per browser so the dashboard opens the way it was left.
+  const [open, setOpen] = useState<boolean>(() => {
+    if (!collapsible) return true;
+    try { const v = storageKey ? localStorage.getItem(storageKey) : null; if (v === '1') return true; if (v === '0') return false; } catch {}
+    return defaultOpen;
+  });
+  const toggle = () => setOpen((v) => { const next = !v; try { if (storageKey) localStorage.setItem(storageKey, next ? '1' : '0'); } catch {} return next; });
   const order: ScheduleStatus[] = ['late', 'behind', 'on-track', 'done', 'no-dates'];
   const sorted = [...rows].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
   const counts = order.map((s) => [s, rows.filter((r) => r.status === s).length] as const).filter(([, n]) => n);
@@ -101,15 +108,25 @@ export function ScheduleCard({ rows, title = 'Schedule — Billing vs Time', sho
   return (
     <div className="bg-white border rounded-lg p-4 space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <div className="font-semibold text-gray-900">{title}</div>
-          <div className="text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</div>
-        </div>
+        {collapsible ? (
+          <button type="button" onClick={toggle} aria-expanded={open} className="text-left min-w-0 flex items-start gap-2 group">
+            <span className={`mt-1 inline-block text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden>▶</span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-gray-900 group-hover:underline">{title}<span className="ml-2 text-xs font-normal text-gray-500">{rows.length} Contract{rows.length === 1 ? '' : 's'}</span></span>
+              {open && <span className="block text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</span>}
+            </span>
+          </button>
+        ) : (
+          <div>
+            <div className="font-semibold text-gray-900">{title}</div>
+            <div className="text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</div>
+          </div>
+        )}
         <div className="flex gap-1.5 flex-wrap">
           {counts.map(([s, n]) => <span key={s} className={`text-xs rounded px-2 py-0.5 ${STATUS[s].cls}`}>{n} {STATUS[s].label}</span>)}
         </div>
       </div>
-      {sorted.length === 0 ? <p className="text-sm text-gray-500">No contracts yet.</p> : (
+      {!open ? null : sorted.length === 0 ? <p className="text-sm text-gray-500">No contracts yet.</p> : (
         <div className="space-y-2">
           {shown.map((r) => (
             <div key={`${r.project ?? ''}${r.contractId}`} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_1fr_auto] items-center gap-x-3 gap-y-1 text-sm">

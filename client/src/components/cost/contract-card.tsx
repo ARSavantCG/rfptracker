@@ -422,14 +422,14 @@ export function ContractCard({
                           <Printer className="h-3.5 w-3.5 mr-1" /> Print SOV
                         </Button>
                       )}
-                      {g.id == null && (
-                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Download this contract's schedule of values to Excel: every line, billed, balance, retainage and budget line"
-                                onClick={() => exportSovXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications, baseline })}>
+                      {(g.id == null || g.co) && (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title={g.co ? `Download ${g.co.number}'s lines to Excel — also its import template` : "Download this contract's schedule of values to Excel: every line, billed, balance, retainage and budget line"}
+                                onClick={() => exportSovXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications, baseline, coId: g.co?.id ?? null })}>
                           <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
                         </Button>
                       )}
-                      {g.id == null && (
-                        <SovImport contract={contract} changeOrders={changeOrders} lines={lines} baseline={baseline} projectId={projectId} />
+                      {(g.id == null || g.co) && (
+                        <SovImport contract={contract} changeOrders={changeOrders} lines={lines} baseline={baseline} projectId={projectId} coId={g.co?.id ?? null} />
                       )}
                     </div>
                   </td>

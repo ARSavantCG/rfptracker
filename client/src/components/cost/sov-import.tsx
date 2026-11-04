@@ -41,7 +41,9 @@ const sameAlloc = (l: SovLineRow, a: Alloc) => (l.allocationMode === a.mode || (
   && JSON.stringify([...l.allocations].map((x) => [x.baselineKey, Math.round(Number(x.pct) * 100)]).sort()) === JSON.stringify([...a.allocations].map((x) => [x.baselineKey, Math.round(x.pct * 100)]).sort());
 
 /** What importing these rows would do: the changes to show, and the calls that make them. */
-export function planSovImport(rows: SheetRow[], x: { contractId: number; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[] }) {
+export function planSovImport(rows: SheetRow[], x: { contractId: number; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[];
+  /** Importing into one change order: every new row goes on it. */
+  coId?: number | null }) {
   const { changeOrders, lines, baseline } = x;
   const contract = { id: x.contractId };
       const changes: Change[] = [];
@@ -52,7 +54,7 @@ export function planSovImport(rows: SheetRow[], x: { contractId: number; changeO
         let desc = text(r['Description']);
         if (/^contract total|^total/i.test(group) || /^contract total/i.test(desc)) continue;
         // Names typed in the Group column (a common slip, e.g. in older templates): read them as the description.
-        if (!desc && group && !/^base contract/i.test(group) && !changeOrders.some((c) => c.number.trim().toLowerCase() === group.split(' — ')[0].trim().toLowerCase())) { desc = group; group = ''; }
+        if (!desc && group && (x.coId != null || !/^base contract/i.test(group)) && !changeOrders.some((c) => c.number.trim().toLowerCase() === group.split(' — ')[0].trim().toLowerCase())) { desc = group; group = ''; }
         if (!desc) {
           if (amount(r['Scheduled Value'])) changes.push({ kind: 'skip', label: `Row ${r.__row}: ${money(amount(r['Scheduled Value'])!)}`, detail: 'No description.' });
           continue;
@@ -80,8 +82,8 @@ export function planSovImport(rows: SheetRow[], x: { contractId: number; changeO
           continue;
         }
         // New line: into its group.
-        let coId: number | null = null;
-        if (group && !/^base contract/i.test(group)) {
+        let coId: number | null = x.coId ?? null;
+        if (x.coId == null && group && !/^base contract/i.test(group)) {
           const no = group.split(' — ')[0].trim().toLowerCase();
           const co = changeOrders.find((c) => c.number.trim().toLowerCase() === no);
           if (!co) { changes.push({ kind: 'skip', label: `Row ${r.__row}: ${desc}`, detail: `Change order "${group}" isn't on this contract — add it in the app first.` }); continue; }
@@ -100,9 +102,10 @@ export function planSovImport(rows: SheetRow[], x: { contractId: number; changeO
   return { changes, ops };
 }
 
-export function SovImport({ contract, changeOrders, lines, baseline, projectId }: {
-  contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[]; projectId: number;
+export function SovImport({ contract, changeOrders, lines, baseline, projectId, coId }: {
+  contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[]; projectId: number; coId?: number | null;
 }) {
+  const co = coId != null ? changeOrders.find((c) => c.id === coId) : null;
   const { toast } = useToast();
   const qc = useQueryClient();
   const ref = useRef<HTMLInputElement>(null);
@@ -111,7 +114,7 @@ export function SovImport({ contract, changeOrders, lines, baseline, projectId }
   const read = async (f: File) => {
     try {
       const rows = await readTemplate(f, 'Description', 'Schedule of Values');
-      setPlan(planSovImport(rows, { contractId: contract.id, changeOrders, lines, baseline }));
+      setPlan(planSovImport(rows, { contractId: contract.id, changeOrders, lines, baseline, coId }));
     } catch (e: any) { toast({ title: 'Not Read', description: e?.message, variant: 'destructive' }); }
   };
 
@@ -127,11 +130,11 @@ export function SovImport({ contract, changeOrders, lines, baseline, projectId }
 
   return (
     <>
-      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Import this contract's lines from its Excel export — shows every change first" onClick={() => ref.current?.click()}>
+      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title={co ? `Import ${co.number}'s lines from Excel — new rows go on ${co.number}; shows every change first` : "Import this contract's lines from its Excel export — shows every change first"} onClick={() => ref.current?.click()}>
         <Upload className="h-3.5 w-3.5 mr-1" /> Import
       </Button>
       <input ref={ref} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) read(f); }} />
-      <ImportPreview title={`Import Schedule of Values — ${contract.counterparty}`} changes={plan?.changes ?? null} onApply={apply} onClose={() => setPlan(null)}
+      <ImportPreview title={`Import ${co ? co.number : 'Schedule of Values'} — ${contract.counterparty}`} changes={plan?.changes ?? null} onApply={apply} onClose={() => setPlan(null)}
         note="Lines are matched by Line ID; rows without one are added to their group. Billed and retainage columns are ignored. Nothing is saved until you apply." />
     </>
   );

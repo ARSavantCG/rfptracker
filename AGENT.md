@@ -362,3 +362,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-03 Tenant Billings donut: receivableDonut (shared/cost-dashboard) from issued tenant (reimbursable) invoices — received, invoiced not paid (+ over 30 days), ready to invoice (tenant draft due), due later (coBalance). Project overview + portfolio, shown when > $0.
 
 - 2026-11-04 SOV template columns reordered (Line ID, Item, Description, Scheduled Value, Budget Line, Group, …reference). Import: names typed in Group with no Description are read as descriptions; blank Item numbered next in group; planSovImport exported (tested on Adolfo's Ryder file: 44 adds).
+
+- 2026-11-04 Per change order Excel + Import on each PCCO header: exportSovXlsx({coId}) exports just that CO (title, file name, how-to); SovImport/planSovImport({coId}) puts every new row on that CO.

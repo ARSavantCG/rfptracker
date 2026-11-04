@@ -11,7 +11,9 @@ import type { ContractRow, ChangeOrderRow, SovLineRow, ApplicationRow } from './
 
 const MONEY = '#,##0.00;(#,##0.00)';
 
-export function exportSovXlsx(x: { projectName: string; contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; applications: ApplicationRow[]; baseline: BaselineLine[] }) {
+export function exportSovXlsx(x: { projectName: string; contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; applications: ApplicationRow[]; baseline: BaselineLine[];
+  /** Just one change order's lines (its own template). */
+  coId?: number | null }) {
   const apps = x.applications.map((a) => ({ id: a.id, contractId: a.contractId, number: a.number, lines: a.lines, retainageAdj: a.retainageAdj ?? 0 }));
   const prog = lineProgress(apps as any);
   const led = retainageLedger(apps as any);
@@ -20,7 +22,8 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
   const last = [...x.applications].sort((a, b) => a.number - b.number).pop();
   const rate = (Number(x.contract.retainagePct) || 0) / 100;
   const coOf = new Map(x.changeOrders.map((c) => [c.id, c]));
-  const ordered = [
+  const only = x.coId != null ? x.changeOrders.find((c) => c.id === x.coId) ?? null : null;
+  const ordered = only ? x.lines.filter((l) => l.changeOrderId === only.id) : [
     ...x.lines.filter((l) => l.changeOrderId == null),
     ...x.changeOrders.flatMap((c) => x.lines.filter((l) => l.changeOrderId === c.id)),
   ];
@@ -53,7 +56,7 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
 
   const longD = (iso: string) => new Date(iso.slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' });
   const head: any[][] = [
-    ['Contract Schedule of Values'],
+    [only ? `Change Order Schedule of Values — ${only.number}${only.title ? ` — ${only.title}` : ''}` : 'Contract Schedule of Values'],
     ['Project', x.projectName],
     ['Contractor', x.contract.counterparty],
     ...(x.contract.contractNumber ? [['Contract #', x.contract.contractNumber]] : []),
@@ -66,10 +69,10 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
   const start = head.length;
   XLSX.utils.sheet_add_json(ws, data, { origin: { r: start, c: 0 }, header: [...cols] });
   // Totals: the contract sum is approved change orders only; pending lines are listed, not added.
-  const inSum = ordered.filter((l) => l.changeOrderId == null || coOf.get(l.changeOrderId)?.status === 'approved');
+  const inSum = only ? ordered : ordered.filter((l) => l.changeOrderId == null || coOf.get(l.changeOrderId)?.status === 'approved');
   const S = (f: (l: SovLineRow) => number) => r2(inSum.reduce((t, l) => t + f(l), 0));
   const sv = S((l) => l.scheduledValue), bd = S((l) => prog.get(l.id)?.toDate ?? 0);
-  XLSX.utils.sheet_add_aoa(ws, [['', '', 'Contract Total (approved)', sv, '', '', '', '', '', bd, sv ? bd / sv : 0, r2(sv - bd),
+  XLSX.utils.sheet_add_aoa(ws, [['', '', only ? `Contract Total — ${only.number}` : 'Contract Total (approved)', sv, '', '', '', '', '', bd, sv ? bd / sv : 0, r2(sv - bd),
     S((l) => led.lines.get(l.id)?.withheld ?? 0), S((l) => led.lines.get(l.id)?.released ?? 0), S((l) => prog.get(l.id)?.retainage ?? 0), '']], { origin: { r: start + data.length + 1, c: 0 } });
   for (let i = 1; i <= data.length + 1; i++) {
     for (const c of [3, 9, 11, 12, 13, 14, 15]) { const a = XLSX.utils.encode_cell({ r: start + i, c }); if (ws[a]?.t === 'n') ws[a].z = MONEY; }
@@ -82,7 +85,7 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Schedule of Values');
   XLSX.utils.book_append_sheet(wb, notesSheet([
-    'This file is also the import template for this contract (Import on the contract).',
+    only ? `This file is the import template for ${only.number} (Import on that change order). New rows go on ${only.number}.` : 'This file is also the import template for this contract (Import on the contract).',
     'Edit a line: its Item, Cost Code, Section, Description, Scheduled Value or Budget Line. Keep the Line ID as is.',
     'Add lines: new rows with the Line ID blank — Item, Description, Scheduled Value and (optional) Budget Line. Group blank = Base Contract; or a change order already in the app (e.g. "PCCO #004").',
     'Budget Line: a budget line\'s name; "Spread with the work"; "Not mapped"; or a split like "New Office Area 70% · Office Expansion 30%".',
@@ -90,5 +93,5 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
     'Lines deleted from the sheet are kept — delete them in the app. Import shows every change before saving.',
   ]), 'How To');
   const slug = (s: string) => s.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
-  XLSX.writeFile(wb, `KURV_SOV_${slug(x.contract.counterparty)}_${new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })}.xlsx`);
+  XLSX.writeFile(wb, `KURV_${only ? `${slug(only.number)}_` : 'SOV_'}${slug(x.contract.counterparty)}_${new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })}.xlsx`);
 }

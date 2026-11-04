@@ -148,13 +148,14 @@ export function ApplicationDialog({
   const toDateOf = (l: SovLineRow) => (prior.get(l.id)?.completed ?? 0) + workOf(l) + num(draft[l.id]?.stored ?? '');
   const autoMap = useMemo(() => {
     const auto = contractLines.filter((l) => !(draft[l.id]?.retainage ?? '').trim());
-    // A line whose retainage was released (or cut) on an earlier pay app holds only what it
-    // held then plus the rate on the work billed since, not the rate on everything again.
+    // What it held on the last pay app plus the rate on what's billed this period (work and stored),
+    // credits included (a credit carries negative retainage) — the way the contractor's G703 runs it
+    // (Adolfo, 2026-11-04: Ryder App 005 = App 004's $2,380,393.02 + 10% of $4,104,983.03). A line
+    // released, cut or over-held earlier keeps that, instead of being reset to the rate on everything.
     const exactOf = (l: SovLineRow) => {
       const p = prior.get(l.id);
-      if (!p || p.toDate === 0) return toDateOf(l) * rate;
-      const full = p.toDate * rate;
-      return p.retainage < full - 0.01 ? p.retainage + (toDateOf(l) - p.toDate) * rate : toDateOf(l) * rate;
+      if (!p) return toDateOf(l) * rate;
+      return p.retainage + (toDateOf(l) - p.toDate) * rate;
     };
     const items = auto.map((l) => ({ id: l.id, exact: exactOf(l) })).filter((x) => Math.abs(x.exact) >= 0.0001);
     const typed = contractLines.filter((l) => (draft[l.id]?.retainage ?? '').trim()).reduce((s, l) => s + num(draft[l.id].retainage), 0);
@@ -470,7 +471,7 @@ export function ApplicationDialog({
                       </td>
                       <td className="px-2 py-1">
                         <MoneyInput className={`h-8 ${aiTint(l.id, 'retainage')}`} value={draft[l.id]?.retainage ?? ''} onValueChange={(v) => set(l.id, 'retainage', v)}
-                                    title={`Left blank: ${money(autoRetainage(l))} (${Number(contract?.retainagePct ?? 0).toFixed(2)}% of work to date)`} />
+                                    title={`Left blank: ${money(autoRetainage(l))} (held on the last pay app + ${Number(contract?.retainagePct ?? 0).toFixed(2)}% of this period)`} />
                         {!(draft[l.id]?.retainage ?? '').trim() && autoRetainage(l) > 0 && (
                           <div className="text-[10px] text-right text-gray-600 tabular-nums mt-0.5">auto {money(autoRetainage(l))}</div>
                         )}
@@ -829,9 +830,9 @@ export function ApplicationDialog({
                         {' '}<button className="text-blue-700 hover:underline" onClick={() => setRetAdj(0)}>Remove</button></span>
                     )}
                     {canRecalc && (
-                      <button className="text-blue-700 hover:underline" title="Clears the retainage boxes so they're figured at the contract rate on work to date, rounded down to the cent like the contractor's"
+                      <button className="text-blue-700 hover:underline" title="Clears the retainage boxes so each line holds what it held on the last pay app plus the contract rate on this period's work (credits carry negative retainage), rounded down to the cent like the contractor's"
                               onClick={() => { setRetTyped(new Set()); setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }]))); }}>
-                        Recalculate retainage at {(rate * 100).toFixed(2)}% (rounded down)
+                        Recalculate retainage: last pay app + {(rate * 100).toFixed(2)}% of this period
                       </button>
                     )}
                     {retTarget.trim() && (

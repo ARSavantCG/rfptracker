@@ -374,3 +374,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 Contract card %: MixedPct — when additions and credits mix, shows additions % billed with "credits N%" beneath (tooltip has both sides and the net), instead of % of a net (e.g. 118%).
 
 - 2026-11-04 Billing by Line Excel (billing-history-export.ts; button on Base Contract header when pay apps exist): sheet 1 billed per line per pay app (work + change in stored), to date vs scheduled, OVERBILLED / negative period flags; sheet 2 retainage held to date per pay app vs rate% of billed, difference flagged.
+
+- 2026-11-04 Retainage left blank = line's retainage on the last pay app + rate × this period's billing (work + change in stored; credits negative), spread to the cent — the contractor's method. Replaces "rate × to date unless released earlier", which reset over-held/credit lines (Ryder App 005 off $18,093.87). Existing apps: open, Recalculate, Save.

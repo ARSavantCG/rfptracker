@@ -2483,7 +2483,8 @@ export function registerCostTrackingRoutes(app: Express): void {
       const [row] = await db.insert(costWaivers).values({
         projectId: c.projectId, contractId: a.contractId, applicationId: id, kind,
         fromWaiverId: kind === 'unconditional' && b.fromWaiverId ? Number(b.fromWaiverId) : null,
-        received: b.received === undefined ? kind === 'conditional' : !!b.received,
+        // New waivers start not received (Adolfo, 2026-11-04) unless the file comes with them; tick it when it's in.
+        received: b.received === undefined ? !!b.documentId : !!b.received,
         ...waiverValues(b, false), createdBy: who(req),
       }).returning();
       res.json(row);

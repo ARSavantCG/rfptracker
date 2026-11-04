@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Download, GripVertical, Paperclip, Plus, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { coLog, cosOnPayApp } from '@shared/co-log';
 import { waiverChecklist, waiverLog, waiverOutstanding, waiverTotals, isGcVendor, partyOf, payAppVendors, isPayAppOf, knownVendors, closeVendor, sameVendor, nextApp, billedVendors, gcPaymentDue, paidOfFrom, unpaid, fundingNote, DOC_TYPES, type UnconditionalRow, type WaiverParty, type WaiverTotals, type MissingConditional, type WaiverLogRow } from '@shared/cost-waivers';
 import { fmtMoneyText, parseAmount } from '@shared/format';
@@ -408,7 +408,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                 return n === payRows.length ? { tone: 'ok' as const, text: 'All Attached' } : { tone: 'muted' as const, text: `${n} of ${payRows.length} Attached` };
               })()} open={isOpen('payapps', !payRows[0] || !payFiles(payRows[0]).length)} onToggle={() => toggle('payapps', !payRows[0] || !payFiles(payRows[0]).length)}
               summary={`${payRows.filter((r) => payFiles(r).length).length} of ${payRows.length} attached`}>
-          <p className="text-xs text-gray-600">The GC's pay application and each sub's, as backup. Vendors come from the conditional waivers below. Drop a file on its row.</p>
+          <p className="text-xs text-gray-600">The GC's pay application and each sub's, as backup. Vendors come from the conditional waivers below (↑↓ reorders both). Drop a file on its row.</p>
           <div className="border rounded-md overflow-x-auto">
             <table className="w-full text-sm min-w-[860px]">
               <thead><tr className="text-left text-[11px] uppercase tracking-wide text-gray-500 border-b bg-gray-50">
@@ -423,7 +423,26 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   const extra = { docType: r.party === 'gc' ? 'g702' : 'sub_pay_app', vendor: r.vendor };
                   return (
                     <tr key={key} {...dz(key, extra)} className={`border-b last:border-0 ${drag === key ? 'bg-blue-100' : ''}`}>
-                      <td className="px-2 py-1.5">{r.vendor}</td>
+                      <td className="px-2 py-1.5">
+                        {(() => {
+                          // Same order as the conditional waivers below: moving here moves it there too.
+                          const w = conds.find((c) => !c.notNeeded && c.vendor === r.vendor);
+                          const live = conds.filter((c) => !c.notNeeded);
+                          const at = w ? live.indexOf(w) : -1;
+                          const move = (d: -1 | 1) => { const to = live[at + d]; if (w && to) reorder('conditional', `c${w.id}`, `c${to.id}`, d === 1); };
+                          return (
+                            <span className="inline-flex items-center gap-1.5">
+                              {w && live.length > 1 && (
+                                <span className="inline-flex">
+                                  <button className="p-0.5 text-gray-400 hover:text-blue-700 disabled:opacity-30" disabled={at <= 0 || busy} title="Move up" onClick={() => move(-1)}><ArrowUp className="h-3.5 w-3.5" /></button>
+                                  <button className="p-0.5 text-gray-400 hover:text-blue-700 disabled:opacity-30" disabled={at >= live.length - 1 || busy} title="Move down" onClick={() => move(1)}><ArrowDown className="h-3.5 w-3.5" /></button>
+                                </span>
+                              )}
+                              {r.vendor}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-2"><span className={`text-[11px] font-semibold rounded px-1.5 py-0.5 ${r.party === 'gc' ? 'text-blue-800 bg-blue-100' : 'text-gray-700 bg-gray-100'}`}>{r.party === 'gc' ? 'GC' : 'Sub'}</span></td>
                       {(() => {
                         const v = payCheck(r);
@@ -606,7 +625,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
             )}
             {ck.missing.map((m) => (
               <MissingRow key={`m${m.vendor}`} m={m} busy={busy} start={m.party === 'gc' ? dueOf(app.id).due : null}
-                          onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}
+                          onAdd={(amount) => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount, received: false, party: m.party === 'gc' && !isGcVendor(m.vendor, gcName) ? 'gc' : undefined }), 'Conditional added')}
                           onSkip={() => call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: m.vendor, amount: 0, received: false, notNeeded: true }), `${m.vendor}: not this pay app`)} />
             ))}
             {newC && (
@@ -620,7 +639,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <div className="flex gap-2 justify-end">
                     <Button size="sm" variant="ghost" className="h-7" onClick={() => setNewC(null)}>Cancel</Button>
                     <Button size="sm" className="h-7" disabled={!newC.vendor.trim() || busy}
-                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: newC.vendor, amount: (Number.isFinite(parseAmount(newC.amount)) ? String(parseAmount(newC.amount)) : newC.amount.replace(/,/g, '')) }), 'Conditional added')) setNewC({ vendor: '', amount: '' }); }}>
+                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'conditional', vendor: newC.vendor, amount: (Number.isFinite(parseAmount(newC.amount)) ? String(parseAmount(newC.amount)) : newC.amount.replace(/,/g, '')), received: false }), 'Conditional added')) setNewC({ vendor: '', amount: '' }); }}>
                       Add
                     </Button>
                   </div>
@@ -700,7 +719,7 @@ export function PackageDialog({ target, bundle, projectId, onClose }: {
                   <div className="flex gap-2 justify-end">
                     <Button size="sm" variant="ghost" className="h-7" onClick={() => setNewU(null)}>Cancel</Button>
                     <Button size="sm" className="h-7" disabled={!newU.vendor.trim() || busy}
-                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'unconditional', vendor: newU.vendor, amount: (Number.isFinite(parseAmount(newU.amount)) ? String(parseAmount(newU.amount)) : newU.amount.replace(/,/g, '')), received: true }), 'Unconditional added')) setNewU(null); }}>
+                            onClick={async () => { if (await call(() => apiRequest(`/api/cost-applications/${app.id}/waivers`, 'POST', { kind: 'unconditional', vendor: newU.vendor, amount: (Number.isFinite(parseAmount(newU.amount)) ? String(parseAmount(newU.amount)) : newU.amount.replace(/,/g, '')), received: false }), 'Unconditional added')) setNewU(null); }}>
                       Add
                     </Button>
                   </div>

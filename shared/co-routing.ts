@@ -12,13 +12,15 @@
  *
  * The financial status (approved | pending | void) follows the stage.
  */
-export type CoStage = 'review' | 'returned' | 'internal' | 'signatures' | 'approved' | 'rejected';
-export const CO_STAGES: ReadonlyArray<{ key: CoStage; label: string; hint: string; tone: 'amber' | 'blue' | 'violet' | 'orange' | 'green' | 'gray' }> = [
+export type CoStage = 'review' | 'returned' | 'internal' | 'signatures' | 'billable' | 'approved' | 'rejected';
+export const CO_STAGES: ReadonlyArray<{ key: CoStage; label: string; hint: string; tone: 'amber' | 'blue' | 'violet' | 'orange' | 'green' | 'teal' | 'gray' }> = [
   { key: 'review', label: 'Under Review', hint: 'Received from the contractor; pending review', tone: 'amber' },
   { key: 'returned', label: 'Returned to Contractor', hint: 'Sent back for revisions or backup', tone: 'orange' },
   { key: 'internal', label: 'Pending Internal Approval', hint: 'Recommended; over $250,000 or adds 30+ days, routed for approval', tone: 'violet' },
   { key: 'signatures', label: 'Pending Signatures', hint: 'Recommended; out for internal signatures', tone: 'blue' },
-  { key: 'approved', label: 'Approved', hint: 'Executed and returned to the contractor; can be billed', tone: 'green' },
+  // Adolfo, 2026-11-04: often approved so the contractor can bill before the change order is formally executed.
+  { key: 'billable', label: 'Approved to Bill — Not Executed', hint: 'Approved; the contractor can bill it; the signed change order is still to come', tone: 'teal' },
+  { key: 'approved', label: 'Approved & Executed', hint: 'Executed and returned to the contractor; can be billed', tone: 'green' },
   { key: 'rejected', label: 'Rejected', hint: 'Not going ahead', tone: 'gray' },
 ];
 export const DEFAULT_CO_THRESHOLD = 250000;
@@ -34,12 +36,12 @@ export function needsHigherRouting(amount: number, daysAdded: number | null | un
 }
 export const isStage = (s: unknown): s is CoStage => CO_STAGES.some((x) => x.key === s);
 export const stageLabel = (s: CoStage) => CO_STAGES.find((x) => x.key === s)!.label;
-export const statusOfStage = (s: CoStage): 'approved' | 'pending' | 'void' => (s === 'approved' ? 'approved' : s === 'rejected' ? 'void' : 'pending');
+export const statusOfStage = (s: CoStage): 'approved' | 'pending' | 'void' => (s === 'approved' || s === 'billable' ? 'approved' : s === 'rejected' ? 'void' : 'pending');
 /** Older change orders have no stage: it follows their status. */
 export const stageOf = (co: { stage?: string | null; status: string }): CoStage =>
   isStage(co.stage) ? co.stage : co.status === 'approved' ? 'approved' : co.status === 'void' ? 'rejected' : 'review';
 /** Still in someone's hands (not approved or rejected). */
-export const isOpenStage = (s: CoStage) => s !== 'approved' && s !== 'rejected';
+export const isOpenStage = (s: CoStage) => s !== 'approved' && s !== 'billable' && s !== 'rejected';
 
 export type RoutingEntry = { stage: CoStage; at: string; by: string | null; to?: string | null; note?: string | null };
 export const parseRouting = (raw: unknown): RoutingEntry[] => {
@@ -81,7 +83,7 @@ export function coRouting(
   const history = parseRouting(co.routing);
   const received = day(co.receivedDate) ?? day(co.createdAt);
   const lastOfStage = [...history].reverse().find((h) => h.stage === stage);
-  const since = day(lastOfStage?.at) ?? (stage === 'approved' ? day(co.approvedDate) : null) ?? received;
+  const since = day(lastOfStage?.at) ?? (stage === 'approved' || stage === 'billable' ? day(co.approvedDate) : null) ?? received;
   const end = isOpenStage(stage) ? today : since ?? today;
   const higher = needsHigherRouting(amount, co.daysAdded, threshold, daysThreshold);
   return {
@@ -89,7 +91,7 @@ export function coRouting(
     daysInStage: since && isOpenStage(stage) ? daysBetween(since, today) : null,
     daysOpen: received ? daysBetween(received, end) : null,
     open: isOpenStage(stage),
-    skippedInternal: !!higher && (stage === 'signatures' || stage === 'approved') && history.some((h) => h.stage === 'review') && !history.some((h) => h.stage === 'internal'),
+    skippedInternal: !!higher && (stage === 'signatures' || stage === 'approved' || stage === 'billable') && history.some((h) => h.stage === 'review') && !history.some((h) => h.stage === 'internal'),
     higher, daysAdded: co.daysAdded ?? null,
     history,
   };

@@ -1872,8 +1872,8 @@ export function registerCostTrackingRoutes(app: Express): void {
       const amt = b.proposedAmount != null && b.proposedAmount !== '' && Number.isFinite(Number(b.proposedAmount)) ? Math.round(Number(b.proposedAmount) * 100) : null;
       const [row] = await db.insert(costChangeOrders).values({
         contractId, number, title: b.title ? String(b.title) : null, status: statusOfStage(stage),
-        approvedDate: stage === 'approved' ? new Date() : null,
-        startAppNumber: stage === 'approved' ? start : null,
+        approvedDate: statusOfStage(stage) === 'approved' ? new Date() : null,
+        startAppNumber: statusOfStage(stage) === 'approved' ? start : null,
         sortOrder: existing.length,
         stage, receivedDate: received, proposedAmountCents: amt, daysAdded: b.daysAdded != null && b.daysAdded !== '' && Number.isFinite(Number(b.daysAdded)) ? Math.max(0, Math.round(Number(b.daysAdded))) : null, routedTo: b.routedTo ? String(b.routedTo).trim().slice(0, 120) || null : null,
         routing: JSON.stringify([{ stage, at: received.toISOString().slice(0, 10), by: whoName(req), to: b.routedTo ? String(b.routedTo).trim() : null, note: 'Received' }]),
@@ -1974,7 +1974,7 @@ export function registerCostTrackingRoutes(app: Express): void {
         const curStage = stageOf(cur);
         // A plain status change (older screens) moves the stage too.
         const toStage: CoStage | null = isStage(b.stage) ? b.stage
-          : b.status !== undefined && CO_STATUSES.includes(String(b.status)) ? (b.status === 'approved' ? 'approved' : b.status === 'void' ? 'rejected' : (curStage === 'approved' || curStage === 'rejected' ? 'review' : curStage))
+          : b.status !== undefined && CO_STATUSES.includes(String(b.status)) ? (b.status === 'approved' ? (curStage === 'billable' ? 'billable' : 'approved') : b.status === 'void' ? 'rejected' : (curStage === 'approved' || curStage === 'billable' || curStage === 'rejected' ? 'review' : curStage))
           : null;
         const to = b.routedTo !== undefined ? (String(b.routedTo ?? '').trim().slice(0, 120) || null) : undefined;
         if (to !== undefined) patch.routedTo = to;
@@ -1982,7 +1982,7 @@ export function registerCostTrackingRoutes(app: Express): void {
           patch.stage = toStage;
           hist.push({ stage: toStage, at, by: whoName(req), to: to !== undefined ? to : cur.routedTo ?? null, note: b.note ? String(b.note).slice(0, 500) : null });
           b.status = statusOfStage(toStage);
-          if (toStage === 'approved' && b.at) b.approvedAt = at;
+          if ((toStage === 'approved' || toStage === 'billable') && b.at) b.approvedAt = at;
         } else if (b.note) {
           hist.push({ stage: curStage, at, by: whoName(req), to: to !== undefined ? to : cur.routedTo ?? null, note: String(b.note).slice(0, 500) });
         } else if (to !== undefined && hist.length) {

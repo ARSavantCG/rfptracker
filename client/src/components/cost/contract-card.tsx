@@ -339,18 +339,20 @@ export function ContractCard({
                           const a = sorted.find((x) => x.number === n);
                           return a ? `${a.kind === 'invoice' ? 'Invoice' : 'App'} ${no3(a.docNumber)}` : 'next pay app';
                         };
-                        const auto = co.startApp == null ? 'Approved on: auto' : `Auto · approved on ${nameOf(co.startApp)}`;
+                        const auto = co.startApp == null ? 'Billed from: auto' : `Auto · billed from ${nameOf(co.startApp)}`;
+                        // Only once it's approved: which pay app it's first billed on.
+                        if (co.status !== 'approved') return null;
                         return (
-                          <div className="w-52 shrink-0" title="The pay app this change order was approved on. Its G702 lists it under 'approved this period'; earlier pay apps leave it out.">
+                          <div className="w-52 shrink-0" title="The pay app this change order is first billed on. Its G702 lists it under 'approved this period'; earlier pay apps leave it out.">
                             <Select value={co.startAppNumber == null ? 'auto' : String(co.startAppNumber)}
                                     onValueChange={(v) => setCoStart.mutate({ id: co.id, startAppNumber: v === 'auto' ? null : Number(v) })}>
                               <SelectTrigger className="h-7 text-xs">
-                                <SelectValue>{co.startAppNumber == null ? auto : `Approved on ${nameOf(co.startAppNumber)}`}</SelectValue>
+                                <SelectValue>{co.startAppNumber == null ? auto : `Billed from ${nameOf(co.startAppNumber)}`}</SelectValue>
                               </SelectTrigger>
                               <SelectContent className="pm-scope">
                                 <SelectItem value="auto">{auto}</SelectItem>
-                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Approved on {a.kind === 'invoice' ? 'Invoice' : 'App'} {no3(a.docNumber)}</SelectItem>)}
-                                <SelectItem value={String(next)}>Approved on the Next Pay App</SelectItem>
+                                {sorted.map((a) => <SelectItem key={a.id} value={String(a.number)}>Billed from {a.kind === 'invoice' ? 'Invoice' : 'App'} {no3(a.docNumber)}</SelectItem>)}
+                                <SelectItem value={String(next)}>Billed from the Next Pay App</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -804,7 +806,11 @@ function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrd
         fd.append('file', f); fd.append('contractId', String(contractId)); fd.append('changeOrderId', String(co.id));
         await apiRequest(`/api/cost-projects/${projectId}/documents`, 'POST', fd, 120_000);
       }
-      onDone(); toast({ title: `${co.number}: Executed Copy Saved` });
+      // Approved to bill and now signed: it's executed.
+      if ((co as any).stage === 'billable') {
+        await apiRequest(`/api/cost-change-orders/${co.id}`, 'PATCH', { stage: 'approved', note: 'Executed copy attached' });
+        onDone(); toast({ title: `${co.number}: Approved & Executed`, description: 'Executed copy saved.' });
+      } else { onDone(); toast({ title: `${co.number}: Executed Copy Saved` }); }
     } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
     finally { setBusy(false); }
   };
@@ -812,15 +818,12 @@ function CoExecuted({ co, docs, contractId, projectId, onDone }: { co: ChangeOrd
     if (!window.confirm(`Remove ${d.originalName} from ${co.number}?`)) return;
     try { await apiRequest(`/api/cost-documents/${d.id}`, 'DELETE'); onDone(); } catch (e: any) { toast({ title: 'Not Removed', description: e?.message, variant: 'destructive' }); }
   };
-  const executed = co.status === 'approved' && docs.length > 0;
   return (
     <div className={`flex items-center gap-1.5 flex-nowrap whitespace-nowrap text-xs rounded px-1 ${over ? 'bg-blue-100' : ''}`}
          onDragOver={(e) => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setOver(true); } }}
          onDragLeave={() => setOver(false)}
          onDrop={(e) => { if (!Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); setOver(false); add(Array.from(e.dataTransfer.files)); }}>
-      {co.status === 'approved' && (executed
-        ? <span className="text-[10px] font-semibold text-green-800 bg-green-100 rounded px-1">Executed</span>
-        : <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 rounded px-1" title="Attach the signed change order">Not Executed</span>)}
+
       {docs.map((d) => (
         <span key={d.id} className="inline-flex items-center gap-1">
           <button className="text-blue-700 hover:underline inline-flex items-center gap-1" onClick={() => openDocument(d.id)} title={d.originalName}>

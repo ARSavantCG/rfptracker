@@ -24,6 +24,7 @@ export const STAGE_STYLE: Record<string, string> = {
   violet: 'bg-violet-50 border-violet-300 text-violet-800',
   blue: 'bg-blue-50 border-blue-300 text-blue-800',
   green: 'bg-green-50 border-green-300 text-green-800',
+  teal: 'bg-teal-50 border-teal-300 text-teal-800',
   gray: 'bg-gray-50 border-gray-300 text-gray-600',
 };
 const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());

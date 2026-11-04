@@ -293,7 +293,7 @@ export function ContractCard({
                     </td>
                     <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{money(t)}{Math.abs(pend) >= 0.005 && <div className="text-[11px] font-normal text-amber-700">+ {money(pend)} pending</div>}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{money(d)}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(d, t)}</td><td />
+                    <td className="px-3 py-1.5 text-right tabular-nums text-gray-600"><MixedPct lines={ls} done={(id) => progress.get(id)?.toDate ?? 0} t={t} d={d} /></td><td />
                   </tr>
                 </tbody>
               );
@@ -372,7 +372,7 @@ export function ContractCard({
                   </td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(total)}</td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{money(done)}</td>
-                  <td className="px-3 py-1.5 text-right text-gray-600 tabular-nums">{pct(done, total)}</td>
+                  <td className="px-3 py-1.5 text-right text-gray-600 tabular-nums"><MixedPct lines={g.lines} done={(id) => progress.get(id)?.toDate ?? 0} t={total} d={done} /></td>
                   <td className="px-3 py-1.5 whitespace-nowrap">
                     <div className="flex items-center gap-1 justify-end flex-wrap">
                       {unmapped.length > 0 && baseline.length > 0 && (
@@ -881,3 +881,22 @@ function QuickCoLine({ co, contractId, baseline, onDone }: { co: ChangeOrderRow;
     </div>
   );
 }
+
+/**
+ * % complete when additions and credits are mixed (Adolfo, 2026-11-04): a % of a net that nets credits
+ * against additions reads oddly (118% of −$372K). So: the additions' % billed, with the credits' % applied
+ * beneath. Plain % when there are no credits.
+ */
+function MixedPct({ lines, done, t, d }: { lines: ReadonlyArray<{ id: number; scheduledValue: number }>; done: (id: number) => number; t: number; d: number }) {
+  const adds = lines.filter((l) => l.scheduledValue > 0), creds = lines.filter((l) => l.scheduledValue < 0);
+  if (!creds.length || !adds.length) return <>{pct(d, t)}</>;
+  const at = adds.reduce((a, l) => a + l.scheduledValue, 0), ad = adds.reduce((a, l) => a + done(l.id), 0);
+  const ct = creds.reduce((a, l) => a + l.scheduledValue, 0), cd = creds.reduce((a, l) => a + done(l.id), 0);
+  return (
+    <span title={`Additions ${money(at)}, billed ${money(ad)} · credits ${money(ct)}, applied ${money(cd)} · net ${money(t)}, billed ${money(d)}`}>
+      {pct(ad, at)}
+      <div className="text-[10px] text-gray-500 whitespace-nowrap">credits {pct(cd, ct)}</div>
+    </span>
+  );
+}
+

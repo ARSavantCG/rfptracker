@@ -370,3 +370,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 SOV grid editor: a save only removes lines the grid has shown (seen ids); lines arriving while it is open (Excel import) are added to the grid, not deleted. Import button hidden while any group is being edited.
 
 - 2026-11-04 CO stage "billable" (Approved to Bill — Not Executed; financial status approved) before "approved" (Approved & Executed). Attaching the executed copy on a billable CO moves it to Approved & Executed. Executed/Not Executed badges removed (the stage says it). "Approved on App" picker shows only once approved, worded "Billed from App 00X".
+
+- 2026-11-04 Contract card %: MixedPct — when additions and credits mix, shows additions % billed with "credits N%" beneath (tooltip has both sides and the net), instead of % of a net (e.g. 118%).

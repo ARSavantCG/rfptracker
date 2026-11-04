@@ -49,7 +49,7 @@ export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { t
             <div className="text-sm font-semibold tabular-nums">{money(centerValue)}</div>
           </div>
         </div>
-        {rolled ? null) : <table className="text-sm flex-1 min-w-[220px]">
+        {rolled ? null : <table className="text-sm flex-1 min-w-[220px]">
           <tbody>
             {slices.map((s) => (
               <tr key={s.label}>

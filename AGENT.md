@@ -372,3 +372,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 CO stage "billable" (Approved to Bill — Not Executed; financial status approved) before "approved" (Approved & Executed). Attaching the executed copy on a billable CO moves it to Approved & Executed. Executed/Not Executed badges removed (the stage says it). "Approved on App" picker shows only once approved, worded "Billed from App 00X".
 
 - 2026-11-04 Contract card %: MixedPct — when additions and credits mix, shows additions % billed with "credits N%" beneath (tooltip has both sides and the net), instead of % of a net (e.g. 118%).
+
+- 2026-11-04 Billing by Line Excel (billing-history-export.ts; button on Base Contract header when pay apps exist): sheet 1 billed per line per pay app (work + change in stored), to date vs scheduled, OVERBILLED / negative period flags; sheet 2 retainage held to date per pay app vs rate% of billed, difference flagged.

@@ -22,6 +22,7 @@ import { fmtPctText, parseAmount } from '@shared/format';
 import { SovGridEditor } from './sov-grid-editor';
 import { SplitLinesDialog } from './split-lines-dialog';
 import { exportSovXlsx } from './sov-export';
+import { exportBillingHistoryXlsx } from './billing-history-export';
 import { SovImport } from './sov-import';
 import { lineProgress, type BaselineLine, type G702 } from '@shared/cost-tracking';
 import {
@@ -428,6 +429,12 @@ export function ContractCard({
                         <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title={g.co ? `Download ${g.co.number}'s lines to Excel — also its import template` : "Download this contract's schedule of values to Excel: every line, billed, balance, retainage and budget line"}
                                 onClick={() => exportSovXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications, baseline, coId: g.co?.id ?? null })}>
                           <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
+                        </Button>
+                      )}
+                      {g.id == null && applications.length > 0 && (
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title="Excel: every line, what was billed on it pay app by pay app, billed to date against scheduled (overbilled lines flagged) — and retainage held at each pay app against the rate"
+                                onClick={() => exportBillingHistoryXlsx({ projectName: projectName ?? '', contract, changeOrders, lines, applications })}>
+                          <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Billing by Line
                         </Button>
                       )}
                       {(g.id == null || g.co) && editing == null && (

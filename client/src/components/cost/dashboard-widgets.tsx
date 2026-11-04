@@ -4,19 +4,38 @@
  * Figures come from shared/cost-dashboard.ts.
  */
 import { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { FeeDonut, VendorDonut, ScheduleRow, ScheduleStatus, ReceivableDonut } from '@shared/cost-dashboard';
 import { money } from './types';
+
+/** Open or rolled up, remembered per card in this browser. */
+function useRolled(key: string, start = false): [boolean, () => void] {
+  const k = `pm-rolled-card-${key}`;
+  const [rolled, set] = useState(() => { try { const v = localStorage.getItem(k); return v == null ? start : v === '1'; } catch { return start; } });
+  return [rolled, () => set((r) => { try { localStorage.setItem(k, r ? '0' : '1'); } catch { /* private */ } return !r; })];
+}
+function RollButton({ rolled, onClick }: { rolled: boolean; onClick: () => void }) {
+  return (
+    <button className="text-gray-500 hover:text-gray-800 inline-flex items-center gap-0.5 text-xs" onClick={onClick} aria-expanded={!rolled} title={rolled ? 'Show the details' : 'Roll up the details'}>
+      {rolled ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{rolled ? 'Details' : 'Hide'}
+    </button>
+  );
+}
 
 type Slice = { label: string; value: number; color: string; hint?: string };
 
 export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { title: string; subtitle?: string; slices: Slice[]; centerLabel: string; centerValue: number }) {
   const total = slices.reduce((t, s) => t + Math.max(0, s.value), 0);
   const data = slices.filter((s) => s.value > 0.005);
+  const [rolled, roll] = useRolled(title.split(' — ')[0]);
   return (
     <div className="bg-white border rounded-lg p-4">
-      <div className="font-semibold text-gray-900">{title}</div>
-      {subtitle && <div className="text-xs text-gray-600">{subtitle}</div>}
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-semibold text-gray-900">{title}</div>
+        <RollButton rolled={rolled} onClick={roll} />
+      </div>
+      {subtitle && !rolled && <div className="text-xs text-gray-600">{subtitle}</div>}
       <div className="flex items-center gap-4 mt-2 flex-wrap">
         <div className="relative w-[184px] h-[184px] flex-shrink-0 mx-auto sm:mx-0">
             <PieChart width={184} height={184}>
@@ -30,7 +49,7 @@ export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { t
             <div className="text-sm font-semibold tabular-nums">{money(centerValue)}</div>
           </div>
         </div>
-        <table className="text-sm flex-1 min-w-[220px]">
+        {rolled ? null) : <table className="text-sm flex-1 min-w-[220px]">
           <tbody>
             {slices.map((s) => (
               <tr key={s.label}>
@@ -41,7 +60,7 @@ export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { t
               </tr>
             ))}
           </tbody>
-        </table>
+        </table>}
       </div>
     </div>
   );
@@ -98,18 +117,19 @@ export function ScheduleCard({ rows, title = 'Schedule — Billing vs Time', sho
   const dated = sorted.filter((r) => r.status !== 'no-dates');
   const undated = sorted.filter((r) => r.status === 'no-dates');
   const shown = showUndated || !dated.length ? sorted : dated;
+  const [rolled, roll] = useRolled(`schedule-${title.split(' — ')[1] ?? 'project'}`);
   return (
     <div className="bg-white border rounded-lg p-4 space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <div className="font-semibold text-gray-900">{title}</div>
-          <div className="text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</div>
+          <div className="font-semibold text-gray-900 flex items-center gap-2">{title} <RollButton rolled={rolled} onClick={roll} /></div>
+          {!rolled && <div className="text-xs text-gray-600">Bar = % of the contract billed. Line = % of the time from start to substantial completion gone by. Behind = billing trails time by more than 10 points.</div>}
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {counts.map(([s, n]) => <span key={s} className={`text-xs rounded px-2 py-0.5 ${STATUS[s].cls}`}>{n} {STATUS[s].label}</span>)}
         </div>
       </div>
-      {sorted.length === 0 ? <p className="text-sm text-gray-500">No contracts yet.</p> : (
+      {rolled ? null : sorted.length === 0 ? <p className="text-sm text-gray-500">No contracts yet.</p> : (
         <div className="space-y-2">
           {shown.map((r) => (
             <div key={`${r.project ?? ''}${r.contractId}`} className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_1fr_auto] items-center gap-x-3 gap-y-1 text-sm">

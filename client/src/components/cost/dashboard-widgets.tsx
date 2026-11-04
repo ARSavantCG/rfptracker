@@ -3,17 +3,27 @@
  * slices add up to the whole, and billing against the schedule per contract.
  * Figures come from shared/cost-dashboard.ts.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import type { FeeDonut, VendorDonut, ScheduleRow, ScheduleStatus, ReceivableDonut } from '@shared/cost-dashboard';
 import { money } from './types';
 
-/** Open or rolled up, remembered per card in this browser. */
+/** Open or rolled up, remembered in this browser; cards sharing a key roll up together. */
 function useRolled(key: string, start = false): [boolean, () => void] {
   const k = `pm-rolled-card-${key}`;
-  const [rolled, set] = useState(() => { try { const v = localStorage.getItem(k); return v == null ? start : v === '1'; } catch { return start; } });
-  return [rolled, () => set((r) => { try { localStorage.setItem(k, r ? '0' : '1'); } catch { /* private */ } return !r; })];
+  const read = () => { try { const v = localStorage.getItem(k); return v == null ? start : v === '1'; } catch { return start; } };
+  const [rolled, set] = useState(read);
+  useEffect(() => {
+    const on = (e: Event) => { if ((e as CustomEvent).detail?.key === k) set((e as CustomEvent).detail.rolled); };
+    window.addEventListener('pm-rolled', on);
+    return () => window.removeEventListener('pm-rolled', on);
+  }, [k]);
+  return [rolled, () => {
+    const next = !rolled;
+    try { localStorage.setItem(k, next ? '1' : '0'); } catch { /* private */ }
+    window.dispatchEvent(new CustomEvent('pm-rolled', { detail: { key: k, rolled: next } }));
+  }];
 }
 function RollButton({ rolled, onClick }: { rolled: boolean; onClick: () => void }) {
   return (
@@ -28,7 +38,7 @@ type Slice = { label: string; value: number; color: string; hint?: string };
 export function Donut({ title, subtitle, slices, centerLabel, centerValue }: { title: string; subtitle?: string; slices: Slice[]; centerLabel: string; centerValue: number }) {
   const total = slices.reduce((t, s) => t + Math.max(0, s.value), 0);
   const data = slices.filter((s) => s.value > 0.005);
-  const [rolled, roll] = useRolled(title.split(' — ')[0]);
+  const [rolled, roll] = useRolled('rings'); // the rings sit side by side: they roll up together
   return (
     <div className="bg-white border rounded-lg p-4">
       <div className="flex items-start justify-between gap-2">

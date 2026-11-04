@@ -91,8 +91,20 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
    * save of the stale grid would read them as removed and delete them.
    */
   const touched = useRef(false);
+  // Lines this grid has shown: only those can be "removed" by a save. Lines that arrive later (an Excel
+  // import, AI setup) are added to the grid, never deleted by a stale save (Adolfo, 2026-11-04).
+  const seen = useRef(new Set<number>(original.map((o) => o.id!).filter((x) => x != null)));
   useEffect(() => {
-    if (!touched.current) setRows(original.length ? original.map((r) => ({ ...r })) : [blankRow(), blankRow(), blankRow()]);
+    if (!touched.current) {
+      setRows(original.length ? original.map((r) => ({ ...r })) : [blankRow(), blankRow(), blankRow()]);
+      seen.current = new Set(original.map((o) => o.id!).filter((x) => x != null));
+      return;
+    }
+    const fresh = original.filter((o) => o.id != null && !seen.current.has(o.id));
+    if (fresh.length) {
+      fresh.forEach((o) => seen.current.add(o.id!));
+      setRows((rs) => [...rs.filter((r) => r.id != null || r.description.trim() || num(r.value)), ...fresh.map((r) => ({ ...r }))]);
+    }
   }, [original]);
   const [saving, setSaving] = useState(false);
   const descRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -137,7 +149,7 @@ export function SovGridEditor({ contractId, changeOrderId, label, lines, baselin
   const live = rows.filter((r) => r.description.trim() || num(r.value));
   const total = live.reduce((s, r) => s + num(r.value), 0);
   const missingDesc = live.filter((r) => !r.description.trim());
-  const removed = original.filter((o) => !rows.some((r) => r.id === o.id));
+  const removed = original.filter((o) => o.id != null && seen.current.has(o.id) && !rows.some((r) => r.id === o.id));
   const changed = rows.filter((r) => r.id != null && !same(r, original.find((o) => o.id === r.id)!));
   const added = live.filter((r) => r.id == null);
   const dirty = removed.length + changed.length + added.length > 0;

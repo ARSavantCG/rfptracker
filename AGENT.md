@@ -366,3 +366,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 Per change order Excel + Import on each PCCO header: exportSovXlsx({coId}) exports just that CO (title, file name, how-to); SovImport/planSovImport({coId}) puts every new row on that CO.
 
 - 2026-11-04 Dashboard cards roll up: Donut legend/subtitle and Schedule rows hide behind a Hide/Details toggle, remembered per card (localStorage pm-rolled-card-*).
+
+- 2026-11-04 SOV grid editor: a save only removes lines the grid has shown (seen ids); lines arriving while it is open (Excel import) are added to the grid, not deleted. Import button hidden while any group is being edited.

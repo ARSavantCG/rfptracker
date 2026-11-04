@@ -428,7 +428,7 @@ export function ContractCard({
                           <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
                         </Button>
                       )}
-                      {(g.id == null || g.co) && (
+                      {(g.id == null || g.co) && editing == null && (
                         <SovImport contract={contract} changeOrders={changeOrders} lines={lines} baseline={baseline} projectId={projectId} coId={g.co?.id ?? null} />
                       )}
                     </div>

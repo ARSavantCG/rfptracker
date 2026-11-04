@@ -28,8 +28,9 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
     : l.allocationMode === 'direct' && l.allocations.length
       ? l.allocations.map((a) => `${names.get(a.baselineKey) ?? 'Removed line'}${l.allocations.length > 1 || a.pct !== 100 ? ` ${Number(a.pct).toFixed(2)}% (${r2((l.scheduledValue * a.pct) / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })})` : ''}`).join(' · ')
       : 'Not mapped';
-  const cols = ['Line ID', 'Group', 'Status', 'Item', 'Cost Code', 'Section', 'Description', 'Scheduled Value', 'Billed to Date', '% Complete', 'Balance to Finish',
-    'Retainage Withheld', 'Retainage Released', 'Retainage Held', `Held vs ${(rate * 100).toFixed(0)}%`, 'Budget Line'] as const;
+  // What you type first, left to right (Item, Description, Value, Budget Line); reference columns after.
+  const cols = ['Line ID', 'Item', 'Description', 'Scheduled Value', 'Budget Line', 'Group', 'Cost Code', 'Section', 'Status', 'Billed to Date', '% Complete', 'Balance to Finish',
+    'Retainage Withheld', 'Retainage Released', 'Retainage Held', `Held vs ${(rate * 100).toFixed(0)}%`] as const;
   const data = ordered.map((l) => {
     const co = l.changeOrderId != null ? coOf.get(l.changeOrderId) : null;
     const p = prog.get(l.id);
@@ -68,22 +69,22 @@ export function exportSovXlsx(x: { projectName: string; contract: ContractRow; c
   const inSum = ordered.filter((l) => l.changeOrderId == null || coOf.get(l.changeOrderId)?.status === 'approved');
   const S = (f: (l: SovLineRow) => number) => r2(inSum.reduce((t, l) => t + f(l), 0));
   const sv = S((l) => l.scheduledValue), bd = S((l) => prog.get(l.id)?.toDate ?? 0);
-  XLSX.utils.sheet_add_aoa(ws, [['', 'Contract Total (approved)', '', '', '', '', '', sv, bd, sv ? bd / sv : 0, r2(sv - bd),
-    S((l) => led.lines.get(l.id)?.withheld ?? 0), S((l) => led.lines.get(l.id)?.released ?? 0), S((l) => prog.get(l.id)?.retainage ?? 0), '', '']], { origin: { r: start + data.length + 1, c: 0 } });
+  XLSX.utils.sheet_add_aoa(ws, [['', '', 'Contract Total (approved)', sv, '', '', '', '', '', bd, sv ? bd / sv : 0, r2(sv - bd),
+    S((l) => led.lines.get(l.id)?.withheld ?? 0), S((l) => led.lines.get(l.id)?.released ?? 0), S((l) => prog.get(l.id)?.retainage ?? 0), '']], { origin: { r: start + data.length + 1, c: 0 } });
   for (let i = 1; i <= data.length + 1; i++) {
-    for (const c of [7, 8, 10, 11, 12, 13, 14]) { const a = XLSX.utils.encode_cell({ r: start + i, c }); if (ws[a]?.t === 'n') ws[a].z = MONEY; }
-    const a = XLSX.utils.encode_cell({ r: start + i, c: 9 }); if (ws[a]?.t === 'n') ws[a].z = '0.00%';
+    for (const c of [3, 9, 11, 12, 13, 14, 15]) { const a = XLSX.utils.encode_cell({ r: start + i, c }); if (ws[a]?.t === 'n') ws[a].z = MONEY; }
+    const a = XLSX.utils.encode_cell({ r: start + i, c: 10 }); if (ws[a]?.t === 'n') ws[a].z = '0.00%';
   }
   const ra = XLSX.utils.encode_cell({ r: 4, c: 1 }); if (ws[ra]) ws[ra].z = '0.00%';
   const adjRow = head.findIndex((r) => r[0] === 'Rounding Adjustment'); if (adjRow >= 0) { const a = XLSX.utils.encode_cell({ r: adjRow, c: 1 }); if (ws[a]) ws[a].z = MONEY; }
-  ws['!cols'] = [{ wch: 9 }, { wch: 34 }, { wch: 10 }, { wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 36 }, ...Array(8).fill({ wch: 15 }), { wch: 60 }];
+  ws['!cols'] = [{ wch: 9 }, { wch: 6 }, { wch: 40 }, { wch: 16 }, { wch: 44 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, ...Array(7).fill({ wch: 15 })];
   ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: start, c: 0 }, e: { r: start + data.length, c: cols.length - 1 } }) };
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Schedule of Values');
   XLSX.utils.book_append_sheet(wb, notesSheet([
     'This file is also the import template for this contract (Import on the contract).',
     'Edit a line: its Item, Cost Code, Section, Description, Scheduled Value or Budget Line. Keep the Line ID as is.',
-    'Add a line: a new row with the Line ID blank and the Group set to "Base Contract" or the change order (e.g. "PCCO #004"). Add a new change order in the app first.',
+    'Add lines: new rows with the Line ID blank — Item, Description, Scheduled Value and (optional) Budget Line. Group blank = Base Contract; or a change order already in the app (e.g. "PCCO #004").',
     'Budget Line: a budget line\'s name; "Spread with the work"; "Not mapped"; or a split like "New Office Area 70% · Office Expansion 30%".',
     'Billed, retainage and the other columns are for reference — the import ignores them.',
     'Lines deleted from the sheet are kept — delete them in the app. Import shows every change before saving.',

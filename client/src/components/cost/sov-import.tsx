@@ -11,7 +11,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Upload } from 'lucide-react';
 import type { BaselineLine } from '@shared/cost-tracking';
 import { money, projectKey, type ContractRow, type ChangeOrderRow, type SovLineRow } from './types';
-import { readTemplate, text, amount } from './excel-io';
+import { readTemplate, text, amount, type SheetRow } from './excel-io';
 import { ImportPreview, type Change } from './import-preview';
 
 type Alloc = { mode: 'direct' | 'spread' | 'unallocated'; allocations: Array<{ baselineKey: string; pct: number }> };
@@ -40,25 +40,23 @@ export function parseBudgetLine(v: string, baseline: readonly BaselineLine[]): A
 const sameAlloc = (l: SovLineRow, a: Alloc) => (l.allocationMode === a.mode || (l.allocationMode === 'direct' && !l.allocations.length && a.mode === 'unallocated'))
   && JSON.stringify([...l.allocations].map((x) => [x.baselineKey, Math.round(Number(x.pct) * 100)]).sort()) === JSON.stringify([...a.allocations].map((x) => [x.baselineKey, Math.round(x.pct * 100)]).sort());
 
-export function SovImport({ contract, changeOrders, lines, baseline, projectId }: {
-  contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[]; projectId: number;
-}) {
-  const { toast } = useToast();
-  const qc = useQueryClient();
-  const ref = useRef<HTMLInputElement>(null);
-  const [plan, setPlan] = useState<{ changes: Change[]; ops: Array<() => Promise<unknown>> } | null>(null);
-
-  const read = async (f: File) => {
-    try {
-      const rows = await readTemplate(f, 'Description', 'Schedule of Values');
+/** What importing these rows would do: the changes to show, and the calls that make them. */
+export function planSovImport(rows: SheetRow[], x: { contractId: number; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[] }) {
+  const { changeOrders, lines, baseline } = x;
+  const contract = { id: x.contractId };
       const changes: Change[] = [];
       const ops: Array<() => Promise<unknown>> = [];
       const adds = new Map<number | null, any[]>();
       for (const r of rows) {
-        const group = text(r['Group']);
-        if (/^contract total|^total/i.test(group)) continue;
-        const desc = text(r['Description']);
-        if (!desc) continue;
+        let group = text(r['Group']);
+        let desc = text(r['Description']);
+        if (/^contract total|^total/i.test(group) || /^contract total/i.test(desc)) continue;
+        // Names typed in the Group column (a common slip, e.g. in older templates): read them as the description.
+        if (!desc && group && !/^base contract/i.test(group) && !changeOrders.some((c) => c.number.trim().toLowerCase() === group.split(' — ')[0].trim().toLowerCase())) { desc = group; group = ''; }
+        if (!desc) {
+          if (amount(r['Scheduled Value'])) changes.push({ kind: 'skip', label: `Row ${r.__row}: ${money(amount(r['Scheduled Value'])!)}`, detail: 'No description.' });
+          continue;
+        }
         const id = Number(text(r['Line ID'])) || null;
         const alloc = parseBudgetLine(text(r['Budget Line']), baseline);
         if (typeof alloc === 'string') { changes.push({ kind: 'skip', label: `Row ${r.__row}: ${desc}`, detail: alloc }); continue; }
@@ -90,11 +88,30 @@ export function SovImport({ contract, changeOrders, lines, baseline, projectId }
           coId = co.id;
         }
         if (value == null) { changes.push({ kind: 'skip', label: `Row ${r.__row}: ${desc}`, detail: 'No scheduled value.' }); continue; }
+        // No item number: the next one in its group.
+        if (!fields.itemNo) {
+          const used = [...lines.filter((l) => (l.changeOrderId ?? null) === coId).map((l) => l.itemNo), ...(adds.get(coId) ?? []).map((l: any) => l.itemNo)];
+          fields.itemNo = String(used.reduce((m, v) => Math.max(m, Number(v) || 0), 0) + 1);
+        }
         adds.set(coId, [...(adds.get(coId) ?? []), { ...fields, scheduledValue: value, allocationMode: alloc.mode, allocations: alloc.allocations }]);
         changes.push({ kind: 'add', label: desc, detail: `${coId ? changeOrders.find((c) => c.id === coId)!.number : 'Base Contract'} · ${money(value)} · ${text(r['Budget Line']) || 'Not mapped'}` });
       }
       adds.forEach((ls, coId) => ops.push(() => apiRequest(`/api/cost-contracts/${contract.id}/sov-lines`, 'POST', { changeOrderId: coId, lines: ls })));
-      setPlan({ changes, ops });
+  return { changes, ops };
+}
+
+export function SovImport({ contract, changeOrders, lines, baseline, projectId }: {
+  contract: ContractRow; changeOrders: ChangeOrderRow[]; lines: SovLineRow[]; baseline: BaselineLine[]; projectId: number;
+}) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const ref = useRef<HTMLInputElement>(null);
+  const [plan, setPlan] = useState<{ changes: Change[]; ops: Array<() => Promise<unknown>> } | null>(null);
+
+  const read = async (f: File) => {
+    try {
+      const rows = await readTemplate(f, 'Description', 'Schedule of Values');
+      setPlan(planSovImport(rows, { contractId: contract.id, changeOrders, lines, baseline }));
     } catch (e: any) { toast({ title: 'Not Read', description: e?.message, variant: 'destructive' }); }
   };
 

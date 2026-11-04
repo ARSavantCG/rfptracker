@@ -360,3 +360,5 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-03 Excel round trips: excel-io.ts (readTemplate finds header row, amount/percent/isoDate), import-preview.tsx (Add/Update/No change/Skipped, Apply). Budget (budget-io.tsx: Line ID match, then name; adds; kept if missing; PATCH baseline + approval note). Contract SOV (sov-export now has Line ID + How To; sov-import.tsx: update by Line ID, add by Group; Budget Line text incl. splits). Ledger charges (ledger-io.tsx: Template/Import by Charge ID).
 
 - 2026-11-03 Tenant Billings donut: receivableDonut (shared/cost-dashboard) from issued tenant (reimbursable) invoices — received, invoiced not paid (+ over 30 days), ready to invoice (tenant draft due), due later (coBalance). Project overview + portfolio, shown when > $0.
+
+- 2026-11-04 SOV template columns reordered (Line ID, Item, Description, Scheduled Value, Budget Line, Group, …reference). Import: names typed in Group with no Description are read as descriptions; blank Item numbered next in group; planSovImport exported (tested on Adolfo's Ryder file: 44 adds).

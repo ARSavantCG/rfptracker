@@ -645,15 +645,24 @@ export function ApplicationDialog({
                   onClick={() => switchEntry('period')}>This Period (E)</Button>
           <Button type="button" size="sm" variant={entry === 'toDate' ? 'default' : 'outline'} className="h-7"
                   onClick={() => switchEntry('toDate')}>Total to Date (G)</Button>
-          <span>— whichever column is easier to copy off the G703. Retainage left blank is {Number(contract.retainagePct).toFixed(2)}% of work to date.</span>
+          <span>— whichever column is easier to copy off the G703. Retainage left blank is the last pay app's plus {Number(contract.retainagePct).toFixed(2)}% of this period.</span>
           {releasing ? (
             <span className="ml-auto text-emerald-800 font-medium">Releasing all retainage: every line's retainage is $0.00, so line 8 pays out what was held.
               {' '}<button type="button" className="text-blue-700 hover:underline font-normal" onClick={() => { setRetTyped(new Set()); setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }]))); }}>Undo</button></span>
           ) : contractLines.some((l) => toDateOf(l)) && (
-            <Button type="button" size="sm" variant="outline" className="h-7 ml-auto" onClick={releaseAll}
-                    title="Sets retainage to $0.00 on every line. Use when this pay app releases the retainage held (substantial or final completion).">
-              Release All Retainage
-            </Button>
+            <div className="ml-auto flex gap-2">
+              {rate > 0 && (
+                <Button type="button" size="sm" variant="outline" className="h-7"
+                        title="Clears every retainage box so each line holds what it held on the last pay app plus the contract rate on this period's billing (credits carry negative retainage), rounded down to the cent like the contractor's"
+                        onClick={() => { setRetTarget(''); setRetTyped(new Set()); setDraft((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, { ...v, retainage: '' }]))); }}>
+                  Recalculate Retainage
+                </Button>
+              )}
+              <Button type="button" size="sm" variant="outline" className="h-7" onClick={releaseAll}
+                      title="Sets retainage to $0.00 on every line. Use when this pay app releases the retainage held (substantial or final completion).">
+                Release All Retainage
+              </Button>
+            </div>
           )}
         </div>
 

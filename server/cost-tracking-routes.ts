@@ -56,6 +56,9 @@ const docUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 
 // ------------------------------------------------------------------ money
 
 /** Dollars in from the client — "1,234.56", 1234.56 — to integer cents. */
+/** Bill To: the entity on the first line, its address on the lines after. */
+const cleanBillTo = (v: unknown) => String(v ?? '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 6).join('\n').slice(0, 500);
+
 export function toCents(v: unknown): number {
   if (v === null || v === undefined || v === '') return 0;
   const x = typeof v === 'number' ? v : parseFloat(String(v).replace(/[$,\s]/g, ''));
@@ -1310,7 +1313,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       const list: CmInvoiceRecord[] = [...(settings.cmInvoices || [])];
       const i = list.findIndex((x) => x.number === req.params.number);
       if (i < 0) return res.status(404).json({ message: 'Invoice not found' });
-      const billTo = String(req.body?.billTo ?? '').trim().slice(0, 200);
+      const billTo = cleanBillTo(req.body?.billTo);
       if (!billTo) return res.status(400).json({ message: 'Enter who the invoice is billed to.' });
       list[i] = { ...list[i], billTo };
       settings.cmInvoices = list;
@@ -1613,7 +1616,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       }
       if (b.invoiceType !== undefined) next.invoiceType = b.invoiceType === 'reimbursable' ? 'reimbursable' : 'fee';
       if (b.invoiceBasis !== undefined) next.invoiceBasis = b.invoiceBasis === 'billed' ? 'billed' : 'paid';
-      if (b.billTo !== undefined) next.billTo = String(b.billTo ?? '').trim().slice(0, 200);
+      if (b.billTo !== undefined) next.billTo = cleanBillTo(b.billTo);
       if (b.cmUncapped !== undefined) next.cmUncapped = !!b.cmUncapped;
       if (b.feeInBudget !== undefined) next.feeInBudget = b.feeInBudget === null ? null : !!b.feeInBudget;
       if (b.tenantBills !== undefined) next.tenantBills = b.tenantBills === 'all' ? 'all' : 'cos';
@@ -1626,8 +1629,8 @@ export function registerCostTrackingRoutes(app: Express): void {
         next.coBillPct = v;
       }
       if (b.coBalanceDate !== undefined) next.coBalanceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.coBalanceDate ?? '')) ? String(b.coBalanceDate) : null;
-      if (b.billToTenant !== undefined) next.billToTenant = String(b.billToTenant ?? '').trim().slice(0, 200);
-      if (b.billToCapital !== undefined) next.billToCapital = String(b.billToCapital ?? '').trim().slice(0, 200);
+      if (b.billToTenant !== undefined) next.billToTenant = cleanBillTo(b.billToTenant);
+      if (b.billToCapital !== undefined) next.billToCapital = cleanBillTo(b.billToCapital);
       if (b.invoiceBasisTenant !== undefined) next.invoiceBasisTenant = b.invoiceBasisTenant === 'billed' ? 'billed' : 'paid';
       if (b.invoiceBasisCapital !== undefined) next.invoiceBasisCapital = b.invoiceBasisCapital === 'billed' ? 'billed' : 'paid';
       if (b.fundingScopes !== undefined) next.fundingScopes = normalizeScopes(b.fundingScopes);

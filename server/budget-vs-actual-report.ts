@@ -188,7 +188,7 @@ export function renderCmFeeReportHtml(input: {
   const earned = (s: BillingStream) => s.earned + s.suppFee;
   const inv = (s: BillingStream) => s.feeInvoiced ?? 0;
   const pend = (v: number) => (v > 0.005 ? sub(`<span style="color:#b45309">+ ${money2(v)} pending</span>`) : "");
-  const party = (label: string, who: string, s: BillingStream) => `<tr><td>${escapeHtml(label)}${who ? sub(escapeHtml(who)) : ""}</td>
+  const party = (label: string, who: string, s: BillingStream) => `<tr><td>${escapeHtml(label)}${who ? sub(escapeHtml(who.split("\n")[0])) : ""}</td>
     <td class="num">${fmtPct(s.pct)}</td>${cell(P(s).base)}${cell(P(s).original)}
     <td class="num">${fmt(P(s).coBase ?? 0)}${pend(P(s).pendingBase ?? 0)}</td><td class="num">${fmt(P(s).changeOrders)}${pend(P(s).pending)}</td>
     ${cell(P(s).fee)}${cell(earned(s))}${cell(inv(s))}${cell(earned(s) - inv(s))}${cell(P(s).fee - inv(s))}</tr>`;
@@ -201,7 +201,7 @@ export function renderCmFeeReportHtml(input: {
     const feeToDate = (Number(i.earned) || 0) + (Number(i.suppFee) || 0);
     const fee = feeToDate - last[stream];
     last[stream] = feeToDate;
-    return `<tr><td>${escapeHtml(i.number)}</td><td>${stream === "fee" ? "Capital partner" : "Tenant"}${i.billTo ? sub(escapeHtml(i.billTo)) : ""}</td><td>${escapeHtml(longDate(i.date))}</td>
+    return `<tr><td>${escapeHtml(i.number)}</td><td>${stream === "fee" ? "Capital partner" : "Tenant"}${i.billTo ? sub(escapeHtml(String(i.billTo).split("\n")[0])) : ""}</td><td>${escapeHtml(longDate(i.date))}</td>
       ${cell(i.due)}${cell(fee)}${cell(i.due - (stream === "fee" ? i.due : fee))}</tr>`;
   });
   const cos = input.changeOrders;
@@ -274,7 +274,7 @@ export function billingTable(b?: { capital: BillingStream; tenant: BillingStream
   const dash = '<span style="color:#9ca3af">—</span>';
   return `<h3 class="sec">Billing Summary — Capital Partner vs Tenant</h3>
   <div style="font-size:10.5px;margin-bottom:6px">Project costs incurred to date <strong>${money2(c.incurred)}</strong> · paid <strong>${money2(c.paidToDate)}</strong> (excluding the CM fee line).</div>
-  <table class="t" style="width:70%"><thead><tr><th class="l"></th><th>Capital Partner${c.billTo ? `<div style="font-weight:400">${escapeHtml(c.billTo)}</div>` : ""}</th><th>Tenant${t.billTo ? `<div style="font-weight:400">${escapeHtml(t.billTo)}</div>` : ""}</th></tr></thead><tbody>
+  <table class="t" style="width:70%"><thead><tr><th class="l"></th><th>Capital Partner${c.billTo ? `<div style="font-weight:400">${escapeHtml(c.billTo.split("\n")[0])}</div>` : ""}</th><th>Tenant${t.billTo ? `<div style="font-weight:400">${escapeHtml(t.billTo.split("\n")[0])}</div>` : ""}</th></tr></thead><tbody>
     ${r(`Billable costs`, dash, `${fmt(t.base)}<div style="font-size:9px;color:#6b7280">${t.basis} to date</div>`)}
     ${r("CM fee — original scope", `${fmt(c.earned)}<div style="font-size:9px;color:#6b7280">${fmtPct(c.pct)} on costs ${c.basis}</div>`, `${fmt(t.earned)}<div style="font-size:9px;color:#6b7280">${fmtPct(t.pct)}</div>`)}
     ${c.suppFee || t.suppFee ? r("Supplemental CM fee — change orders", fmt(c.suppFee), fmt(t.suppFee)) : ""}
@@ -654,7 +654,6 @@ export function renderCmInvoiceHtml(input: {
   const reimb = inv.type === 'reimbursable';
   const paid = inv.basis === 'paid';
   const info: ReportInfoRow[] = [
-    { label: "Bill To", value: inv.billTo || input.project.tenantName || "" },
     // "Project", not "Tenant" — the bill-to party is the tenant, so a "Tenant" row read like a second name for them (Adolfo, 2026-11-05).
     // Report Header's "Project" wins; blank falls back to the project's name.
     ...(() => { const v = String((((input.project as any)?.settings?.reportHeader ?? {}) as any).projectName ?? "").trim() || String((input.project as any).name || input.project.tenantName || ""); return v ? [{ label: "Project", value: v }] : []; })(),
@@ -697,6 +696,8 @@ export function renderCmInvoiceHtml(input: {
     .draft-mark { color: #b45309; font-weight: 700; }
   </style></head><body>
   ${reportHeaderHtml({ title, eyebrow: "Invoice", info, draft: !inv.number,
+    // Bill To sits on the right: the entity, then its address, one line each (Adolfo, 2026-11-05).
+    aside: { label: "Bill To", lines: String(inv.billTo || input.project.tenantName || "").split(/\r?\n/) },
     notes: inv.number ? [] : [reimb && inv.mode === "full" ? "Draft — figures are as of today and change as change orders are approved. Issue the invoice to fix them." : "Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
   ${full ? `<h3 class="sec">Approved Change Orders</h3>

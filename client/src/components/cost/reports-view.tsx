@@ -14,6 +14,7 @@ import { coLog } from '@shared/co-log';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Printer, FileText, Trash2, ChevronRight, Download, FileSpreadsheet, Pencil } from 'lucide-react';
@@ -163,7 +164,7 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
                 <tbody className="tabular-nums">
                   {rows.map(([label, d]) => (
                     <tr key={label} className="border-b">
-                      <td className="py-1.5">{label}{d.billTo ? <div className="text-[11px] text-gray-500">{d.billTo}</div> : null}</td>
+                      <td className="py-1.5">{label}{d.billTo ? <div className="text-[11px] text-gray-500">{String(d.billTo).split('\n')[0]}</div> : null}</td>
                       <td className={td}>{d.pct.toFixed(2)}%</td>
                       <td className={td}>{money(d.projected.base)}</td>
                       <td className={td}>{money(d.projected.original)}</td>
@@ -197,8 +198,8 @@ export function ReportsView({ bundle: b, projectId, onShowUnallocated, onShowBud
         <p className="text-sm text-gray-700">Project costs incurred to date <strong className="tabular-nums">{money(cap.incurred)}</strong> · paid <strong className="tabular-nums">{money(cap.paidToDate)}</strong> <span className="text-xs text-gray-500">(excluding the CM fee line)</span></p>
         <table className="w-full max-w-2xl text-sm">
           <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b">
-            <th className="py-1 text-left" /><th className="py-1 text-right">Capital Partner{cap.billTo ? <div className="normal-case font-normal">{cap.billTo}</div> : null}</th>
-            <th className="py-1 text-right">Tenant{ten.billTo ? <div className="normal-case font-normal">{ten.billTo}</div> : null}</th>
+            <th className="py-1 text-left" /><th className="py-1 text-right">Capital Partner{cap.billTo ? <div className="normal-case font-normal">{String(cap.billTo).split('\n')[0]}</div> : null}</th>
+            <th className="py-1 text-right">Tenant{ten.billTo ? <div className="normal-case font-normal">{String(ten.billTo).split('\n')[0]}</div> : null}</th>
           </tr></thead>
           <tbody className="tabular-nums">
             <SumRow label="Billable Costs" a="—" b={money(ten.base)} />
@@ -236,7 +237,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
   const [busy, setBusy] = useState(false);
   const who = tenant ? 'the tenant' : 'the capital partner';
   const issue = async () => {
-    if (!window.confirm(`Issue ${invNo} to ${d.billTo || who} for ${money(d.due)}? The figures are fixed once issued.`)) return;
+    if (!window.confirm(`Issue ${invNo} to ${String(d.billTo || who).split('\n')[0]} for ${money(d.due)}? The figures are fixed once issued.`)) return;
     setBusy(true);
     try {
       const data: any = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices`, 'POST', { number: invNo, date: invDate, stream: d.stream });
@@ -319,9 +320,9 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
             </Select>
           </Labeled>
         )}
-        <Labeled label="Bill To">
-          <div className="flex gap-2">
-            <Input className="h-9" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
+        <Labeled label="Bill To (entity on line 1, address below)">
+          <div className="flex gap-2 items-start">
+            <Textarea rows={3} className="text-sm min-h-[64px]" value={billTo} onChange={(e) => setBillTo(e.target.value)} />
             {billTo !== d.billTo && <Button className="h-9" variant="outline" onClick={() => saveSetting({ [billKey]: billTo }, 'Bill to saved')}>Save</Button>}
           </div>
         </Labeled>
@@ -388,19 +389,19 @@ function BillToCell({ inv, projectId, fallback }: { inv: any; projectId: number;
     try {
       const data = await apiRequest(`/api/cost-projects/${projectId}/cm-invoices/${encodeURIComponent(inv.number)}/bill-to`, 'PATCH', { billTo: edit });
       qc.setQueryData([projectKey(projectId)], data); setEdit(null);
-      toast({ title: `${inv.number} now billed to ${edit}`, description: 'Reprint it to send the corrected copy.' });
+      toast({ title: `${inv.number} now billed to ${String(edit).split('\n')[0]}`, description: 'Reprint it to send the corrected copy.' });
     } catch (e: any) { toast({ title: 'Not Saved', description: e?.message, variant: 'destructive' }); }
   };
   if (edit !== null) return (
     <span className="inline-flex items-center gap-1">
-      <Input className="h-7 w-56 text-sm" value={edit} autoFocus onChange={(e) => setEdit(e.target.value)}
-             onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEdit(null); }} />
+      <Textarea rows={3} className="w-64 text-sm min-h-[64px]" value={edit} autoFocus onChange={(e) => setEdit(e.target.value)}
+             onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); if (e.key === 'Escape') setEdit(null); }} />
       <Button size="sm" className="h-7" onClick={save}>Save</Button>
       <Button size="sm" variant="ghost" className="h-7" onClick={() => setEdit(null)}>Cancel</Button>
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1.5">{cur || '—'}
+    <span className="inline-flex items-start gap-1.5"><span className="whitespace-pre-line">{cur || '—'}</span>
       <button className="text-gray-400 hover:text-gray-700" title="Change who this invoice is billed to" onClick={() => setEdit(cur)}><Pencil className="h-3 w-3" /></button>
     </span>
   );

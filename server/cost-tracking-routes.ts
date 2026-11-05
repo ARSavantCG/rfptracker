@@ -378,8 +378,11 @@ export async function loadProjectBundle(projectId: number, opts: { asOf?: string
     return [c.id, g702For(c.id, nums.length ? Math.max(...nums) : 0, { lines, changeOrders, applications }, { allChangeOrders: true })];
   }));
 
+  // The property's name rides along for invoice-number codes (KPE).
+  const prop0: any = project.propertyId ? await storage.getProperty(project.propertyId).catch(() => undefined) : undefined;
   const bundle = {
     project: { ...project, baseline },
+    propertyName: String(prop0?.propertyName ?? '') as string,
     contracts: contracts.map((c) => ({ ...c, retainagePct: c.retainageBp / 100 })),
     changeOrders: cos.map((c) => ({ ...c, routing: parseRouting(c.routing), proposedAmount: c.proposedAmountCents == null ? null : dollars(c.proposedAmountCents), startApp: coStarts.get(c.id)?.start ?? null, startSource: coStarts.get(c.id)?.source ?? 'none' })),
     sovLines: sov.map((l) => ({ ...l, scheduledValue: dollars(l.scheduledValueCents) })),
@@ -1638,7 +1641,7 @@ export function registerCostTrackingRoutes(app: Express): void {
       if (b.supplementalLabel !== undefined) next.supplementalLabel = String(b.supplementalLabel ?? '').trim().slice(0, 60);
       // The header every report prints (project, owner, GC, prime contract, prepared by); blanks fall back to the project's own facts.
       if (b.reportHeader !== undefined) {
-        const keys = ['projectName', 'shortName', 'projectNo', 'address', 'owner', 'generalContractor', 'primeContract', 'primeContractDate', 'preparedBy', 'preparedByTitle', 'payableTo', 'paymentTerms'];
+        const keys = ['projectName', 'shortName', 'projectNo', 'address', 'owner', 'generalContractor', 'primeContract', 'primeContractDate', 'preparedBy', 'preparedByTitle', 'payableTo', 'paymentTerms', 'invProjectCode', 'invPropertyCode'];
         const src = (b.reportHeader && typeof b.reportHeader === 'object') ? b.reportHeader : {};
         next.reportHeader = Object.fromEntries(keys.map((k) => [k, String(src[k] ?? '').trim().slice(0, 200)]).filter(([, v]) => v));
       }

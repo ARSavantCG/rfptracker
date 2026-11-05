@@ -385,3 +385,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-05: Invoice header: project facts left; right column = boxed Invoice No./Date/Terms/Due Date/Amount Due, then Bill To under a hairline label (blue bar removed).
 - 2026-11-05: Invoice box: no lines, grey label cells kept, text matched to 12px.
 - 2026-11-05: Invoices print with 1in margins all round, centered (body padding 0 in print; letter-width centered on screen).
+- 2026-11-05: Invoice numbers ACC-KPE-TCO-002 (shared/invoice-number.ts); codes editable in Report Header (invProjectCode/invPropertyCode); bundle.propertyName added; sequence continues from issued count.

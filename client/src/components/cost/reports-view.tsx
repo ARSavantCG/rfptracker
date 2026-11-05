@@ -8,6 +8,7 @@ import { exportBvaXlsx } from './bva-export';
 import { MoneyInput } from './inputs';
 import { parseAmount } from '@shared/format';
 import { CO_STAGES } from '@shared/co-routing';
+import { projectCodeFrom, propertyCodeFrom, invoicePrefix, nextInvoiceNumber } from '@shared/invoice-number';
 import { STAGE_STYLE } from './co-routing';
 import { waiversByPayApp, paidOfFrom, payAppLog, gcPaymentDue, threeWayCheck, owedByVendor } from '@shared/cost-waivers';
 import { coLog } from '@shared/co-log';
@@ -230,8 +231,11 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
   const queryClient = useQueryClient();
   const tenant = d.stream === 'tenant';
   const mine = b.cmInvoices.filter((i) => (i.type === 'reimbursable') === tenant);
-  const nextNo = (n: number) => `${tenant ? 'TEN' : 'CAP'}-${String(n + 1).padStart(3, '0')}`;
-  const [invNo, setInvNo] = useState(nextNo(mine.length));
+  // ACC-KPE-TCO-002: project · property · type · sequence (Adolfo, 2026-11-05). Codes from the Report Header, else the names.
+  const rh = (((b.project as any).settings || {}).reportHeader || {}) as Record<string, string>;
+  const projCode = (rh.invProjectCode || '').trim() || projectCodeFrom(rh.projectName || b.project.tenantName || b.project.name);
+  const propCode = (rh.invPropertyCode || '').trim() || propertyCodeFrom(b.propertyName);
+  const [invNo, setInvNo] = useState(() => nextInvoiceNumber(invoicePrefix(projCode, propCode, tenant ? 'tenant' : 'capital'), mine.map((i) => String(i.number))));
   const [invDate, setInvDate] = useState(todayIso());
   const [billTo, setBillTo] = useState(d.billTo);
   const [busy, setBusy] = useState(false);
@@ -346,7 +350,7 @@ function InvoiceCard({ d, bundle: b, projectId, open, saveSetting }: {
       </div>}
       <p className="text-xs text-gray-600">{full ? `${d.items.length} change order${d.items.length === 1 ? '' : 's'}` : `${d.items.length} item${d.items.length === 1 ? '' : 's'}`} behind it{d.items.some((i) => i.thisInvoice) ? `, ${d.items.filter((i) => i.thisInvoice).length} new since the last invoice` : ''}.</p>
       <div className="flex items-end gap-2 flex-wrap">
-        <Labeled label="Invoice No."><Input className="h-9 w-32" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
+        <Labeled label="Invoice No."><Input className="h-9 w-44" value={invNo} onChange={(e) => setInvNo(e.target.value)} /></Labeled>
         <Labeled label="Date"><Input type="date" className="h-9 w-44" value={invDate} onChange={(e) => setInvDate(e.target.value)} /></Labeled>
         <Button variant="outline" className="h-9" onClick={() => open(`/api/reports/cm-invoice/${projectId}?stream=${d.stream}`)}><FileText className="h-4 w-4 mr-1" /> Preview</Button>
         <Button className="h-9" disabled={busy || Math.abs(d.due) < 0.005 || !invNo.trim()} onClick={issue}><Printer className="h-4 w-4 mr-1" /> Issue</Button>
@@ -786,6 +790,8 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
     ['owner', 'Owner', ''],
     ['payableTo', 'Make Checks Payable To (Invoices)', 'the Owner'],
     ['paymentTerms', 'Payment Terms (Invoices)', ''],
+    ['invProjectCode', 'Invoice No. — Project Code', projectCodeFrom(saved.projectName || b.project.tenantName || b.project.name)],
+    ['invPropertyCode', 'Invoice No. — Property Code', propertyCodeFrom(b.propertyName) || 'none'],
     ['primeContract', 'Prime Contract No.', (gc as any)?.contractNumber ?? ''],
     ['primeContractDate', 'Prime Contract Date', (gc as any)?.contractDate ?? '', 'date'],
     ['preparedBy', 'Prepared By', ''],
@@ -807,6 +813,7 @@ function ReportHeaderCard({ b, projectId }: { b: ProjectBundle; projectId: numbe
           <Labeled key={k} label={label}>
             <Input className="h-9" type={type === 'date' ? 'date' : 'text'} value={h[k] ?? ''} onChange={(e) => setH({ ...h, [k]: e.target.value })} />
             {!(h[k] ?? '').trim() && fallback && <div className="text-[11px] text-gray-500 mt-0.5">Blank: uses {fallback}</div>}
+            {k === 'invPropertyCode' && <div className="text-[11px] text-gray-500 mt-0.5">Numbers read Project-Property-Type-Seq: tenant change orders TCO, capital partner CM fee CMF — e.g. {invoicePrefix(h.invProjectCode || projectCodeFrom(h.projectName || b.project.tenantName || b.project.name), h.invPropertyCode || propertyCodeFrom(b.propertyName), 'tenant')}-002. Issued invoices keep their numbers.</div>}
             {k === 'paymentTerms' && <div className="text-[11px] text-gray-500 mt-0.5">E.g. "Due upon receipt, per Lease Exhibit B, Section 5" or "Net 30" (prints the due date). Blank: not printed.</div>}
           </Labeled>
         ))}

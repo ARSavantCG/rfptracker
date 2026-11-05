@@ -114,6 +114,8 @@ export interface DocumentRow {
 import type { BudgetBreakdownRow, fundingSources, budgetStory } from '@shared/cost-budget-approval';
 
 export interface ProjectBundle {
+  /** The property's name — the default property code in invoice numbers. */
+  propertyName?: string;
   /** Funding by scope: the setup, and what it works out to. */
   scopeSetup: import('@shared/funding-scopes').FundingScope[];
   scopes: import('@shared/funding-scopes').ScopesResult;

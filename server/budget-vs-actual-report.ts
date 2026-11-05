@@ -655,7 +655,8 @@ export function renderCmInvoiceHtml(input: {
   const paid = inv.basis === 'paid';
   const info: ReportInfoRow[] = [
     { label: "Bill To", value: inv.billTo || input.project.tenantName || "" },
-    ...(inv.billTo && input.project.tenantName && inv.billTo !== input.project.tenantName ? [{ label: "Tenant", value: input.project.tenantName }] : []),
+    // "Project", not "Tenant" — the bill-to party is the tenant, so a "Tenant" row read like a second name for them (Adolfo, 2026-11-05).
+    ...(((input.project as any).name || input.project.tenantName) ? [{ label: "Project", value: String((input.project as any).name || input.project.tenantName) }] : []),
     { label: "Property", value: input.propertyLabel || "" },
     { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },
     { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },

@@ -116,15 +116,14 @@ export const REPORT_SHELL_CSS = `
   /* Invoice column, laid out like a standard business invoice (Adolfo, 2026-11-05):
      a boxed table of the invoice's own facts, then Bill To under a hairline label. */
   .rs-aside { flex: 0 0 auto; width: 40%; font-size: 12px; line-height: 1.4; margin: 0 0 12px; }
-  .rs-meta { width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; }
-  .rs-meta th, .rs-meta td { padding: 4px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-  .rs-meta th { background: #f3f4f6; color: #374151; font-weight: 700; width: 42%; white-space: nowrap;
+  .rs-meta { width: 100%; border-collapse: collapse; border: 0; font-size: 12px; line-height: 1.35; margin: 0; }
+  .rs-meta th, .rs-meta td { padding: 1px 8px; border: 0; text-align: left; vertical-align: top; font-size: 12px; }
+  .rs-meta th { background: #f3f4f6; color: #1f2937; font-weight: 700; width: 42%; white-space: nowrap;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .rs-meta td { text-align: right; font-variant-numeric: tabular-nums; color: #111827; }
-  .rs-meta tr.rs-strong th, .rs-meta tr.rs-strong td { font-weight: 700; font-size: 13px; }
-  .rs-billto { margin-top: 12px; }
-  .rs-billto .rs-aside-l { font-weight: 700; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
-    border-bottom: 1px solid #d1d5db; padding-bottom: 2px; margin-bottom: 4px; }
+  .rs-meta td { text-align: right; font-variant-numeric: tabular-nums; color: #111827; font-weight: 400; }
+  .rs-meta tr.rs-strong th, .rs-meta tr.rs-strong td { font-weight: 700; }
+  .rs-billto { margin-top: 10px; }
+  .rs-billto .rs-aside-l { font-weight: 700; color: #1f2937; font-size: 12px; margin-bottom: 2px; }
   .rs-billto .rs-aside-1 { font-weight: 700; color: #111827; }
   .rs-billto div { overflow-wrap: anywhere; }
   .rs-notes { margin: -6px 0 10px; font-size: 11px; color: #6b7280; }

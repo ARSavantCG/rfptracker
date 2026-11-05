@@ -382,3 +382,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-05: CM/tenant invoices header row 'Tenant' → 'Project' (project name).
 - 2026-11-05: Invoice Project row uses Report Header Project (projectName) first.
 - 2026-11-05: Invoice Bill To moved to a right-hand block (entity line 1, address lines below); Bill To fields are multi-line textareas; tables show line 1 only.
+- 2026-11-05: Invoice header: project facts left; right column = boxed Invoice No./Date/Terms/Due Date/Amount Due, then Bill To under a hairline label (blue bar removed).

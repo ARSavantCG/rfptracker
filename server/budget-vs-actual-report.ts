@@ -659,18 +659,21 @@ export function renderCmInvoiceHtml(input: {
     ...(() => { const v = String((((input.project as any)?.settings?.reportHeader ?? {}) as any).projectName ?? "").trim() || String((input.project as any).name || input.project.tenantName || ""); return v ? [{ label: "Project", value: v }] : []; })(),
     { label: "Property", value: input.propertyLabel || "" },
     { label: "Rentable Area", value: input.rentableSf ? `${Math.round(input.rentableSf).toLocaleString("en-US")} SF` : "" },
-    { label: "Invoice No.", value: inv.number ?? "DRAFT — not yet issued" },
+  ];
+  // The invoice's own facts go in the right-hand box, with Bill To under it (Adolfo, 2026-11-05).
+  const meta: ReportInfoRow[] = [
+    { label: "Invoice No.", value: inv.number ?? "DRAFT" },
     { label: "Invoice Date", value: longDate(inv.date) },
   ];
   // Payment terms (Report Header): printed as typed; "Net 30" (any days) also prints the due date.
   const terms = String((((input.project as any)?.settings?.reportHeader ?? {}) as any).paymentTerms ?? "").trim();
   if (terms) {
-    info.push({ label: "Terms", value: terms });
+    meta.push({ label: "Terms", value: terms });
     const net = /\bnet\s*(\d{1,3})\b/i.exec(terms);
     if (net && /^\d{4}-\d{2}-\d{2}/.test(inv.date)) {
       const [y, m, d] = inv.date.slice(0, 10).split("-").map(Number);
       const due = new Date(Date.UTC(y, m - 1, d + Number(net[1])));
-      info.push({ label: "Due Date", value: longDate(due.toISOString().slice(0, 10)) });
+      meta.push({ label: "Due Date", value: longDate(due.toISOString().slice(0, 10)) });
     }
   }
   const title = reimb && inv.mode === "full" ? "Change Order Invoice" : reimb ? "Reimbursement & Construction Management Fee Invoice" : "Construction Management Fee Invoice";
@@ -697,7 +700,8 @@ export function renderCmInvoiceHtml(input: {
   </style></head><body>
   ${reportHeaderHtml({ title, eyebrow: "Invoice", info, draft: !inv.number,
     // Bill To sits on the right: the entity, then its address, one line each (Adolfo, 2026-11-05).
-    aside: { label: "Bill To", lines: String(inv.billTo || input.project.tenantName || "").split(/\r?\n/) },
+    aside: { rows: [...meta, { label: "Amount Due", value: fmt(inv.due) }], strong: ["Amount Due"],
+      label: "Bill To", lines: String(inv.billTo || input.project.tenantName || "").split(/\r?\n/) },
     notes: inv.number ? [] : [reimb && inv.mode === "full" ? "Draft — figures are as of today and change as change orders are approved. Issue the invoice to fix them." : "Draft — figures are as of today and change as more work is billed. Issue the invoice to fix them."] })}
 
   ${full ? `<h3 class="sec">Approved Change Orders</h3>

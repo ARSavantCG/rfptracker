@@ -16,7 +16,7 @@ export function projectCodeFrom(name: unknown): string {
 /** Initials of the property: "Kurv Port Everglades" → KPE (building suffixes dropped). */
 export function propertyCodeFrom(name: unknown): string {
   const words = letters(String(name ?? '').replace(/\s*[-–]\s*Bldg\.?.*$/i, '')).split(/\s+/).filter(Boolean);
-  return words.map((w) => w[0]).join('').slice(0, 4);
+  return words.map((w) => w[0]).join('').slice(0, 3);
 }
 
 export function invoicePrefix(projectCode: string, propertyCode: string, stream: 'tenant' | 'capital'): string {

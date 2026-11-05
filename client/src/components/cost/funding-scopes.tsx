@@ -20,6 +20,48 @@ import { money, projectKey, type ProjectBundle } from './types';
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+/** $/SF × SF = Amount — type any two and the third fills in. The box just typed wins; the
+ *  other given box stays put and the remaining one is worked out. */
+function fillThird(y: FundingSource, field: 'perSf' | 'sf' | 'amount', n: number | null): FundingSource {
+  const perSf = field === 'perSf' ? n : y.perSf ?? null;
+  const sf = field === 'sf' ? n : y.sf ?? null;
+  const amount = field === 'amount' ? n ?? 0 : y.amount || 0;
+  if (field === 'amount') {
+    if (sf) return { ...y, amount, sf, perSf: amount / sf };
+    if (perSf) return { ...y, amount, perSf, sf: Math.round((amount / perSf) * 100) / 100 };
+    return { ...y, amount, perSf: null, sf: null };
+  }
+  if (perSf != null && sf != null) return { ...y, perSf, sf, amount: r2(perSf * sf) };
+  if (field === 'sf' && sf && amount) return { ...y, sf, perSf: amount / sf, amount };
+  if (field === 'perSf' && perSf && amount) return { ...y, perSf, sf: Math.round((amount / perSf) * 100) / 100, amount };
+  return { ...y, perSf, sf, amount };
+}
+
+/** A number box that keeps exactly what's typed ("28.", ".5") while you type and only hands
+ *  back a number once it reads as one — so a decimal point never wipes the box. */
+function NumCell({ value, onNumber, money }: { value: number | null; onNumber: (n: number | null) => void; money?: boolean }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const show = (v: number | null) => (v == null || !Number.isFinite(v) ? '' : String(Math.round(v * 1e6) / 1e6));
+  const commit = (raw: string) => {
+    const t = raw.replace(/[$,\s]/g, '');
+    if (t === '') return onNumber(null);
+    const n = parseAmount(t);
+    if (Number.isFinite(n)) onNumber(n);
+  };
+  if (money) return (
+    <MoneyInput className="h-8" value={draft ?? show(value)}
+      onFocus={() => setDraft(show(value))} onBlur={() => setDraft(null)}
+      onValueChange={(v) => { if (draft !== null) setDraft(v); commit(v); }} />
+  );
+  return (
+    <Input className="h-8 text-right tabular-nums" inputMode="decimal" value={draft ?? (value == null ? '' : Number(show(value)).toLocaleString('en-US', { maximumFractionDigits: 2 }))}
+      onFocus={() => setDraft(show(value))} onBlur={(e) => { commit(e.target.value); setDraft(null); }}
+      onChange={(e) => { setDraft(e.target.value); commit(e.target.value); }} />
+  );
+}
+
 export function FundingScopes({ bundle, projectId }: { bundle: ProjectBundle; projectId: number }) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -129,9 +171,9 @@ function ScopeEditor({ initial, lines, onCancel, onSave }: { initial: FundingSco
                           <SelectContent className="pm-scope">{SOURCE_KINDS.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}</SelectContent>
                         </Select></td>
                         <td className="py-1 pr-2"><Input className="h-8" value={x.label} onChange={(e) => updSrc(i, k, (y) => ({ ...y, label: e.target.value }))} /></td>
-                        <td className="py-1 pr-2 w-24"><MoneyInput className="h-8" value={x.perSf != null ? String(x.perSf) : ''} onValueChange={(v) => updSrc(i, k, (y) => { const perSf = v === '' ? null : parseAmount(v); return { ...y, perSf, amount: perSf != null && y.sf ? Math.round(perSf * y.sf * 100) / 100 : y.amount }; })} /></td>
-                        <td className="py-1 pr-2 w-24"><Input className="h-8 text-right tabular-nums" inputMode="numeric" value={x.sf != null ? String(x.sf) : ''} onChange={(e) => updSrc(i, k, (y) => { const sf = e.target.value === '' ? null : Number(e.target.value.replace(/[^\d.]/g, '')); return { ...y, sf, amount: sf != null && y.perSf != null ? Math.round(y.perSf * sf * 100) / 100 : y.amount }; })} /></td>
-                        <td className="py-1 pr-2 w-36"><MoneyInput className="h-8" value={x.amount ? String(x.amount) : ''} onValueChange={(v) => updSrc(i, k, (y) => ({ ...y, amount: parseAmount(v) || 0, perSf: null, sf: null }))} /></td>
+                        <td className="py-1 pr-2 w-24"><NumCell money value={x.perSf ?? null} onNumber={(n) => updSrc(i, k, (y) => fillThird(y, 'perSf', n))} /></td>
+                        <td className="py-1 pr-2 w-24"><NumCell value={x.sf ?? null} onNumber={(n) => updSrc(i, k, (y) => fillThird(y, 'sf', n))} /></td>
+                        <td className="py-1 pr-2 w-36"><NumCell money value={x.amount || null} onNumber={(n) => updSrc(i, k, (y) => fillThird(y, 'amount', n))} /></td>
                         <td className="py-1"><button className="p-1 text-gray-400 hover:text-red-700" onClick={() => upd(i, (y) => ({ ...y, sources: y.sources.filter((_, j) => j !== k) }))}><Trash2 className="h-4 w-4" /></button></td>
                       </tr>
                     ))}

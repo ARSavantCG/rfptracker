@@ -378,3 +378,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 Retainage left blank = line's retainage on the last pay app + rate × this period's billing (work + change in stored; credits negative), spread to the cent — the contractor's method. Replaces "rate × to date unless released earlier", which reset over-held/credit lines (Ryder App 005 off $18,093.87). Existing apps: open, Recalculate, Save.
 
 - 2026-11-04 Waivers: new ones start not received unless created with a file (server default; package dialog sends received:false). Pay App package: ↑↓ on Pay Applications rows reorder the conditional waivers (same order).
+- 2026-11-05: Funding by Scope source rows — NumCell keeps typed text (decimals no longer NaN/wipe); $/SF × SF = Amount, any two fill the third (fillThird).

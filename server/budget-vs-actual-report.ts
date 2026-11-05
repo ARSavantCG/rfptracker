@@ -697,6 +697,11 @@ export function renderCmInvoiceHtml(input: {
     .due td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .due tr.big td { font-size: 14px; font-weight: 700; border-top: 2px solid #111827; border-bottom: 2px solid #111827; background: #f9fafb; }
     .draft-mark { color: #b45309; font-weight: 700; }
+    /* Invoices: an even 1" margin all round, centered (Adolfo, 2026-11-05). The page margin
+       is the whole margin in print; on screen the sheet is letter width and centered. */
+    @page { size: Letter; margin: 1in; }
+    @media print { body { padding: 0 !important; } }
+    @media screen { body { width: 6.5in; margin: 0 auto !important; padding: 1in !important; box-sizing: content-box; } }
   </style></head><body>
   ${reportHeaderHtml({ title, eyebrow: "Invoice", info, draft: !inv.number,
     // Bill To sits on the right: the entity, then its address, one line each (Adolfo, 2026-11-05).

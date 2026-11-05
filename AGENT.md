@@ -384,3 +384,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-05: Invoice Bill To moved to a right-hand block (entity line 1, address lines below); Bill To fields are multi-line textareas; tables show line 1 only.
 - 2026-11-05: Invoice header: project facts left; right column = boxed Invoice No./Date/Terms/Due Date/Amount Due, then Bill To under a hairline label (blue bar removed).
 - 2026-11-05: Invoice box: no lines, grey label cells kept, text matched to 12px.
+- 2026-11-05: Invoices print with 1in margins all round, centered (body padding 0 in print; letter-width centered on screen).

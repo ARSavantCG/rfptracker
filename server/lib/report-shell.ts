@@ -122,7 +122,7 @@ export const REPORT_SHELL_CSS = `
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .rs-meta td { text-align: right; font-variant-numeric: tabular-nums; color: #111827; font-weight: 400; }
   .rs-meta tr.rs-strong th, .rs-meta tr.rs-strong td { font-weight: 700; }
-  .rs-billto { margin-top: 10px; }
+  .rs-billto { margin-top: 10px; padding-left: 8px; } /* lines up with the label text above, not the grey edge */
   .rs-billto .rs-aside-l { font-weight: 700; color: #1f2937; font-size: 12px; margin-bottom: 2px; }
   .rs-billto .rs-aside-1 { font-weight: 700; color: #111827; }
   .rs-billto div { overflow-wrap: anywhere; }

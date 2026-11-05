@@ -380,3 +380,4 @@ and live test output are proof. The gold standard is: click the button and watch
 - 2026-11-04 Waivers: new ones start not received unless created with a file (server default; package dialog sends received:false). Pay App package: ↑↓ on Pay Applications rows reorder the conditional waivers (same order).
 - 2026-11-05: Funding by Scope source rows — NumCell keeps typed text (decimals no longer NaN/wipe); $/SF × SF = Amount, any two fill the third (fillThird).
 - 2026-11-05: CM/tenant invoices header row 'Tenant' → 'Project' (project name).
+- 2026-11-05: Invoice Project row uses Report Header Project (projectName) first.
